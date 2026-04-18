@@ -8,6 +8,12 @@ export const DEFAULT_CONFIG: Record<string, string> = {
   prompt_store_max_db_mb: '100',
 };
 
+/** Returns true only if the key has been explicitly written to the config table. */
+export function isConfigSet(db: Database, key: string): boolean {
+  const result = db.exec('SELECT COUNT(*) FROM config WHERE key = ?', [key]);
+  return (result[0]?.values[0]?.[0] as number) > 0;
+}
+
 /** Returns the stored value, or the built-in default, or undefined if neither exists. */
 export function getConfig(db: Database, key: string): string | undefined {
   const result = db.exec('SELECT value FROM config WHERE key = ?', [key]);

@@ -69,8 +69,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     try {
-      handleCapturePrompt(store, args);
-      return { content: [{ type: 'text', text: 'captured' }] };
+      const result = handleCapturePrompt(store, args);
+      const text = result.status === 'disabled' ? 'capture disabled' : 'captured';
+      return { content: [{ type: 'text', text }] };
     } catch (err) {
       process.stderr.write(`[nexpath-serve] capture_prompt error: ${err}\n`);
       return {

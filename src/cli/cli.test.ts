@@ -34,11 +34,11 @@ describe('nexpath CLI — metadata', () => {
     expect(subNames).toEqual(expect.arrayContaining(['set', 'get']));
   });
 
-  it('store registers delete, disable, and prune sub-commands', () => {
+  it('store registers enable, disable, delete, and prune sub-commands', () => {
     const prog = createProgram();
     const storeCmd = prog.commands.find((c) => c.name() === 'store')!;
     const subNames = storeCmd.commands.map((c) => c.name());
-    expect(subNames).toEqual(expect.arrayContaining(['delete', 'disable', 'prune']));
+    expect(subNames).toEqual(expect.arrayContaining(['enable', 'disable', 'delete', 'prune']));
   });
 });
 

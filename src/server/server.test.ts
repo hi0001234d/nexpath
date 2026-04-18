@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TOOLS } from './tools.js';
-import { handleCapturePrompt } from './handlers.js';
-import { openStore, type Store } from '../store/index.js';
+import { handleCapturePrompt, FIRST_RUN_BANNER } from './handlers.js';
+import { openStore, setConfig, type Store } from '../store/index.js';
 
 // ── MCP tool definitions ──────────────────────────────────────────────────────
 
@@ -48,13 +48,21 @@ describe('MCP tool definitions', () => {
   });
 });
 
-// ── handleCapturePrompt ───────────────────────────────────────────────────────
+// ── handleCapturePrompt — enabled ─────────────────────────────────────────────
 
-describe('handleCapturePrompt', () => {
+describe('handleCapturePrompt (capture enabled)', () => {
   let store: Store;
 
-  beforeEach(async () => { store = await openStore(':memory:'); });
+  beforeEach(async () => {
+    store = await openStore(':memory:');
+    setConfig(store, 'prompt_capture_enabled', 'true');
+  });
   afterEach(() => { store.db.close(); });
+
+  it('returns status captured', () => {
+    const result = handleCapturePrompt(store, { prompt: 'hello world', project_id: '/proj/a', agent: 'claude-code' });
+    expect(result.status).toBe('captured');
+  });
 
   it('inserts the prompt text into the store', () => {
     handleCapturePrompt(store, { prompt: 'hello world', project_id: '/proj/a', agent: 'claude-code' });
@@ -100,5 +108,81 @@ describe('handleCapturePrompt', () => {
     handleCapturePrompt(store, { prompt: 'third', project_id: '/p' });
     const res = store.db.exec('SELECT COUNT(*) FROM prompts');
     expect(res[0]?.values[0]?.[0]).toBe(3);
+  });
+});
+
+// ── handleCapturePrompt — disabled ────────────────────────────────────────────
+
+describe('handleCapturePrompt (capture disabled)', () => {
+  let store: Store;
+
+  beforeEach(async () => {
+    store = await openStore(':memory:');
+    setConfig(store, 'prompt_capture_enabled', 'false');
+  });
+  afterEach(() => { store.db.close(); });
+
+  it('returns status disabled', () => {
+    const result = handleCapturePrompt(store, { prompt: 'test' });
+    expect(result.status).toBe('disabled');
+  });
+
+  it('does not insert any row when disabled', () => {
+    handleCapturePrompt(store, { prompt: 'test' });
+    const res = store.db.exec('SELECT COUNT(*) FROM prompts');
+    expect(res[0]?.values[0]?.[0]).toBe(0);
+  });
+});
+
+// ── handleCapturePrompt — first run ───────────────────────────────────────────
+
+describe('handleCapturePrompt (first run — flag never set)', () => {
+  let store: Store;
+
+  beforeEach(async () => {
+    store = await openStore(':memory:');
+    // intentionally NOT setting prompt_capture_enabled
+  });
+  afterEach(() => {
+    store.db.close();
+    vi.restoreAllMocks();
+  });
+
+  it('returns status first_run_enabled', () => {
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const result = handleCapturePrompt(store, { prompt: 'first ever' });
+    expect(result.status).toBe('first_run_enabled');
+  });
+
+  it('captures the prompt on first run', () => {
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    handleCapturePrompt(store, { prompt: 'first ever', project_id: '/p' });
+    const res = store.db.exec('SELECT COUNT(*) FROM prompts');
+    expect(res[0]?.values[0]?.[0]).toBe(1);
+  });
+
+  it('persists prompt_capture_enabled = true after first run', () => {
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    handleCapturePrompt(store, { prompt: 'first ever' });
+    const res = store.db.exec("SELECT value FROM config WHERE key = 'prompt_capture_enabled'");
+    expect(res[0]?.values[0]?.[0]).toBe('true');
+  });
+
+  it('writes the disclosure banner to stderr on first run', () => {
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    handleCapturePrompt(store, { prompt: 'first ever' });
+    const written = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    expect(written).toContain(FIRST_RUN_BANNER);
+  });
+
+  it('subsequent call after first run is treated as enabled (no banner)', () => {
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    handleCapturePrompt(store, { prompt: 'first' });
+    vi.restoreAllMocks();
+
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const result = handleCapturePrompt(store, { prompt: 'second' });
+    expect(result.status).toBe('captured');
+    expect(stderrSpy).not.toHaveBeenCalled();
   });
 });

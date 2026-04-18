@@ -2,7 +2,7 @@
 import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { configGetAction, configSetAction } from './commands/config.js';
-import { storeDeleteAction, storeDisableAction, storePruneAction } from './commands/store.js';
+import { storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAction } from './commands/store.js';
 
 export function createProgram(): Command {
   const program = new Command();
@@ -93,6 +93,13 @@ export function createProgram(): Command {
     .option('-y, --yes', 'Skip confirmation prompt')
     .action(async (opts: { project?: string; yes?: boolean }) => {
       await storeDeleteAction(opts);
+    });
+
+  storeCmd
+    .command('enable')
+    .description('Enable prompt capture (sets prompt_capture_enabled = true)')
+    .action(async () => {
+      await storeEnableAction();
     });
 
   storeCmd

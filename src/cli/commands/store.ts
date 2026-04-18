@@ -66,6 +66,18 @@ export async function storeDeleteAction(
   console.log('All stored prompts deleted.');
 }
 
+// ── store enable ──────────────────────────────────────────────────────────────
+
+export async function storeEnableAction(dbPath = DEFAULT_DB_PATH): Promise<void> {
+  const store = await openStore(dbPath);
+  setConfig(store, 'prompt_capture_enabled', 'true');
+  closeStore(store);
+  console.log('Prompt capture enabled.');
+  console.log('Stored: prompt text, timestamp, agent name, project path');
+  console.log('Location: ~/.nexpath/prompt-store.db — nothing is sent externally');
+  console.log('Disable anytime: nexpath store disable');
+}
+
 // ── store disable ─────────────────────────────────────────────────────────────
 
 export async function storeDisableAction(dbPath = DEFAULT_DB_PATH): Promise<void> {

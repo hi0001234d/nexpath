@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { rmSync } from 'node:fs';
-import { openStore, closeStore, insertPrompt, getConfig } from '../../store/index.js';
-import { parsePeriod, storeDeleteAction, storeDisableAction, storePruneAction } from './store.js';
+import { openStore, closeStore, insertPrompt, getConfig, setConfig } from '../../store/index.js';
+import { parsePeriod, storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAction } from './store.js';
 
 async function tempDb(setup?: (store: Awaited<ReturnType<typeof openStore>>) => void) {
   const path = join(tmpdir(), `nexpath-test-${randomUUID()}.db`);
@@ -111,6 +111,43 @@ describe('storeDeleteAction — project delete', () => {
     // Should complete without throwing or prompting
     await storeDeleteAction({ project: '/proj/x' }, path);
     expect(spy.mock.calls.length).toBeGreaterThan(0);
+    cleanup();
+  });
+});
+
+// ── storeEnableAction ─────────────────────────────────────────────────────────
+
+describe('storeEnableAction', () => {
+  it('sets prompt_capture_enabled to true', async () => {
+    const { path, cleanup } = await tempDb();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    await storeEnableAction(path);
+
+    const store = await openStore(path);
+    expect(getConfig(store.db, 'prompt_capture_enabled')).toBe('true');
+    closeStore(store);
+    cleanup();
+  });
+
+  it('prints four informational lines', async () => {
+    const { path, cleanup } = await tempDb();
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await storeEnableAction(path);
+    expect(spy.mock.calls).toHaveLength(4);
+    expect(spy.mock.calls[0][0]).toContain('Prompt capture enabled');
+    cleanup();
+  });
+
+  it('overwrites a previously disabled state', async () => {
+    const { path, cleanup } = await tempDb((store) => {
+      setConfig(store, 'prompt_capture_enabled', 'false');
+    });
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    await storeEnableAction(path);
+
+    const store = await openStore(path);
+    expect(getConfig(store.db, 'prompt_capture_enabled')).toBe('true');
+    closeStore(store);
     cleanup();
   });
 });

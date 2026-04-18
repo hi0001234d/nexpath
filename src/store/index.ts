@@ -8,5 +8,5 @@ export {
   type InsertParams,
   type PromptStats,
 } from './prompts.js';
-export { getConfig, setConfig, getAllConfig, DEFAULT_CONFIG } from './config.js';
+export { getConfig, setConfig, getAllConfig, isConfigSet, DEFAULT_CONFIG } from './config.js';
 export { redactSecrets } from './redact.js';

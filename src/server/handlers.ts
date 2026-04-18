@@ -3,7 +3,7 @@
  * starting the stdio transport.
  */
 
-import { insertPrompt, type Store } from '../store/index.js';
+import { insertPrompt, getConfig, setConfig, isConfigSet, type Store } from '../store/index.js';
 
 export type CapturePromptParams = {
   prompt: string;
@@ -11,17 +11,50 @@ export type CapturePromptParams = {
   agent?: string;
 };
 
+export type CaptureResult =
+  | { status: 'captured' }
+  | { status: 'disabled' }
+  | { status: 'first_run_enabled' };
+
+export const FIRST_RUN_BANNER =
+  'Nexpath will store your coding prompts locally at ~/.nexpath/prompt-store.db\n' +
+  'to calibrate language and vocabulary for better artifact quality.\n' +
+  '\n' +
+  '  \u2022 Data stays on your machine \u2014 nothing is sent externally\n' +
+  '  \u2022 Stored: prompt text, timestamp, agent name, project path\n' +
+  '  \u2022 Max: 500 prompts per project, 100 MB total\n' +
+  '  \u2022 Disable anytime: nexpath store disable\n' +
+  '  \u2022 Delete anytime:  nexpath store delete\n';
+
 /**
  * Handle a capture_prompt tool call.
- * Writes the prompt to the SQLite store immediately (crash-safe by design —
- * sql.js serializes to disk on every insert).
  *
- * project_id falls back to 'unknown' if the hook did not supply one.
+ * - First run (prompt_capture_enabled not in config): opts in by default,
+ *   writes disclosure banner to stderr, captures the prompt.
+ * - Disabled (prompt_capture_enabled = 'false'): skips capture.
+ * - Enabled (prompt_capture_enabled = 'true'): captures normally.
  */
-export function handleCapturePrompt(store: Store, params: CapturePromptParams): void {
+export function handleCapturePrompt(store: Store, params: CapturePromptParams): CaptureResult {
+  // First run: key has never been explicitly written to the config table
+  if (!isConfigSet(store.db, 'prompt_capture_enabled')) {
+    setConfig(store, 'prompt_capture_enabled', 'true');
+    process.stderr.write(`[nexpath-serve] first run — prompt capture enabled\n${FIRST_RUN_BANNER}`);
+    insertPrompt(store, {
+      projectRoot: params.project_id ?? 'unknown',
+      promptText: params.prompt,
+      agent: params.agent,
+    });
+    return { status: 'first_run_enabled' };
+  }
+
+  if (getConfig(store.db, 'prompt_capture_enabled') === 'false') {
+    return { status: 'disabled' };
+  }
+
   insertPrompt(store, {
     projectRoot: params.project_id ?? 'unknown',
     promptText: params.prompt,
     agent: params.agent,
   });
+  return { status: 'captured' };
 }
