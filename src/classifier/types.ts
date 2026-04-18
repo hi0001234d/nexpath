@@ -70,6 +70,8 @@ export interface SessionState {
    * Enforces the "once per stage transition event, never re-fires same event same session" rule.
    */
   firedDecisionSessions: string[];
+  /** Cached user profile — null until ≥ PROFILE_RECOMPUTE_INTERVAL prompts processed. */
+  profile: UserProfile | null;
 }
 
 // ── User nature / mood / depth (item 9) ───────────────────────────────────────

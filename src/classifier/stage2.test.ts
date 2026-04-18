@@ -43,6 +43,7 @@ function makeState(overrides: Partial<SessionState> = {}): SessionState {
     signalCounters:        {},
     absenceFlags:          [],
     firedDecisionSessions: [],
+    profile:               null,
     ...overrides,
   };
 }

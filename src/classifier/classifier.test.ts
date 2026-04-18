@@ -4,6 +4,7 @@ import { classifyWithTFIDF, resetTFIDFModel } from './TFIDFClassifier.js';
 import { createEmbeddingClassifier } from './EmbeddingClassifier.js';
 import { classifyPrompt } from './PromptClassifier.js';
 import { SessionStateManager, SESSION_GAP_MS, STAGE_CONFIRM_THRESHOLD } from './SessionStateManager.js';
+import { PROFILE_RECOMPUTE_INTERVAL } from './UserProfileClassifier.js';
 import { detectAbsenceFlags, ABSENCE_MIN_PROMPTS, ABSENCE_COOLDOWN_PROMPTS } from './AbsenceDetector.js';
 import { detectSignals, initialSignalCounters } from './signals.js';
 import { openStore, closeStore } from '../store/index.js';
@@ -29,6 +30,7 @@ function makeState(overrides: Partial<SessionState> = {}): SessionState {
     signalCounters:        initialSignalCounters(),
     absenceFlags:          [],
     firedDecisionSessions: [],
+    profile:               null,
     ...overrides,
   };
 }
@@ -957,5 +959,67 @@ describe('AbsenceDetector', () => {
     for (const f of flags) {
       expect(f.cooldownUntil).toBe(f.raisedAtIndex + ABSENCE_COOLDOWN_PROMPTS);
     }
+  });
+});
+
+// ── SessionStateManager — profile (Gap 1) ─────────────────────────────────────
+
+describe('SessionStateManager — user profile', () => {
+  it('profile is null before any prompts are processed', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/profile-a');
+    expect(mgr.current.profile).toBeNull();
+    closeStore(store);
+  });
+
+  it('profile is computed after the first prompt (isProfileStale(null) = true)', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/profile-b');
+    mgr.processPrompt(store, 'implement the login flow', makeResult('implementation', 0.8));
+    expect(mgr.current.profile).not.toBeNull();
+    expect(mgr.current.profile?.computedAt).toBe(1);
+    closeStore(store);
+  });
+
+  it('profile survives save/load round-trip', async () => {
+    const store = await openStore(':memory:');
+    const mgr1 = SessionStateManager.load(store, '/project/profile-c');
+    mgr1.processPrompt(store, 'implement feature', makeResult('implementation', 0.8));
+    const savedNature = mgr1.current.profile?.nature;
+
+    const mgr2 = SessionStateManager.load(store, '/project/profile-c');
+    expect(mgr2.current.profile).not.toBeNull();
+    expect(mgr2.current.profile?.nature).toBe(savedNature);
+    closeStore(store);
+  });
+
+  it('profile is recomputed when stale (promptCount - computedAt >= PROFILE_RECOMPUTE_INTERVAL)', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/profile-d');
+    // First prompt: computedAt=1, promptCount=1
+    mgr.processPrompt(store, 'prompt 0', makeResult('implementation', 0.8));
+    const firstComputedAt = mgr.current.profile?.computedAt; // 1
+
+    // Process PROFILE_RECOMPUTE_INTERVAL more prompts to make it stale: promptCount=1+5=6, diff=5 >= 5
+    for (let i = 0; i < PROFILE_RECOMPUTE_INTERVAL; i++) {
+      mgr.processPrompt(store, `prompt ${i + 1}`, makeResult('implementation', 0.8));
+    }
+    expect(mgr.current.profile?.computedAt).toBeGreaterThan(firstComputedAt!);
+    closeStore(store);
+  });
+
+  it('profile is NOT recomputed between stale intervals', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/profile-e');
+    // First prompt: computedAt=1, promptCount=1
+    mgr.processPrompt(store, 'prompt 0', makeResult('implementation', 0.8));
+    const firstComputedAt = mgr.current.profile?.computedAt; // 1
+
+    // Process 3 more prompts: promptCount=4, diff=3 < 5 → not stale
+    for (let i = 0; i < 3; i++) {
+      mgr.processPrompt(store, `prompt ${i + 1}`, makeResult('implementation', 0.8));
+    }
+    expect(mgr.current.profile?.computedAt).toBe(firstComputedAt);
+    closeStore(store);
   });
 });

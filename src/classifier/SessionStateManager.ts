@@ -3,6 +3,7 @@ import type { Store } from '../store/db.js';
 import { saveStore } from '../store/db.js';
 import type { SessionState, Stage, PromptRecord, ClassificationResult } from './types.js';
 import { detectSignals, initialSignalCounters } from './signals.js';
+import { classifyUserProfile, isProfileStale } from './UserProfileClassifier.js';
 
 /** Gap in ms after which the session resets (30 minutes per research). */
 export const SESSION_GAP_MS = 30 * 60 * 1000;
@@ -58,6 +59,7 @@ function newSession(projectRoot: string, now: number): SessionState {
     signalCounters:          initialSignalCounters(),
     absenceFlags:            [],
     firedDecisionSessions:   [],
+    profile:                 null,
   };
 }
 
@@ -148,6 +150,11 @@ export class SessionStateManager {
     // ── Advance counter ───────────────────────────────────────────────────────
     s.promptCount   += 1;
     s.lastPromptAt   = now;
+
+    // ── User profile (recompute when stale) ───────────────────────────────────
+    if (isProfileStale(s.profile, s.promptCount)) {
+      s.profile = classifyUserProfile(s.promptHistory, s.promptCount);
+    }
 
     saveState(store, s);
   }

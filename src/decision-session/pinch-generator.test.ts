@@ -290,3 +290,57 @@ describe('generatePinchLabel', () => {
     expect(call.messages[0].content).toContain('2-3 word');
   });
 });
+
+// ── buildPinchPrompt — profile (Gap 1) ────────────────────────────────────────
+
+import type { UserProfile } from '../classifier/types.js';
+
+function makeProfile(overrides: Partial<UserProfile> = {}): UserProfile {
+  return {
+    nature:           'cool_geek',
+    precisionScore:   5,
+    playfulnessScore: 6,
+    mood:             'focused',
+    depth:            'medium',
+    depthScore:       5,
+    computedAt:       10,
+    ...overrides,
+  };
+}
+
+describe('buildPinchPrompt — profile-aware tone', () => {
+  it('includes empathetic modifier when mood is frustrated', () => {
+    const prompt = buildPinchPrompt('Is the plan written?', 'stage_transition', 'implementation',
+      makeProfile({ mood: 'frustrated' }));
+    expect(prompt).toContain('empathetic');
+  });
+
+  it('includes concise modifier when mood is rushed', () => {
+    const prompt = buildPinchPrompt('Is the plan written?', 'stage_transition', 'implementation',
+      makeProfile({ mood: 'rushed' }));
+    expect(prompt).toContain('concise');
+  });
+
+  it('includes energetic modifier when mood is excited', () => {
+    const prompt = buildPinchPrompt('Is the plan written?', 'stage_transition', 'implementation',
+      makeProfile({ mood: 'excited' }));
+    expect(prompt).toContain('energetic');
+  });
+
+  it('includes peer-level modifier when depth is high', () => {
+    const prompt = buildPinchPrompt('Is the plan written?', 'stage_transition', 'implementation',
+      makeProfile({ depth: 'high' }));
+    expect(prompt).toContain('peer-level');
+  });
+
+  it('includes jargon-free modifier when nature is beginner', () => {
+    const prompt = buildPinchPrompt('Is the plan written?', 'stage_transition', 'implementation',
+      makeProfile({ nature: 'beginner' }));
+    expect(prompt).toContain('jargon-free');
+  });
+
+  it('falls back to static tone when profile is undefined', () => {
+    const prompt = buildPinchPrompt('Is the plan written?', 'stage_transition', 'implementation');
+    expect(prompt).toContain('Motivating and friendly, not judgmental');
+  });
+});

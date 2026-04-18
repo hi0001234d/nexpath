@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { Stage } from '../classifier/types.js';
+import type { Stage, UserProfile } from '../classifier/types.js';
 import type { FlagType } from '../classifier/Stage2Trigger.js';
 import {
   IDEA_TO_PRD,
@@ -53,6 +53,18 @@ export const PINCH_FALLBACK_TABLE: Record<string, string> = {
 
 // ── CO-STAR prompt ─────────────────────────────────────────────────────────────
 
+function buildToneHint(profile: UserProfile): string {
+  const modifiers: string[] = [];
+  if (profile.mood === 'frustrated') modifiers.push('especially empathetic and patient');
+  if (profile.mood === 'rushed')     modifiers.push('ultra-concise, no filler');
+  if (profile.mood === 'excited')    modifiers.push('energetic and encouraging');
+  if (profile.depth === 'high')      modifiers.push('peer-level technical, no hand-holding');
+  if (profile.nature === 'beginner') modifiers.push('encouraging, jargon-free');
+  return modifiers.length > 0
+    ? `Motivating and friendly. Additional tone: ${modifiers.join('; ')}.`
+    : 'Motivating and friendly, not judgmental. Like a trusted colleague tapping them on the shoulder.';
+}
+
 /**
  * Build the CO-STAR prompt for the pinch label generation.
  *
@@ -60,22 +72,27 @@ export const PINCH_FALLBACK_TABLE: Record<string, string> = {
  *   C — Context     : what is happening in the session
  *   O — Objective   : generate a 2-3 word label
  *   S — Style       : concise, punchy, developer-friendly
- *   T — Tone        : motivating, not judgmental, non-technical
+ *   T — Tone        : motivating, not judgmental, non-technical (profile-adapted when available)
  *   A — Audience    : a developer who is vibe coding with an AI agent
  *   R — Response    : 2-3 words only, plain text, no punctuation
  */
 export function buildPinchPrompt(
-  question:    string,
-  flagType:    FlagType,
+  question:     string,
+  flagType:     FlagType,
   currentStage: Stage,
+  profile?:     UserProfile,
 ): string {
+  const tone = profile
+    ? buildToneHint(profile)
+    : 'Motivating and friendly, not judgmental. Like a trusted colleague tapping them on the shoulder.';
+
   return `Context: A developer is using an AI coding agent. The system has detected that the developer may benefit from a quick check-in. The situation: ${question}
 
 Objective: Generate a 2-3 word label that opens a short advisory popup. The label appears in bold at the top of the popup, above the question "${question}".
 
 Style: Ultra-concise. Punchy. Memorable. Think of it as a chapter title or a traffic sign — not a sentence.
 
-Tone: Motivating and friendly, not judgmental. Like a trusted colleague tapping them on the shoulder.
+Tone: ${tone}
 
 Audience: A developer who is moving fast with an AI coding agent. They may be mid-flow. The label should feel like a natural pause, not an interruption.
 
@@ -132,13 +149,14 @@ export async function generatePinchLabel(
   stage:    Stage,
   flagType: FlagType,
   client?:  OpenAI,
+  profile?: UserProfile,
 ): Promise<string> {
   const content  = resolveDecisionContent(stage, flagType);
   const fallback = content.pinchFallback;
 
   try {
     const openai   = client ?? new OpenAI();
-    const prompt   = buildPinchPrompt(content.question, flagType, stage);
+    const prompt   = buildPinchPrompt(content.question, flagType, stage, profile);
 
     const response = await openai.chat.completions.create({
       model:       PINCH_MODEL,

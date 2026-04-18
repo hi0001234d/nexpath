@@ -130,11 +130,15 @@ export async function runAuto(
   // ── 8. Mark as fired (before rendering — prevents re-entry on restart) ───────
   mgr.markDecisionSessionFired(store, firedKey);
 
+  // ── 8.5. Read user profile (computed in processPrompt, null if < 5 prompts) ──
+  const userProfile = mgr.current.profile ?? undefined;
+
   // ── 9. Pinch label generation ────────────────────────────────────────────────
   const pinchLabel = await generatePinchLabel(
     mgr.current.currentStage,
     flagType,
     openai,
+    userProfile,
   );
 
   // ── 10. Decision session UI ──────────────────────────────────────────────────
