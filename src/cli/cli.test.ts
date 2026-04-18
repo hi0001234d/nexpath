@@ -26,7 +26,24 @@ describe('nexpath CLI — metadata', () => {
       expect.arrayContaining(['install', 'uninstall', 'init', 'auto', 'optimize', 'status', 'config', 'store'])
     );
   });
+
+  it('config registers set and get sub-commands', () => {
+    const prog = createProgram();
+    const configCmd = prog.commands.find((c) => c.name() === 'config')!;
+    const subNames = configCmd.commands.map((c) => c.name());
+    expect(subNames).toEqual(expect.arrayContaining(['set', 'get']));
+  });
+
+  it('store registers delete, disable, and prune sub-commands', () => {
+    const prog = createProgram();
+    const storeCmd = prog.commands.find((c) => c.name() === 'store')!;
+    const subNames = storeCmd.commands.map((c) => c.name());
+    expect(subNames).toEqual(expect.arrayContaining(['delete', 'disable', 'prune']));
+  });
 });
+
+// Stub commands — these still print "not yet implemented"
+// Config + store commands are wired to real handlers; tested in commands/*.test.ts
 
 describe('nexpath CLI — lifecycle stubs', () => {
   it('install prints stub message', async () => {
@@ -61,39 +78,5 @@ describe('nexpath CLI — status stub', () => {
   it('status prints stub message', async () => {
     const out = await run('status');
     expect(out[0]).toBe('[nexpath status] — not yet implemented');
-  });
-});
-
-describe('nexpath CLI — config sub-commands', () => {
-  it('config set <key> <value> prints stub message', async () => {
-    const out = await run('config', 'set', 'language_override', 'en');
-    expect(out[0]).toBe('[nexpath config set language_override en] — not yet implemented');
-  });
-
-  it('config get <key> prints stub message', async () => {
-    const out = await run('config', 'get', 'language_override');
-    expect(out[0]).toBe('[nexpath config get language_override] — not yet implemented');
-  });
-});
-
-describe('nexpath CLI — store sub-commands', () => {
-  it('store delete prints stub message', async () => {
-    const out = await run('store', 'delete');
-    expect(out[0]).toBe('[nexpath store delete] — not yet implemented');
-  });
-
-  it('store disable prints stub message', async () => {
-    const out = await run('store', 'disable');
-    expect(out[0]).toBe('[nexpath store disable] — not yet implemented');
-  });
-
-  it('store prune --older-than 30d prints stub message', async () => {
-    const out = await run('store', 'prune', '--older-than', '30d');
-    expect(out[0]).toBe('[nexpath store prune --older-than 30d] — not yet implemented');
-  });
-
-  it('store prune without --older-than uses ? placeholder', async () => {
-    const out = await run('store', 'prune');
-    expect(out[0]).toBe('[nexpath store prune --older-than ?] — not yet implemented');
   });
 });

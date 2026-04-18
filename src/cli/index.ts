@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
+import { configGetAction, configSetAction } from './commands/config.js';
+import { storeDeleteAction, storeDisableAction, storePruneAction } from './commands/store.js';
 
 export function createProgram(): Command {
   const program = new Command();
@@ -66,16 +68,16 @@ export function createProgram(): Command {
 
   configCmd
     .command('set <key> <value>')
-    .description('Set a config value (e.g. language_override en)')
-    .action((key: string, value: string) => {
-      console.log(`[nexpath config set ${key} ${value}] — not yet implemented`);
+    .description('Set a config value (e.g. prompt_capture_enabled false)')
+    .action(async (key: string, value: string) => {
+      await configSetAction(key, value);
     });
 
   configCmd
     .command('get <key>')
     .description('Get a config value')
-    .action((key: string) => {
-      console.log(`[nexpath config get ${key}] — not yet implemented`);
+    .action(async (key: string) => {
+      await configGetAction(key);
     });
 
   // ── Store command ─────────────────────────────────────────────────────────────
@@ -86,24 +88,27 @@ export function createProgram(): Command {
 
   storeCmd
     .command('delete')
-    .description('Delete all stored prompts')
-    .action(() => {
-      console.log('[nexpath store delete] — not yet implemented');
+    .description('Delete all stored prompts (or a single project with --project)')
+    .option('--project <path>', 'Delete prompts for this project only')
+    .option('-y, --yes', 'Skip confirmation prompt')
+    .action(async (opts: { project?: string; yes?: boolean }) => {
+      await storeDeleteAction(opts);
     });
 
   storeCmd
     .command('disable')
-    .description('Disable prompt capture (sets prompt_capture_enabled = false)')
-    .action(() => {
-      console.log('[nexpath store disable] — not yet implemented');
+    .description('Disable prompt capture (sets prompt_capture_enabled = false, keeps existing data)')
+    .action(async () => {
+      await storeDisableAction();
     });
 
   storeCmd
     .command('prune')
-    .option('--older-than <period>', 'Remove prompts older than this period (e.g. 30d, 6m)')
     .description('Remove prompts older than the specified period')
-    .action((opts: { olderThan?: string }) => {
-      console.log(`[nexpath store prune --older-than ${opts.olderThan ?? '?'}] — not yet implemented`);
+    .option('--older-than <period>', 'Period threshold (e.g. 30d, 6m, 1y)')
+    .option('--project <path>', 'Prune only this project')
+    .action(async (opts: { olderThan?: string; project?: string }) => {
+      await storePruneAction(opts);
     });
 
   return program;
@@ -114,5 +119,5 @@ export const program = createProgram();
 
 // Only parse argv when run directly (not when imported by tests)
 if (fileURLToPath(import.meta.url) === process.argv[1]) {
-  program.parse();
+  await program.parseAsync();
 }
