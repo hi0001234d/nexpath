@@ -161,15 +161,38 @@ export async function runAuto(
 // ── CLI entry point ────────────────────────────────────────────────────────────
 
 /**
+ * Read all data from stdin (non-TTY).  Returns '' if stdin is a TTY or empty.
+ * Used in hook mode to receive the Claude Code JSON payload.
+ */
+export async function readStdin(): Promise<string> {
+  if (process.stdin.isTTY) return '';
+  return new Promise((resolve) => {
+    let data = '';
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (chunk: string) => { data += chunk; });
+    process.stdin.on('end', () => resolve(data.trim()));
+    process.stdin.on('error', () => resolve(''));
+    // Safety timeout — stdin closes in <100ms in normal hook operation.
+    // If it never closes (misbehaving environment), fail fast after 5 s.
+    setTimeout(() => resolve(data.trim()), 5000);
+  });
+}
+
+/**
  * Register `nexpath auto` with the given Commander program.
  *
  * Usage:
  *   nexpath auto --project /path/to/project "The latest prompt text"
  *
- * The command is designed to be called between agent responses (post-response,
- * pre-next-prompt) via a hook in the agent environment.
+ * Hook mode (Claude Code UserPromptSubmit):
+ *   The command reads the prompt from the JSON payload on stdin when no
+ *   positional argument is provided.  The project root defaults to CWD,
+ *   which Claude Code sets to the project directory for hooks.
  *
- * If a prompt is selected, it is printed to stdout for the agent to pick up.
+ *   When a prompt is selected in hook mode the output is a JSON object
+ *   using the Claude Code `additionalContext` format so the guidance is
+ *   injected into the conversation automatically.
+ *
  * If skipped or no action: exits silently.
  */
 export function registerAutoCommand(program: import('commander').Command): void {
@@ -178,9 +201,25 @@ export function registerAutoCommand(program: import('commander').Command): void 
     .description('Run the nexpath advisory pipeline between agent responses')
     .option('-p, --project <path>', 'Project root path', process.cwd())
     .option('--db <path>', 'Database path', DEFAULT_DB_PATH)
-    .argument('[prompt]', 'The latest prompt text (required)')
+    .argument('[prompt]', 'The latest prompt text (omit to read from stdin in hook mode)')
     .action(async (promptArg: string | undefined, opts: { project: string; db: string }) => {
-      const promptText = promptArg?.trim();
+      let promptText = promptArg?.trim();
+      let hookMode   = false;
+
+      if (!promptText) {
+        // Hook mode: read JSON payload from stdin (Claude Code UserPromptSubmit)
+        const raw = await readStdin();
+        if (raw) {
+          try {
+            const payload = JSON.parse(raw) as { prompt?: string };
+            promptText = payload.prompt?.trim();
+            hookMode   = true;
+          } catch {
+            // Not valid JSON — fall through to the error below
+          }
+        }
+      }
+
       if (!promptText) {
         process.stderr.write('nexpath auto: prompt text is required\n');
         process.exit(1);
@@ -194,7 +233,17 @@ export function registerAutoCommand(program: import('commander').Command): void 
         );
 
         if (result.outcome === 'selected') {
-          process.stdout.write(result.selectedPrompt + '\n');
+          if (hookMode) {
+            // Claude Code hook output format — injected as additionalContext
+            process.stdout.write(JSON.stringify({
+              hookSpecificOutput: {
+                hookEventName:     'UserPromptSubmit',
+                additionalContext: result.selectedPrompt,
+              },
+            }) + '\n');
+          } else {
+            process.stdout.write(result.selectedPrompt + '\n');
+          }
         }
         // 'no_action' and 'skipped' → exit silently
       } finally {

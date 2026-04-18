@@ -22,6 +22,11 @@ import {
   claudeCliUninstall,
   installAction,
   uninstallAction,
+  getClaudeSettingsPath,
+  buildHookCommand,
+  buildHookEntry,
+  writeHookEntry,
+  removeHookEntry,
 } from './install.js';
 
 afterEach(() => vi.restoreAllMocks());
@@ -792,5 +797,254 @@ describe('uninstallAction', () => {
     } finally {
       cleanup();
     }
+  });
+});
+
+// ── getClaudeSettingsPath ─────────────────────────────────────────────────────
+
+describe('getClaudeSettingsPath', () => {
+  it('returns path inside .claude directory', () => {
+    const p = getClaudeSettingsPath('/home/user');
+    expect(p).toContain('.claude');
+    expect(p.endsWith('settings.json')).toBe(true);
+  });
+
+  it('is separate from .claude.json (MCP config)', () => {
+    const settings = getClaudeSettingsPath('/home/user');
+    expect(settings).not.toBe(join('/home/user', '.claude.json'));
+  });
+});
+
+// ── buildHookCommand ──────────────────────────────────────────────────────────
+
+describe('buildHookCommand', () => {
+  it('starts with node prefix', () => {
+    const cmd = buildHookCommand('/home/user', 'linux');
+    expect(cmd.startsWith('node "')).toBe(true);
+  });
+
+  it('contains auto --db flags', () => {
+    const cmd = buildHookCommand('/home/user', 'linux');
+    expect(cmd).toContain('" auto --db "');
+  });
+
+  it('db path ends with prompt-store.db', () => {
+    const cmd = buildHookCommand('/home/user', 'linux');
+    expect(cmd).toContain('prompt-store.db"');
+  });
+
+  it('db path includes .nexpath directory', () => {
+    const cmd = buildHookCommand('/home/user', 'linux');
+    expect(cmd).toContain('.nexpath');
+  });
+
+  it('uses forward slashes on Windows (no backslashes)', () => {
+    const cmd = buildHookCommand('C:\\Users\\Test', 'win32');
+    expect(cmd).not.toContain('\\');
+  });
+
+  it('cli path is absolute (not relative)', () => {
+    const cmd = buildHookCommand('/home/user', 'linux');
+    const match = /^node "([^"]+)"/.exec(cmd);
+    expect(match).not.toBeNull();
+    const cliPath = match![1];
+    expect(cliPath.startsWith('/') || /^[A-Za-z]:/.test(cliPath)).toBe(true);
+  });
+});
+
+// ── buildHookEntry ────────────────────────────────────────────────────────────
+
+describe('buildHookEntry', () => {
+  it('has UserPromptSubmit key', () => {
+    const entry = buildHookEntry('/home/user', 'linux');
+    expect(entry).toHaveProperty('UserPromptSubmit');
+  });
+
+  it('UserPromptSubmit is an array', () => {
+    const entry = buildHookEntry('/home/user', 'linux');
+    expect(Array.isArray(entry.UserPromptSubmit)).toBe(true);
+  });
+
+  it('first hook group has _nexpath_hook: true marker', () => {
+    const entry  = buildHookEntry('/home/user', 'linux');
+    const groups = entry.UserPromptSubmit as Array<Record<string, unknown>>;
+    expect(groups[0]._nexpath_hook).toBe(true);
+  });
+
+  it('matcher is UserPromptSubmit', () => {
+    const entry  = buildHookEntry('/home/user', 'linux');
+    const groups = entry.UserPromptSubmit as Array<Record<string, unknown>>;
+    expect(groups[0].matcher).toBe('UserPromptSubmit');
+  });
+
+  it('inner hooks array has one entry with type command', () => {
+    const entry  = buildHookEntry('/home/user', 'linux');
+    const groups = entry.UserPromptSubmit as Array<Record<string, unknown>>;
+    const hooks  = groups[0].hooks as Array<Record<string, unknown>>;
+    expect(hooks).toHaveLength(1);
+    expect(hooks[0].type).toBe('command');
+  });
+
+  it('does NOT include a timeout field (uses Claude Code default)', () => {
+    const entry  = buildHookEntry('/home/user', 'linux');
+    const groups = entry.UserPromptSubmit as Array<Record<string, unknown>>;
+    const hooks  = groups[0].hooks as Array<Record<string, unknown>>;
+    expect(hooks[0]).not.toHaveProperty('timeout');
+  });
+
+  it('hook command contains nexpath auto --db', () => {
+    const entry  = buildHookEntry('/home/user', 'linux');
+    const groups = entry.UserPromptSubmit as Array<Record<string, unknown>>;
+    const hooks  = groups[0].hooks as Array<Record<string, unknown>>;
+    expect(hooks[0].command as string).toContain('auto --db');
+  });
+});
+
+// ── writeHookEntry ────────────────────────────────────────────────────────────
+
+describe('writeHookEntry', () => {
+  it('creates settings.json with UserPromptSubmit hook when file is absent', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      const file = join(dir, 'settings.json');
+      writeHookEntry(file, '/home/user', 'linux');
+      const data  = readJson(file) as Record<string, unknown>;
+      const hooks = data.hooks as Record<string, unknown>;
+      expect(hooks).toHaveProperty('UserPromptSubmit');
+    } finally { cleanup(); }
+  });
+
+  it('preserves existing UserPromptSubmit hooks from other tools', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      const file = join(dir, 'settings.json');
+      writeFileSync(file, JSON.stringify({
+        hooks: {
+          UserPromptSubmit: [
+            { matcher: 'UserPromptSubmit', hooks: [{ type: 'command', command: 'other-tool' }] },
+          ],
+        },
+      }), 'utf8');
+      writeHookEntry(file, '/home/user', 'linux');
+      const data   = readJson(file) as Record<string, unknown>;
+      const hooks  = data.hooks as Record<string, unknown>;
+      const groups = hooks.UserPromptSubmit as Array<Record<string, unknown>>;
+      expect(groups.length).toBe(2);
+      const commands = groups.flatMap(
+        (g) => (g.hooks as Array<Record<string, unknown>>).map((h) => h.command as string),
+      );
+      expect(commands).toContain('other-tool');
+      expect(commands.some((c) => c.includes('auto --db'))).toBe(true);
+    } finally { cleanup(); }
+  });
+
+  it('replaces prior nexpath hook on reinstall without duplicating', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      const file = join(dir, 'settings.json');
+      writeHookEntry(file, '/home/user', 'linux');
+      writeHookEntry(file, '/home/user', 'linux');
+      const data    = readJson(file) as Record<string, unknown>;
+      const hooks   = data.hooks as Record<string, unknown>;
+      const groups  = hooks.UserPromptSubmit as Array<Record<string, unknown>>;
+      const nexpath = groups.filter((g) => g._nexpath_hook);
+      expect(nexpath).toHaveLength(1);
+    } finally { cleanup(); }
+  });
+
+  it('creates parent directory if it does not exist', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      const file = join(dir, 'nested', 'settings.json');
+      writeHookEntry(file, '/home/user', 'linux');
+      const data = readJson(file) as Record<string, unknown>;
+      expect(data).toHaveProperty('hooks');
+    } finally { cleanup(); }
+  });
+});
+
+// ── removeHookEntry ───────────────────────────────────────────────────────────
+
+describe('removeHookEntry', () => {
+  it('returns false when settings.json does not exist', () => {
+    const absent = join(tmpdir(), `nexpath-absent-${randomUUID()}.json`);
+    expect(removeHookEntry(absent)).toBe(false);
+  });
+
+  it('returns false when file has no hooks key', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      const file = join(dir, 'settings.json');
+      writeFileSync(file, JSON.stringify({}), 'utf8');
+      expect(removeHookEntry(file)).toBe(false);
+    } finally { cleanup(); }
+  });
+
+  it('returns false when nexpath hook is absent', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      const file = join(dir, 'settings.json');
+      writeFileSync(file, JSON.stringify({ hooks: {} }), 'utf8');
+      expect(removeHookEntry(file)).toBe(false);
+    } finally { cleanup(); }
+  });
+
+  it('removes nexpath hook group and returns true', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      const file = join(dir, 'settings.json');
+      writeHookEntry(file, '/home/user', 'linux');
+      expect(removeHookEntry(file)).toBe(true);
+      const data  = readJson(file) as Record<string, unknown>;
+      const hooks = data.hooks as Record<string, unknown>;
+      expect(hooks.UserPromptSubmit).toBeUndefined();
+    } finally { cleanup(); }
+  });
+
+  it('preserves non-nexpath UserPromptSubmit hooks when removing', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      const file = join(dir, 'settings.json');
+      writeFileSync(file, JSON.stringify({
+        hooks: {
+          UserPromptSubmit: [
+            { matcher: 'UserPromptSubmit', hooks: [{ type: 'command', command: 'other-tool' }] },
+            { _nexpath_hook: true, matcher: 'UserPromptSubmit', hooks: [{ type: 'command', command: 'node "/x" auto --db "/y"' }] },
+          ],
+        },
+      }), 'utf8');
+      removeHookEntry(file);
+      const data   = readJson(file) as Record<string, unknown>;
+      const hooks  = data.hooks as Record<string, unknown>;
+      const groups = hooks.UserPromptSubmit as Array<Record<string, unknown>>;
+      expect(groups).toHaveLength(1);
+      const cmd = (groups[0].hooks as Array<Record<string, unknown>>)[0].command;
+      expect(cmd).toBe('other-tool');
+    } finally { cleanup(); }
+  });
+
+  it('returns false on second call (idempotent)', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      const file = join(dir, 'settings.json');
+      writeHookEntry(file, '/home/user', 'linux');
+      removeHookEntry(file);
+      expect(removeHookEntry(file)).toBe(false);
+    } finally { cleanup(); }
+  });
+});
+
+// ── resolveAgentPaths — claudeSettings field ──────────────────────────────────
+
+describe('resolveAgentPaths — claudeSettings', () => {
+  it('includes claudeSettings pointing inside .claude directory', () => {
+    const paths = resolveAgentPaths('/home/user', '/appdata', '/cwd', 'linux');
+    expect(paths.claudeSettings).toContain('.claude');
+    expect(paths.claudeSettings.endsWith('settings.json')).toBe(true);
+  });
+
+  it('claudeSettings is different from claudeJson', () => {
+    const paths = resolveAgentPaths('/home/user', '/appdata', '/cwd', 'linux');
+    expect(paths.claudeSettings).not.toBe(paths.claudeJson);
   });
 });

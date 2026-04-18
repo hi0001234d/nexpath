@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
+import { PassThrough } from 'node:stream';
 import { openStore } from '../../store/db.js';
 import type { Store } from '../../store/db.js';
-import { buildFiredKey, runAuto } from './auto.js';
+import { buildFiredKey, runAuto, readStdin } from './auto.js';
 import type { AutoInput } from './auto.js';
 import { getSkippedSessions } from '../../store/skipped-sessions.js';
 import { SKIP_NOW } from '../../decision-session/options.js';
@@ -429,5 +430,50 @@ describe('SessionStateManager — firedDecisionSessions', () => {
     const futureTime = Date.now() + SESSION_GAP_MS + 1000;
     const mgr2 = SessionStateManager.load(store, '/proj/e', futureTime);
     expect(mgr2.current.firedDecisionSessions).toEqual([]);
+  });
+});
+
+// ── readStdin ─────────────────────────────────────────────────────────────────
+
+describe('readStdin', () => {
+  const originalStdin = process.stdin;
+
+  function replaceStdin(stream: PassThrough): void {
+    Object.defineProperty(process, 'stdin', { value: stream, writable: true, configurable: true });
+  }
+
+  afterEach(() => {
+    Object.defineProperty(process, 'stdin', { value: originalStdin, writable: true, configurable: true });
+    vi.useRealTimers();
+  });
+
+  it('returns empty string immediately when stdin is a TTY', async () => {
+    const stream = new PassThrough();
+    (stream as unknown as Record<string, unknown>).isTTY = true;
+    replaceStdin(stream);
+    const result = await readStdin();
+    expect(result).toBe('');
+  });
+
+  it('returns data from stdin when it closes normally', async () => {
+    const stream = new PassThrough();
+    replaceStdin(stream);
+    const promise = readStdin();
+    stream.push('{"prompt":"hello"}');
+    stream.push(null); // end
+    const result = await promise;
+    expect(result).toBe('{"prompt":"hello"}');
+  });
+
+  it('resolves via 5-second timeout when stdin never closes', async () => {
+    vi.useFakeTimers();
+    const stream = new PassThrough();
+    replaceStdin(stream);
+    const promise = readStdin();
+    stream.push('partial data');
+    // stdin never ends — advance timers past the 5 s safety timeout
+    await vi.advanceTimersByTimeAsync(5001);
+    const result = await promise;
+    expect(result).toBe('partial data');
   });
 });
