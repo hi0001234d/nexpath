@@ -33,6 +33,20 @@ CREATE TABLE IF NOT EXISTS session_states (
   state_json   TEXT    NOT NULL,
   updated_at   INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS skipped_sessions (
+  id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_root            TEXT    NOT NULL,
+  session_id              TEXT    NOT NULL,
+  flag_type               TEXT    NOT NULL,
+  stage                   TEXT    NOT NULL,
+  level_reached           INTEGER NOT NULL,
+  skipped_at_prompt_count INTEGER NOT NULL,
+  skipped_at              INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_skipped_sessions_project
+  ON skipped_sessions (project_root, skipped_at);
 `;
 
 export function migrate(db: Database): void {

@@ -3,6 +3,13 @@ import { openStore, type Store } from './db.js';
 import { insertPrompt, deleteProjectPrompts, deleteAllPrompts, pruneOlderThan, getPromptStats } from './prompts.js';
 import { getConfig, setConfig, getAllConfig, isConfigSet } from './config.js';
 import { redactSecrets } from './redact.js';
+import {
+  insertSkippedSession,
+  getSkippedSessions,
+  getSkippedSessionCount,
+  deleteSkippedSession,
+  deleteAllSkippedSessions,
+} from './skipped-sessions.js';
 
 // ── redactSecrets ─────────────────────────────────────────────────────────────
 
@@ -66,6 +73,16 @@ describe('store — schema', () => {
   it('creates the index on prompts(project_root, id)', () => {
     const res = store.db.exec("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_prompts_project_id'");
     expect(res[0]?.values[0]?.[0]).toBe('idx_prompts_project_id');
+  });
+
+  it('creates the skipped_sessions table', () => {
+    const res = store.db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='skipped_sessions'");
+    expect(res[0]?.values[0]?.[0]).toBe('skipped_sessions');
+  });
+
+  it('creates the index on skipped_sessions(project_root, skipped_at)', () => {
+    const res = store.db.exec("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_skipped_sessions_project'");
+    expect(res[0]?.values[0]?.[0]).toBe('idx_skipped_sessions_project');
   });
 });
 
@@ -320,5 +337,141 @@ describe('store — config', () => {
     setConfig(store, 'prompt_capture_enabled', 'true');
     expect(isConfigSet(store.db, 'prompt_capture_enabled')).toBe(true);
     expect(isConfigSet(store.db, 'prompt_store_max_per_project')).toBe(false);
+  });
+});
+
+// ── skipped_sessions CRUD ─────────────────────────────────────────────────────
+
+describe('store — skipped_sessions', () => {
+  let store: Store;
+
+  const BASE = {
+    projectRoot:          '/proj/alpha',
+    sessionId:            'session-abc',
+    flagType:             'stage_transition',
+    stage:                'implementation',
+    levelReached:         1,
+    skippedAtPromptCount: 22,
+  };
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('inserts a skipped session and returns it via getSkippedSessions', () => {
+    insertSkippedSession(store, BASE);
+    const rows = getSkippedSessions(store, '/proj/alpha');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].projectRoot).toBe('/proj/alpha');
+    expect(rows[0].sessionId).toBe('session-abc');
+    expect(rows[0].flagType).toBe('stage_transition');
+    expect(rows[0].stage).toBe('implementation');
+    expect(rows[0].levelReached).toBe(1);
+    expect(rows[0].skippedAtPromptCount).toBe(22);
+  });
+
+  it('skipped_at is set to a unix ms timestamp close to Date.now()', () => {
+    const before = Date.now();
+    insertSkippedSession(store, BASE);
+    const after = Date.now();
+    const row = getSkippedSessions(store, '/proj/alpha')[0];
+    expect(row.skippedAt).toBeGreaterThanOrEqual(before);
+    expect(row.skippedAt).toBeLessThanOrEqual(after);
+  });
+
+  it('assigns an auto-incremented id', () => {
+    insertSkippedSession(store, BASE);
+    insertSkippedSession(store, { ...BASE, flagType: 'absence:test_creation' });
+    const rows = getSkippedSessions(store, '/proj/alpha');
+    expect(rows[0].id).toBe(1);
+    expect(rows[1].id).toBe(2);
+  });
+
+  it('getSkippedSessions returns rows ordered oldest-first (by skipped_at ASC)', () => {
+    insertSkippedSession(store, { ...BASE, flagType: 'stage_transition' });
+    insertSkippedSession(store, { ...BASE, flagType: 'absence:test_creation' });
+    const rows = getSkippedSessions(store, '/proj/alpha');
+    expect(rows[0].flagType).toBe('stage_transition');
+    expect(rows[1].flagType).toBe('absence:test_creation');
+  });
+
+  it('getSkippedSessions returns only rows for the given project', () => {
+    insertSkippedSession(store, BASE);
+    insertSkippedSession(store, { ...BASE, projectRoot: '/proj/beta' });
+    expect(getSkippedSessions(store, '/proj/alpha')).toHaveLength(1);
+    expect(getSkippedSessions(store, '/proj/beta')).toHaveLength(1);
+  });
+
+  it('getSkippedSessions returns empty array when no rows exist', () => {
+    expect(getSkippedSessions(store, '/no/project')).toEqual([]);
+  });
+
+  it('getSkippedSessionCount returns correct count', () => {
+    expect(getSkippedSessionCount(store, '/proj/alpha')).toBe(0);
+    insertSkippedSession(store, BASE);
+    insertSkippedSession(store, { ...BASE, flagType: 'absence:security_check' });
+    expect(getSkippedSessionCount(store, '/proj/alpha')).toBe(2);
+  });
+
+  it('getSkippedSessionCount is project-scoped', () => {
+    insertSkippedSession(store, BASE);
+    insertSkippedSession(store, { ...BASE, projectRoot: '/proj/beta' });
+    expect(getSkippedSessionCount(store, '/proj/alpha')).toBe(1);
+    expect(getSkippedSessionCount(store, '/proj/beta')).toBe(1);
+  });
+
+  it('deleteSkippedSession removes the row by id', () => {
+    insertSkippedSession(store, BASE);
+    const id = getSkippedSessions(store, '/proj/alpha')[0].id;
+    deleteSkippedSession(store, id);
+    expect(getSkippedSessions(store, '/proj/alpha')).toHaveLength(0);
+  });
+
+  it('deleteSkippedSession removes only the targeted row', () => {
+    insertSkippedSession(store, BASE);
+    insertSkippedSession(store, { ...BASE, flagType: 'absence:test_creation' });
+    const rows = getSkippedSessions(store, '/proj/alpha');
+    deleteSkippedSession(store, rows[0].id);
+    const remaining = getSkippedSessions(store, '/proj/alpha');
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].flagType).toBe('absence:test_creation');
+  });
+
+  it('deleteSkippedSession is a no-op for a non-existent id', () => {
+    insertSkippedSession(store, BASE);
+    deleteSkippedSession(store, 9999); // id does not exist
+    expect(getSkippedSessions(store, '/proj/alpha')).toHaveLength(1);
+  });
+
+  it('deleteAllSkippedSessions removes all rows for the project', () => {
+    insertSkippedSession(store, BASE);
+    insertSkippedSession(store, { ...BASE, flagType: 'absence:test_creation' });
+    deleteAllSkippedSessions(store, '/proj/alpha');
+    expect(getSkippedSessions(store, '/proj/alpha')).toHaveLength(0);
+  });
+
+  it('deleteAllSkippedSessions only removes rows for the given project', () => {
+    insertSkippedSession(store, BASE);
+    insertSkippedSession(store, { ...BASE, projectRoot: '/proj/beta' });
+    deleteAllSkippedSessions(store, '/proj/alpha');
+    expect(getSkippedSessions(store, '/proj/alpha')).toHaveLength(0);
+    expect(getSkippedSessions(store, '/proj/beta')).toHaveLength(1);
+  });
+
+  it('stores absence flag type with signal key', () => {
+    insertSkippedSession(store, { ...BASE, flagType: 'absence:security_check' });
+    const row = getSkippedSessions(store, '/proj/alpha')[0];
+    expect(row.flagType).toBe('absence:security_check');
+  });
+
+  it('stores level_reached = 2 (user reached Level 2 before skipping)', () => {
+    insertSkippedSession(store, { ...BASE, levelReached: 2 });
+    const row = getSkippedSessions(store, '/proj/alpha')[0];
+    expect(row.levelReached).toBe(2);
+  });
+
+  it('stores level_reached = 3 (user reached Level 3 before skipping)', () => {
+    insertSkippedSession(store, { ...BASE, levelReached: 3 });
+    const row = getSkippedSessions(store, '/proj/alpha')[0];
+    expect(row.levelReached).toBe(3);
   });
 });
