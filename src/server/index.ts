@@ -19,18 +19,30 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import { openStore, closeStore } from '../store/index.js';
 import { TOOLS } from './tools.js';
+import { handleCapturePrompt, type CapturePromptParams } from './handlers.js';
+
+// ── Open prompt store ─────────────────────────────────────────────────────────
+// Opened once on startup; stays open for the full agent session.
+// Crash safety: insertPrompt serializes to disk on every call — at most one
+// in-flight prompt is lost on an unclean exit.
+
+const store = await openStore();
+process.stderr.write(`[nexpath-serve] store opened\n`);
 
 // ── Shutdown handlers ─────────────────────────────────────────────────────────
-// db.close() will be called here once the store module is implemented (item 2)
+// Close the SQLite connection cleanly so the last write is flushed.
 
 process.stdin.on('end', () => {
   process.stderr.write('[nexpath-serve] stdin closed — shutting down\n');
+  closeStore(store);
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
   process.stderr.write('[nexpath-serve] SIGTERM received — shutting down\n');
+  closeStore(store);
   process.exit(0);
 });
 
@@ -47,13 +59,25 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }))
 // Handle tool calls
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (request.params.name === 'capture_prompt') {
-    // Store module not yet implemented (item 2) — stub response
-    process.stderr.write(
-      `[nexpath-serve] capture_prompt called — store not yet implemented\n`
-    );
-    return {
-      content: [{ type: 'text', text: 'captured' }],
-    };
+    const args = request.params.arguments as CapturePromptParams | undefined;
+
+    if (!args?.prompt) {
+      return {
+        content: [{ type: 'text', text: 'Error: prompt argument is required' }],
+        isError: true,
+      };
+    }
+
+    try {
+      handleCapturePrompt(store, args);
+      return { content: [{ type: 'text', text: 'captured' }] };
+    } catch (err) {
+      process.stderr.write(`[nexpath-serve] capture_prompt error: ${err}\n`);
+      return {
+        content: [{ type: 'text', text: `Error: ${(err as Error).message}` }],
+        isError: true,
+      };
+    }
   }
 
   return {
