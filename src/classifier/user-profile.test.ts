@@ -41,6 +41,14 @@ describe('NatureClassifier — quadrantToNature', () => {
   it('one point below threshold → beginner if both below', () => {
     expect(quadrantToNature(NATURE_HIGH_THRESHOLD - 0.1, NATURE_HIGH_THRESHOLD - 0.1)).toBe('beginner');
   });
+
+  it('prec at threshold, play just below → hardcore_pro (not pro_geek_soul)', () => {
+    expect(quadrantToNature(NATURE_HIGH_THRESHOLD, NATURE_HIGH_THRESHOLD - 0.1)).toBe('hardcore_pro');
+  });
+
+  it('prec just below threshold, play at threshold → cool_geek (not pro_geek_soul)', () => {
+    expect(quadrantToNature(NATURE_HIGH_THRESHOLD - 0.1, NATURE_HIGH_THRESHOLD)).toBe('cool_geek');
+  });
 });
 
 describe('NatureClassifier — classifyNature', () => {
@@ -130,6 +138,12 @@ describe('NatureClassifier — classifyNature', () => {
     const { playfulnessScore: withoutEmoji } = classifyNature(['lets go this is working']);
     expect(withEmoji).toBeGreaterThan(withoutEmoji);
   });
+
+  it('playfulness score caps at 10 even with very many hits', () => {
+    const heavy = 'lol haha lmao omg wtf yeah nah nope welp oops whoops ugh meh wild cool crazy insane awesome sick dope kinda sorta tbh ngl imo idk right? yeah? no?';
+    const { playfulnessScore } = classifyNature([heavy, heavy, heavy]);
+    expect(playfulnessScore).toBeLessThanOrEqual(10);
+  });
 });
 
 // ── MoodClassifier ────────────────────────────────────────────────────────────
@@ -185,6 +199,46 @@ describe('MoodClassifier — extractMoodFeatures', () => {
   it('detects list structure (dash bullets)', () => {
     const f = extractMoodFeatures(['- add auth\n- add logging\n- add tests']);
     expect(f.listStructureCount).toBe(1);
+  });
+
+  it('detects list structure (bullet • format)', () => {
+    const f = extractMoodFeatures(['• add auth', '• add tests', '• deploy']);
+    expect(f.listStructureCount).toBe(3);
+  });
+
+  it('detects list structure (asterisk * format)', () => {
+    const f = extractMoodFeatures(['* add auth', '* add tests', '* deploy']);
+    expect(f.listStructureCount).toBe(3);
+  });
+
+  it('detects list structure (parenthesis-close 1) format)', () => {
+    const f = extractMoodFeatures(['1) implement auth', '2) write tests', '3) deploy']);
+    expect(f.listStructureCount).toBe(3);
+  });
+
+  it('allCapsPresent is true even when ALL CAPS appears only in a later prompt', () => {
+    const f = extractMoodFeatures([
+      'first prompt is totally normal and fine',
+      'second prompt is also fine here',
+      'third prompt has a BROKEN thing',
+    ]);
+    expect(f.allCapsPresent).toBe(true);
+  });
+
+  it('allCapsPresent is false when no prompt has ANY caps word (3+ chars)', () => {
+    const f = extractMoodFeatures([
+      'everything looks fine here',
+      'all good nothing wrong',
+    ]);
+    expect(f.allCapsPresent).toBe(false);
+  });
+
+  it('negLexiconHits exact count — two distinct terms across two prompts', () => {
+    const f = extractMoodFeatures([
+      'the output is broken here',
+      'the result is wrong for this',
+    ]);
+    expect(f.negLexiconHits).toBe(2);
   });
 });
 
@@ -266,6 +320,74 @@ describe('MoodClassifier — classifyMood', () => {
     const prompt = 'I want to implement the full authentication module including jwt token generation refresh token but it is broken and not working as expected right now';
     expect(classifyMood([prompt, prompt, prompt])).not.toBe('focused');
   });
+
+  // ── Threshold boundaries ──────────────────────────────────────────────────────
+
+  it('neg_lexicon_hits === 2 (at threshold, NOT > 2) → not frustrated → casual', () => {
+    // Exactly 2 neg hits, avg words ≥ 8, no other signals → falls through to casual
+    const prompts = [
+      'the output returned from the function is broken here for some reason',  // 'broken' → 1
+      'the computed result is wrong for this particular specific input case',   // 'wrong' → 1
+      'everything else seems to be working fine and looks correct here',
+    ];
+    expect(classifyMood(prompts)).toBe('casual');
+  });
+
+  it('neg_lexicon_hits === 3 (> 2) → frustrated', () => {
+    const prompts = [
+      'the output returned from the function is broken here for some reason',  // 'broken'
+      'the computed result is wrong for this particular specific input case',   // 'wrong'
+      'something in the codebase is still failing and not working correctly',   // 'still' + 'not working'
+    ];
+    expect(classifyMood(prompts)).toBe('frustrated');
+  });
+
+  it('avg_word_count === 8 exactly → NOT rushed → casual (threshold is < 8, not ≤)', () => {
+    // Single prompt with exactly 8 words, no other signals
+    expect(classifyMood(['add the login form to the app here'])).toBe('casual');
+  });
+
+  it('exclamation_density === 1.0 exactly → NOT excited → casual (threshold is > 1.0, not ≥)', () => {
+    // 3 prompts × 1 exclamation each → density = 1.0, avg words ≥ 8, no other signals
+    const prompts = [
+      'this implementation looks really great and everything works well!',
+      'nice progress on the entire feature implementation here!',
+      'good job completing all this work and keep it going!',
+    ];
+    expect(classifyMood(prompts)).toBe('casual');
+  });
+
+  it('list_structure_count === 2 (NOT > 2) → not methodical → casual', () => {
+    // Only 2 list prompts out of 3, avg ≥ 8, no other strong signals
+    const prompts = [
+      '1. implement the auth endpoint with proper validation and error handling here',
+      '2. write the unit tests for the auth module covering all the edge cases',
+      'then we do the final review of all the generated implementation code',
+    ];
+    expect(classifyMood(prompts)).toBe('casual');
+  });
+
+  // ── Cross-signal priority ordering ────────────────────────────────────────────
+
+  it('excited beats methodical when both triggered (elif order)', () => {
+    // list_count > 2 AND exclamation_density > 1.0 → excited wins (checked first)
+    const prompts = [
+      '1. implement the full authentication endpoint with proper validation right now!!!',
+      '2. write comprehensive unit test cases for the entire auth module please!!!',
+      '3. deploy to staging and celebrate the whole feature launch completion!!!',
+    ];
+    expect(classifyMood(prompts)).toBe('excited');
+  });
+
+  it('methodical beats focused when both triggered (elif order)', () => {
+    // list_count > 2 AND avg_word_count > 25 AND neg === 0 → methodical wins (checked first)
+    const prompts = [
+      '1. please implement the complete user authentication endpoint that handles all the scenarios and edge cases including proper error handling response codes input validation and security checks',
+      '2. write comprehensive unit tests for the entire authentication module making sure to cover all the boundary conditions integration points edge cases and performance scenarios thoroughly',
+      '3. perform a thorough detailed code review of the generated authentication implementation checking for security vulnerabilities performance concerns code quality issues and architectural consistency',
+    ];
+    expect(classifyMood(prompts)).toBe('methodical');
+  });
 });
 
 // ── DepthClassifier ───────────────────────────────────────────────────────────
@@ -290,6 +412,16 @@ describe('DepthClassifier — scorePromptDepth', () => {
   it('accumulates multiple high-depth hits in one prompt', () => {
     const score = scorePromptDepth('schema migration transaction consistency throughput latency cache');
     expect(score).toBeGreaterThanOrEqual(4);
+  });
+
+  it('mixed high and low vocab — net score is high minus low hits', () => {
+    // 'schema'(+1) + 'migration'(+1) + 'just'(-1) + 'quick'(-1) → net 0
+    expect(scorePromptDepth('schema migration just a quick thing')).toBe(0);
+  });
+
+  it('purely low-depth vocab yields a negative score', () => {
+    // 'just'(-1) + 'quick'(-1) + 'simple'(-1) → -3
+    expect(scorePromptDepth('just a quick simple change')).toBe(-3);
   });
 });
 
@@ -362,6 +494,27 @@ describe('DepthClassifier — classifyDepth', () => {
     const { depth } = classifyDepth(prompts);
     expect(depth).toBe('medium');
   });
+
+  it('depthScore just below HIGH_THRESHOLD (e.g. 1.5) → medium not high', () => {
+    // 'schema migration coupling' = 3 hits, 'neutral' = 0 → avg = 1.5 (< 2.0)
+    const { depth, depthScore } = classifyDepth(['schema migration coupling', 'add the feature']);
+    expect(depthScore).toBeCloseTo(1.5, 1);
+    expect(depth).toBe('medium');
+  });
+
+  it('depthScore just below MEDIUM_THRESHOLD (e.g. 0.25) → low not medium', () => {
+    // 'schema' = 1 hit, 3 neutral prompts → avg = 1/4 = 0.25 (< 0.5)
+    const { depth, depthScore } = classifyDepth(['schema', 'add this', 'build that', 'do it']);
+    expect(depthScore).toBeCloseTo(0.25, 2);
+    expect(depth).toBe('low');
+  });
+
+  it('negative depthScore (only low-depth vocab) → low', () => {
+    const prompts = ['just a quick fix', 'simple minor change', 'little fix here'];
+    const { depth, depthScore } = classifyDepth(prompts);
+    expect(depthScore).toBeLessThan(0);
+    expect(depth).toBe('low');
+  });
 });
 
 // ── UserProfileClassifier ─────────────────────────────────────────────────────
@@ -383,6 +536,25 @@ describe('UserProfileClassifier — classifyUserProfile', () => {
     const history = makeRecords(['implement this']);
     const profile = classifyUserProfile(history, 42);
     expect(profile.computedAt).toBe(42);
+  });
+
+  it('precisionScore and playfulnessScore are numbers in the 0–10 range', () => {
+    const history = makeRecords(['architecture schema tradeoff', 'lol yeah wild omg']);
+    const profile = classifyUserProfile(history, 2);
+    expect(typeof profile.precisionScore).toBe('number');
+    expect(typeof profile.playfulnessScore).toBe('number');
+    expect(profile.precisionScore).toBeGreaterThanOrEqual(0);
+    expect(profile.precisionScore).toBeLessThanOrEqual(10);
+    expect(profile.playfulnessScore).toBeGreaterThanOrEqual(0);
+    expect(profile.playfulnessScore).toBeLessThanOrEqual(10);
+  });
+
+  it('depthScore is a number (not undefined) and can be negative', () => {
+    const history = makeRecords(['just a quick simple fix', 'minor little fix here']);
+    const profile = classifyUserProfile(history, 2);
+    expect(typeof profile.depthScore).toBe('number');
+    expect(profile.depthScore).toBeLessThan(0);
+    expect(profile.depth).toBe('low');
   });
 
   it('returns beginner + casual + low for empty history', () => {
