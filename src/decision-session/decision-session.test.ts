@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from 'vitest';
-import { isCancel } from '@clack/prompts';
 import {
   resolveDecisionContent,
   buildOptionList,
@@ -222,6 +221,30 @@ describe('resolveDecisionContent', () => {
     const content = resolveDecisionContent('feedback_loop', 'absence:some_signal');
     expect(content).toBe(TASK_REVIEW);
   });
+
+  // Priority contract: absence override wins over TRANSITION_CONTENT
+  it('absence:test_creation on prd stage → TASK_REVIEW (override wins over IDEA_TO_PRD transition)', () => {
+    // Priority 1 (absence override) takes precedence over priority 2 (stage-based transition).
+    // 'prd' is in TRANSITION_CONTENT → IDEA_TO_PRD, but absence:test_creation override → TASK_REVIEW.
+    const content = resolveDecisionContent('prd', 'absence:test_creation');
+    expect(content).toBe(TASK_REVIEW);
+  });
+
+  it('absence:regression_check on architecture stage → TASK_REVIEW (override wins over PRD_TO_ARCHITECTURE)', () => {
+    const content = resolveDecisionContent('architecture', 'absence:regression_check');
+    expect(content).toBe(TASK_REVIEW);
+  });
+
+  it('unmapped absence on prd stage → IDEA_TO_PRD (falls through to TRANSITION_CONTENT)', () => {
+    // No override for 'some_signal' → falls to TRANSITION_CONTENT['prd'] = IDEA_TO_PRD
+    const content = resolveDecisionContent('prd', 'absence:some_unknown_signal');
+    expect(content).toBe(IDEA_TO_PRD);
+  });
+
+  it('unmapped absence on review_testing stage → IMPLEMENTATION_TO_REVIEW (falls through to TRANSITION_CONTENT)', () => {
+    const content = resolveDecisionContent('review_testing', 'absence:some_unknown_signal');
+    expect(content).toBe(IMPLEMENTATION_TO_REVIEW);
+  });
 });
 
 // ── Content structure validation ──────────────────────────────────────────────
@@ -382,6 +405,25 @@ describe('buildSelectMessage', () => {
     expect(msg).toContain('minimum viable step');
     expect(msg).toContain('Is the plan written?');
   });
+
+  it('Level 1: pinch label appears before the question in the message', () => {
+    const msg = buildSelectMessage('Hold up.', 'Is the plan written?', 1);
+    expect(msg.indexOf('Hold up.')).toBeLessThan(msg.indexOf('Is the plan written?'));
+  });
+
+  it('Level 2: order is pinch → subtitle → question', () => {
+    const msg = buildSelectMessage('Hold up.', 'Is the plan written?', 2);
+    const pinchPos    = msg.indexOf('Hold up.');
+    const subtitlePos = msg.indexOf('lighter options');
+    const questionPos = msg.indexOf('Is the plan written?');
+    expect(pinchPos).toBeLessThan(subtitlePos);
+    expect(subtitlePos).toBeLessThan(questionPos);
+  });
+
+  it('parts are separated by newlines', () => {
+    const msg = buildSelectMessage('Hold up.', 'Is the plan written?', 2);
+    expect(msg).toContain('\n');
+  });
 });
 
 // ── runLevel ──────────────────────────────────────────────────────────────────
@@ -430,6 +472,38 @@ describe('runLevel', () => {
     const call = (selectFn as ReturnType<typeof vi.fn>).mock.calls[0][0];
     const values = call.options.map((o: { value: string }) => o.value);
     expect(values).not.toContain(SHOW_SIMPLER);
+  });
+
+  it('value and label are equal for every option (options are pre-filled prompts)', () => {
+    const selectFn = mockSelect(SKIP_NOW);
+    // run and capture what was passed to selectFn
+    runLevel(makeInput(), 1, selectFn).catch(() => {});
+    // Since it's async, use an explicit assertion via calling with a spy
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    return runLevel(makeInput(), 1, spy).then(() => {
+      const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options;
+      for (const opt of opts) {
+        expect(opt.value).toBe(opt.label);
+      }
+    });
+  });
+
+  it('selecting an L2 content option returns that prompt text', async () => {
+    const content  = resolveDecisionContent('implementation', 'stage_transition');
+    const l2Option = content.L2[0];
+    const result   = await runLevel(makeInput(), 2, mockSelect(l2Option));
+    expect(result).toBe(l2Option);
+  });
+
+  it('selecting an L3 content option returns that prompt text', async () => {
+    const content  = resolveDecisionContent('prd', 'stage_transition');
+    const l3Option = content.L3[0];
+    const result   = await runLevel(
+      makeInput({ stage: 'prd', flagType: 'stage_transition' }),
+      3,
+      mockSelect(l3Option),
+    );
+    expect(result).toBe(l3Option);
   });
 });
 
@@ -561,6 +635,18 @@ describe('runDecisionSession', () => {
       const rows = getSkippedSessions(store, '/proj/cancel-store');
       expect(rows).toHaveLength(1);
       expect(rows[0].levelReached).toBe(1);
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('multiple skips create multiple rows (no dedup at storage layer)', async () => {
+    const store = await openStore(':memory:');
+    try {
+      await runDecisionSession(makeInput({ projectRoot: '/proj/multi' }), store, mockSelect(SKIP_NOW));
+      await runDecisionSession(makeInput({ projectRoot: '/proj/multi' }), store, mockSelect(SKIP_NOW));
+      const rows = getSkippedSessions(store, '/proj/multi');
+      expect(rows).toHaveLength(2);
     } finally {
       store.db.close();
     }

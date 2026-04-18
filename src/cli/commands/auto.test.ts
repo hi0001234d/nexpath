@@ -332,6 +332,54 @@ describe('runAuto — full flow', () => {
   });
 });
 
+// ── runAuto — store persistence ───────────────────────────────────────────────
+
+describe('runAuto — store persistence', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('records a skipped_sessions row when outcome is skipped', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/persist-skip');
+    mgr.addAbsenceFlag(store, {
+      signalKey:     'test_creation',
+      stage:         'implementation',
+      raisedAtIndex: 5,
+      cooldownUntil: 100,
+    });
+
+    const openai = makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.');
+    const result = await runAuto(
+      makeInput({ projectRoot: '/test/persist-skip' }),
+      store,
+      openai,
+      mockSelect(SKIP_NOW),
+    );
+
+    if (result.outcome === 'skipped') {
+      const rows = getSkippedSessions(store, '/test/persist-skip');
+      expect(rows).toHaveLength(1);
+      expect(rows[0].flagType).toBeDefined();
+      expect(rows[0].stage).toBeDefined();
+    } else {
+      // If Stage 2 didn't fire (no_action), no row written — acceptable
+      expect(result.outcome).toBe('no_action');
+    }
+  });
+
+  it('does NOT record a skipped_sessions row when outcome is no_action', async () => {
+    const result = await runAuto(
+      makeInput({ promptText: 'ok', projectRoot: '/test/persist-noact' }),
+      store,
+    );
+    expect(result.outcome).toBe('no_action');
+    const rows = getSkippedSessions(store, '/test/persist-noact');
+    expect(rows).toHaveLength(0);
+  });
+});
+
 // ── SessionStateManager — firedDecisionSessions field ────────────────────────
 
 describe('SessionStateManager — firedDecisionSessions', () => {

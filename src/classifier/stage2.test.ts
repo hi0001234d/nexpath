@@ -29,19 +29,20 @@ function makePromptRecord(text: string, index: number) {
 
 function makeState(overrides: Partial<SessionState> = {}): SessionState {
   return {
-    sessionId:       'test-session',
-    projectRoot:     '/test/project',
-    startedAt:       Date.now(),
-    lastPromptAt:    Date.now(),
-    currentStage:    'implementation',
-    stageConfidence: 0.85,
-    stageConfirmedAt: 5,
-    promptCount:     20,
-    promptHistory:   Array.from({ length: 15 }, (_, i) =>
+    sessionId:             'test-session',
+    projectRoot:           '/test/project',
+    startedAt:             Date.now(),
+    lastPromptAt:          Date.now(),
+    currentStage:          'implementation',
+    stageConfidence:       0.85,
+    stageConfirmedAt:      5,
+    promptCount:           20,
+    promptHistory:         Array.from({ length: 15 }, (_, i) =>
       makePromptRecord(`implement the auth module step ${i + 1}`, i),
     ),
-    signalCounters:  {},
-    absenceFlags:    [],
+    signalCounters:        {},
+    absenceFlags:          [],
+    firedDecisionSessions: [],
     ...overrides,
   };
 }

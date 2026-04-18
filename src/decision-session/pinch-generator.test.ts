@@ -60,6 +60,10 @@ describe('PinchGenerator constants', () => {
     expect(PINCH_TEMPERATURE).toBeGreaterThan(0.5);
   });
 
+  it('PINCH_TEMPERATURE is exactly 0.9', () => {
+    expect(PINCH_TEMPERATURE).toBe(0.9);
+  });
+
   it('PINCH_FALLBACK_TABLE has entries for all 6 transitions', () => {
     expect(PINCH_FALLBACK_TABLE.idea_to_prd).toBe(IDEA_TO_PRD.pinchFallback);
     expect(PINCH_FALLBACK_TABLE.prd_to_architecture).toBe(PRD_TO_ARCHITECTURE.pinchFallback);
@@ -180,6 +184,14 @@ describe('validatePinchLabel', () => {
     expect(validatePinchLabel('Pause.')).toBe('Pause.');
   });
 
+  it('returns null for a single-character string (below PINCH_MIN_CHARS)', () => {
+    expect(validatePinchLabel('A')).toBeNull();
+  });
+
+  it('returns null for a single-character string surrounded by quotes (still 1 char after strip)', () => {
+    expect(validatePinchLabel('"A"')).toBeNull();
+  });
+
   it('accepts a label with exactly 4 words (max flexibility boundary)', () => {
     // Implementation allows up to 4 words for LLM flexibility
     expect(validatePinchLabel('Hold on right now.')).toBe('Hold on right now.');
@@ -225,7 +237,7 @@ describe('generatePinchLabel', () => {
   });
 
   it('never throws — returns a string even on API failure', async () => {
-    await expect(generatePinchLabel('release', 'stage_transition', makeErrorClient())).resolves.toBeDefined();
+    await expect(generatePinchLabel('release', 'stage_transition', makeErrorClient())).resolves.toBeTypeOf('string');
   });
 
   it('uses IDEA_TO_PRD fallback for prd stage transition', async () => {
