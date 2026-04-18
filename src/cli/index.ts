@@ -6,6 +6,7 @@ import { storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAct
 import { installAction, uninstallAction } from './commands/install.js';
 import { initAction } from './commands/init.js';
 import { registerAutoCommand } from './commands/auto.js';
+import { registerOptimizeCommand } from './commands/optimize.js';
 
 export function createProgram(): Command {
   const program = new Command();
@@ -43,12 +44,7 @@ export function createProgram(): Command {
 
   registerAutoCommand(program);
 
-  program
-    .command('optimize')
-    .description('Work through previously skipped decision session suggestions')
-    .action(() => {
-      console.log('[nexpath optimize] — not yet implemented');
-    });
+  registerOptimizeCommand(program);
 
   // ── Status command ────────────────────────────────────────────────────────────
 

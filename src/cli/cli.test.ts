@@ -62,10 +62,34 @@ describe('nexpath CLI — auto command registration', () => {
   });
 });
 
-describe('nexpath CLI — guidance stubs', () => {
-  it('optimize prints stub message', async () => {
-    const out = await run('optimize');
-    expect(out[0]).toBe('[nexpath optimize] — not yet implemented');
+describe('nexpath CLI — optimize command registration', () => {
+  it('optimize command is registered with --project and --db options', () => {
+    const prog       = createProgram();
+    const optCmd = prog.commands.find((c) => c.name() === 'optimize')!;
+    expect(optCmd).toBeDefined();
+    const longFlags = optCmd.options.map((o) => o.long);
+    expect(longFlags).toContain('--project');
+    expect(longFlags).toContain('--db');
+  });
+
+  it('optimize command description mentions skipped suggestions', () => {
+    const prog   = createProgram();
+    const optCmd = prog.commands.find((c) => c.name() === 'optimize')!;
+    expect(optCmd.description()).toContain('skipped');
+  });
+
+  it('optimize prints "No skipped items" when queue is empty', async () => {
+    // run() captures console.log; optimize writes to stdout directly —
+    // capture stdout instead
+    const lines: string[] = [];
+    const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: unknown) => {
+      lines.push(String(chunk));
+      return true;
+    });
+    const prog = createProgram();
+    await prog.parseAsync(['node', 'nexpath', 'optimize', '--db', ':memory:']);
+    spy.mockRestore();
+    expect(lines.join('')).toContain('No skipped items');
   });
 });
 
