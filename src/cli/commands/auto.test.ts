@@ -255,7 +255,6 @@ describe('runAuto — full flow', () => {
     // Arrange: pre-seed the session state so shouldFireStage2 fires
     // We do this by importing and using SessionStateManager directly
     const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
-    const { AbsenceFlag } = await import('../../classifier/types.js').catch(() => ({ AbsenceFlag: null }));
     const mgr = SessionStateManager.load(store, '/test/full1');
 
     // Manually push an active absence flag so shouldFireStage2 fires

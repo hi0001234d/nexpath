@@ -96,8 +96,8 @@ export async function createXenovaEmbedder(): Promise<EmbeddingFn | null> {
   try {
     // Dynamic import so the module is not required at startup — only when Tier 3 is used.
     const { pipeline } = await import('@xenova/transformers');
-    // @ts-expect-error — pipeline types vary by version
-    const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const extractor = await (pipeline as any)('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
     return async (texts: string[]): Promise<number[][]> => {
       const output = await extractor(texts, { pooling: 'mean', normalize: true });
       // output.tolist() returns number[][] from the tensor

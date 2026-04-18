@@ -17,17 +17,18 @@ function makeResult(stage: import('./types.js').Stage, confidence: number): Clas
 
 function makeState(overrides: Partial<SessionState> = {}): SessionState {
   return {
-    sessionId:        'test-session',
-    projectRoot:      '/test/project',
-    startedAt:        1000,
-    lastPromptAt:     1000,
-    currentStage:     'implementation',
-    stageConfidence:  0.80,
-    stageConfirmedAt: 0,
-    promptCount:      20,
-    promptHistory:    [],
-    signalCounters:   initialSignalCounters(),
-    absenceFlags:     [],
+    sessionId:             'test-session',
+    projectRoot:           '/test/project',
+    startedAt:             1000,
+    lastPromptAt:          1000,
+    currentStage:          'implementation',
+    stageConfidence:       0.80,
+    stageConfirmedAt:      0,
+    promptCount:           20,
+    promptHistory:         [],
+    signalCounters:        initialSignalCounters(),
+    absenceFlags:          [],
+    firedDecisionSessions: [],
     ...overrides,
   };
 }
