@@ -115,6 +115,40 @@ describe('preprocessText', () => {
     expect(result).not.toContain('NULL');
     expect(result).toContain('feature');
   });
+
+  it('strips remaining ENG_KEYWORDS: let, var, true, false', () => {
+    const result = preprocessText('let var true false the feature is ready to test');
+    expect(result).not.toContain('let');
+    expect(result).not.toContain('var');
+    expect(result).not.toContain('true');
+    expect(result).not.toContain('false');
+    expect(result).toContain('feature');
+  });
+
+  it('strips remaining ENG_KEYWORDS: export, class, new, this', () => {
+    const result = preprocessText('export class new this the feature is ready to test');
+    expect(result).not.toContain('export');
+    expect(result).not.toContain('class');
+    expect(result).not.toContain('new');
+    expect(result).not.toContain('this');
+    expect(result).toContain('feature');
+  });
+
+  it('handles multi-step camelCase (processUserPaymentRequest → multiple splits)', () => {
+    const result = preprocessText('processUserPaymentRequest is called here');
+    // camelCase split: process User Payment Request
+    expect(result).toContain('User');
+    expect(result).toContain('Payment');
+    expect(result).toContain('Request');
+    expect(result).not.toContain('processUserPaymentRequest');
+  });
+
+  it('returns empty string when ALL lines fail the letter ratio test', () => {
+    // Every line is < 50% letters → all dropped → empty string returned
+    const input = '{ a: 1 }\n[1, 2, 3]\n==> !!';
+    const result = preprocessText(input);
+    expect(result).toBe('');
+  });
 });
 
 // ── applyThreshold ────────────────────────────────────────────────────────────
@@ -196,6 +230,25 @@ describe('applyThreshold', () => {
   it('does not hardcode en fallback — returns undefined when no prior', () => {
     expect(applyThreshold([])).toBeUndefined();
     expect(applyThreshold([{ lang: 'hi', accuracy: 0.3 }])).toBeUndefined();
+  });
+
+  it('ignores candidates beyond #2 — only gap between #1 and #2 is checked', () => {
+    // #3 candidate at 0.01 does not affect the gap calculation between #1 and #2
+    const results: DetectionResult[] = [
+      { lang: 'hi', accuracy: 0.82 },
+      { lang: 'en', accuracy: 0.60 },  // gap = 0.22 >= 0.15 → accepted
+      { lang: 'de', accuracy: 0.01 },  // ignored
+    ];
+    expect(applyThreshold(results)).toBe('hi');
+  });
+
+  it('3+ candidates: rejects when #1 vs #2 gap is small, even if #3 is tiny', () => {
+    const results: DetectionResult[] = [
+      { lang: 'en', accuracy: 0.62 },
+      { lang: 'hi', accuracy: 0.55 },  // gap = 0.07 < 0.15 → ambiguous
+      { lang: 'de', accuracy: 0.01 },  // ignored
+    ];
+    expect(applyThreshold(results, 'fr')).toBe('fr');
   });
 });
 
@@ -340,6 +393,13 @@ describe('runDetection', () => {
     // All lines are symbol-heavy (< 50% letters) → preprocessed to '' → tinyld not called
     const codeOnlyText = '{ a: 1, b: 2 }\n[1, 2, 3, 4, 5]\n====>>\n;;; {}';
     const results = runDetection(codeOnlyText);
+    expect(Array.isArray(results)).toBe(true);
+    expect(results.length).toBe(0);
+  });
+
+  it('returns empty array when input is only ENG_KEYWORDS (all stripped → empty after preprocess)', () => {
+    // All words are ENG_KEYWORDS → filtered away → line becomes empty → dropped → '' → []
+    const results = runDetection('const let var function return async await null undefined true false import export class new this');
     expect(Array.isArray(results)).toBe(true);
     expect(results.length).toBe(0);
   });
