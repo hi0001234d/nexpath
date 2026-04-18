@@ -1,0 +1,37 @@
+{
+  "name": "nexpath",
+  "version": "0.1.1",
+  "description": "Behaviour guidance system for vibe coders using AI coding agents",
+  "type": "module",
+  "bin": {
+    "nexpath": "./dist/cli/index.js",
+    "nexpath-serve": "./dist/server/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev:cli": "tsx src/cli/index.ts",
+    "dev:server": "tsx src/server/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "latest",
+    "@clack/prompts": "^0.9",
+    "@modelcontextprotocol/sdk": "latest",
+    "better-sqlite3": "^9",
+    "commander": "^12",
+    "tinyld": "^1",
+    "zod": "^3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7",
+    "@types/node": "^20",
+    "tsx": "^4",
+    "typescript": "^5",
+    "vitest": "^2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
