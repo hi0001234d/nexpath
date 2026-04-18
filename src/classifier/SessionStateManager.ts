@@ -98,6 +98,10 @@ export class SessionStateManager {
 
     // ── Gap reset check ──────────────────────────────────────────────────────
     if (s.promptCount > 0 && now - s.lastPromptAt >= SESSION_GAP_MS) {
+      // Increment windowsSinceLastSeen for all signals that were absent before reset
+      for (const counter of Object.values(s.signalCounters)) {
+        if (counter.lastSeenAt === null) counter.windowsSinceLastSeen += 1;
+      }
       // Reset to new session in-place (keeps projectRoot, resets everything else)
       const fresh = newSession(s.projectRoot, now);
       Object.assign(s, fresh);

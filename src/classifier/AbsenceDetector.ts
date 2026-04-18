@@ -49,12 +49,9 @@ export function detectAbsenceFlags(state: SessionState): AbsenceFlag[] {
     const counter = state.signalCounters[sig.key];
     if (!counter || counter.lastSeenAt !== null) continue;
 
-    // Gate — cooldown: is there a recently active flag for this signal?
+    // Gate — cooldown: is there an active flag whose cooldown window hasn't expired?
     const existingFlag = state.absenceFlags.find((f) => f.signalKey === sig.key);
-    if (existingFlag) {
-      const refIndex = existingFlag.dismissedAtIndex ?? existingFlag.raisedAtIndex;
-      if (promptCount - refIndex < ABSENCE_COOLDOWN_PROMPTS) continue;
-    }
+    if (existingFlag && promptCount < existingFlag.cooldownUntil) continue;
 
     newFlags.push({
       signalKey:     sig.key,
