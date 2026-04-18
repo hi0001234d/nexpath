@@ -132,6 +132,23 @@ describe('handleCapturePrompt (capture disabled)', () => {
     const res = store.db.exec('SELECT COUNT(*) FROM prompts');
     expect(res[0]?.values[0]?.[0]).toBe(0);
   });
+
+  it('multiple calls while disabled all return disabled', () => {
+    const r1 = handleCapturePrompt(store, { prompt: 'a' });
+    const r2 = handleCapturePrompt(store, { prompt: 'b' });
+    const r3 = handleCapturePrompt(store, { prompt: 'c' });
+    expect(r1.status).toBe('disabled');
+    expect(r2.status).toBe('disabled');
+    expect(r3.status).toBe('disabled');
+  });
+
+  it('accumulates zero rows across multiple disabled calls', () => {
+    handleCapturePrompt(store, { prompt: 'a' });
+    handleCapturePrompt(store, { prompt: 'b' });
+    handleCapturePrompt(store, { prompt: 'c' });
+    const res = store.db.exec('SELECT COUNT(*) FROM prompts');
+    expect(res[0]?.values[0]?.[0]).toBe(0);
+  });
 });
 
 // ── handleCapturePrompt — first run ───────────────────────────────────────────
@@ -184,5 +201,64 @@ describe('handleCapturePrompt (first run — flag never set)', () => {
     const result = handleCapturePrompt(store, { prompt: 'second' });
     expect(result.status).toBe('captured');
     expect(stderrSpy).not.toHaveBeenCalled();
+  });
+
+  it('stores the correct prompt text on first run', () => {
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    handleCapturePrompt(store, { prompt: 'my first prompt', project_id: '/p' });
+    const res = store.db.exec('SELECT prompt_text FROM prompts');
+    expect(res[0]?.values[0]?.[0]).toBe('my first prompt');
+  });
+
+  it('stores project_id on first run', () => {
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    handleCapturePrompt(store, { prompt: 'x', project_id: '/my/project' });
+    const res = store.db.exec('SELECT project_root FROM prompts');
+    expect(res[0]?.values[0]?.[0]).toBe('/my/project');
+  });
+
+  it('stores agent on first run', () => {
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    handleCapturePrompt(store, { prompt: 'x', project_id: '/p', agent: 'windsurf' });
+    const res = store.db.exec('SELECT agent FROM prompts');
+    expect(res[0]?.values[0]?.[0]).toBe('windsurf');
+  });
+
+  it('applies secret redaction on first run', () => {
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    handleCapturePrompt(store, { prompt: 'token=ghp_abcdefghijklmnopqrstuvwxyz123456789012', project_id: '/p' });
+    const res = store.db.exec('SELECT prompt_text FROM prompts');
+    const stored = res[0]?.values[0]?.[0] as string;
+    expect(stored).toContain('ghp_[REDACTED]');
+    expect(stored).not.toContain('ghp_abcdefghij');
+  });
+
+  it('calling disable after first run makes the next call return disabled', () => {
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    handleCapturePrompt(store, { prompt: 'first' }); // first run → flag = true
+    setConfig(store, 'prompt_capture_enabled', 'false'); // user disables
+    const result = handleCapturePrompt(store, { prompt: 'second' });
+    expect(result.status).toBe('disabled');
+  });
+
+  it('banner contains disclosure about data staying on the machine', () => {
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    handleCapturePrompt(store, { prompt: 'first ever' });
+    const written = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    expect(written).toContain('nothing is sent externally');
+  });
+
+  it('banner contains the disable instruction', () => {
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    handleCapturePrompt(store, { prompt: 'first ever' });
+    const written = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    expect(written).toContain('nexpath store disable');
+  });
+
+  it('banner contains the delete instruction', () => {
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    handleCapturePrompt(store, { prompt: 'first ever' });
+    const written = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    expect(written).toContain('nexpath store delete');
   });
 });

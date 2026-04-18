@@ -150,6 +150,20 @@ describe('storeEnableAction', () => {
     closeStore(store);
     cleanup();
   });
+
+  it('leaves existing prompts intact', async () => {
+    const { path, cleanup } = await tempDb((store) => {
+      insertPrompt(store, { projectRoot: '/p', promptText: 'kept' });
+    });
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    await storeEnableAction(path);
+
+    const store = await openStore(path);
+    const res = store.db.exec('SELECT COUNT(*) FROM prompts');
+    expect(res[0]?.values[0]?.[0]).toBe(1);
+    closeStore(store);
+    cleanup();
+  });
 });
 
 // ── storeDisableAction ────────────────────────────────────────────────────────

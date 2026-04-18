@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { openStore, type Store } from './db.js';
 import { insertPrompt, deleteProjectPrompts, deleteAllPrompts, pruneOlderThan, getPromptStats } from './prompts.js';
-import { getConfig, setConfig, getAllConfig } from './config.js';
+import { getConfig, setConfig, getAllConfig, isConfigSet } from './config.js';
 import { redactSecrets } from './redact.js';
 
 // ── redactSecrets ─────────────────────────────────────────────────────────────
@@ -288,5 +288,37 @@ describe('store — config', () => {
     setConfig(store, 'language_override', 'es');
     const all = getAllConfig(store.db);
     expect(all['language_override']).toBe('es');
+  });
+
+  // ── isConfigSet ──────────────────────────────────────────────────────────────
+
+  it('isConfigSet returns false for a key that has never been written', () => {
+    expect(isConfigSet(store.db, 'prompt_capture_enabled')).toBe(false);
+  });
+
+  it('isConfigSet returns false even though getConfig returns a default for the same key', () => {
+    // getConfig falls back to DEFAULT_CONFIG, but isConfigSet must not
+    expect(getConfig(store.db, 'prompt_capture_enabled')).toBe('true');
+    expect(isConfigSet(store.db, 'prompt_capture_enabled')).toBe(false);
+  });
+
+  it('isConfigSet returns true after setConfig is called', () => {
+    setConfig(store, 'prompt_capture_enabled', 'true');
+    expect(isConfigSet(store.db, 'prompt_capture_enabled')).toBe(true);
+  });
+
+  it('isConfigSet returns true when the stored value is false', () => {
+    setConfig(store, 'prompt_capture_enabled', 'false');
+    expect(isConfigSet(store.db, 'prompt_capture_enabled')).toBe(true);
+  });
+
+  it('isConfigSet returns false for a completely unknown key', () => {
+    expect(isConfigSet(store.db, 'nonexistent_key')).toBe(false);
+  });
+
+  it('isConfigSet is independent per key', () => {
+    setConfig(store, 'prompt_capture_enabled', 'true');
+    expect(isConfigSet(store.db, 'prompt_capture_enabled')).toBe(true);
+    expect(isConfigSet(store.db, 'prompt_store_max_per_project')).toBe(false);
   });
 });
