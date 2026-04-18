@@ -124,6 +124,12 @@ describe('NatureClassifier — classifyNature', () => {
     const { playfulnessScore: withoutExcl } = classifyNature(['This is great. Let us go.']);
     expect(withExcl).toBeGreaterThan(withoutExcl);
   });
+
+  it('emoji increases playfulness score (+2 per prompt with emoji)', () => {
+    const { playfulnessScore: withEmoji }    = classifyNature(['lets go 🚀 this is working']);
+    const { playfulnessScore: withoutEmoji } = classifyNature(['lets go this is working']);
+    expect(withEmoji).toBeGreaterThan(withoutEmoji);
+  });
 });
 
 // ── MoodClassifier ────────────────────────────────────────────────────────────
@@ -246,6 +252,20 @@ describe('MoodClassifier — classifyMood', () => {
     const prompts = ['BROKEN', 'fix it', 'go', 'now', 'please'];
     expect(classifyMood(prompts)).toBe('frustrated');
   });
+
+  it('frustrated takes priority over excited (all caps + exclamation density > 1)', () => {
+    const prompts = [
+      'STILL broken!! why does this keep failing!! not working again!!',
+      'WRONG output again!! this is the same issue!!',
+    ];
+    expect(classifyMood(prompts)).toBe('frustrated');
+  });
+
+  it('focused requires ZERO neg lexicon — long prompt with neg hit stays casual', () => {
+    // avg_word_count > 25 but has a negative lexicon hit → should NOT be focused
+    const prompt = 'I want to implement the full authentication module including jwt token generation refresh token but it is broken and not working as expected right now';
+    expect(classifyMood([prompt, prompt, prompt])).not.toBe('focused');
+  });
 });
 
 // ── DepthClassifier ───────────────────────────────────────────────────────────
@@ -257,6 +277,10 @@ describe('DepthClassifier — scorePromptDepth', () => {
 
   it('scores positive for high-depth vocab', () => {
     expect(scorePromptDepth('design the abstraction layer with proper coupling constraints')).toBeGreaterThan(0);
+  });
+
+  it('scores +1 for "approach" (design depth term)', () => {
+    expect(scorePromptDepth('which approach should we use here')).toBe(1);
   });
 
   it('scores negative for low-depth vocab', () => {
@@ -431,6 +455,18 @@ describe('UserProfileClassifier — classifyUserProfile', () => {
     const profile = classifyUserProfile(history, 15);
     // Mood should reflect last 5 (frustrated), not first 10 (excited)
     expect(profile.mood).toBe('frustrated');
+  });
+
+  it('uses only last 10 prompts for depth', () => {
+    // First 15 prompts are deep architectural, last 10 are surface-level
+    const deepPrompts = Array(15).fill(
+      'design the abstraction coupling schema migration transaction invariant throughput latency',
+    );
+    const surfacePrompts = Array(10).fill('just a quick simple fix please');
+    const history = makeRecords([...deepPrompts, ...surfacePrompts]);
+    const profile = classifyUserProfile(history, 25);
+    // Depth should reflect last 10 (surface/low), not first 15 (high)
+    expect(profile.depth).toBe('low');
   });
 });
 

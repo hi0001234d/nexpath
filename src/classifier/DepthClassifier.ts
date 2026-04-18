@@ -28,7 +28,7 @@ const HIGH_DEPTH_VOCAB: string[] = [
   'schema', 'migration', 'index', 'transaction', 'consistency',
   'normalisation', 'normalization',
   // Design terms
-  'pattern', 'tradeoff', 'trade-off', 'alternative', 'constraint', 'invariant',
+  'pattern', 'tradeoff', 'trade-off', 'alternative', 'approach', 'constraint', 'invariant',
   // Comparison framing
   ' vs ', 'instead of', 'compared to',
 ];
