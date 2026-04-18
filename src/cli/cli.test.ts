@@ -93,9 +93,30 @@ describe('nexpath CLI — optimize command registration', () => {
   });
 });
 
-describe('nexpath CLI — status stub', () => {
-  it('status prints stub message', async () => {
-    const out = await run('status');
-    expect(out[0]).toBe('[nexpath status] — not yet implemented');
+describe('nexpath CLI — status command', () => {
+  it('status command is registered with --db option', () => {
+    const prog    = createProgram();
+    const statCmd = prog.commands.find((c) => c.name() === 'status')!;
+    expect(statCmd).toBeDefined();
+    const longFlags = statCmd.options.map((o) => o.long);
+    expect(longFlags).toContain('--db');
+  });
+
+  it('status description mentions MCP connections', () => {
+    const prog    = createProgram();
+    const statCmd = prog.commands.find((c) => c.name() === 'status')!;
+    expect(statCmd.description().toLowerCase()).toContain('mcp');
+  });
+
+  it('status prints MCP connections section to stdout', async () => {
+    const lines: string[] = [];
+    const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: unknown) => {
+      lines.push(String(chunk));
+      return true;
+    });
+    const prog = createProgram();
+    await prog.parseAsync(['node', 'nexpath', 'status', '--db', ':memory:']);
+    spy.mockRestore();
+    expect(lines.join('')).toContain('MCP connections');
   });
 });

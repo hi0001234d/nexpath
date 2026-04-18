@@ -7,6 +7,7 @@ import { installAction, uninstallAction } from './commands/install.js';
 import { initAction } from './commands/init.js';
 import { registerAutoCommand } from './commands/auto.js';
 import { registerOptimizeCommand } from './commands/optimize.js';
+import { registerStatusCommand } from './commands/status.js';
 
 export function createProgram(): Command {
   const program = new Command();
@@ -48,12 +49,7 @@ export function createProgram(): Command {
 
   // ── Status command ────────────────────────────────────────────────────────────
 
-  program
-    .command('status')
-    .description('Show MCP connection status, prompt store stats, and config summary')
-    .action(() => {
-      console.log('[nexpath status] — not yet implemented');
-    });
+  registerStatusCommand(program);
 
   // ── Config command ────────────────────────────────────────────────────────────
 
