@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { configGetAction, configSetAction } from './commands/config.js';
 import { storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAction } from './commands/store.js';
+import { installAction, uninstallAction } from './commands/install.js';
 
 export function createProgram(): Command {
   const program = new Command();
@@ -17,15 +18,16 @@ export function createProgram(): Command {
   program
     .command('install')
     .description('Register nexpath-serve MCP server with all detected AI coding agents')
-    .action(() => {
-      console.log('[nexpath install] — not yet implemented');
+    .option('-y, --yes', 'Skip confirmation prompt')
+    .action(async (opts: { yes?: boolean }) => {
+      await installAction(opts);
     });
 
   program
     .command('uninstall')
     .description('Remove nexpath-serve MCP registration from all agents')
-    .action(() => {
-      console.log('[nexpath uninstall] — not yet implemented');
+    .action(async () => {
+      await uninstallAction();
     });
 
   program

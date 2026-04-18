@@ -46,16 +46,6 @@ describe('nexpath CLI — metadata', () => {
 // Config + store commands are wired to real handlers; tested in commands/*.test.ts
 
 describe('nexpath CLI — lifecycle stubs', () => {
-  it('install prints stub message', async () => {
-    const out = await run('install');
-    expect(out[0]).toBe('[nexpath install] — not yet implemented');
-  });
-
-  it('uninstall prints stub message', async () => {
-    const out = await run('uninstall');
-    expect(out[0]).toBe('[nexpath uninstall] — not yet implemented');
-  });
-
   it('init prints stub message', async () => {
     const out = await run('init');
     expect(out[0]).toBe('[nexpath init] — not yet implemented');
