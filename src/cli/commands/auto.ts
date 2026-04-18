@@ -59,6 +59,8 @@ export interface AutoInput {
   promptText:  string;
   /** Project root — used to look up session state. */
   projectRoot: string;
+  /** Emit diagnostic info to stderr at each decision point. */
+  debug?: boolean;
 }
 
 export type AutoOutcome =
@@ -83,15 +85,22 @@ export async function runAuto(
   openai?:   OpenAI,
   selectFn?: SelectFn,
 ): Promise<AutoOutcome> {
+  const dbg = input.debug
+    ? (msg: string) => process.stderr.write(`[nexpath:debug] ${msg}\n`)
+    : () => { /* noop */ };
+
   // ── 1. Load session state ────────────────────────────────────────────────────
   const mgr = SessionStateManager.load(store, input.projectRoot);
   const prevStage: Stage = mgr.current.currentStage;
+  dbg(`session loaded  promptCount=${mgr.current.promptCount}  stage=${prevStage}`);
 
   // ── 2. Stage 1 classifier ────────────────────────────────────────────────────
   const classification = await classifyPrompt(input.promptText);
+  dbg(`stage1  classified=${classification.stage}  confidence=${classification.confidence.toFixed(2)}`);
 
   // ── 3. Process prompt → updates state (stage, history, counters) ─────────────
   mgr.processPrompt(store, input.promptText, classification);
+  dbg(`after processPrompt  stage=${mgr.current.currentStage}  stageConfidence=${mgr.current.stageConfidence.toFixed(2)}`);
 
   // ── 3.5. Language detection (every LANG_DETECT_INTERVAL prompts or first time) ─
   const shouldDetectLang = mgr.current.detectedLanguage === undefined
@@ -108,12 +117,14 @@ export async function runAuto(
     mgr.setDetectedLanguage(store, resolved);
   }
   const effectiveLang = mgr.current.detectedLanguage;
+  dbg(`language  effectiveLang=${effectiveLang ?? '(none)'}`);
 
   // ── 4. Absence detection ─────────────────────────────────────────────────────
   const newFlags = detectAbsenceFlags(mgr.current as import('../../classifier/types.js').SessionState);
   for (const flag of newFlags) {
     mgr.addAbsenceFlag(store, flag);
   }
+  dbg(`absenceFlags  new=${newFlags.length}  total=${mgr.current.absenceFlags.length}`);
 
   // ── 5. Should Stage 2 fire? ──────────────────────────────────────────────────
   const flagType = shouldFireStage2(
@@ -121,12 +132,15 @@ export async function runAuto(
     prevStage,
     newFlags,
   );
+  dbg(`shouldFireStage2  flagType=${flagType ?? 'null (no_action)'}`);
 
   if (!flagType) return { outcome: 'no_action' };
 
   // ── 6. Deduplication — already fired this session? ──────────────────────────
   const firedKey = buildFiredKey(flagType, mgr.current.currentStage);
-  if (mgr.hasFiredDecisionSession(firedKey)) {
+  const alreadyFired = mgr.hasFiredDecisionSession(firedKey);
+  dbg(`dedup  firedKey=${firedKey}  alreadyFired=${alreadyFired}`);
+  if (alreadyFired) {
     return { outcome: 'no_action' };
   }
 
@@ -141,7 +155,9 @@ export async function runAuto(
   let stage2Output: import('../../classifier/Stage2Trigger.js').Stage2Output;
   try {
     stage2Output = await runStage2(stage2Input, openai);
-  } catch {
+    dbg(`stage2  fire=${stage2Output.fire_decision_session}  confidence=${stage2Output.stage_confidence.toFixed(2)}  reason=${stage2Output.reason}`);
+  } catch (err) {
+    dbg(`stage2  ERROR: ${(err as Error).message}`);
     // Stage 2 API failure → skip silently (non-blocking)
     return { outcome: 'no_action' };
   }
@@ -229,8 +245,9 @@ export function registerAutoCommand(program: import('commander').Command): void 
     .description('Run the nexpath advisory pipeline between agent responses')
     .option('-p, --project <path>', 'Project root path', process.cwd())
     .option('--db <path>', 'Database path', DEFAULT_DB_PATH)
+    .option('--debug', 'Print diagnostic info to stderr at each pipeline step')
     .argument('[prompt]', 'The latest prompt text (omit to read from stdin in hook mode)')
-    .action(async (promptArg: string | undefined, opts: { project: string; db: string }) => {
+    .action(async (promptArg: string | undefined, opts: { project: string; db: string; debug?: boolean }) => {
       let promptText = promptArg?.trim();
       let hookMode   = false;
 
@@ -256,7 +273,7 @@ export function registerAutoCommand(program: import('commander').Command): void 
       const store = await openStore(opts.db);
       try {
         const result = await runAuto(
-          { promptText, projectRoot: opts.project },
+          { promptText, projectRoot: opts.project, debug: opts.debug },
           store,
         );
 
