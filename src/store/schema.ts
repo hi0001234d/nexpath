@@ -26,6 +26,13 @@ CREATE TABLE IF NOT EXISTS projects (
   description  TEXT,
   created_at   INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS session_states (
+  project_root TEXT    PRIMARY KEY,
+  session_id   TEXT    NOT NULL,
+  state_json   TEXT    NOT NULL,
+  updated_at   INTEGER NOT NULL
+);
 `;
 
 export function migrate(db: Database): void {
