@@ -242,7 +242,7 @@ export function buildHookEntry(home: string, platform = process.platform): Recor
     UserPromptSubmit: [
       {
         _nexpath_hook: true,
-        matcher:       'UserPromptSubmit',
+        matcher:       '',
         hooks: [
           {
             type:    'command',

@@ -871,10 +871,10 @@ describe('buildHookEntry', () => {
     expect(groups[0]._nexpath_hook).toBe(true);
   });
 
-  it('matcher is UserPromptSubmit', () => {
+  it('matcher is empty string (fires on all prompts)', () => {
     const entry  = buildHookEntry('/home/user', 'linux');
     const groups = entry.UserPromptSubmit as Array<Record<string, unknown>>;
-    expect(groups[0].matcher).toBe('UserPromptSubmit');
+    expect(groups[0].matcher).toBe('');
   });
 
   it('inner hooks array has one entry with type command', () => {
