@@ -66,6 +66,42 @@ export interface SessionState {
   absenceFlags: AbsenceFlag[];
 }
 
+// ── User nature / mood / depth (item 9) ───────────────────────────────────────
+
+/** Four developer archetypes derived from the 2D precision × playfulness quadrant. */
+export type UserNature =
+  | 'cool_geek'      // Low precision, High playfulness
+  | 'hardcore_pro'   // High precision, Low playfulness
+  | 'pro_geek_soul'  // High precision, High playfulness
+  | 'beginner';      // Low precision, Low playfulness
+
+/** Six session mood categories detectable from the last 5 prompts. */
+export type UserMood =
+  | 'focused'
+  | 'excited'
+  | 'frustrated'
+  | 'casual'
+  | 'rushed'
+  | 'methodical';
+
+/** Session technical depth based on vocabulary scoring over the last 10 prompts. */
+export type SessionDepth = 'low' | 'medium' | 'high';
+
+/** Computed user profile — produced by UserProfileClassifier on demand. */
+export interface UserProfile {
+  nature: UserNature;
+  /** Technical precision score 0–10 (drives nature + option phrasing). */
+  precisionScore: number;
+  /** Playfulness / expressiveness score 0–10 (drives nature + pinch tone). */
+  playfulnessScore: number;
+  mood: UserMood;
+  depth: SessionDepth;
+  /** Raw avg depth score before thresholding. */
+  depthScore: number;
+  /** promptCount when this profile was computed (for stickiness tracking by caller). */
+  computedAt: number;
+}
+
 // ── Signal definitions ─────────────────────────────────────────────────────────
 
 export interface SignalDefinition {
