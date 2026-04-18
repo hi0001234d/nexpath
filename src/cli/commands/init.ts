@@ -85,8 +85,8 @@ const defaultPromptFn: PromptFn = async ({ name: defaultName }) => {
   return {
     name:        (name as string).trim(),
     projectType: projectType as string,
-    language:    (language as string).trim(),
-    description: (description as string).trim(),
+    language:    ((language as string | undefined) ?? '').trim(),
+    description: ((description as string | undefined) ?? '').trim(),
   };
 };
 
