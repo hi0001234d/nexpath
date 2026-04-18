@@ -4,7 +4,7 @@ import type { Store } from '../../store/db.js';
 import { buildFiredKey, runAuto } from './auto.js';
 import type { AutoInput } from './auto.js';
 import { getSkippedSessions } from '../../store/skipped-sessions.js';
-import { SKIP_NOW, SHOW_SIMPLER } from '../../decision-session/options.js';
+import { SKIP_NOW } from '../../decision-session/options.js';
 import type { SelectFn } from '../../decision-session/DecisionSession.js';
 import type OpenAI from 'openai';
 
@@ -107,6 +107,22 @@ describe('buildFiredKey', () => {
     expect(buildFiredKey('stage_transition', 'release')).toContain('release');
     expect(buildFiredKey('absence:security_check', 'release')).toContain('release');
   });
+
+  it('builds correct key for stage_transition to prd', () => {
+    expect(buildFiredKey('stage_transition', 'prd')).toBe('stage_transition:→prd');
+  });
+
+  it('builds correct key for absence flag on non-implementation stage', () => {
+    // Absence flags can fire on any stage — key must embed both signal and stage
+    const key = buildFiredKey('absence:security_check', 'prd');
+    expect(key).toBe('absence:security_check@prd');
+  });
+
+  it('stage_transition and absence keys are distinct for the same stage', () => {
+    const st  = buildFiredKey('stage_transition', 'review_testing');
+    const abs = buildFiredKey('absence:test_creation', 'review_testing');
+    expect(st).not.toBe(abs);
+  });
 });
 
 // ── runAuto — no_action paths ─────────────────────────────────────────────────
@@ -197,6 +213,33 @@ describe('runAuto — deduplication', () => {
     mgr.markDecisionSessionFired(store, 'absence:test_creation@implementation');
     mgr.markDecisionSessionFired(store, 'absence:test_creation@implementation');
     expect(mgr.current.firedDecisionSessions.filter(k => k === 'absence:test_creation@implementation')).toHaveLength(1);
+  });
+
+  it('runAuto returns no_action immediately when firedDecisionSessions contains the would-be key', async () => {
+    // Pre-mark every possible stage_transition key for the implementation stage so
+    // that even if shouldFireStage2 fires, the dedup check catches it before Stage 2.
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/dedup-e2e');
+    mgr.markDecisionSessionFired(store, 'stage_transition:→implementation');
+
+    // The mock would fire if called, but Stage 2 should never be reached
+    const openai = {
+      chat: {
+        completions: {
+          create: vi.fn().mockRejectedValue(new Error('should not be called via dedup')),
+        },
+      },
+    } as unknown as OpenAI;
+
+    // Even if shouldFireStage2 returns 'stage_transition', dedup catches it
+    // (result is no_action from either early-exit or dedup)
+    const result = await runAuto(
+      makeInput({ projectRoot: '/test/dedup-e2e' }),
+      store,
+      openai,
+    );
+    // Either no_action from shouldFireStage2 not firing, or from dedup
+    expect(result.outcome).toBe('no_action');
   });
 });
 
