@@ -19,6 +19,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import { TOOLS } from './tools.js';
 
 // ── Shutdown handlers ─────────────────────────────────────────────────────────
 // db.close() will be called here once the store module is implemented (item 2)
@@ -41,33 +42,7 @@ const server = new Server(
 );
 
 // List available tools
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [
-    {
-      name: 'capture_prompt',
-      description:
-        'Capture a user prompt for behaviour analysis. Called automatically by the agent hook on every user message.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          prompt: {
-            type: 'string',
-            description: 'The user prompt text to capture',
-          },
-          project_id: {
-            type: 'string',
-            description: 'Identifier for the current project (e.g. workspace folder name or path hash)',
-          },
-          agent: {
-            type: 'string',
-            description: 'The AI coding agent that fired this capture (e.g. claude-code, cursor, windsurf)',
-          },
-        },
-        required: ['prompt'],
-      },
-    },
-  ],
-}));
+server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 
 // Handle tool calls
 server.setRequestHandler(CallToolRequestSchema, async (request) => {

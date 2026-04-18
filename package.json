@@ -19,14 +19,14 @@
     "@anthropic-ai/sdk": "latest",
     "@clack/prompts": "^0.9",
     "@modelcontextprotocol/sdk": "latest",
-    "better-sqlite3": "^9",
     "commander": "^12",
+    "sql.js": "^1",
     "tinyld": "^1",
     "zod": "^3"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7",
     "@types/node": "^20",
+    "@types/sql.js": "^1",
     "tsx": "^4",
     "typescript": "^5",
     "vitest": "^2"
