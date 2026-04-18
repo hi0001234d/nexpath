@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { fileURLToPath } from 'node:url';
+import { realpathSync } from 'node:fs';
 import { Command } from 'commander';
 import { configGetAction, configSetAction } from './commands/config.js';
 import { storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAction } from './commands/store.js';
@@ -37,8 +38,10 @@ export function createProgram(): Command {
   program
     .command('init')
     .description('Set up nexpath for the current project (onboarding questionnaire)')
-    .action(async () => {
-      await initAction();
+    .option('--project <path>', 'Project root directory (defaults to cwd)')
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (opts: { project?: string; db?: string }) => {
+      await initAction(opts.project, opts.db);
     });
 
   // ── Guidance commands ─────────────────────────────────────────────────────────
@@ -58,17 +61,19 @@ export function createProgram(): Command {
     .description('Manage nexpath configuration');
 
   configCmd
-    .command('set <key> <value>')
-    .description('Set a config value (e.g. prompt_capture_enabled false)')
-    .action(async (key: string, value: string) => {
-      await configSetAction(key, value);
+    .command('set <key> [value]')
+    .description('Set a config value (e.g. prompt_capture_enabled false); omit value to clear')
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (key: string, value: string = '', opts: { db?: string }) => {
+      await configSetAction(key, value, opts.db);
     });
 
   configCmd
     .command('get <key>')
     .description('Get a config value')
-    .action(async (key: string) => {
-      await configGetAction(key);
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (key: string, opts: { db?: string }) => {
+      await configGetAction(key, opts.db);
     });
 
   // ── Store command ─────────────────────────────────────────────────────────────
@@ -82,22 +87,25 @@ export function createProgram(): Command {
     .description('Delete all stored prompts (or a single project with --project)')
     .option('--project <path>', 'Delete prompts for this project only')
     .option('-y, --yes', 'Skip confirmation prompt')
-    .action(async (opts: { project?: string; yes?: boolean }) => {
-      await storeDeleteAction(opts);
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (opts: { project?: string; yes?: boolean; db?: string }) => {
+      await storeDeleteAction(opts, opts.db);
     });
 
   storeCmd
     .command('enable')
     .description('Enable prompt capture (sets prompt_capture_enabled = true)')
-    .action(async () => {
-      await storeEnableAction();
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (opts: { db?: string }) => {
+      await storeEnableAction(opts.db);
     });
 
   storeCmd
     .command('disable')
     .description('Disable prompt capture (sets prompt_capture_enabled = false, keeps existing data)')
-    .action(async () => {
-      await storeDisableAction();
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (opts: { db?: string }) => {
+      await storeDisableAction(opts.db);
     });
 
   storeCmd
@@ -105,8 +113,9 @@ export function createProgram(): Command {
     .description('Remove prompts older than the specified period')
     .option('--older-than <period>', 'Period threshold (e.g. 30d, 6m, 1y)')
     .option('--project <path>', 'Prune only this project')
-    .action(async (opts: { olderThan?: string; project?: string }) => {
-      await storePruneAction(opts);
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (opts: { olderThan?: string; project?: string; db?: string }) => {
+      await storePruneAction(opts, opts.db);
     });
 
   return program;
@@ -115,7 +124,10 @@ export function createProgram(): Command {
 // Module-level singleton used when running as a binary
 export const program = createProgram();
 
-// Only parse argv when run directly (not when imported by tests)
-if (fileURLToPath(import.meta.url) === process.argv[1]) {
+// Only parse argv when run directly (not when imported by tests).
+// realpathSync resolves the npm-link symlink so the comparison holds on Windows.
+const thisFile = fileURLToPath(import.meta.url);
+const mainFile = process.argv[1] ? (() => { try { return realpathSync(process.argv[1]); } catch { return process.argv[1]; } })() : '';
+if (thisFile === mainFile) {
   await program.parseAsync();
 }

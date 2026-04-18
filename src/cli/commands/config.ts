@@ -5,10 +5,10 @@ export async function configGetAction(key: string, dbPath = DEFAULT_DB_PATH): Pr
   const value = getConfig(store.db, key);
   closeStore(store);
 
-  if (value === undefined) {
-    console.log('(not set)');
+  if (value === undefined || value === '') {
+    console.log(`${key} = (not set)`);
   } else {
-    console.log(value);
+    console.log(`${key} = ${value}`);
   }
 }
 
