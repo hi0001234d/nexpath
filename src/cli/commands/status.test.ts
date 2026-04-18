@@ -15,7 +15,6 @@ import {
 import { MCP_SERVER_NAME } from './install.js';
 import { openStore, closeStore } from '../../store/db.js';
 import { insertPrompt } from '../../store/prompts.js';
-import { upsertProject } from '../../store/projects.js';
 
 // ── Test fixtures ─────────────────────────────────────────────────────────────
 
@@ -85,6 +84,12 @@ describe('isOpenCodeRegistered', () => {
     const p = join(dir, 'oc.json');
     writeJson(p, { mcp: { [MCP_SERVER_NAME]: { type: 'local' } } });
     expect(isOpenCodeRegistered(p)).toBe(true);
+  });
+
+  it('returns false on malformed JSON', () => {
+    const p = join(dir, 'bad.json');
+    writeFileSync(p, 'not json');
+    expect(isOpenCodeRegistered(p)).toBe(false);
   });
 });
 
@@ -161,6 +166,14 @@ describe('formatBytes', () => {
   it('formats 1 MB exactly', () => {
     expect(formatBytes(1_048_576)).toBe('1.0 MB');
   });
+
+  it('formats 0 bytes', () => {
+    expect(formatBytes(0)).toBe('0 B');
+  });
+
+  it('formats 1023 bytes as B (below KB threshold)', () => {
+    expect(formatBytes(1_023)).toBe('1023 B');
+  });
 });
 
 // ── runStatus ─────────────────────────────────────────────────────────────────
@@ -202,6 +215,12 @@ describe('runStatus — store not initialised', () => {
     expect(result.config['prompt_capture_enabled']).toBe('true');
     expect(result.config['prompt_store_max_per_project']).toBe('500');
   });
+
+  it('store.dbPath in result matches input dbPath', async () => {
+    const dbPath = join(dir, 'missing.db');
+    const result = await runStatus({ dbPath, agents: [], settingsPath: join(dir, 's.json') });
+    expect(result.store.dbPath).toBe(dbPath);
+  });
 });
 
 describe('runStatus — with populated store', () => {
@@ -241,6 +260,16 @@ describe('runStatus — with populated store', () => {
   it('dbSizeBytes is > 0 when DB exists', async () => {
     const result = await runStatus({ dbPath, agents: [], settingsPath: join(dir, 's.json') });
     expect(result.store.dbSizeBytes).toBeGreaterThan(0);
+  });
+
+  it('store.exists is true for :memory: path', async () => {
+    const result = await runStatus({ dbPath: ':memory:', agents: [], settingsPath: join(dir, 's.json') });
+    expect(result.store.exists).toBe(true);
+  });
+
+  it('store.dbPath in result matches input dbPath', async () => {
+    const result = await runStatus({ dbPath, agents: [], settingsPath: join(dir, 's.json') });
+    expect(result.store.dbPath).toBe(dbPath);
   });
 
   it('config reads from DB (not just defaults)', async () => {
@@ -294,6 +323,39 @@ describe('runStatus — agent MCP registration', () => {
     expect(result.agents[0].registered).toBe(true);
   });
 
+  it('marks cline-type agent using mcpServers key', async () => {
+    const cfgPath = join(dir, 'cline.json');
+    writeJson(cfgPath, { mcpServers: { [MCP_SERVER_NAME]: { disabled: false } } });
+    const result = await runStatus({
+      dbPath:       join(dir, 'missing.db'),
+      agents:       [{ id: 'cline', label: 'Cline', configPath: cfgPath, type: 'cline' }],
+      settingsPath: join(dir, 's.json'),
+    });
+    expect(result.agents[0].registered).toBe(true);
+  });
+
+  it('marks kilo-type agent using mcpServers key', async () => {
+    const cfgPath = join(dir, 'kilo.json');
+    writeJson(cfgPath, { mcpServers: { [MCP_SERVER_NAME]: {} } });
+    const result = await runStatus({
+      dbPath:       join(dir, 'missing.db'),
+      agents:       [{ id: 'kiloCode', label: 'KiloCode', configPath: cfgPath, type: 'kilo' }],
+      settingsPath: join(dir, 's.json'),
+    });
+    expect(result.agents[0].registered).toBe(true);
+  });
+
+  it('marks standard-type agent using mcpServers key', async () => {
+    const cfgPath = join(dir, 'cursor.json');
+    writeJson(cfgPath, { mcpServers: { [MCP_SERVER_NAME]: {} } });
+    const result = await runStatus({
+      dbPath:       join(dir, 'missing.db'),
+      agents:       [{ id: 'cursor', label: 'Cursor', configPath: cfgPath, type: 'standard' }],
+      settingsPath: join(dir, 's.json'),
+    });
+    expect(result.agents[0].registered).toBe(true);
+  });
+
   it('includes all injected agents in result', async () => {
     const result = await runStatus({
       dbPath:       join(dir, 'missing.db'),
@@ -320,6 +382,16 @@ describe('runStatus — hook registration', () => {
       settingsPath: join(dir, 'missing-settings.json'),
     });
     expect(result.hook.registered).toBe(false);
+  });
+
+  it('hook.settingsPath in result matches injected settingsPath', async () => {
+    const settingsPath = join(dir, 'my-settings.json');
+    const result = await runStatus({
+      dbPath:       join(dir, 'missing.db'),
+      agents:       [],
+      settingsPath,
+    });
+    expect(result.hook.settingsPath).toBe(settingsPath);
   });
 
   it('hook.registered is true when nexpath hook present in settings', async () => {
@@ -374,6 +446,46 @@ describe('renderStatus — sections', () => {
     const out = renderStatus(makeResult());
     expect(out).toContain('Not initialised');
   });
+
+  it('output ends with a newline (pipe-safe)', () => {
+    const out = renderStatus(makeResult());
+    expect(out.endsWith('\n')).toBe(true);
+  });
+
+  it('sections appear in order: MCP connections → Prompt store → Config', () => {
+    const out = renderStatus(makeResult());
+    const mcpIdx   = out.indexOf('MCP connections');
+    const storeIdx = out.indexOf('Prompt store');
+    const cfgIdx   = out.indexOf('Config');
+    expect(mcpIdx).toBeLessThan(storeIdx);
+    expect(storeIdx).toBeLessThan(cfgIdx);
+  });
+
+  it('renders with empty agents list without crashing', () => {
+    expect(() => renderStatus(makeResult({ agents: [] }))).not.toThrow();
+  });
+
+  it('includes dbPath in Prompt store header when store exists', () => {
+    const result = makeResult({
+      store: {
+        exists: true, dbPath: '/custom/path/store.db',
+        totalPrompts: 0, dbSizeBytes: 0, perProject: [],
+      },
+    });
+    const out = renderStatus(result);
+    expect(out).toContain('/custom/path/store.db');
+  });
+
+  it('includes dbPath in Prompt store header when store is absent', () => {
+    const result = makeResult({
+      store: {
+        exists: false, dbPath: '/home/.nexpath/prompt-store.db',
+        totalPrompts: 0, dbSizeBytes: 0, perProject: [],
+      },
+    });
+    const out = renderStatus(result);
+    expect(out).toContain('/home/.nexpath/prompt-store.db');
+  });
 });
 
 describe('renderStatus — agent lines', () => {
@@ -416,6 +528,35 @@ describe('renderStatus — agent lines', () => {
     const out = renderStatus(result);
     expect(out).toContain('/home/.claude.json');
   });
+
+  it('includes settings path in hook registered line', () => {
+    const result = makeResult({
+      hook: { settingsPath: '/home/.claude/settings.json', registered: true },
+    });
+    const out = renderStatus(result);
+    expect(out).toContain('/home/.claude/settings.json');
+  });
+
+  it('includes "run: nexpath install" hint in hook not-registered line', () => {
+    const out = renderStatus(makeResult());
+    expect(out).toContain('run: nexpath install');
+  });
+
+  it('renders multiple agents in order', () => {
+    const result = makeResult({
+      agents: [
+        { label: 'Claude Code', configPath: '/c.json', registered: true },
+        { label: 'Cursor',      configPath: '/cur.json', registered: false },
+        { label: 'Windsurf',    configPath: '/win.json', registered: true },
+      ],
+    });
+    const out = renderStatus(result);
+    const claudeIdx  = out.indexOf('Claude Code');
+    const cursorIdx  = out.indexOf('Cursor');
+    const windsurfIdx = out.indexOf('Windsurf');
+    expect(claudeIdx).toBeLessThan(cursorIdx);
+    expect(cursorIdx).toBeLessThan(windsurfIdx);
+  });
 });
 
 describe('renderStatus — store stats', () => {
@@ -457,6 +598,28 @@ describe('renderStatus — store stats', () => {
     expect(out).toContain('/proj/beta');
     expect(out).toContain('3 prompts');
     expect(out).toContain('2 prompts');
+  });
+
+  it('shows "Total prompts : 0" when store exists but is empty', () => {
+    const result = makeResult({
+      store: {
+        exists: true, dbPath: '/db', totalPrompts: 0,
+        dbSizeBytes: 0, perProject: [],
+      },
+    });
+    const out = renderStatus(result);
+    expect(out).toContain('Total prompts : 0');
+  });
+
+  it('shows singular "1 prompts" correctly (toLocaleString passthrough)', () => {
+    const result = makeResult({
+      store: {
+        exists: true, dbPath: '/db', totalPrompts: 1,
+        dbSizeBytes: 0, perProject: [{ projectRoot: '/p', count: 1 }],
+      },
+    });
+    const out = renderStatus(result);
+    expect(out).toContain('1 prompts');
   });
 
   it('shows project count', () => {

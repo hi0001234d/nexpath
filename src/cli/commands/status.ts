@@ -123,8 +123,11 @@ export async function runStatus(input: StatusInput): Promise<StatusResult> {
     registered: isHookRegistered(settingsPath),
   };
 
-  // ── Prompt store stats ────────────────────────────────────────────────────
+  // ── Prompt store stats + config ───────────────────────────────────────────
+  // Open the DB once; read both stats and config in the same session.
   let store: StoreStatus;
+  let config: Record<string, string>;
+
   if (input.dbPath === ':memory:' || existsSync(input.dbPath)) {
     const db = await openStore(input.dbPath);
     try {
@@ -139,6 +142,7 @@ export async function runStatus(input: StatusInput): Promise<StatusResult> {
           count:       p.count,
         })),
       };
+      config = getAllConfig(db.db);
     } finally {
       closeStore(db);
     }
@@ -150,19 +154,6 @@ export async function runStatus(input: StatusInput): Promise<StatusResult> {
       dbSizeBytes:  0,
       perProject:   [],
     };
-  }
-
-  // ── Config ────────────────────────────────────────────────────────────────
-  // Read config from same store as stats when DB exists; else fall back to defaults.
-  let config: Record<string, string>;
-  if (input.dbPath === ':memory:' || existsSync(input.dbPath)) {
-    const db = await openStore(input.dbPath);
-    try {
-      config = getAllConfig(db.db);
-    } finally {
-      closeStore(db);
-    }
-  } else {
     config = { ...DEFAULT_CONFIG };
   }
 
