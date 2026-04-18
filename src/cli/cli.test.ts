@@ -42,16 +42,27 @@ describe('nexpath CLI — metadata', () => {
   });
 });
 
-// Stub commands — these still print "not yet implemented"
-// Config + store commands are wired to real handlers; tested in commands/*.test.ts
+// Remaining stubs (items 15/16 — not yet started)
+// Config + store + auto commands are wired to real handlers; tested in commands/*.test.ts
 
-
-describe('nexpath CLI — guidance stubs', () => {
-  it('auto prints stub message', async () => {
-    const out = await run('auto');
-    expect(out[0]).toBe('[nexpath auto] — not yet implemented');
+describe('nexpath CLI — auto command registration', () => {
+  it('auto command is registered with --project and --db options', () => {
+    const prog   = createProgram();
+    const autoCmd = prog.commands.find((c) => c.name() === 'auto')!;
+    expect(autoCmd).toBeDefined();
+    const longFlags = autoCmd.options.map((o) => o.long);
+    expect(longFlags).toContain('--project');
+    expect(longFlags).toContain('--db');
   });
 
+  it('auto command description mentions advisory pipeline', () => {
+    const prog    = createProgram();
+    const autoCmd = prog.commands.find((c) => c.name() === 'auto')!;
+    expect(autoCmd.description()).toContain('advisory pipeline');
+  });
+});
+
+describe('nexpath CLI — guidance stubs', () => {
   it('optimize prints stub message', async () => {
     const out = await run('optimize');
     expect(out[0]).toBe('[nexpath optimize] — not yet implemented');

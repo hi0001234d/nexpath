@@ -5,6 +5,7 @@ import { configGetAction, configSetAction } from './commands/config.js';
 import { storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAction } from './commands/store.js';
 import { installAction, uninstallAction } from './commands/install.js';
 import { initAction } from './commands/init.js';
+import { registerAutoCommand } from './commands/auto.js';
 
 export function createProgram(): Command {
   const program = new Command();
@@ -40,12 +41,7 @@ export function createProgram(): Command {
 
   // ── Guidance commands ─────────────────────────────────────────────────────────
 
-  program
-    .command('auto')
-    .description('Run the behaviour guidance system — fires the decision session at the right moments')
-    .action(() => {
-      console.log('[nexpath auto] — not yet implemented');
-    });
+  registerAutoCommand(program);
 
   program
     .command('optimize')
