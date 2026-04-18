@@ -25,7 +25,7 @@ describe('configGetAction', () => {
     const { path, cleanup } = await tempDb();
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     await configGetAction('prompt_capture_enabled', path);
-    expect(spy.mock.calls[0][0]).toBe('true');
+    expect(spy.mock.calls[0][0]).toBe('prompt_capture_enabled = true');
     cleanup();
   });
 
@@ -33,7 +33,7 @@ describe('configGetAction', () => {
     const { path, cleanup } = await tempDb();
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     await configGetAction('prompt_store_max_per_project', path);
-    expect(spy.mock.calls[0][0]).toBe('500');
+    expect(spy.mock.calls[0][0]).toBe('prompt_store_max_per_project = 500');
     cleanup();
   });
 
@@ -41,7 +41,7 @@ describe('configGetAction', () => {
     const { path, cleanup } = await tempDb();
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     await configGetAction('completely_unknown_key', path);
-    expect(spy.mock.calls[0][0]).toBe('(not set)');
+    expect(spy.mock.calls[0][0]).toBe('completely_unknown_key = (not set)');
     cleanup();
   });
 
@@ -51,7 +51,7 @@ describe('configGetAction', () => {
     });
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     await configGetAction('prompt_capture_enabled', path);
-    expect(spy.mock.calls[0][0]).toBe('false');
+    expect(spy.mock.calls[0][0]).toBe('prompt_capture_enabled = false');
     cleanup();
   });
 });
@@ -72,7 +72,7 @@ describe('configSetAction', () => {
 
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     await configGetAction('prompt_store_max_per_project', path);
-    expect(spy.mock.calls[0][0]).toBe('1000');
+    expect(spy.mock.calls[0][0]).toBe('prompt_store_max_per_project = 1000');
     cleanup();
   });
 
@@ -84,7 +84,7 @@ describe('configSetAction', () => {
 
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     await configGetAction('prompt_store_max_per_project', path);
-    expect(spy.mock.calls[0][0]).toBe('750');
+    expect(spy.mock.calls[0][0]).toBe('prompt_store_max_per_project = 750');
     cleanup();
   });
 });
