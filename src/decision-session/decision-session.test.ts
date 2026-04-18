@@ -120,6 +120,26 @@ describe('buildOptionList', () => {
     expect(l1.length).toBeGreaterThan(l2.length);
     expect(l2.length).toBeGreaterThan(l3.length);
   });
+
+  it('TASK_REVIEW L1 has exactly 5 options (3 content + Show simpler + Skip)', () => {
+    const { options } = buildOptionList(TASK_REVIEW, 1);
+    expect(options).toHaveLength(5);
+  });
+
+  it('TASK_REVIEW L2 has exactly 4 options (2 content + Show simpler + Skip)', () => {
+    const { options } = buildOptionList(TASK_REVIEW, 2);
+    expect(options).toHaveLength(4);
+  });
+
+  it('TASK_REVIEW L3 has exactly 2 options (1 content + Skip)', () => {
+    const { options } = buildOptionList(TASK_REVIEW, 3);
+    expect(options).toHaveLength(2);
+  });
+
+  it('IMPLEMENTATION_TO_REVIEW L1 has exactly 6 options (4 content + Show simpler + Skip)', () => {
+    const { options } = buildOptionList(IMPLEMENTATION_TO_REVIEW, 1);
+    expect(options).toHaveLength(6);
+  });
 });
 
 // ── resolveDecisionContent ────────────────────────────────────────────────────
@@ -150,6 +170,23 @@ describe('resolveDecisionContent', () => {
     expect(content).toBe(REVIEW_TO_RELEASE);
   });
 
+  it('stage_transition to implementation → TASK_REVIEW (within-implementation fallback)', () => {
+    // implementation is not in TRANSITION_CONTENT; special case branch returns TASK_REVIEW
+    const content = resolveDecisionContent('implementation', 'stage_transition');
+    expect(content).toBe(TASK_REVIEW);
+  });
+
+  it('stage_transition to idea → TASK_REVIEW (generic fallback for unmapped stage)', () => {
+    // idea is not in TRANSITION_CONTENT and not the implementation special case
+    const content = resolveDecisionContent('idea', 'stage_transition');
+    expect(content).toBe(TASK_REVIEW);
+  });
+
+  it('stage_transition to feedback_loop → TASK_REVIEW (generic fallback for terminal stage)', () => {
+    const content = resolveDecisionContent('feedback_loop', 'stage_transition');
+    expect(content).toBe(TASK_REVIEW);
+  });
+
   it('absence:test_creation → TASK_REVIEW content (specific override)', () => {
     const content = resolveDecisionContent('implementation', 'absence:test_creation');
     expect(content).toBe(TASK_REVIEW);
@@ -178,6 +215,11 @@ describe('resolveDecisionContent', () => {
   it('absence:unknown_signal in idea stage → falls back to TASK_REVIEW', () => {
     // No specific override, 'idea' not in TRANSITION_CONTENT → TASK_REVIEW fallback
     const content = resolveDecisionContent('idea', 'absence:some_signal');
+    expect(content).toBe(TASK_REVIEW);
+  });
+
+  it('absence:unknown_signal in feedback_loop stage → falls back to TASK_REVIEW', () => {
+    const content = resolveDecisionContent('feedback_loop', 'absence:some_signal');
     expect(content).toBe(TASK_REVIEW);
   });
 });
@@ -231,6 +273,43 @@ describe('DecisionContent structure', () => {
   it('SHOW_SIMPLER constant matches research spec wording', () => {
     expect(SHOW_SIMPLER).toBe('Show simpler options →');
   });
+
+  // Exact option counts per content block (guards against accidental truncation)
+  it('IDEA_TO_PRD has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(IDEA_TO_PRD.L1).toHaveLength(3);
+    expect(IDEA_TO_PRD.L2).toHaveLength(2);
+    expect(IDEA_TO_PRD.L3).toHaveLength(1);
+  });
+
+  it('PRD_TO_ARCHITECTURE has exactly 4 L1, 2 L2, 1 L3 options', () => {
+    expect(PRD_TO_ARCHITECTURE.L1).toHaveLength(4);
+    expect(PRD_TO_ARCHITECTURE.L2).toHaveLength(2);
+    expect(PRD_TO_ARCHITECTURE.L3).toHaveLength(1);
+  });
+
+  it('ARCHITECTURE_TO_TASKS has exactly 4 L1, 2 L2, 1 L3 options', () => {
+    expect(ARCHITECTURE_TO_TASKS.L1).toHaveLength(4);
+    expect(ARCHITECTURE_TO_TASKS.L2).toHaveLength(2);
+    expect(ARCHITECTURE_TO_TASKS.L3).toHaveLength(1);
+  });
+
+  it('TASK_REVIEW has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(TASK_REVIEW.L1).toHaveLength(3);
+    expect(TASK_REVIEW.L2).toHaveLength(2);
+    expect(TASK_REVIEW.L3).toHaveLength(1);
+  });
+
+  it('IMPLEMENTATION_TO_REVIEW has exactly 4 L1, 2 L2, 1 L3 options', () => {
+    expect(IMPLEMENTATION_TO_REVIEW.L1).toHaveLength(4);
+    expect(IMPLEMENTATION_TO_REVIEW.L2).toHaveLength(2);
+    expect(IMPLEMENTATION_TO_REVIEW.L3).toHaveLength(1);
+  });
+
+  it('REVIEW_TO_RELEASE has exactly 4 L1, 2 L2, 1 L3 options', () => {
+    expect(REVIEW_TO_RELEASE.L1).toHaveLength(4);
+    expect(REVIEW_TO_RELEASE.L2).toHaveLength(2);
+    expect(REVIEW_TO_RELEASE.L3).toHaveLength(1);
+  });
 });
 
 // ── ANSI formatting helpers ───────────────────────────────────────────────────
@@ -243,6 +322,10 @@ describe('ANSI formatting helpers', () => {
     expect(result).toContain('\x1b[0m'); // reset
   });
 
+  it('formatPinchLabel uses bold cyan escape (\x1b[1;96m)', () => {
+    expect(formatPinchLabel('test')).toContain('\x1b[1;96m');
+  });
+
   it('formatQuestion wraps text in bold white ANSI codes', () => {
     const result = formatQuestion('Is the plan written?');
     expect(result).toContain('Is the plan written?');
@@ -250,11 +333,28 @@ describe('ANSI formatting helpers', () => {
     expect(result).toContain('\x1b[0m');
   });
 
+  it('formatQuestion uses bold white escape (\x1b[1;97m)', () => {
+    expect(formatQuestion('test')).toContain('\x1b[1;97m');
+  });
+
   it('formatSubtitle wraps text in dim yellow ANSI codes', () => {
     const result = formatSubtitle('— lighter options');
     expect(result).toContain('— lighter options');
     expect(result).toContain('\x1b[');
     expect(result).toContain('\x1b[0m');
+  });
+
+  it('formatSubtitle uses dim yellow escape (\x1b[2;33m)', () => {
+    expect(formatSubtitle('test')).toContain('\x1b[2;33m');
+  });
+
+  it('each formatter uses a distinct ANSI color (pinch ≠ question ≠ subtitle)', () => {
+    const pinch    = formatPinchLabel('x').split('x')[0];
+    const question = formatQuestion('x').split('x')[0];
+    const subtitle = formatSubtitle('x').split('x')[0];
+    expect(pinch).not.toBe(question);
+    expect(pinch).not.toBe(subtitle);
+    expect(question).not.toBe(subtitle);
   });
 });
 
@@ -395,7 +495,7 @@ describe('runDecisionSession', () => {
   it('persists skip to store when store is provided', async () => {
     const store = await openStore(':memory:');
     try {
-      const input = makeInput({ projectRoot: '/proj/test', levelReached: undefined } as Partial<DecisionSessionInput>);
+      const input = makeInput({ projectRoot: '/proj/test' });
       await runDecisionSession(input, store, mockSelect(SKIP_NOW));
       const rows = getSkippedSessions(store, '/proj/test');
       expect(rows).toHaveLength(1);
@@ -452,6 +552,18 @@ describe('runDecisionSession', () => {
     // Should not throw even without a store
     const result = await runDecisionSession(makeInput(), undefined, mockSelect(SKIP_NOW));
     expect(result.outcome).toBe('skipped');
+  });
+
+  it('persists skip to store on Ctrl+C (cancel symbol)', async () => {
+    const store = await openStore(':memory:');
+    try {
+      await runDecisionSession(makeInput({ projectRoot: '/proj/cancel-store' }), store, mockCancel());
+      const rows = getSkippedSessions(store, '/proj/cancel-store');
+      expect(rows).toHaveLength(1);
+      expect(rows[0].levelReached).toBe(1);
+    } finally {
+      store.db.close();
+    }
   });
 
   it('records promptCount and sessionId correctly in the skip row', async () => {

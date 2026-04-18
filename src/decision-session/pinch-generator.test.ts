@@ -7,6 +7,7 @@ import {
   PINCH_MAX_TOKENS,
   PINCH_TEMPERATURE,
   PINCH_MAX_CHARS,
+  PINCH_MIN_CHARS,
   PINCH_FALLBACK_TABLE,
 } from './PinchGenerator.js';
 import {
@@ -73,6 +74,14 @@ describe('PinchGenerator constants', () => {
       expect(typeof label).toBe('string');
       expect(label.length).toBeGreaterThan(0);
     }
+  });
+
+  it('PINCH_MIN_CHARS is 2 (minimum label length)', () => {
+    expect(PINCH_MIN_CHARS).toBe(2);
+  });
+
+  it('PINCH_FALLBACK_TABLE has exactly 6 entries', () => {
+    expect(Object.keys(PINCH_FALLBACK_TABLE)).toHaveLength(6);
   });
 });
 
@@ -170,6 +179,15 @@ describe('validatePinchLabel', () => {
   it('accepts a 1-word label (minimum)', () => {
     expect(validatePinchLabel('Pause.')).toBe('Pause.');
   });
+
+  it('accepts a label with exactly 4 words (max flexibility boundary)', () => {
+    // Implementation allows up to 4 words for LLM flexibility
+    expect(validatePinchLabel('Hold on right now.')).toBe('Hold on right now.');
+  });
+
+  it('returns null for a 5-word label (exceeds word limit)', () => {
+    expect(validatePinchLabel('This has five whole words')).toBeNull();
+  });
 });
 
 // ── generatePinchLabel ────────────────────────────────────────────────────────
@@ -228,6 +246,16 @@ describe('generatePinchLabel', () => {
   it('uses TASK_REVIEW fallback for absence:test_creation', async () => {
     const result = await generatePinchLabel('implementation', 'absence:test_creation', makeErrorClient());
     expect(result).toBe(TASK_REVIEW.pinchFallback);
+  });
+
+  it('uses ARCHITECTURE_TO_TASKS fallback for task_breakdown stage transition', async () => {
+    const result = await generatePinchLabel('task_breakdown', 'stage_transition', makeErrorClient());
+    expect(result).toBe(ARCHITECTURE_TO_TASKS.pinchFallback);
+  });
+
+  it('uses IMPLEMENTATION_TO_REVIEW fallback for review_testing stage transition', async () => {
+    const result = await generatePinchLabel('review_testing', 'stage_transition', makeErrorClient());
+    expect(result).toBe(IMPLEMENTATION_TO_REVIEW.pinchFallback);
   });
 
   it('passes correct model and temperature to the OpenAI API', async () => {
