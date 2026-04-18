@@ -7,6 +7,9 @@ import {
   deleteAllPrompts,
   pruneOlderThan,
   setConfig,
+  deleteAllSkippedSessions,
+  deleteAllSkippedSessionsGlobal,
+  pruneSkippedSessions,
 } from '../../store/index.js';
 
 // ── Period parser ─────────────────────────────────────────────────────────────
@@ -46,6 +49,7 @@ export async function storeDeleteAction(
   if (opts.project) {
     const store = await openStore(dbPath);
     deleteProjectPrompts(store, opts.project);
+    deleteAllSkippedSessions(store, opts.project);
     closeStore(store);
     console.log(`Deleted all prompts for project: ${opts.project}`);
     return;
@@ -62,6 +66,7 @@ export async function storeDeleteAction(
 
   const store = await openStore(dbPath);
   deleteAllPrompts(store);
+  deleteAllSkippedSessionsGlobal(store);
   closeStore(store);
   console.log('All stored prompts deleted.');
 }
@@ -110,6 +115,7 @@ export async function storePruneAction(opts: PruneOpts, dbPath = DEFAULT_DB_PATH
 
   const store = await openStore(dbPath);
   const deleted = pruneOlderThan(store, ms, opts.project);
+  pruneSkippedSessions(store, ms, opts.project);
   closeStore(store);
 
   const scope = opts.project ? `project: ${opts.project}` : 'all projects';

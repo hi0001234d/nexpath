@@ -127,3 +127,33 @@ export function deleteSkippedSession(store: Store, id: number): void {
 export function deleteAllSkippedSessions(store: Store, projectRoot: string): void {
   store.db.run('DELETE FROM skipped_sessions WHERE project_root = ?', [projectRoot]);
 }
+
+/**
+ * Remove all skipped items across every project.
+ * Used by `nexpath store delete` (no --project flag).
+ */
+export function deleteAllSkippedSessionsGlobal(store: Store): void {
+  store.db.run('DELETE FROM skipped_sessions');
+}
+
+/**
+ * Remove skipped items older than the specified age.
+ * Mirrors pruneOlderThan — used by `nexpath store prune`.
+ * @param olderThanMs  Milliseconds — items with skipped_at < (now - olderThanMs) are deleted
+ * @param projectRoot  Optional — scope to one project
+ */
+export function pruneSkippedSessions(
+  store:        Store,
+  olderThanMs:  number,
+  projectRoot?: string,
+): void {
+  const cutoff = Date.now() - olderThanMs;
+  if (projectRoot) {
+    store.db.run(
+      'DELETE FROM skipped_sessions WHERE project_root = ? AND skipped_at < ?',
+      [projectRoot, cutoff],
+    );
+  } else {
+    store.db.run('DELETE FROM skipped_sessions WHERE skipped_at < ?', [cutoff]);
+  }
+}

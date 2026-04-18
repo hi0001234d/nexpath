@@ -3,7 +3,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { rmSync } from 'node:fs';
-import { openStore, closeStore, insertPrompt, getConfig, setConfig } from '../../store/index.js';
+import {
+  openStore,
+  closeStore,
+  insertPrompt,
+  getConfig,
+  setConfig,
+  insertSkippedSession,
+  getSkippedSessionCount,
+  pruneSkippedSessions,
+} from '../../store/index.js';
 import { parsePeriod, storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAction } from './store.js';
 
 async function tempDb(setup?: (store: Awaited<ReturnType<typeof openStore>>) => void) {
@@ -261,5 +270,137 @@ describe('storePruneAction', () => {
     expect(spy.mock.calls[0][0]).toContain('Error');
     expect(process.exitCode).toBe(1);
     process.exitCode = originalExitCode;
+  });
+});
+
+// ── Gap 3 — skipped_sessions cleanup ──────────────────────────────────────────
+
+function insertSkip(store: Awaited<ReturnType<typeof openStore>>, projectRoot: string) {
+  insertSkippedSession(store, {
+    projectRoot,
+    sessionId: 'sess-1',
+    flagType: 'stage_transition',
+    stage: 'implementation',
+    levelReached: 1,
+    skippedAtPromptCount: 1,
+  });
+}
+
+describe('storeDeleteAction — project delete cleans skipped_sessions', () => {
+  it('deletes skipped_sessions for the deleted project', async () => {
+    const { path, cleanup } = await tempDb((store) => {
+      insertSkip(store, '/proj/a');
+      insertSkip(store, '/proj/b');
+    });
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    await storeDeleteAction({ project: '/proj/a' }, path);
+
+    const store = await openStore(path);
+    expect(getSkippedSessionCount(store, '/proj/a')).toBe(0);
+    closeStore(store);
+    cleanup();
+  });
+
+  it('preserves skipped_sessions for other projects', async () => {
+    const { path, cleanup } = await tempDb((store) => {
+      insertSkip(store, '/proj/a');
+      insertSkip(store, '/proj/b');
+    });
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    await storeDeleteAction({ project: '/proj/a' }, path);
+
+    const store = await openStore(path);
+    expect(getSkippedSessionCount(store, '/proj/b')).toBe(1);
+    closeStore(store);
+    cleanup();
+  });
+});
+
+describe('storeDeleteAction — full delete cleans all skipped_sessions', () => {
+  it('removes every skipped_sessions row', async () => {
+    const { path, cleanup } = await tempDb((store) => {
+      insertSkip(store, '/proj/a');
+      insertSkip(store, '/proj/b');
+    });
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    await storeDeleteAction({ yes: true }, path);
+
+    const store = await openStore(path);
+    const res = store.db.exec('SELECT COUNT(*) FROM skipped_sessions');
+    expect(res[0]?.values[0]?.[0]).toBe(0);
+    closeStore(store);
+    cleanup();
+  });
+});
+
+describe('storePruneAction — prunes skipped_sessions', () => {
+  it('prunes skipped_sessions older than cutoff for a specific project', async () => {
+    const old = Date.now() - 2 * 24 * 60 * 60 * 1000;
+    const { path, cleanup } = await tempDb((store) => {
+      store.db.run(
+        'INSERT INTO skipped_sessions (project_root, session_id, flag_type, stage, level_reached, skipped_at_prompt_count, skipped_at) VALUES (?,?,?,?,?,?,?)',
+        ['/proj/a', 'sess-old', 'stage_transition', 'implementation', 1, 1, old],
+      );
+      store.db.run(
+        'INSERT INTO skipped_sessions (project_root, session_id, flag_type, stage, level_reached, skipped_at_prompt_count, skipped_at) VALUES (?,?,?,?,?,?,?)',
+        ['/proj/b', 'sess-b', 'stage_transition', 'implementation', 1, 1, old],
+      );
+    });
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    await storePruneAction({ olderThan: '1d', project: '/proj/a' }, path);
+
+    const store = await openStore(path);
+    expect(getSkippedSessionCount(store, '/proj/a')).toBe(0);
+    expect(getSkippedSessionCount(store, '/proj/b')).toBe(1); // other project untouched
+    closeStore(store);
+    cleanup();
+  });
+
+  it('prunes skipped_sessions older than cutoff across all projects (no --project)', async () => {
+    const old = Date.now() - 2 * 24 * 60 * 60 * 1000;
+    const { path, cleanup } = await tempDb((store) => {
+      store.db.run(
+        'INSERT INTO skipped_sessions (project_root, session_id, flag_type, stage, level_reached, skipped_at_prompt_count, skipped_at) VALUES (?,?,?,?,?,?,?)',
+        ['/proj/a', 'sess-old-a', 'stage_transition', 'implementation', 1, 1, old],
+      );
+      store.db.run(
+        'INSERT INTO skipped_sessions (project_root, session_id, flag_type, stage, level_reached, skipped_at_prompt_count, skipped_at) VALUES (?,?,?,?,?,?,?)',
+        ['/proj/b', 'sess-old-b', 'stage_transition', 'implementation', 1, 1, old],
+      );
+      store.db.run(
+        'INSERT INTO skipped_sessions (project_root, session_id, flag_type, stage, level_reached, skipped_at_prompt_count, skipped_at) VALUES (?,?,?,?,?,?,?)',
+        ['/proj/b', 'sess-recent', 'stage_transition', 'implementation', 1, 1, Date.now()],
+      );
+    });
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    await storePruneAction({ olderThan: '1d' }, path);
+
+    const store = await openStore(path);
+    const res = store.db.exec('SELECT COUNT(*) FROM skipped_sessions');
+    expect(res[0]?.values[0]?.[0]).toBe(1); // only the recent one remains
+    closeStore(store);
+    cleanup();
+  });
+});
+
+describe('pruneSkippedSessions (unit)', () => {
+  it('deletes only items with skipped_at before the cutoff', async () => {
+    const old = Date.now() - 2 * 24 * 60 * 60 * 1000;
+    const { path, cleanup } = await tempDb((store) => {
+      store.db.run(
+        'INSERT INTO skipped_sessions (project_root, session_id, flag_type, stage, level_reached, skipped_at_prompt_count, skipped_at) VALUES (?,?,?,?,?,?,?)',
+        ['/proj/a', 'sess-old', 'stage_transition', 'implementation', 1, 1, old],
+      );
+      store.db.run(
+        'INSERT INTO skipped_sessions (project_root, session_id, flag_type, stage, level_reached, skipped_at_prompt_count, skipped_at) VALUES (?,?,?,?,?,?,?)',
+        ['/proj/a', 'sess-new', 'stage_transition', 'implementation', 1, 2, Date.now()],
+      );
+    });
+
+    const store = await openStore(path);
+    pruneSkippedSessions(store, 24 * 60 * 60 * 1000); // 1d cutoff
+    expect(getSkippedSessionCount(store, '/proj/a')).toBe(1);
+    closeStore(store);
+    cleanup();
   });
 });

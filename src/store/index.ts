@@ -17,6 +17,8 @@ export {
   getSkippedSessionCount,
   deleteSkippedSession,
   deleteAllSkippedSessions,
+  deleteAllSkippedSessionsGlobal,
+  pruneSkippedSessions,
   type SkippedSessionRecord,
   type InsertSkippedSessionInput,
 } from './skipped-sessions.js';
