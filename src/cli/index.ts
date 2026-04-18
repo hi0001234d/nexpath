@@ -4,6 +4,7 @@ import { Command } from 'commander';
 import { configGetAction, configSetAction } from './commands/config.js';
 import { storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAction } from './commands/store.js';
 import { installAction, uninstallAction } from './commands/install.js';
+import { initAction } from './commands/init.js';
 
 export function createProgram(): Command {
   const program = new Command();
@@ -33,8 +34,8 @@ export function createProgram(): Command {
   program
     .command('init')
     .description('Set up nexpath for the current project (onboarding questionnaire)')
-    .action(() => {
-      console.log('[nexpath init] — not yet implemented');
+    .action(async () => {
+      await initAction();
     });
 
   // ── Guidance commands ─────────────────────────────────────────────────────────

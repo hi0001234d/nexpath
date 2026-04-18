@@ -45,12 +45,6 @@ describe('nexpath CLI — metadata', () => {
 // Stub commands — these still print "not yet implemented"
 // Config + store commands are wired to real handlers; tested in commands/*.test.ts
 
-describe('nexpath CLI — lifecycle stubs', () => {
-  it('init prints stub message', async () => {
-    const out = await run('init');
-    expect(out[0]).toBe('[nexpath init] — not yet implemented');
-  });
-});
 
 describe('nexpath CLI — guidance stubs', () => {
   it('auto prints stub message', async () => {
