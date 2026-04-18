@@ -718,6 +718,63 @@ describe('installAction', () => {
       cleanup();
     }
   });
+
+  it('writes advisory hook to claudeSettings when claude CLI succeeds', async () => {
+    const { dir, cleanup } = tmpDir();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {} });
+      const data  = readJson(paths.claudeSettings) as Record<string, unknown>;
+      const hooks = data.hooks as Record<string, unknown>;
+      const groups = hooks.UserPromptSubmit as Array<Record<string, unknown>>;
+      expect(groups.some((g) => g._nexpath_hook === true)).toBe(true);
+    } finally { cleanup(); }
+  });
+
+  it('writes advisory hook to claudeSettings even when claude CLI falls back', async () => {
+    const { dir, cleanup } = tmpDir();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true }, {
+        paths,
+        isWin: false,
+        execFn: () => { throw new Error('claude not found'); },
+      });
+      const data  = readJson(paths.claudeSettings) as Record<string, unknown>;
+      const hooks = data.hooks as Record<string, unknown>;
+      const groups = hooks.UserPromptSubmit as Array<Record<string, unknown>>;
+      expect(groups.some((g) => g._nexpath_hook === true)).toBe(true);
+    } finally { cleanup(); }
+  });
+
+  it('hook write failure is non-blocking — prints warning and install continues', async () => {
+    const { dir, cleanup } = tmpDir();
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      // Create .claude as a FILE — writeJson's mkdirSync will fail (ENOTDIR)
+      writeFileSync(join(dir, '.claude'), 'not-a-directory');
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {} });
+      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
+      expect(output).toContain('hook write failed');
+      // MCP registration still happened (install did not abort)
+      expect(output).toContain('Claude Code');
+    } finally { cleanup(); }
+  });
+
+  it('prints advisory pipeline auto-wired note after agent loop', async () => {
+    const { dir, cleanup } = tmpDir();
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {} });
+      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
+      expect(output).toContain('advisory pipeline');
+      expect(output).toContain('Claude Code only');
+    } finally { cleanup(); }
+  });
 });
 
 // ── uninstallAction ───────────────────────────────────────────────────────────
@@ -797,6 +854,35 @@ describe('uninstallAction', () => {
     } finally {
       cleanup();
     }
+  });
+
+  it('removes advisory hook from claudeSettings and prints advisory hook removed', async () => {
+    const { dir, cleanup } = tmpDir();
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      // Pre-write the hook so uninstall has something to remove
+      writeHookEntry(paths.claudeSettings, dir, 'linux');
+      await uninstallAction({ paths, execFn: () => {} });
+      // File should no longer contain the nexpath hook group
+      const data  = readJson(paths.claudeSettings) as Record<string, unknown>;
+      const hooks = data.hooks as Record<string, unknown>;
+      expect(hooks.UserPromptSubmit).toBeUndefined();
+      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
+      expect(output).toContain('advisory hook removed');
+    } finally { cleanup(); }
+  });
+
+  it('reports hook not registered when no settings file exists', async () => {
+    const { dir, cleanup } = tmpDir();
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      // settings.json never written — hook was never registered
+      await uninstallAction({ paths, execFn: () => {} });
+      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
+      expect(output).toContain('hook not registered');
+    } finally { cleanup(); }
   });
 });
 

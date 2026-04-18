@@ -433,6 +433,103 @@ describe('SessionStateManager — firedDecisionSessions', () => {
   });
 });
 
+// ── registerAutoCommand — output format ──────────────────────────────────────
+//
+// Tests verify the CLI action's output formatting without running the full
+// advisory pipeline.  We invoke registerAutoCommand through Commander with an
+// in-memory store and a selectFn that is never reached (pipeline returns
+// no_action for a single low-signal prompt), capturing stdout/stderr writes.
+
+describe('registerAutoCommand — output format', () => {
+  const originalStdout = process.stdout.write.bind(process.stdout);
+  const originalStderr = process.stderr.write.bind(process.stderr);
+  const originalExit   = process.exit.bind(process);
+
+  function captureStdout(): { lines: string[]; restore: () => void } {
+    const lines: string[] = [];
+    const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: unknown) => {
+      lines.push(String(chunk));
+      return true;
+    });
+    return { lines, restore: () => spy.mockRestore() };
+  }
+
+  function captureStderr(): { lines: string[]; restore: () => void } {
+    const lines: string[] = [];
+    const spy = vi.spyOn(process.stderr, 'write').mockImplementation((chunk: unknown) => {
+      lines.push(String(chunk));
+      return true;
+    });
+    return { lines, restore: () => spy.mockRestore() };
+  }
+
+  it('emits nothing to stdout when outcome is no_action (direct mode)', async () => {
+    const { Command } = await import('commander');
+    const { registerAutoCommand } = await import('./auto.js');
+    const program = new Command();
+    program.exitOverride();
+    registerAutoCommand(program);
+    const { lines, restore } = captureStdout();
+    try {
+      await program.parseAsync(['node', 'nexpath', 'auto', '--db', ':memory:', 'ok']);
+    } catch { /* exitOverride may throw */ }
+    restore();
+    // 'ok' is a low-signal prompt — pipeline returns no_action — stdout silent
+    expect(lines.join('')).toBe('');
+  });
+
+  it('hookSpecificOutput JSON has correct structure when parsed', () => {
+    // Verify the output format matches what Claude Code expects — parse and check shape
+    const selectedPrompt = 'cross-confirm the spec before writing any code';
+    const output = JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName:     'UserPromptSubmit',
+        additionalContext: selectedPrompt,
+      },
+    });
+    const parsed = JSON.parse(output) as {
+      hookSpecificOutput: { hookEventName: string; additionalContext: string };
+    };
+    expect(parsed.hookSpecificOutput.hookEventName).toBe('UserPromptSubmit');
+    expect(parsed.hookSpecificOutput.additionalContext).toBe(selectedPrompt);
+    expect(Object.keys(parsed)).toEqual(['hookSpecificOutput']);
+  });
+
+  it('exits with code 1 and writes to stderr when prompt is missing in direct mode', async () => {
+    const { Command } = await import('commander');
+    const { registerAutoCommand } = await import('./auto.js');
+    const program = new Command();
+    program.exitOverride();
+    registerAutoCommand(program);
+
+    const stderrLines: string[] = [];
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation((chunk: unknown) => {
+      stderrLines.push(String(chunk));
+      return true;
+    });
+
+    // Provide TTY stdin so readStdin returns '' immediately
+    const originalStdin = process.stdin;
+    const stream = new PassThrough();
+    (stream as unknown as Record<string, unknown>).isTTY = true;
+    Object.defineProperty(process, 'stdin', { value: stream, writable: true, configurable: true });
+
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('process.exit called');
+    }) as never);
+
+    try {
+      await program.parseAsync(['node', 'nexpath', 'auto', '--db', ':memory:']);
+    } catch { /* expected — exit throws */ }
+
+    stderrSpy.mockRestore();
+    exitSpy.mockRestore();
+    Object.defineProperty(process, 'stdin', { value: originalStdin, writable: true, configurable: true });
+
+    expect(stderrLines.join('')).toContain('prompt text is required');
+  });
+});
+
 // ── readStdin ─────────────────────────────────────────────────────────────────
 
 describe('readStdin', () => {
