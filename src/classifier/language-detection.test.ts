@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   preprocessText,
   runDetection,
@@ -95,6 +95,25 @@ describe('preprocessText', () => {
     const result = preprocessText(input);
     expect(result).toContain('implement');
     expect(result).not.toContain('{');
+  });
+
+  it('drops a line that becomes empty after all keywords are stripped', () => {
+    // 'const return null' — all three are ENG_KEYWORDS → filtered.trim() = '' → line dropped
+    const input = 'const return null\nI want to add the authentication feature here';
+    const result = preprocessText(input);
+    expect(result).not.toContain('const');
+    expect(result).not.toContain('return');
+    expect(result).not.toContain('null');
+    expect(result).toContain('authentication');
+  });
+
+  it('strips ENG_KEYWORDS case-insensitively (CONST, RETURN, NULL removed)', () => {
+    // w.toLowerCase() is used → uppercase variants are also stripped
+    const result = preprocessText('CONST RETURN NULL the feature works');
+    expect(result).not.toContain('CONST');
+    expect(result).not.toContain('RETURN');
+    expect(result).not.toContain('NULL');
+    expect(result).toContain('feature');
   });
 });
 
@@ -219,16 +238,12 @@ describe('detectLanguage', () => {
     expect(result).toBe('fr');
   });
 
-  it('uses only the last LANG_WINDOW prompts when history is longer', () => {
-    // 25 prompts: first 5 are non-English characters (Arabic text), last 20 are English
-    // Because we slice at LANG_WINDOW=20, the Arabic prompts fall outside the window
-    const arabicPrompts = Array(5).fill('أريد تنفيذ خدمة المصادقة');
+  it('detects language correctly across a full 20-prompt window', () => {
+    // detectLanguage does NOT slice internally — caller is responsible (per spec/pattern).
+    // This tests that detection works correctly when given the 20-prompt window.
     const englishPrompts = Array(20).fill(
-      'implement the authentication service with proper validation and error handling',
+      'I want to add the login feature so users can access their account and reset their password',
     );
-    const allPrompts = [...arabicPrompts, ...englishPrompts];
-    // The function itself doesn't slice — caller is responsible, per spec
-    // But we test with 20 prompts to verify detection works on the window
     const result = detectLanguage(englishPrompts);
     expect(result).toBe('en');
   });
@@ -294,13 +309,37 @@ describe('resolveLanguage', () => {
     expect(resolveLanguage('ar')).toBe('ar');
     expect(resolveLanguage('ko')).toBe('ko');
   });
+
+  it('whitespace-only detectedLanguage is treated as not set → undefined', () => {
+    // detectedLanguage.trim() = '' → falsy → falls through to undefined
+    expect(resolveLanguage(undefined, '   ')).toBeUndefined();
+    expect(resolveLanguage('', '   ')).toBeUndefined();
+  });
+
+  it('detected language with surrounding whitespace is trimmed and returned', () => {
+    expect(resolveLanguage(undefined, ' hi ')).toBe('hi');
+  });
 });
 
 // ── runDetection (integration smoke test) ─────────────────────────────────────
 
 describe('runDetection', () => {
+  it('returns empty array for empty string input', () => {
+    const results = runDetection('');
+    expect(Array.isArray(results)).toBe(true);
+    expect(results.length).toBe(0);
+  });
+
   it('returns empty array for blank/whitespace input', () => {
     const results = runDetection('   ');
+    expect(Array.isArray(results)).toBe(true);
+    expect(results.length).toBe(0);
+  });
+
+  it('returns empty array when input preprocesses to empty (only code lines)', () => {
+    // All lines are symbol-heavy (< 50% letters) → preprocessed to '' → tinyld not called
+    const codeOnlyText = '{ a: 1, b: 2 }\n[1, 2, 3, 4, 5]\n====>>\n;;; {}';
+    const results = runDetection(codeOnlyText);
     expect(Array.isArray(results)).toBe(true);
     expect(results.length).toBe(0);
   });
