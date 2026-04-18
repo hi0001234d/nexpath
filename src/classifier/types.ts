@@ -64,6 +64,12 @@ export interface SessionState {
   promptHistory: PromptRecord[]; // capped at 30
   signalCounters: Record<string, SignalCounter>;
   absenceFlags: AbsenceFlag[];
+  /**
+   * Keys of decision session events that have already fired this session.
+   * Format: 'stage_transition:<prev>→<next>' | 'absence:<signalKey>@<stage>'
+   * Enforces the "once per stage transition event, never re-fires same event same session" rule.
+   */
+  firedDecisionSessions: string[];
 }
 
 // ── User nature / mood / depth (item 9) ───────────────────────────────────────

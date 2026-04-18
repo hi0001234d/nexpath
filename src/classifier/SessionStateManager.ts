@@ -55,8 +55,9 @@ function newSession(projectRoot: string, now: number): SessionState {
     stageConfirmedAt:  -1,    // -1 = not yet confirmed
     promptCount:       0,
     promptHistory:     [],
-    signalCounters:    initialSignalCounters(),
-    absenceFlags:      [],
+    signalCounters:          initialSignalCounters(),
+    absenceFlags:            [],
+    firedDecisionSessions:   [],
   };
 }
 
@@ -166,5 +167,22 @@ export class SessionStateManager {
   addAbsenceFlag(store: Store, flag: import('./types.js').AbsenceFlag): void {
     this.state.absenceFlags.push(flag);
     saveState(store, this.state);
+  }
+
+  /** Check whether a decision session has already fired for this key this session. */
+  hasFiredDecisionSession(key: string): boolean {
+    return (this.state.firedDecisionSessions ?? []).includes(key);
+  }
+
+  /**
+   * Record that a decision session fired for the given event key.
+   * Persists to the store so restarts within the same session don't re-fire.
+   */
+  markDecisionSessionFired(store: Store, key: string): void {
+    if (!this.state.firedDecisionSessions) this.state.firedDecisionSessions = [];
+    if (!this.state.firedDecisionSessions.includes(key)) {
+      this.state.firedDecisionSessions.push(key);
+      saveState(store, this.state);
+    }
   }
 }
