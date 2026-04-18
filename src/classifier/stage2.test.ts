@@ -44,6 +44,7 @@ function makeState(overrides: Partial<SessionState> = {}): SessionState {
     absenceFlags:          [],
     firedDecisionSessions: [],
     profile:               null,
+    detectedLanguage:      undefined,
     ...overrides,
   };
 }

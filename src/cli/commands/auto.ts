@@ -10,6 +10,13 @@ import { runDecisionSession } from '../../decision-session/DecisionSession.js';
 import type { SelectFn } from '../../decision-session/DecisionSession.js';
 import type { Stage } from '../../classifier/types.js';
 import type { FlagType } from '../../classifier/Stage2Trigger.js';
+import {
+  detectLanguage,
+  resolveLanguage,
+  LANG_WINDOW,
+  LANG_DETECT_INTERVAL,
+} from '../../classifier/LanguageDetector.js';
+import { getConfig } from '../../store/config.js';
 
 /**
  * nexpath auto — orchestration command (per decision-session-ux-research.md).
@@ -86,6 +93,22 @@ export async function runAuto(
   // ── 3. Process prompt → updates state (stage, history, counters) ─────────────
   mgr.processPrompt(store, input.promptText, classification);
 
+  // ── 3.5. Language detection (every LANG_DETECT_INTERVAL prompts or first time) ─
+  const shouldDetectLang = mgr.current.detectedLanguage === undefined
+    || mgr.current.promptCount % LANG_DETECT_INTERVAL === 0;
+
+  if (shouldDetectLang) {
+    const historyTexts = mgr.current.promptHistory.map((r) => r.text);
+    const langOverride  = getConfig(store.db, 'language_override');
+    const detected      = detectLanguage(
+      historyTexts.slice(-LANG_WINDOW),
+      mgr.current.detectedLanguage,
+    );
+    const resolved      = resolveLanguage(langOverride, detected);
+    mgr.setDetectedLanguage(store, resolved);
+  }
+  const effectiveLang = mgr.current.detectedLanguage;
+
   // ── 4. Absence detection ─────────────────────────────────────────────────────
   const newFlags = detectAbsenceFlags(mgr.current as import('../../classifier/types.js').SessionState);
   for (const flag of newFlags) {
@@ -139,6 +162,7 @@ export async function runAuto(
     flagType,
     openai,
     userProfile,
+    effectiveLang,
   );
 
   // ── 10. Decision session UI ──────────────────────────────────────────────────

@@ -60,6 +60,7 @@ function newSession(projectRoot: string, now: number): SessionState {
     absenceFlags:            [],
     firedDecisionSessions:   [],
     profile:                 null,
+    detectedLanguage:        undefined,
   };
 }
 
@@ -179,6 +180,12 @@ export class SessionStateManager {
   /** Check whether a decision session has already fired for this key this session. */
   hasFiredDecisionSession(key: string): boolean {
     return (this.state.firedDecisionSessions ?? []).includes(key);
+  }
+
+  /** Persist the detected language so the sticky fallback survives across runAuto invocations. */
+  setDetectedLanguage(store: Store, lang: string | undefined): void {
+    this.state.detectedLanguage = lang;
+    saveState(store, this.state);
   }
 
   /**

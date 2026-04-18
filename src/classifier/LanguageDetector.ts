@@ -19,6 +19,17 @@ import { detectAll } from 'tinyld';
 export const LANG_WINDOW          = 20;
 export const LANG_MIN_ACCURACY    = 0.5;
 export const LANG_MIN_GAP         = 0.15;
+/** Re-detect language every N prompts (stickiness cadence — matches depth classifier). */
+export const LANG_DETECT_INTERVAL = 10;
+
+/**
+ * Validate a language code before injecting into an LLM prompt.
+ * Accepts ISO 639-1 (2-char), ISO 639-2 (3-char), and BCP 47 subtags (up to 8 chars).
+ * Rejects anything that could be a prompt injection attempt.
+ */
+export function isValidLanguageCode(s: string): boolean {
+  return /^[a-zA-Z]{2,8}$/.test(s.trim());
+}
 
 /** English programming keywords that inflate English scores — stripped before detection. */
 const ENG_KEYWORDS = new Set([

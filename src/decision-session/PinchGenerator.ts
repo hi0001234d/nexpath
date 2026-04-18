@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import type { Stage, UserProfile } from '../classifier/types.js';
 import type { FlagType } from '../classifier/Stage2Trigger.js';
+import { isValidLanguageCode } from '../classifier/LanguageDetector.js';
 import {
   IDEA_TO_PRD,
   PRD_TO_ARCHITECTURE,
@@ -81,10 +82,15 @@ export function buildPinchPrompt(
   flagType:     FlagType,
   currentStage: Stage,
   profile?:     UserProfile,
+  language?:    string,
 ): string {
   const tone = profile
     ? buildToneHint(profile)
     : 'Motivating and friendly, not judgmental. Like a trusted colleague tapping them on the shoulder.';
+
+  const langInstruction = language && isValidLanguageCode(language)
+    ? `\n\nLanguage: Respond with the label in "${language}".`
+    : '';
 
   return `Context: A developer is using an AI coding agent. The system has detected that the developer may benefit from a quick check-in. The situation: ${question}
 
@@ -99,7 +105,7 @@ Audience: A developer who is moving fast with an AI coding agent. They may be mi
 Response format: Output ONLY the 2-3 word label. No punctuation at the end. No quotes. No explanation. Examples of the right style: "Hold up.", "Quick check.", "Before coding.", "Worth a pause."
 
 Flag type context: ${flagType}
-Current stage: ${currentStage}
+Current stage: ${currentStage}${langInstruction}
 
 Output the label now:`;
 }
@@ -146,17 +152,18 @@ export function validatePinchLabel(raw: string): string | null {
  * @param client   Optional OpenAI client (injectable for testing)
  */
 export async function generatePinchLabel(
-  stage:    Stage,
-  flagType: FlagType,
-  client?:  OpenAI,
-  profile?: UserProfile,
+  stage:     Stage,
+  flagType:  FlagType,
+  client?:   OpenAI,
+  profile?:  UserProfile,
+  language?: string,
 ): Promise<string> {
   const content  = resolveDecisionContent(stage, flagType);
   const fallback = content.pinchFallback;
 
   try {
     const openai   = client ?? new OpenAI();
-    const prompt   = buildPinchPrompt(content.question, flagType, stage, profile);
+    const prompt   = buildPinchPrompt(content.question, flagType, stage, profile, language);
 
     const response = await openai.chat.completions.create({
       model:       PINCH_MODEL,

@@ -31,6 +31,7 @@ function makeState(overrides: Partial<SessionState> = {}): SessionState {
     absenceFlags:          [],
     firedDecisionSessions: [],
     profile:               null,
+    detectedLanguage:      undefined,
     ...overrides,
   };
 }
@@ -1020,6 +1021,38 @@ describe('SessionStateManager — user profile', () => {
       mgr.processPrompt(store, `prompt ${i + 1}`, makeResult('implementation', 0.8));
     }
     expect(mgr.current.profile?.computedAt).toBe(firstComputedAt);
+    closeStore(store);
+  });
+});
+
+// ── SessionStateManager — detectedLanguage (Gap 2) ────────────────────────────
+
+describe('SessionStateManager — detectedLanguage', () => {
+  it('detectedLanguage initialises to undefined', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/lang-a');
+    expect(mgr.current.detectedLanguage).toBeUndefined();
+    closeStore(store);
+  });
+
+  it('setDetectedLanguage persists value and is readable after load', async () => {
+    const store = await openStore(':memory:');
+    const mgr1 = SessionStateManager.load(store, '/project/lang-b');
+    mgr1.setDetectedLanguage(store, 'fr');
+
+    const mgr2 = SessionStateManager.load(store, '/project/lang-b');
+    expect(mgr2.current.detectedLanguage).toBe('fr');
+    closeStore(store);
+  });
+
+  it('setDetectedLanguage(undefined) stores undefined', async () => {
+    const store = await openStore(':memory:');
+    const mgr1 = SessionStateManager.load(store, '/project/lang-c');
+    mgr1.setDetectedLanguage(store, 'de');
+    mgr1.setDetectedLanguage(store, undefined);
+
+    const mgr2 = SessionStateManager.load(store, '/project/lang-c');
+    expect(mgr2.current.detectedLanguage).toBeUndefined();
     closeStore(store);
   });
 });

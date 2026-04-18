@@ -72,6 +72,8 @@ export interface SessionState {
   firedDecisionSessions: string[];
   /** Cached user profile — null until ≥ PROFILE_RECOMPUTE_INTERVAL prompts processed. */
   profile: UserProfile | null;
+  /** Last successfully detected/resolved language code. undefined = not yet detected. */
+  detectedLanguage: string | undefined;
 }
 
 // ── User nature / mood / depth (item 9) ───────────────────────────────────────
