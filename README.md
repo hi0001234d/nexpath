@@ -1,8 +1,8 @@
 # Nexpath
 
-> **The spec-aware guidance layer for vibe coders and coding-agent users.**
+> **A behaviour guidance layer for vibe coders and coding-agent users.**
 
-Nexpath keeps you aligned with spec-driven development practices while you work with AI coding agents — without slowing you down.
+Nexpath gives developers meaningful direction while they work with AI coding agents — helpful suggestions at the right moment, without slowing you down.
 
 ---
 
@@ -10,11 +10,11 @@ Nexpath keeps you aligned with spec-driven development practices while you work 
 
 Nexpath is a behaviour guidance system for developers using AI coding agents. It monitors your
 development sessions, understands where you are in your project lifecycle, and surfaces
-**"the decision session"** — a lightweight, non-intrusive interactive prompt that keeps you
-aligned with spec-driven development practices without ever forcing your hand.
+**"the decision session"** — a lightweight, non-intrusive interactive prompt that gives you
+meaningful input and direction without ever forcing your hand.
 
-When Nexpath detects a meaningful moment in your workflow — like transitioning from spec to
-architecture, or finishing a coding task without running tests — it presents a set of
+When Nexpath detects a meaningful moment in your workflow — like transitioning from planning
+to architecture, or finishing a coding task without running tests — it presents a set of
 **pre-filled agent prompts** you can select with one keypress. These aren't tips. They're
 ready-to-send prompts that tell your AI agent exactly what to do next.
 
@@ -31,7 +31,7 @@ planned for v0.1.3.
 
 Vibe coding has changed how software gets built. AI coding agents can generate entire features
 from a single sentence — but the speed of generation often outpaces the discipline of process.
-Developers skip spec reviews. They forget regression checks. They ship without acceptance tests.
+Developers skip reviews. They forget regression checks. They ship without acceptance tests.
 Not out of laziness — out of momentum.
 
 We saw this firsthand in our own team's workflows: careless approvals, skipped cross-confirmation,
@@ -40,10 +40,11 @@ codebase may have been generated without rigorous verification at any stage.
 
 Nexpath was built during AI Hackfest 2026 by MLH, informed by prior deep research on MCP and
 coding agent workflows. It addresses the gap between what AI agents can generate and what
-disciplined development actually requires.
+disciplined development actually requires — giving developers helpful direction, interesting
+input, and meaningful suggestions right inside their coding sessions.
 
 Nexpath does not slow you down. It complements your momentum by appearing at the right moments
-with the right questions: _"You just closed a feature. Want to cross-confirm the spec before
+with the right questions: _"You just finished a feature. Want to cross-confirm before
 moving on?"_
 
 ---
@@ -55,8 +56,8 @@ layer for coding-agent workflows.
 
 ReviewDuel focuses on **what you build** — reviewing artifacts, flagging risks, guiding code
 quality. Nexpath focuses on **how you build** — guiding your development behaviour across
-sessions so that spec, tests, and architecture decisions don't get skipped under vibe-coding
-momentum.
+sessions so that important steps like testing, reviews, and architecture decisions don't get
+skipped under vibe-coding momentum.
 
 Nexpath was extracted as an independent, standalone project so it can:
 - Be adopted by developers who do not use ReviewDuel
@@ -72,10 +73,10 @@ When ReviewDuel becomes public, Nexpath will also ship as an integrated componen
 ### The Decision Session
 
 The core interaction. When Nexpath detects a stage transition in your development workflow, it
-presents structured options aligned with where you are in the spec-driven development lifecycle.
-Each option is a pre-filled prompt ready to send to your AI agent — select it and hit Enter.
+presents structured options aligned with where you are in your project lifecycle. Each option
+is a pre-filled prompt ready to send to your AI agent — select it and hit Enter.
 
-Decision sessions fire at key moments: moving from idea to spec, spec to architecture,
+Decision sessions fire at key moments: moving from idea to planning, planning to architecture,
 architecture to task breakdown, completing a task, finishing a phase, and pre-release checks.
 
 ### 3-Level Easier Options
@@ -112,7 +113,7 @@ the classifier's detection to reduce false positives.
 
 Nexpath tracks which development signals are present or missing in your session. If you've been
 coding for 15+ prompts in a confirmed stage without mentioning tests, cross-confirmation, or
-regression checks, it raises an absence flag and offers relevant options.
+regression checks, it raises an absence flag and offers relevant suggestions.
 
 ### Agent Support
 
@@ -201,8 +202,9 @@ nexpath store prune --older-than 30d   # Remove old prompts
 1. **Detection** — As you work with your coding agent, Nexpath captures each prompt via MCP
    and classifies your development stage in <5ms using keyword matching and TF-IDF scoring.
 
-2. **Trigger** — When a stage transition is detected (e.g., you've moved from spec to coding),
-   a lightweight LLM call confirms the detection. If confirmed, the decision session fires.
+2. **Trigger** — When a stage transition is detected (e.g., you've moved from planning to
+   coding), a lightweight LLM call confirms the detection. If confirmed, the decision session
+   fires.
 
 3. **Presentation** — A 2–3 word creative label appears (e.g., "Before coding.", "Quick check."),
    followed by a question and a set of pre-filled prompt options.
@@ -297,8 +299,8 @@ detected stage).
 Idea → PRD → Architecture → Task Breakdown → Implementation → Review/Testing → Release → Feedback Loop
 ```
 
-Decision sessions fire at forward stage transitions, offering stage-specific pre-filled prompts
-to cross-confirm work before moving on.
+Decision sessions fire at forward stage transitions, offering relevant pre-filled prompts
+to help you cross-confirm work before moving on.
 
 ---
 
@@ -334,4 +336,4 @@ are tracked in this repo. The ReviewDuel integration is maintained separately.
 - **OpenAI** — For gpt-4o-mini, the runtime LLM powering cross-confirmation and pinch labels
 - **Model Context Protocol** — For enabling cross-agent prompt capture
 
-Built with insights from the vibe coding community and the spec-driven development movement.
+Built with insights from the vibe coding community and developers building real projects with AI coding agents.
