@@ -6,7 +6,7 @@ import { classifyPrompt } from './PromptClassifier.js';
 import { SessionStateManager, SESSION_GAP_MS, STAGE_CONFIRM_THRESHOLD } from './SessionStateManager.js';
 import { PROFILE_RECOMPUTE_INTERVAL } from './UserProfileClassifier.js';
 import { detectAbsenceFlags, ABSENCE_MIN_PROMPTS, ABSENCE_COOLDOWN_PROMPTS } from './AbsenceDetector.js';
-import { detectSignals, initialSignalCounters } from './signals.js';
+import { detectSignals, initialSignalCounters, SIGNAL_DEFINITIONS } from './signals.js';
 import { openStore, closeStore } from '../store/index.js';
 import type { SessionState, ClassificationResult } from './types.js';
 
@@ -459,6 +459,55 @@ describe('detectSignals', () => {
 
   it('is case-insensitive — WRITE TESTS detects test_creation', () => {
     expect(detectSignals('WRITE TESTS FOR THIS MODULE')).toContain('test_creation');
+  });
+
+  // ── behaviour_testing signal (v0.3.0) ────────────────────────────────────────
+
+  it('detects "manual test" → behaviour_testing', () => {
+    expect(detectSignals('let me do a manual test of the login flow')).toContain('behaviour_testing');
+  });
+
+  it('detects "acceptance test" → behaviour_testing', () => {
+    expect(detectSignals('write an acceptance test for the checkout feature')).toContain('behaviour_testing');
+  });
+
+  it('detects "happy path" → behaviour_testing', () => {
+    expect(detectSignals('test the happy path for user registration')).toContain('behaviour_testing');
+  });
+
+  it('detects "user scenario" → behaviour_testing', () => {
+    expect(detectSignals('create a user scenario for the admin dashboard')).toContain('behaviour_testing');
+  });
+
+  it('detects "e2e test" → behaviour_testing', () => {
+    expect(detectSignals('add an e2e test for the payment flow')).toContain('behaviour_testing');
+  });
+
+  it('detects "user journey" → behaviour_testing', () => {
+    expect(detectSignals('map out the user journey for the onboarding flow')).toContain('behaviour_testing');
+  });
+
+  it('detects "manually test" → behaviour_testing', () => {
+    expect(detectSignals('I want to manually test this before shipping')).toContain('behaviour_testing');
+  });
+
+  it('does NOT fire behaviour_testing for plain unit test prompts (those are test_creation)', () => {
+    expect(detectSignals('write unit tests for the auth module')).not.toContain('behaviour_testing');
+  });
+
+  it('does NOT fire behaviour_testing for run-all-tests prompts (those are regression_check)', () => {
+    expect(detectSignals('run all tests and check for regressions')).not.toContain('behaviour_testing');
+  });
+
+  it('behaviour_testing has absenceThreshold of 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'behaviour_testing');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it('behaviour_testing expectedStages includes implementation and review_testing', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'behaviour_testing');
+    expect(sig?.expectedStages).toContain('implementation');
+    expect(sig?.expectedStages).toContain('review_testing');
   });
 });
 

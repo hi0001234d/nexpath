@@ -107,6 +107,8 @@ const IMPLEMENTATION_TO_REVIEW: DecisionContent = {
     'Check the spec acceptance criteria against what was built: go through each acceptance criterion in the PRD and tell me whether it is fully satisfied, partially satisfied, or not yet implemented.',
     'Cross-confirm the full implementation against the spec: review everything built in this phase and identify any gaps between what was implemented and what the spec required — include security, error handling, and edge cases.',
     'Review for regression: does anything that was working before this phase now behave differently or break?',
+    // v0.3.0 — acceptance/behaviour testing gap
+    'Write a manual acceptance test script for this phase: the main user journey from first action to goal completion, edge cases that automated tests would not catch, and the expected outcome at each step.',
   ],
   L2: [
     'Run tests for the new code in this phase and report any failures.',
@@ -136,6 +138,24 @@ const REVIEW_TO_RELEASE: DecisionContent = {
   ],
 };
 
+/** Absence trigger: behaviour_testing — fires when implementation proceeds without manual acceptance testing */
+const BEHAVIOUR_TESTING: DecisionContent = {
+  question:      'Phase done — any real-user scenario tested?',
+  pinchFallback: 'User scenario?',
+  L1: [
+    'Write a manual test scenario for the main user journey: list each step a real user would take, what they would see, and what would confirm it is working correctly.',
+    'List the acceptance tests for this feature: describe 3 to 5 scenarios a real user would run through, from happy path to edge cases, and the expected outcome for each.',
+    'Identify the 3 most likely ways a real user could break this feature without triggering any automated tests — then tell me how to manually verify each one.',
+  ],
+  L2: [
+    'Describe the happy path for the main use case: what does a user do, step by step, to successfully complete the core workflow?',
+    'What is the most important thing to verify manually before I call this feature done — and how do I check it?',
+  ],
+  L3: [
+    'What is one real user scenario I should manually test right now before moving on?',
+  ],
+};
+
 // ── Content resolution ─────────────────────────────────────────────────────────
 
 /**
@@ -144,10 +164,11 @@ const REVIEW_TO_RELEASE: DecisionContent = {
  * Signals not listed here fall back to the stage-based transition content.
  */
 const ABSENCE_CONTENT: Partial<Record<string, DecisionContent>> = {
-  test_creation:        TASK_REVIEW,
-  regression_check:     TASK_REVIEW,
+  test_creation:         TASK_REVIEW,
+  regression_check:      TASK_REVIEW,
   spec_acceptance_check: TASK_REVIEW,
-  cross_confirming:     TASK_REVIEW,
+  cross_confirming:      TASK_REVIEW,
+  behaviour_testing:     BEHAVIOUR_TESTING,
 };
 
 /**
@@ -253,4 +274,5 @@ export {
   TASK_REVIEW,
   IMPLEMENTATION_TO_REVIEW,
   REVIEW_TO_RELEASE,
+  BEHAVIOUR_TESTING,
 };

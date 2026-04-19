@@ -11,6 +11,7 @@ import {
   TASK_REVIEW,
   IMPLEMENTATION_TO_REVIEW,
   REVIEW_TO_RELEASE,
+  BEHAVIOUR_TESTING,
 } from './options.js';
 import {
   buildSelectMessage,
@@ -135,9 +136,9 @@ describe('buildOptionList', () => {
     expect(options).toHaveLength(2);
   });
 
-  it('IMPLEMENTATION_TO_REVIEW L1 has exactly 6 options (4 content + Show simpler + Skip)', () => {
+  it('IMPLEMENTATION_TO_REVIEW L1 has exactly 7 options (5 content + Show simpler + Skip)', () => {
     const { options } = buildOptionList(IMPLEMENTATION_TO_REVIEW, 1);
-    expect(options).toHaveLength(6);
+    expect(options).toHaveLength(7); // 5 content options (4 original + 1 v0.3.0) + Show simpler + Skip
   });
 });
 
@@ -322,8 +323,8 @@ describe('DecisionContent structure', () => {
     expect(TASK_REVIEW.L3).toHaveLength(1);
   });
 
-  it('IMPLEMENTATION_TO_REVIEW has exactly 4 L1, 2 L2, 1 L3 options', () => {
-    expect(IMPLEMENTATION_TO_REVIEW.L1).toHaveLength(4);
+  it('IMPLEMENTATION_TO_REVIEW has exactly 5 L1, 2 L2, 1 L3 options', () => {
+    expect(IMPLEMENTATION_TO_REVIEW.L1).toHaveLength(5); // 4 original + 1 added in v0.3.0
     expect(IMPLEMENTATION_TO_REVIEW.L2).toHaveLength(2);
     expect(IMPLEMENTATION_TO_REVIEW.L3).toHaveLength(1);
   });
@@ -663,5 +664,92 @@ describe('runDecisionSession', () => {
     } finally {
       store.db.close();
     }
+  });
+});
+
+// ── BEHAVIOUR_TESTING content block (v0.3.0) ──────────────────────────────────
+
+describe('BEHAVIOUR_TESTING content', () => {
+  it('has correct question text', () => {
+    expect(BEHAVIOUR_TESTING.question).toBe('Phase done — any real-user scenario tested?');
+  });
+
+  it('has correct pinchFallback', () => {
+    expect(BEHAVIOUR_TESTING.pinchFallback).toBe('User scenario?');
+  });
+
+  it('has 3 L1 options', () => {
+    expect(BEHAVIOUR_TESTING.L1).toHaveLength(3);
+  });
+
+  it('has 2 L2 options', () => {
+    expect(BEHAVIOUR_TESTING.L2).toHaveLength(2);
+  });
+
+  it('has 1 L3 option', () => {
+    expect(BEHAVIOUR_TESTING.L3).toHaveLength(1);
+  });
+
+  it('L1 option 1 mentions user journey or user steps', () => {
+    expect(BEHAVIOUR_TESTING.L1[0].toLowerCase()).toMatch(/user|journey|step/);
+  });
+
+  it('L1 option 2 mentions acceptance tests or scenarios', () => {
+    expect(BEHAVIOUR_TESTING.L1[1].toLowerCase()).toMatch(/acceptance|scenario/);
+  });
+
+  it('L1 option 3 is adversarial framing — mentions automated tests or break', () => {
+    expect(BEHAVIOUR_TESTING.L1[2].toLowerCase()).toMatch(/automated|break/);
+  });
+
+  it('L3 minimum option ends with a question mark', () => {
+    expect(BEHAVIOUR_TESTING.L3[0]).toMatch(/\?$/);
+  });
+
+  it('all L1 options are non-empty strings', () => {
+    for (const opt of BEHAVIOUR_TESTING.L1) {
+      expect(typeof opt).toBe('string');
+      expect(opt.trim().length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('resolveDecisionContent — behaviour_testing absence (v0.3.0)', () => {
+  it('returns BEHAVIOUR_TESTING for absence:behaviour_testing in implementation stage', () => {
+    expect(resolveDecisionContent('implementation', 'absence:behaviour_testing')).toBe(BEHAVIOUR_TESTING);
+  });
+
+  it('returns BEHAVIOUR_TESTING for absence:behaviour_testing in review_testing stage', () => {
+    expect(resolveDecisionContent('review_testing', 'absence:behaviour_testing')).toBe(BEHAVIOUR_TESTING);
+  });
+
+  it('does NOT return BEHAVIOUR_TESTING for unrelated absence signals', () => {
+    expect(resolveDecisionContent('implementation', 'absence:test_creation')).not.toBe(BEHAVIOUR_TESTING);
+    expect(resolveDecisionContent('implementation', 'absence:regression_check')).not.toBe(BEHAVIOUR_TESTING);
+  });
+});
+
+describe('IMPLEMENTATION_TO_REVIEW — v0.3.0 addition', () => {
+  it('has 5 L1 options after v0.3.0 addition', () => {
+    expect(IMPLEMENTATION_TO_REVIEW.L1).toHaveLength(5);
+  });
+
+  it('5th L1 option contains "manual acceptance test"', () => {
+    expect(IMPLEMENTATION_TO_REVIEW.L1[4].toLowerCase()).toContain('manual acceptance test');
+  });
+
+  it('5th L1 option mentions user journey', () => {
+    expect(IMPLEMENTATION_TO_REVIEW.L1[4].toLowerCase()).toContain('user journey');
+  });
+
+  it('5th L1 option mentions edge cases', () => {
+    expect(IMPLEMENTATION_TO_REVIEW.L1[4].toLowerCase()).toContain('edge cases');
+  });
+
+  it('first 4 L1 options are unchanged from before v0.3.0', () => {
+    expect(IMPLEMENTATION_TO_REVIEW.L1[0]).toContain('Run the full test suite');
+    expect(IMPLEMENTATION_TO_REVIEW.L1[1]).toContain('Check the spec acceptance criteria');
+    expect(IMPLEMENTATION_TO_REVIEW.L1[2]).toContain('Cross-confirm the full implementation');
+    expect(IMPLEMENTATION_TO_REVIEW.L1[3]).toContain('Review for regression');
   });
 });

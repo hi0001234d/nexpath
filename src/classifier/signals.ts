@@ -242,6 +242,18 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     ],
     absenceThreshold: 20,
   },
+  {
+    key: 'behaviour_testing',
+    description: 'Manual acceptance/behaviour testing from a real user perspective',
+    expectedStages: ['implementation', 'review_testing'],
+    detectionKeywords: [
+      'manual test', 'acceptance test', 'test as a user', 'user scenario',
+      'happy path', 'sad path', 'end to end test', 'e2e test',
+      'user journey', 'test the flow', 'functional test', 'test from a user',
+      'manually test', 'real user test', 'test the feature as',
+    ],
+    absenceThreshold: 15,
+  },
 ];
 
 // ── Signal detection from prompt text ────────────────────────────────────────
