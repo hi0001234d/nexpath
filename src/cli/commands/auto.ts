@@ -159,6 +159,7 @@ export async function runAuto(
     logger.debug('stage2_result', { fire: stage2Output.fire_decision_session, confidence: stage2Output.stage_confidence, reason: stage2Output.reason });
   } catch (err) {
     logger.warn('stage2_error', { error: (err as Error).message, stage: mgr.current.currentStage });
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'stage2_error' });
     // Stage 2 API failure → skip silently (non-blocking)
     return { outcome: 'no_action' };
   }
