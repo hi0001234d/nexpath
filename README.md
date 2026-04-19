@@ -252,45 +252,28 @@ detected stage).
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     AI Coding Agent                         │
-│               (Claude Code — fully supported)               │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  nexpath-serve (MCP stdio server)                           │
-│  ┌──────────────────┐     ┌────────────────────────────┐   │
-│  │  capture_prompt   │────▶│  prompt-store.db (SQLite)   │   │
-│  │  tool handler     │     │  ~/.nexpath/                │   │
-│  └──────────────────┘     └────────────────────────────┘   │
-│                                                             │
-│  Advisory pipeline (fires automatically between prompts)    │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  ┌───────────────────────────────────────────────┐   │  │
-│  │  │  Stage 1: Prompt Classifier                    │   │  │
-│  │  │  Tier 1: Keyword Match (<1ms)                  │   │  │
-│  │  │  Tier 2: TF-IDF Scoring (<5ms)                 │   │  │
-│  │  └────────────────────┬──────────────────────────┘   │  │
-│  │                       │                               │  │
-│  │  ┌────────────────────▼──────────────────────────┐   │  │
-│  │  │  Session State Manager                         │   │  │
-│  │  │  stage tracking · signal counters              │   │  │
-│  │  │  absence detection · user profile              │   │  │
-│  │  └────────────────────┬──────────────────────────┘   │  │
-│  │                       │                               │  │
-│  │  ┌────────────────────▼──────────────────────────┐   │  │
-│  │  │  Stage 2: LLM Cross-Confirmation               │   │  │
-│  │  │  OpenAI gpt-4o-mini                            │   │  │
-│  │  └────────────────────┬──────────────────────────┘   │  │
-│  │                       │                               │  │
-│  │  ┌────────────────────▼──────────────────────────┐   │  │
-│  │  │  Decision Session UI                            │   │  │
-│  │  │  pinch label → question → L1 / L2 / L3         │   │  │
-│  │  │  selected prompt → back to agent                │   │  │
-│  │  └───────────────────────────────────────────────┘   │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    Agent["<b>AI Coding Agent</b><br/>Claude Code — fully supported"]
+
+    subgraph MCP["nexpath-serve (MCP stdio server)"]
+        Capture["capture_prompt<br/>tool handler"]
+    end
+
+    DB[("prompt-store.db<br/>SQLite · ~/.nexpath/")]
+
+    subgraph Pipeline["Advisory Pipeline — fires automatically between prompts"]
+        S1["<b>Stage 1: Prompt Classifier</b><br/>Tier 1: Keyword Match (&lt;1ms)<br/>Tier 2: TF-IDF Scoring (&lt;5ms)"]
+        SM["<b>Session State Manager</b><br/>stage tracking · signal counters<br/>absence detection · user profile"]
+        S2["<b>Stage 2: LLM Cross-Confirmation</b><br/>OpenAI gpt-4o-mini"]
+        DS["<b>Decision Session UI</b><br/>pinch label → question → L1 / L2 / L3<br/>selected prompt → back to agent"]
+    end
+
+    Agent --> MCP
+    Capture --> DB
+    Agent --> Pipeline
+    S1 --> SM --> S2 --> DS
+    DS -->|"selected prompt"| Agent
 ```
 
 ### Development Lifecycle Stages
