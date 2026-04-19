@@ -169,6 +169,16 @@ export async function runAuto(
     return { outcome: 'no_action' };
   }
 
+  // ── 7.5. TTY guard — @clack/prompts requires an interactive stdin ────────────
+  // In hook mode stdin is a JSON pipe; setRawMode throws node:tty:97 on Windows.
+  // Skip rendering silently so the hook never crashes. Tracked as architectural gap:
+  // the decision session UI needs a direct console handle (CONIN$/CONOUT$) to work
+  // in Claude Code's UserPromptSubmit hook subprocess on Windows.
+  if (!process.stdin.isTTY) {
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'no_tty' });
+    return { outcome: 'no_action' };
+  }
+
   // ── 8. Mark as fired (before rendering — prevents re-entry on restart) ───────
   mgr.markDecisionSessionFired(store, firedKey);
 
