@@ -20,6 +20,7 @@ import { getConfig } from '../../store/config.js';
 import { logger, initLogger } from '../../logger.js';
 import type { LogLevel } from '../../logger.js';
 import { writeHookStats } from '../../store/hook-stats.js';
+import { createTtySelectFn } from '../../decision-session/TtySelectFn.js';
 
 /**
  * nexpath auto — orchestration command (per decision-session-ux-research.md).
@@ -169,14 +170,26 @@ export async function runAuto(
     return { outcome: 'no_action' };
   }
 
-  // ── 7.5. TTY guard — @clack/prompts requires an interactive stdin ────────────
-  // In hook mode stdin is a JSON pipe; setRawMode throws node:tty:97 on Windows.
-  // Skip rendering silently so the hook never crashes. Tracked as architectural gap:
-  // the decision session UI needs a direct console handle (CONIN$/CONOUT$) to work
-  // in Claude Code's UserPromptSubmit hook subprocess on Windows.
-  if (!process.stdin.isTTY) {
-    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'no_tty' });
-    return { outcome: 'no_action' };
+  // ── 7.5. TTY resolution — open console TTY directly if stdin is piped ───────
+  // In hook mode stdin is a piped JSON payload, not a TTY. When no selectFn is
+  // injected (normal operation, not tests), try to open the console TTY device
+  // directly (CONIN$/CONOUT$ on Windows, /dev/tty on Linux/Mac) so the decision
+  // session UI can render in hook context. Falls back to no_action if unavailable.
+  let effectiveSelectFn: SelectFn | undefined = selectFn; // injected by tests or undefined
+
+  if (!effectiveSelectFn) {
+    if (!process.stdin.isTTY) {
+      // Hook mode: try direct console TTY
+      const ttySel = createTtySelectFn();
+      if (!ttySel) {
+        logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'no_tty' });
+        return { outcome: 'no_action' };
+      }
+      effectiveSelectFn = ttySel;
+      logger.debug('tty_resolved', { method: 'direct_tty' });
+    }
+    // else: stdin IS TTY — leave effectiveSelectFn undefined so runDecisionSession
+    // uses its @clack/prompts default
   }
 
   // ── 8. Mark as fired (before rendering — prevents re-entry on restart) ───────
@@ -205,7 +218,7 @@ export async function runAuto(
       promptCount: mgr.current.promptCount,
     },
     store,
-    selectFn,
+    effectiveSelectFn,
   );
 
   if (dsResult.outcome === 'selected') {
