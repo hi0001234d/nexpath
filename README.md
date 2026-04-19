@@ -213,7 +213,9 @@ nexpath optimize
 
 2. **Trigger** — When a stage transition is detected (e.g., you've moved from planning to
    coding), a lightweight LLM call confirms the detection. If confirmed, the decision session
-   fires after the agent has responded to the user's prompt — never mid-response.
+   fires. By design, this should happen after the agent has fully responded to the user's
+   prompt — never mid-response. In v0.1.1 there is a known UI timing issue where the
+   decision session UI can fire during prompt processing; this is being fixed in v0.1.2.
 
 3. **Presentation** — A 2–3 word creative label appears (e.g., "Before coding.", "Quick check."),
    followed by a question and a set of pre-filled prompt options across three levels.
@@ -260,7 +262,7 @@ nexpath store delete -y
 | Version | Status | Description |
 |---------|--------|-------------|
 | **v0.1.1** | Completed | Core behaviour guidance system — decision sessions, 3-level options, `nexpath optimize`, prompt classification, developer profiling. Full Claude Code support. |
-| **v0.1.2** | Planned | Fix decision session timing — currently fires during prompt processing instead of after agent response. Stabilise MCP server and advisory pipeline for production reliability. |
+| **v0.1.2** | Planned | Fix decision session UI timing — currently the interactive UI fires during prompt processing instead of after the agent has responded. Stabilise MCP server and advisory pipeline for production reliability. |
 | **v0.1.3** | Planned | Expand end-to-end support to additional coding agents: Cursor, Windsurf, Cline, Roo Code, KiloCode, and OpenCode. |
 
 ---
