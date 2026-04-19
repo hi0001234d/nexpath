@@ -19,11 +19,40 @@ to architecture, or finishing a coding task without running tests — it present
 ready-to-send prompts that tell your AI agent exactly what to do next.
 
 If the suggested actions don't fit your current situation, Nexpath offers progressively
-simpler alternatives across three levels. If none fit at all, skip it — `nexpath optimize`
-lets you revisit skipped items later in one focused session.
+simpler alternatives — the decision session cascades through three levels, from full-depth
+to minimum viable step. If none fit at all, skip it — `nexpath optimize` lets you revisit
+skipped items later in one focused session.
 
 **Fully supported on Claude Code as of v0.1.1.** Support for additional coding agents is
 planned for v0.1.3.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TB
+    Agent["<b>AI Coding Agent</b><br/>Claude Code — fully supported"]
+
+    subgraph MCP["nexpath-serve (MCP stdio server)"]
+        Capture["capture_prompt<br/>tool handler"]
+    end
+
+    DB[("prompt-store.db<br/>SQLite · ~/.nexpath/")]
+
+    subgraph Pipeline["Advisory Pipeline — fires automatically after agent responds"]
+        S1["<b>Stage 1: Prompt Classifier</b><br/>Tier 1: Keyword Match (&lt;1ms)<br/>Tier 2: TF-IDF Scoring (&lt;5ms)"]
+        SM["<b>Session State Manager</b><br/>stage tracking · signal counters<br/>absence detection · user profile"]
+        S2["<b>Stage 2: LLM Cross-Confirmation</b><br/>gpt-4o-mini / Gemini"]
+        DS["<b>Decision Session UI</b><br/>pinch label → question → L1 / L2 / L3<br/>selected prompt → back to agent"]
+    end
+
+    Agent --> MCP
+    Capture --> DB
+    Agent --> Pipeline
+    S1 --> SM --> S2 --> DS
+    DS -->|"selected prompt"| Agent
+```
 
 ---
 
@@ -76,15 +105,16 @@ The core interaction. When Nexpath detects a stage transition in your developmen
 presents structured options aligned with where you are in your project lifecycle. Each option
 is a pre-filled prompt ready to send to your AI agent — select it and hit Enter.
 
+The decision session cascades through three levels:
+- **Level 1** — Full-depth recommendations for thorough development practice
+- **Level 2** — Lighter alternatives when you're short on time
+- **Level 3** — Minimum viable step — one small action that still moves you forward
+
+Select "Show simpler options →" to move down a level. Select "Skip for now" to record the item
+and revisit it later with `nexpath optimize`.
+
 Decision sessions fire at key moments: moving from idea to planning, planning to architecture,
 architecture to task breakdown, completing a task, finishing a phase, and pre-release checks.
-
-### 3-Level Easier Options
-
-When you can't follow the recommended next step — whether due to time, budget, or resources —
-Nexpath offers progressively simpler alternatives. Level 1 is the full-depth recommendation,
-Level 2 is lighter, and Level 3 is the minimum viable step. If even Level 3 doesn't fit, skip
-it and come back later.
 
 ### `nexpath optimize`
 
@@ -106,8 +136,8 @@ Nexpath classifies your prompts against 8 development stages using a two-tier ca
 - **Tier 1 — Keyword matching** (<1ms): Fast pattern detection against curated signal vocabulary
 - **Tier 2 — TF-IDF scoring** (<5ms): Statistical text analysis when keywords are ambiguous
 
-Before surfacing a decision session, a lightweight LLM call (OpenAI gpt-4o-mini) cross-confirms
-the classifier's detection to reduce false positives.
+Before surfacing a decision session, a lightweight LLM call cross-confirms the classifier's
+detection to reduce false positives.
 
 ### Absence Detection
 
@@ -141,58 +171,37 @@ npm install
 npm run build
 npm link
 
-# Register with Claude Code
+# Register with your coding agent and verify
 nexpath install --yes
-
-# Verify
 nexpath status
 ```
 
 ### Environment Variables
 
 ```bash
-# Required for LLM features (Stage 2 cross-confirmation + pinch labels)
+# Required for LLM features (cross-confirmation + pinch labels)
 export OPENAI_API_KEY=your-key-here
 ```
 
 Without an API key, Nexpath still functions — it falls back to static pinch labels and skips
-Stage 2 cross-confirmation. The local classifier and decision session UI work fully offline.
+LLM cross-confirmation. The local classifier and decision session UI work fully offline.
+
+To uninstall:
+
+```bash
+nexpath uninstall
+```
 
 ---
 
 ## Usage
 
-### Commands
-
 ```bash
-# Register Nexpath with your coding agent
-nexpath install --yes
-
-# Remove Nexpath registration
-nexpath uninstall
-
 # Set up a new project (interactive questionnaire)
 nexpath init
 
 # Revisit previously skipped decision session items
 nexpath optimize
-
-# View MCP connections, prompt store stats, and config
-nexpath status
-
-# View recent activity log
-nexpath log
-nexpath log --tail 20 --level error
-
-# Manage configuration
-nexpath config get <key>
-nexpath config set <key> <value>
-
-# Manage the prompt store
-nexpath store enable       # Enable prompt capture
-nexpath store disable      # Disable (keeps existing data)
-nexpath store delete -y    # Delete all stored prompts
-nexpath store prune --older-than 30d   # Remove old prompts
 ```
 
 ---
@@ -204,86 +213,45 @@ nexpath store prune --older-than 30d   # Remove old prompts
 
 2. **Trigger** — When a stage transition is detected (e.g., you've moved from planning to
    coding), a lightweight LLM call confirms the detection. If confirmed, the decision session
-   fires.
+   fires after the agent has responded to the user's prompt — never mid-response.
 
 3. **Presentation** — A 2–3 word creative label appears (e.g., "Before coding.", "Quick check."),
-   followed by a question and a set of pre-filled prompt options.
+   followed by a question and a set of pre-filled prompt options across three levels.
 
 4. **Selection** — Pick an option to send it directly to your agent, or select
-   "Show simpler options" to see lighter alternatives (up to 3 levels).
+   "Show simpler options" to see lighter alternatives. Select "Skip for now" to record the
+   item and move on.
 
-5. **Skip** — Select "Skip for now" and the item is recorded. Run `nexpath optimize` later
-   to revisit all skipped items in one session.
-
----
-
-## Configuration
-
-Configuration is stored in the SQLite database at `~/.nexpath/prompt-store.db`.
-
-| Key | Default | Description |
-|-----|---------|-------------|
-| `prompt_capture_enabled` | `true` | Enable or disable prompt capture |
-| `prompt_store_max_per_project` | `500` | Maximum prompts stored per project |
-| `prompt_store_max_db_mb` | `100` | Maximum database size in megabytes |
-
-```bash
-nexpath config get prompt_capture_enabled
-nexpath config set prompt_store_max_per_project 1000
-```
+5. **Replay** — Run `nexpath optimize` anytime to revisit all skipped items in one session.
 
 ---
 
-## Privacy
+## Configuration and Privacy
 
-All data is stored **locally only** at `~/.nexpath/`. Nothing leaves your machine except two
+### Privacy Controls
+
+All data is stored **locally only** at `~/.nexpath/`. Nothing leaves your machine except
 targeted LLM calls per decision session (sending only session context — last 10 prompts and
 detected stage).
 
 - **Automatic secret redaction** — API keys (`sk-*`, `ghp_*`, `ghu_*`), bearer tokens, and
-  PEM blocks are stripped from prompts before storage
-- **Configurable limits** — 500 prompts per project, 100 MB total DB size (both configurable)
-- **Full control** — disable capture (`nexpath store disable`), delete all data
-  (`nexpath store delete`), prune old prompts (`nexpath store prune --older-than 30d`)
-- **First-run disclosure** — on the first prompt capture, Nexpath prints a banner explaining
-  what it stores and how to opt out
+  PEM blocks are automatically stripped from prompts before storage. If a prompt contains
+  sensitive credentials, they never reach the database.
+- **First-run disclosure** — on the very first prompt capture, Nexpath prints a privacy banner
+  explaining exactly what it stores and how to opt out
 
----
+### Opting Out and Data Control
 
-## Architecture
+```bash
+# Disable prompt capture (keeps existing data, stops collecting new prompts)
+nexpath store disable
 
-```mermaid
-flowchart TB
-    Agent["<b>AI Coding Agent</b><br/>Claude Code — fully supported"]
+# Remove prompts older than 30 days
+nexpath store prune --older-than 30d
 
-    subgraph MCP["nexpath-serve (MCP stdio server)"]
-        Capture["capture_prompt<br/>tool handler"]
-    end
-
-    DB[("prompt-store.db<br/>SQLite · ~/.nexpath/")]
-
-    subgraph Pipeline["Advisory Pipeline — fires automatically between prompts"]
-        S1["<b>Stage 1: Prompt Classifier</b><br/>Tier 1: Keyword Match (&lt;1ms)<br/>Tier 2: TF-IDF Scoring (&lt;5ms)"]
-        SM["<b>Session State Manager</b><br/>stage tracking · signal counters<br/>absence detection · user profile"]
-        S2["<b>Stage 2: LLM Cross-Confirmation</b><br/>OpenAI gpt-4o-mini"]
-        DS["<b>Decision Session UI</b><br/>pinch label → question → L1 / L2 / L3<br/>selected prompt → back to agent"]
-    end
-
-    Agent --> MCP
-    Capture --> DB
-    Agent --> Pipeline
-    S1 --> SM --> S2 --> DS
-    DS -->|"selected prompt"| Agent
+# Delete all stored prompts permanently
+nexpath store delete -y
 ```
-
-### Development Lifecycle Stages
-
-```
-Idea → PRD → Architecture → Task Breakdown → Implementation → Review/Testing → Release → Feedback Loop
-```
-
-Decision sessions fire at forward stage transitions, offering relevant pre-filled prompts
-to help you cross-confirm work before moving on.
 
 ---
 
@@ -292,7 +260,7 @@ to help you cross-confirm work before moving on.
 | Version | Status | Description |
 |---------|--------|-------------|
 | **v0.1.1** | Completed | Core behaviour guidance system — decision sessions, 3-level options, `nexpath optimize`, prompt classification, developer profiling. Full Claude Code support. |
-| **v0.1.2** | Planned | Fix existing MCP server issues and stabilise the advisory pipeline for production reliability. |
+| **v0.1.2** | Planned | Fix decision session timing — currently fires during prompt processing instead of after agent response. Stabilise MCP server and advisory pipeline for production reliability. |
 | **v0.1.3** | Planned | Expand end-to-end support to additional coding agents: Cursor, Windsurf, Cline, Roo Code, KiloCode, and OpenCode. |
 
 ---
@@ -316,7 +284,8 @@ are tracked in this repo. The ReviewDuel integration is maintained separately.
 
 - **Major League Hacking (MLH)** — For organizing AI Hackfest 2026
 - **Anthropic** — For Claude Code, our primary development environment
-- **OpenAI** — For gpt-4o-mini, the runtime LLM powering cross-confirmation and pinch labels
+- **OpenAI** — For gpt-4o-mini, used for cross-confirmation and pinch label generation
+- **Google** — For Gemini AI, planned as an alternative LLM provider alongside OpenAI
 - **Model Context Protocol** — For enabling cross-agent prompt capture
 
 Built with insights from the vibe coding community and developers building real projects with AI coding agents.
