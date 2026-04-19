@@ -1,5 +1,6 @@
 import { ReadStream, WriteStream } from 'node:tty';
-import { openSync } from 'node:fs';
+import { openSync, appendFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { platform } from 'node:process';
 import { SelectPrompt } from '@clack/core';
 import pc from 'picocolors';
@@ -128,8 +129,12 @@ function buildSelectFn(streams: TtyStreams): SelectFn {
       // throws because the hook subprocess has no usable console handle even
       // though CONIN$ opened). Return a symbol — runLevel treats
       // `typeof result === 'symbol'` as skip, so the pipeline exits cleanly.
-      // The error is re-thrown as a structured log entry for diagnosis.
-      process.stderr.write(`[nexpath] tty_runtime_error: ${(err as Error).message}\n`);
+      // Write to stderr AND a temp file — hook subprocess stderr may be swallowed.
+      const errMsg = `[nexpath] tty_runtime_error: ${(err as Error).message}\nstack: ${(err as Error).stack ?? 'none'}\n`;
+      process.stderr.write(errMsg);
+      try {
+        appendFileSync(`${tmpdir()}/nexpath-tty-error.log`, errMsg);
+      } catch { /* ignore diagnostic write errors */ }
       return Symbol('tty_runtime_failed');
     } finally {
       // Always close TTY streams to prevent fd leaks per hook invocation.
