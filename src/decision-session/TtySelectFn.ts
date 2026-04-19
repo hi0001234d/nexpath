@@ -1,8 +1,7 @@
 import { ReadStream, WriteStream } from 'node:tty';
-import { openSync, appendFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { openSync } from 'node:fs';
 import { platform } from 'node:process';
-import { SelectPrompt } from '@clack/core';
+import * as rl from 'node:readline';
 import pc from 'picocolors';
 import type { SelectFn } from './DecisionSession.js';
 
@@ -18,55 +17,6 @@ interface TtyStreams {
   sharedFd: boolean;
 }
 
-// ── Render helpers ─────────────────────────────────────────────────────────────
-
-function stateIcon(state: string): string {
-  switch (state) {
-    case 'initial':
-    case 'active':  return pc.cyan('◆');
-    case 'cancel':  return pc.red('■');
-    case 'error':   return pc.yellow('▲');
-    case 'submit':  return pc.green('◇');
-    default:        return pc.cyan('◆');
-  }
-}
-
-/**
- * Build a render function for SelectPrompt that mirrors @clack/prompts styling.
- * `message` is captured from the SelectFn call closure — not available on `this`.
- */
-function buildRenderFn(message: string) {
-  return function (this: {
-    state:   string;
-    cursor:  number;
-    options: Array<{ value: string; label: string }>;
-  }): string {
-    const header = `${pc.gray('│')}\n${stateIcon(this.state)}  ${message}\n`;
-
-    switch (this.state) {
-      case 'submit':
-        return `${header}${pc.gray('│')}  ${pc.dim(this.options[this.cursor]?.label ?? '')}`;
-
-      case 'cancel':
-        return (
-          `${header}${pc.gray('│')}  ` +
-          `${pc.strikethrough(pc.dim(this.options[this.cursor]?.label ?? ''))}\n${pc.gray('│')}`
-        );
-
-      default: {
-        const optLines = this.options.map((opt, i) => {
-          if (i === this.cursor) return `${pc.green('◉')} ${opt.label}`;
-          return `${pc.dim('○')} ${pc.dim(opt.label)}`;
-        });
-        return (
-          `${header}${pc.cyan('│')}  ` +
-          `${optLines.join(`\n${pc.cyan('│')}  `)}\n${pc.cyan('└')}\n`
-        );
-      }
-    }
-  };
-}
-
 // ── Platform-specific TTY stream opening ───────────────────────────────────────
 
 /**
@@ -78,15 +28,15 @@ function buildRenderFn(message: string) {
  *
  * Returns null if no TTY device is accessible (CI, no-console context, service).
  * The caller must fall back to no_action when null is returned.
+ *
+ * NOTE: Git Bash / MSYS2 translates \\.\CONIN$ → C:\.CONIN$ → ENOENT.
+ *       Windows path only works in PowerShell / cmd / Windows Terminal.
  */
 function openTtyStreams(): TtyStreams | null {
   try {
     if (platform === 'win32') {
-      // r+ (OPEN_EXISTING + GENERIC_READ|WRITE) works for both console devices.
-      // Do NOT use 'w+' for CONOUT$ — it implies truncation semantics on some
-      // Windows versions. Both must be r+ for reliable console handle creation.
-      // NOTE: Git Bash / MSYS2 translates \\.\CONIN$ → C:\.CONIN$ → ENOENT.
-      //       This approach only works in PowerShell / cmd / Windows Terminal.
+      // r+ (OPEN_EXISTING + GENERIC_READ|WRITE) — do NOT use 'w+' for CONOUT$,
+      // it implies truncation semantics on some Windows versions.
       const inFd  = openSync('\\\\.\\CONIN$',  'r+');
       const outFd = openSync('\\\\.\\CONOUT$', 'r+');
       return {
@@ -110,38 +60,70 @@ function openTtyStreams(): TtyStreams | null {
 
 // ── SelectFn builder ───────────────────────────────────────────────────────────
 
+/**
+ * Build a SelectFn that uses a readline-based numbered menu over the direct
+ * TTY streams.
+ *
+ * Why readline instead of @clack/core's SelectPrompt:
+ *   SelectPrompt.prompt() internally calls `new WriteStream(0)` — hardcoded
+ *   fd=0 (piped stdin in hook context). uv_tty_init on a pipe returns EBADF.
+ *   readline with terminal:false reads lines without raw mode or fd=0 access,
+ *   so it works correctly in hook subprocesses.
+ *
+ * UX: numbered list (1-N) written to CONOUT$, user types a number + Enter.
+ * No setRawMode required — the console's built-in cooked mode provides echo
+ * and line buffering.
+ */
 function buildSelectFn(streams: TtyStreams): SelectFn {
-  return async (opts) => {
-    const clackOptions = opts.options.map((o) => ({ value: o.value, label: o.label }));
+  return (opts) =>
+    new Promise<string | symbol>((resolve) => {
+      const options = opts.options;
+      let settled = false;
 
-    try {
-      const result = await new SelectPrompt({
-        options:      clackOptions,
-        initialValue: clackOptions[0]?.value,
-        input:        streams.input  as unknown as import('stream').Readable,
-        output:       streams.output as unknown as import('stream').Writable,
-        render:       buildRenderFn(opts.message),
-      }).prompt();
+      function cleanup(value: string | symbol): void {
+        if (settled) return;
+        settled = true;
+        iface.close();
+        streams.input.destroy();
+        if (!streams.sharedFd) streams.output.destroy();
+        resolve(value);
+      }
 
-      return result as string | symbol;
-    } catch (err) {
-      // TTY initialisation failed at runtime (e.g. uv_tty_init / setRawMode
-      // throws because the hook subprocess has no usable console handle even
-      // though CONIN$ opened). Return a symbol — runLevel treats
-      // `typeof result === 'symbol'` as skip, so the pipeline exits cleanly.
-      // Write to stderr AND a temp file — hook subprocess stderr may be swallowed.
-      const errMsg = `[nexpath] tty_runtime_error: ${(err as Error).message}\nstack: ${(err as Error).stack ?? 'none'}\n`;
-      process.stderr.write(errMsg);
-      try {
-        appendFileSync(`${tmpdir()}/nexpath-tty-error.log`, errMsg);
-      } catch { /* ignore diagnostic write errors */ }
-      return Symbol('tty_runtime_failed');
-    } finally {
-      // Always close TTY streams to prevent fd leaks per hook invocation.
-      streams.input.destroy();
-      if (!streams.sharedFd) streams.output.destroy();
-    }
-  };
+      // Render numbered menu to CONOUT$ directly
+      const menuLines = [
+        pc.gray('│'),
+        `${pc.cyan('◆')}  ${opts.message}`,
+        ...options.map((opt, i) => `${pc.cyan('│')}  ${pc.green(`${i + 1})`)} ${opt.label}`),
+        pc.cyan('│'),
+      ];
+      streams.output.write(menuLines.join('\n') + '\n');
+      streams.output.write(`${pc.cyan('└')}  Select (1-${options.length}): `);
+
+      // readline with terminal:false — line-mode read, no raw mode, no fd=0 access
+      const iface = rl.createInterface({
+        input:    streams.input as unknown as import('stream').Readable,
+        terminal: false,
+      });
+
+      streams.input.once('error',  () => cleanup(Symbol('tty_error')));
+      streams.output.once('error', () => cleanup(Symbol('tty_error')));
+
+      iface.once('line', (answer) => {
+        const num = parseInt(answer.trim(), 10);
+        if (!isNaN(num) && num >= 1 && num <= options.length) {
+          const selected = options[num - 1];
+          streams.output.write(
+            `${pc.gray('│')}  ${pc.dim(selected.label)}\n${pc.gray('│')}\n`,
+          );
+          cleanup(selected.value);
+        } else {
+          // Invalid input → treat as cancel/skip
+          cleanup(Symbol('cancelled'));
+        }
+      });
+
+      iface.once('close', () => cleanup(Symbol('cancelled')));
+    });
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
