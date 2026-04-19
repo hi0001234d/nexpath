@@ -140,6 +140,42 @@ describe('buildOptionList', () => {
     const { options } = buildOptionList(IMPLEMENTATION_TO_REVIEW, 1);
     expect(options).toHaveLength(7); // 5 content options (4 original + 1 v0.3.0) + Show simpler + Skip
   });
+
+  // ── BEHAVIOUR_TESTING buildOptionList at all 3 levels (v0.3.0) ───────────────
+
+  it('BEHAVIOUR_TESTING L1 has exactly 5 options (3 content + Show simpler + Skip)', () => {
+    const { options, hasNextLevel } = buildOptionList(BEHAVIOUR_TESTING, 1);
+    expect(options).toHaveLength(5);
+    expect(hasNextLevel).toBe(true);
+    expect(options.at(-1)).toBe(SKIP_NOW);
+    expect(options.at(-2)).toBe(SHOW_SIMPLER);
+  });
+
+  it('BEHAVIOUR_TESTING L2 has exactly 4 options (2 content + Show simpler + Skip)', () => {
+    const { options, hasNextLevel } = buildOptionList(BEHAVIOUR_TESTING, 2);
+    expect(options).toHaveLength(4);
+    expect(hasNextLevel).toBe(true);
+    expect(options.at(-1)).toBe(SKIP_NOW);
+    expect(options.at(-2)).toBe(SHOW_SIMPLER);
+  });
+
+  it('BEHAVIOUR_TESTING L3 has exactly 2 options (1 content + Skip, no Show simpler)', () => {
+    const { options, hasNextLevel } = buildOptionList(BEHAVIOUR_TESTING, 3);
+    expect(options).toHaveLength(2);
+    expect(hasNextLevel).toBe(false);
+    expect(options.at(-1)).toBe(SKIP_NOW);
+    expect(options).not.toContain(SHOW_SIMPLER);
+  });
+
+  it('BEHAVIOUR_TESTING L1 first option is the user journey prompt', () => {
+    const { options } = buildOptionList(BEHAVIOUR_TESTING, 1);
+    expect(options[0]).toContain('manual test scenario');
+  });
+
+  it('BEHAVIOUR_TESTING L3 only option is the minimum scenario prompt', () => {
+    const { options } = buildOptionList(BEHAVIOUR_TESTING, 3);
+    expect(options[0]).toContain('manually test right now');
+  });
 });
 
 // ── resolveDecisionContent ────────────────────────────────────────────────────
@@ -258,6 +294,7 @@ describe('DecisionContent structure', () => {
     TASK_REVIEW,
     IMPLEMENTATION_TO_REVIEW,
     REVIEW_TO_RELEASE,
+    BEHAVIOUR_TESTING,  // v0.3.0 — must be included in structural invariant checks
   ];
 
   it('every content entry has a non-empty question', () => {

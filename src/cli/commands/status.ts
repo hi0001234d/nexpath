@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
 import { getPromptStats } from '../../store/prompts.js';
 import { getAllConfig, DEFAULT_CONFIG } from '../../store/config.js';
+import { readHookStats, type ProjectHookStats } from '../../store/hook-stats.js';
 import {
   detectAgents,
   resolveAgentPaths,
@@ -33,10 +34,11 @@ export interface StoreStatus {
 }
 
 export interface StatusResult {
-  agents:  AgentStatus[];
-  hook:    HookStatus;
-  store:   StoreStatus;
-  config:  Record<string, string>;
+  agents:     AgentStatus[];
+  hook:       HookStatus;
+  store:      StoreStatus;
+  config:     Record<string, string>;
+  hookStats:  ProjectHookStats[];
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -157,7 +159,12 @@ export async function runStatus(input: StatusInput): Promise<StatusResult> {
     config = { ...DEFAULT_CONFIG };
   }
 
-  return { agents: agentStatuses, hook, store, config };
+  const hookStatsMap = readHookStats();
+  const hookStats    = Object.values(hookStatsMap).sort((a, b) =>
+    b.lastRunAt.localeCompare(a.lastRunAt),
+  );
+
+  return { agents: agentStatuses, hook, store, config, hookStats };
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -204,6 +211,24 @@ export function renderStatus(result: StatusResult): string {
   } else {
     lines.push(`Prompt store  (${result.store.dbPath})`);
     lines.push(`  Not initialised — run: nexpath install && nexpath init`);
+  }
+
+  lines.push('');
+
+  // ── Hook activity ─────────────────────────────────────────────────────────
+  lines.push('Hook activity');
+  if (result.hookStats.length === 0) {
+    lines.push('  No hook invocations recorded yet');
+  } else {
+    for (const s of result.hookStats) {
+      const label = s.projectRoot.length > 40
+        ? '...' + s.projectRoot.slice(-37)
+        : s.projectRoot;
+      lines.push(`  ${label}`);
+      lines.push(`    last run    : ${s.lastRunAt}`);
+      lines.push(`    invocations : ${s.invocationCount}`);
+      lines.push(`    last outcome: ${s.lastOutcome}`);
+    }
   }
 
   lines.push('');

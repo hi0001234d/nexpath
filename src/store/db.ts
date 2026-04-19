@@ -14,6 +14,7 @@ import { createRequire } from 'node:module';
 import initSqlJs from 'sql.js';
 import type { SqlJsStatic, Database } from 'sql.js';
 import { migrate } from './schema.js';
+import { logger } from '../logger.js';
 
 export const DEFAULT_DB_PATH = join(homedir(), '.nexpath', 'prompt-store.db');
 
@@ -45,7 +46,13 @@ export async function openStore(dbPath: string = DEFAULT_DB_PATH): Promise<Store
     buffer = readFileSync(dbPath);
   }
 
-  const db = buffer ? new SQL.Database(buffer) : new SQL.Database();
+  let db: Database;
+  try {
+    db = buffer ? new SQL.Database(buffer) : new SQL.Database();
+  } catch (err) {
+    logger.error('db_open_failed', { path: dbPath, error: (err as Error).message });
+    db = new SQL.Database(); // blank fallback — prevents hook crash
+  }
   migrate(db);
 
   const store: Store = { db, dbPath };

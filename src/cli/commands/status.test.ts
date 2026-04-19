@@ -422,6 +422,7 @@ function makeResult(overrides: Partial<StatusResult> = {}): StatusResult {
       perProject:   [],
     },
     config: { prompt_capture_enabled: 'true', prompt_store_max_per_project: '500', prompt_store_max_db_mb: '100' },
+    hookStats: [],
     ...overrides,
   };
 }
@@ -452,13 +453,34 @@ describe('renderStatus — sections', () => {
     expect(out.endsWith('\n')).toBe(true);
   });
 
-  it('sections appear in order: MCP connections → Prompt store → Config', () => {
+  it('sections appear in order: MCP connections → Prompt store → Hook activity → Config', () => {
     const out = renderStatus(makeResult());
     const mcpIdx   = out.indexOf('MCP connections');
     const storeIdx = out.indexOf('Prompt store');
+    const hookIdx  = out.indexOf('Hook activity');
     const cfgIdx   = out.indexOf('Config');
     expect(mcpIdx).toBeLessThan(storeIdx);
-    expect(storeIdx).toBeLessThan(cfgIdx);
+    expect(storeIdx).toBeLessThan(hookIdx);
+    expect(hookIdx).toBeLessThan(cfgIdx);
+  });
+
+  it('includes "Hook activity" header', () => {
+    const out = renderStatus(makeResult());
+    expect(out).toContain('Hook activity');
+  });
+
+  it('shows no invocations message when hookStats is empty', () => {
+    const out = renderStatus(makeResult({ hookStats: [] }));
+    expect(out).toContain('No hook invocations recorded yet');
+  });
+
+  it('shows project stats when hookStats has entries', () => {
+    const out = renderStatus(makeResult({
+      hookStats: [{ projectRoot: '/my/project', lastRunAt: '2026-04-19T10:00:00Z', invocationCount: 7, lastOutcome: 'no_action' }],
+    }));
+    expect(out).toContain('invocations : 7');
+    expect(out).toContain('no_action');
+    expect(out).toContain('2026-04-19T10:00:00Z');
   });
 
   it('renders with empty agents list without crashing', () => {

@@ -6,7 +6,7 @@ import { classifyPrompt } from './PromptClassifier.js';
 import { SessionStateManager, SESSION_GAP_MS, STAGE_CONFIRM_THRESHOLD } from './SessionStateManager.js';
 import { PROFILE_RECOMPUTE_INTERVAL } from './UserProfileClassifier.js';
 import { detectAbsenceFlags, ABSENCE_MIN_PROMPTS, ABSENCE_COOLDOWN_PROMPTS } from './AbsenceDetector.js';
-import { detectSignals, initialSignalCounters, SIGNAL_DEFINITIONS } from './signals.js';
+import { detectSignals, initialSignalCounters, SIGNAL_DEFINITIONS, SIGNAL_MAP } from './signals.js';
 import { openStore, closeStore } from '../store/index.js';
 import type { SessionState, ClassificationResult } from './types.js';
 
@@ -508,6 +508,74 @@ describe('detectSignals', () => {
     const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'behaviour_testing');
     expect(sig?.expectedStages).toContain('implementation');
     expect(sig?.expectedStages).toContain('review_testing');
+  });
+
+  // remaining keywords
+  it('detects "sad path" → behaviour_testing', () => {
+    expect(detectSignals('write a sad path test for the payment failure')).toContain('behaviour_testing');
+  });
+
+  it('detects "end to end test" → behaviour_testing', () => {
+    expect(detectSignals('write an end to end test for the checkout flow')).toContain('behaviour_testing');
+  });
+
+  it('detects "test the flow" → behaviour_testing', () => {
+    expect(detectSignals('I want to test the flow from login to dashboard')).toContain('behaviour_testing');
+  });
+
+  it('detects "functional test" → behaviour_testing', () => {
+    expect(detectSignals('write a functional test for the user registration')).toContain('behaviour_testing');
+  });
+
+  it('detects "test from a user" → behaviour_testing', () => {
+    expect(detectSignals('test from a user perspective to see if this works')).toContain('behaviour_testing');
+  });
+
+  it('detects "real user test" → behaviour_testing', () => {
+    expect(detectSignals('do a real user test on the checkout page')).toContain('behaviour_testing');
+  });
+
+  it('detects "test the feature as" → behaviour_testing', () => {
+    expect(detectSignals('test the feature as a first-time visitor would')).toContain('behaviour_testing');
+  });
+
+  it('co-detects behaviour_testing + regression_check in same prompt', () => {
+    const signals = detectSignals('manually test the happy path then run all tests for regressions');
+    expect(signals).toContain('behaviour_testing');
+    expect(signals).toContain('regression_check');
+  });
+
+  it('co-detects behaviour_testing + test_creation when both vocabularies appear', () => {
+    const signals = detectSignals('write acceptance tests and unit tests for this module');
+    expect(signals).toContain('behaviour_testing');
+    expect(signals).toContain('test_creation');
+  });
+
+  // SIGNAL_MAP and initialSignalCounters coverage
+  it('SIGNAL_MAP contains behaviour_testing key', () => {
+    expect(SIGNAL_MAP.has('behaviour_testing')).toBe(true);
+  });
+
+  it('SIGNAL_MAP.get(behaviour_testing) returns the correct definition', () => {
+    const sig = SIGNAL_MAP.get('behaviour_testing');
+    expect(sig?.key).toBe('behaviour_testing');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it('initialSignalCounters contains behaviour_testing key', () => {
+    const counters = initialSignalCounters();
+    expect('behaviour_testing' in counters).toBe(true);
+  });
+
+  it('initialSignalCounters behaviour_testing entry starts absent', () => {
+    const counters = initialSignalCounters();
+    expect(counters['behaviour_testing'].present).toBe(false);
+    expect(counters['behaviour_testing'].lastSeenAt).toBeNull();
+  });
+
+  it('initialSignalCounters covers exactly 23 signals', () => {
+    const counters = initialSignalCounters();
+    expect(Object.keys(counters)).toHaveLength(23);
   });
 });
 

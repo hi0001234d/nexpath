@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { realpathSync } from 'node:fs';
 import { Command } from 'commander';
 import { configGetAction, configSetAction } from './commands/config.js';
+import { logAction } from './commands/log.js';
 import { storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAction } from './commands/store.js';
 import { installAction, uninstallAction } from './commands/install.js';
 import { initAction } from './commands/init.js';
@@ -53,6 +54,17 @@ export function createProgram(): Command {
   // ── Status command ────────────────────────────────────────────────────────────
 
   registerStatusCommand(program);
+
+  // ── Log command ───────────────────────────────────────────────────────────────
+
+  program
+    .command('log')
+    .description('Show recent nexpath activity log')
+    .option('--tail <n>', 'Number of lines to show (default: 50)')
+    .option('--level <level>', 'Filter by log level: error | warn | info | debug')
+    .action((opts: { tail?: string; level?: string }) => {
+      logAction({ tail: opts.tail ? parseInt(opts.tail, 10) : undefined, level: opts.level });
+    });
 
   // ── Config command ────────────────────────────────────────────────────────────
 
