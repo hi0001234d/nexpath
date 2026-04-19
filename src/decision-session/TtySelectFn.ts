@@ -123,6 +123,14 @@ function buildSelectFn(streams: TtyStreams): SelectFn {
       }).prompt();
 
       return result as string | symbol;
+    } catch (err) {
+      // TTY initialisation failed at runtime (e.g. uv_tty_init / setRawMode
+      // throws because the hook subprocess has no usable console handle even
+      // though CONIN$ opened). Return a symbol — runLevel treats
+      // `typeof result === 'symbol'` as skip, so the pipeline exits cleanly.
+      // The error is re-thrown as a structured log entry for diagnosis.
+      process.stderr.write(`[nexpath] tty_runtime_error: ${(err as Error).message}\n`);
+      return Symbol('tty_runtime_failed');
     } finally {
       // Always close TTY streams to prevent fd leaks per hook invocation.
       streams.input.destroy();
