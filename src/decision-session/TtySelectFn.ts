@@ -81,8 +81,13 @@ function buildRenderFn(message: string) {
 function openTtyStreams(): TtyStreams | null {
   try {
     if (platform === 'win32') {
+      // r+ (OPEN_EXISTING + GENERIC_READ|WRITE) works for both console devices.
+      // Do NOT use 'w+' for CONOUT$ — it implies truncation semantics on some
+      // Windows versions. Both must be r+ for reliable console handle creation.
+      // NOTE: Git Bash / MSYS2 translates \\.\CONIN$ → C:\.CONIN$ → ENOENT.
+      //       This approach only works in PowerShell / cmd / Windows Terminal.
       const inFd  = openSync('\\\\.\\CONIN$',  'r+');
-      const outFd = openSync('\\\\.\\CONOUT$', 'w+');
+      const outFd = openSync('\\\\.\\CONOUT$', 'r+');
       return {
         input:    new ReadStream(inFd),
         output:   new WriteStream(outFd),
