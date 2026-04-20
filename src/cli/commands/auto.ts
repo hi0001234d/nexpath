@@ -6,8 +6,6 @@ import { SessionStateManager } from '../../classifier/SessionStateManager.js';
 import { detectAbsenceFlags } from '../../classifier/AbsenceDetector.js';
 import { shouldFireStage2, runStage2 } from '../../classifier/Stage2Trigger.js';
 import { generatePinchLabel } from '../../decision-session/PinchGenerator.js';
-import { runDecisionSession } from '../../decision-session/DecisionSession.js';
-import type { SelectFn } from '../../decision-session/DecisionSession.js';
 import type { Stage } from '../../classifier/types.js';
 import type { FlagType } from '../../classifier/Stage2Trigger.js';
 import {
@@ -20,7 +18,7 @@ import { getConfig } from '../../store/config.js';
 import { logger, initLogger } from '../../logger.js';
 import type { LogLevel } from '../../logger.js';
 import { writeHookStats } from '../../store/hook-stats.js';
-import { createTtySelectFn } from '../../decision-session/TtySelectFn.js';
+import { upsertPendingAdvisory } from '../../store/pending-advisories.js';
 
 /**
  * nexpath auto — orchestration command (per decision-session-ux-research.md).
@@ -67,25 +65,22 @@ export interface AutoInput {
 
 export type AutoOutcome =
   | { outcome: 'no_action' }
-  | { outcome: 'selected';  selectedPrompt: string }
-  | { outcome: 'skipped' };
+  | { outcome: 'pending' };
 
 // ── Core orchestration ─────────────────────────────────────────────────────────
 
 /**
  * Run the full nexpath auto pipeline.
  *
- * @param input      Prompt text + project root
- * @param store      Open SQLite store (caller manages lifecycle)
- * @param openai     Optional OpenAI client (injectable for testing)
- * @param selectFn   Optional @clack/prompts select replacement (injectable for testing)
+ * @param input    Prompt text + project root
+ * @param store    Open SQLite store (caller manages lifecycle)
+ * @param openai   Optional OpenAI client (injectable for testing)
  * @returns AutoOutcome — what the pipeline decided and did
  */
 export async function runAuto(
-  input:     AutoInput,
-  store:     Store,
-  openai?:   OpenAI,
-  selectFn?: SelectFn,
+  input:   AutoInput,
+  store:   Store,
+  openai?: OpenAI,
 ): Promise<AutoOutcome> {
   // ── 1. Load session state ────────────────────────────────────────────────────
   const mgr = SessionStateManager.load(store, input.projectRoot);
@@ -170,35 +165,13 @@ export async function runAuto(
     return { outcome: 'no_action' };
   }
 
-  // ── 7.5. TTY resolution — open console TTY directly if stdin is piped ───────
-  // In hook mode stdin is a piped JSON payload, not a TTY. When no selectFn is
-  // injected (normal operation, not tests), try to open the console TTY device
-  // directly (CONIN$/CONOUT$ on Windows, /dev/tty on Linux/Mac) so the decision
-  // session UI can render in hook context. Falls back to no_action if unavailable.
-  let effectiveSelectFn: SelectFn | undefined = selectFn; // injected by tests or undefined
-
-  if (!effectiveSelectFn) {
-    if (!process.stdin.isTTY) {
-      // Hook mode: try direct console TTY
-      const ttySel = createTtySelectFn();
-      if (!ttySel) {
-        logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'no_tty' });
-        return { outcome: 'no_action' };
-      }
-      effectiveSelectFn = ttySel;
-      logger.debug('tty_resolved', { method: 'direct_tty' });
-    }
-    // else: stdin IS TTY — leave effectiveSelectFn undefined so runDecisionSession
-    // uses its @clack/prompts default
-  }
-
-  // ── 8. Mark as fired (before rendering — prevents re-entry on restart) ───────
+  // ── 8. Mark as fired (before storing — prevents re-entry on restart) ────────
   mgr.markDecisionSessionFired(store, firedKey);
 
   // ── 8.5. Read user profile (computed in processPrompt, null if < 5 prompts) ──
   const userProfile = mgr.current.profile ?? undefined;
 
-  // ── 9. Pinch label generation ────────────────────────────────────────────────
+  // ── 9. Pinch label generation ─────────────────────────────────────────────
   const pinchLabel = await generatePinchLabel(
     mgr.current.currentStage,
     flagType,
@@ -207,27 +180,18 @@ export async function runAuto(
     effectiveLang,
   );
 
-  // ── 10. Decision session UI ──────────────────────────────────────────────────
-  const dsResult = await runDecisionSession(
-    {
-      stage:       mgr.current.currentStage,
-      flagType,
-      pinchLabel,
-      sessionId:   mgr.current.sessionId,
-      projectRoot: input.projectRoot,
-      promptCount: mgr.current.promptCount,
-    },
-    store,
-    effectiveSelectFn,
-  );
+  // ── 10. Store pending advisory — Stop hook will show UI after Claude responds
+  upsertPendingAdvisory(store, {
+    projectRoot: input.projectRoot,
+    stage:       mgr.current.currentStage,
+    flagType,
+    pinchLabel,
+    sessionId:   mgr.current.sessionId,
+    promptCount: mgr.current.promptCount,
+  });
 
-  if (dsResult.outcome === 'selected') {
-    logger.info('pipeline_outcome', { outcome: 'selected' });
-    return { outcome: 'selected', selectedPrompt: dsResult.selectedPrompt };
-  }
-
-  logger.info('pipeline_outcome', { outcome: 'skipped' });
-  return { outcome: 'skipped' };
+  logger.info('pipeline_outcome', { outcome: 'pending', pinchLabel });
+  return { outcome: 'pending' };
 }
 
 // ── CLI entry point ────────────────────────────────────────────────────────────
@@ -276,7 +240,6 @@ export function registerAutoCommand(program: import('commander').Command): void 
     .argument('[prompt]', 'The latest prompt text (omit to read from stdin in hook mode)')
     .action(async (promptArg: string | undefined, opts: { project: string; db: string }) => {
       let promptText = promptArg?.trim();
-      let hookMode   = false;
 
       if (!promptText) {
         // Hook mode: read JSON payload from stdin (Claude Code UserPromptSubmit)
@@ -285,7 +248,6 @@ export function registerAutoCommand(program: import('commander').Command): void 
           try {
             const payload = JSON.parse(raw) as { prompt?: string };
             promptText = payload.prompt?.trim();
-            hookMode   = true;
           } catch {
             // Not valid JSON — fall through to the error below
           }
@@ -309,21 +271,7 @@ export function registerAutoCommand(program: import('commander').Command): void 
         );
 
         writeHookStats(opts.project, result.outcome);
-
-        if (result.outcome === 'selected') {
-          if (hookMode) {
-            // Claude Code hook output format — injected as additionalContext
-            process.stdout.write(JSON.stringify({
-              hookSpecificOutput: {
-                hookEventName:     'UserPromptSubmit',
-                additionalContext: result.selectedPrompt,
-              },
-            }) + '\n');
-          } else {
-            process.stdout.write(result.selectedPrompt + '\n');
-          }
-        }
-        // 'no_action' and 'skipped' → exit silently
+        // 'no_action' and 'pending' → exit silently (Stop hook handles UI)
       } finally {
         closeStore(store);
       }

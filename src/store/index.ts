@@ -22,3 +22,10 @@ export {
   type SkippedSessionRecord,
   type InsertSkippedSessionInput,
 } from './skipped-sessions.js';
+export {
+  upsertPendingAdvisory,
+  getPendingAdvisory,
+  markAdvisoryShown,
+  type PendingAdvisory,
+  type UpsertPendingAdvisoryInput,
+} from './pending-advisories.js';

@@ -24,6 +24,7 @@ import {
   uninstallAction,
   getClaudeSettingsPath,
   buildHookCommand,
+  buildStopHookCommand,
   buildHookEntry,
   writeHookEntry,
   removeHookEntry,
@@ -938,6 +939,30 @@ describe('buildHookCommand', () => {
   });
 });
 
+// ── buildStopHookCommand ──────────────────────────────────────────────────────
+
+describe('buildStopHookCommand', () => {
+  it('contains stop --db', () => {
+    const cmd = buildStopHookCommand('/home/user', 'linux');
+    expect(cmd).toContain('stop --db');
+  });
+
+  it('contains the nexpath db path', () => {
+    const cmd = buildStopHookCommand('/home/user', 'linux');
+    expect(cmd).toContain('.nexpath/prompt-store.db');
+  });
+
+  it('starts with node "..."', () => {
+    const cmd = buildStopHookCommand('/home/user', 'linux');
+    expect(cmd).toMatch(/^node "/);
+  });
+
+  it('uses forward slashes on Windows', () => {
+    const cmd = buildStopHookCommand('C:\\Users\\Test', 'win32');
+    expect(cmd).not.toContain('\\');
+  });
+});
+
 // ── buildHookEntry ────────────────────────────────────────────────────────────
 
 describe('buildHookEntry', () => {
@@ -946,20 +971,42 @@ describe('buildHookEntry', () => {
     expect(entry).toHaveProperty('UserPromptSubmit');
   });
 
+  it('has Stop key', () => {
+    const entry = buildHookEntry('/home/user', 'linux');
+    expect(entry).toHaveProperty('Stop');
+  });
+
   it('UserPromptSubmit is an array', () => {
     const entry = buildHookEntry('/home/user', 'linux');
     expect(Array.isArray(entry.UserPromptSubmit)).toBe(true);
   });
 
-  it('first hook group has _nexpath_hook: true marker', () => {
+  it('Stop is an array', () => {
+    const entry = buildHookEntry('/home/user', 'linux');
+    expect(Array.isArray(entry.Stop)).toBe(true);
+  });
+
+  it('UserPromptSubmit hook group has _nexpath_hook: true marker', () => {
     const entry  = buildHookEntry('/home/user', 'linux');
     const groups = entry.UserPromptSubmit as Array<Record<string, unknown>>;
+    expect(groups[0]._nexpath_hook).toBe(true);
+  });
+
+  it('Stop hook group has _nexpath_hook: true marker', () => {
+    const entry  = buildHookEntry('/home/user', 'linux');
+    const groups = entry.Stop as Array<Record<string, unknown>>;
     expect(groups[0]._nexpath_hook).toBe(true);
   });
 
   it('matcher is empty string (fires on all prompts)', () => {
     const entry  = buildHookEntry('/home/user', 'linux');
     const groups = entry.UserPromptSubmit as Array<Record<string, unknown>>;
+    expect(groups[0].matcher).toBe('');
+  });
+
+  it('Stop matcher is empty string', () => {
+    const entry  = buildHookEntry('/home/user', 'linux');
+    const groups = entry.Stop as Array<Record<string, unknown>>;
     expect(groups[0].matcher).toBe('');
   });
 
@@ -978,11 +1025,18 @@ describe('buildHookEntry', () => {
     expect(hooks[0]).not.toHaveProperty('timeout');
   });
 
-  it('hook command contains nexpath auto --db', () => {
+  it('UserPromptSubmit hook command contains nexpath auto --db', () => {
     const entry  = buildHookEntry('/home/user', 'linux');
     const groups = entry.UserPromptSubmit as Array<Record<string, unknown>>;
     const hooks  = groups[0].hooks as Array<Record<string, unknown>>;
     expect(hooks[0].command as string).toContain('auto --db');
+  });
+
+  it('Stop hook command contains nexpath stop --db', () => {
+    const entry  = buildHookEntry('/home/user', 'linux');
+    const groups = entry.Stop as Array<Record<string, unknown>>;
+    const hooks  = groups[0].hooks as Array<Record<string, unknown>>;
+    expect(hooks[0].command as string).toContain('stop --db');
   });
 });
 

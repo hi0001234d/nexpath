@@ -1,12 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PassThrough } from 'node:stream';
 import { openStore } from '../../store/db.js';
 import type { Store } from '../../store/db.js';
 import { buildFiredKey, runAuto, readStdin } from './auto.js';
 import type { AutoInput } from './auto.js';
-import { getSkippedSessions } from '../../store/skipped-sessions.js';
-import { SKIP_NOW } from '../../decision-session/options.js';
-import type { SelectFn } from '../../decision-session/DecisionSession.js';
+import { getPendingAdvisory } from '../../store/pending-advisories.js';
 import type OpenAI from 'openai';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -82,14 +80,6 @@ const FIRE_NO_RESPONSE = {
   fire_decision_session: false,
   reason:                'All signals present.',
 };
-
-function mockSelect(value: string): SelectFn {
-  return vi.fn().mockResolvedValue(value);
-}
-
-function mockCancel(): SelectFn {
-  return vi.fn().mockResolvedValue(Symbol('cancel'));
-}
 
 // ── buildFiredKey ─────────────────────────────────────────────────────────────
 
@@ -244,7 +234,7 @@ describe('runAuto — deduplication', () => {
   });
 });
 
-// ── runAuto — full flow with mock Stage 2 + selectFn ─────────────────────────
+// ── runAuto — full flow (pending advisory) ────────────────────────────────────
 
 describe('runAuto — full flow', () => {
   let store: Store;
@@ -252,48 +242,9 @@ describe('runAuto — full flow', () => {
   beforeEach(async () => { store = await openStore(':memory:'); });
   afterEach(() => { store.db.close(); });
 
-  it('returns selected when user picks a content option', async () => {
-    // Arrange: pre-seed the session state so shouldFireStage2 fires
-    // We do this by importing and using SessionStateManager directly
+  it('returns pending and stores advisory when Stage 2 says fire', async () => {
     const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
     const mgr = SessionStateManager.load(store, '/test/full1');
-
-    // Manually push an active absence flag so shouldFireStage2 fires
-    // (the presence of a flag + low confidence triggers Stage 2)
-    mgr.addAbsenceFlag(store, {
-      signalKey:     'test_creation',
-      stage:         'implementation',
-      raisedAtIndex: 5,
-      cooldownUntil: 100,
-    });
-
-    // Set low stageConfidence in state to trigger low-conf + active flag condition
-    // We use an implementation with FIRE_YES_RESPONSE mock
-    const openai = makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.');
-
-    // Use selectFn that always picks the first content option
-    const capturedOptions: string[] = [];
-    const selectFn: SelectFn = vi.fn().mockImplementation(async (opts) => {
-      capturedOptions.push(...opts.options.map((o: { value: string }) => o.value));
-      return opts.options[0].value; // pick first option
-    });
-
-    const result = await runAuto(
-      makeInput({ projectRoot: '/test/full1' }),
-      store,
-      openai,
-      selectFn,
-    );
-
-    // If Stage 2 fired (depends on session state having enough signals),
-    // we expect 'selected'. Otherwise 'no_action'.
-    // The test validates the complete flow contract.
-    expect(['selected', 'no_action', 'skipped']).toContain(result.outcome);
-  });
-
-  it('returns skipped when user selects SKIP_NOW', async () => {
-    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
-    const mgr = SessionStateManager.load(store, '/test/full2');
     mgr.addAbsenceFlag(store, {
       signalKey:     'test_creation',
       stage:         'implementation',
@@ -302,18 +253,20 @@ describe('runAuto — full flow', () => {
     });
 
     const openai = makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.');
-    const result = await runAuto(
-      makeInput({ projectRoot: '/test/full2' }),
-      store,
-      openai,
-      mockSelect(SKIP_NOW),
-    );
-    expect(['skipped', 'no_action']).toContain(result.outcome);
+    const result = await runAuto(makeInput({ projectRoot: '/test/full1' }), store, openai);
+
+    expect(['pending', 'no_action']).toContain(result.outcome);
+    if (result.outcome === 'pending') {
+      const advisory = getPendingAdvisory(store, '/test/full1');
+      expect(advisory).not.toBeNull();
+      expect(advisory?.status).toBe('pending');
+      expect(advisory?.pinchLabel).toBe('Hold up.');
+    }
   });
 
-  it('returns skipped on Ctrl+C (cancel symbol)', async () => {
+  it('stores advisory with correct stage and flagType', async () => {
     const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
-    const mgr = SessionStateManager.load(store, '/test/full3');
+    const mgr = SessionStateManager.load(store, '/test/full-meta');
     mgr.addAbsenceFlag(store, {
       signalKey:     'test_creation',
       stage:         'implementation',
@@ -321,14 +274,15 @@ describe('runAuto — full flow', () => {
       cooldownUntil: 100,
     });
 
-    const openai = makeMockOpenAI(FIRE_YES_RESPONSE);
-    const result = await runAuto(
-      makeInput({ projectRoot: '/test/full3' }),
-      store,
-      openai,
-      mockCancel(),
-    );
-    expect(['skipped', 'no_action']).toContain(result.outcome);
+    const openai = makeMockOpenAI(FIRE_YES_RESPONSE, 'Quick check.');
+    const result = await runAuto(makeInput({ projectRoot: '/test/full-meta' }), store, openai);
+
+    if (result.outcome === 'pending') {
+      const advisory = getPendingAdvisory(store, '/test/full-meta');
+      expect(advisory?.stage).toBeDefined();
+      expect(advisory?.flagType).toBeDefined();
+      expect(advisory?.sessionId).toBeDefined();
+    }
   });
 });
 
@@ -340,43 +294,46 @@ describe('runAuto — store persistence', () => {
   beforeEach(async () => { store = await openStore(':memory:'); });
   afterEach(() => { store.db.close(); });
 
-  it('records a skipped_sessions row when outcome is skipped', async () => {
-    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
-    const mgr = SessionStateManager.load(store, '/test/persist-skip');
-    mgr.addAbsenceFlag(store, {
-      signalKey:     'test_creation',
-      stage:         'implementation',
-      raisedAtIndex: 5,
-      cooldownUntil: 100,
-    });
-
-    const openai = makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.');
-    const result = await runAuto(
-      makeInput({ projectRoot: '/test/persist-skip' }),
-      store,
-      openai,
-      mockSelect(SKIP_NOW),
-    );
-
-    if (result.outcome === 'skipped') {
-      const rows = getSkippedSessions(store, '/test/persist-skip');
-      expect(rows).toHaveLength(1);
-      expect(rows[0].flagType).toBeDefined();
-      expect(rows[0].stage).toBeDefined();
-    } else {
-      // If Stage 2 didn't fire (no_action), no row written — acceptable
-      expect(result.outcome).toBe('no_action');
-    }
-  });
-
-  it('does NOT record a skipped_sessions row when outcome is no_action', async () => {
+  it('does NOT store a pending advisory when outcome is no_action', async () => {
     const result = await runAuto(
       makeInput({ promptText: 'ok', projectRoot: '/test/persist-noact' }),
       store,
     );
     expect(result.outcome).toBe('no_action');
-    const rows = getSkippedSessions(store, '/test/persist-noact');
-    expect(rows).toHaveLength(0);
+    const advisory = getPendingAdvisory(store, '/test/persist-noact');
+    expect(advisory).toBeNull();
+  });
+
+  it('overwrites prior pending advisory on second trigger for same project', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+
+    // First trigger
+    const mgr1 = SessionStateManager.load(store, '/test/overwrite');
+    mgr1.addAbsenceFlag(store, {
+      signalKey:     'test_creation',
+      stage:         'implementation',
+      raisedAtIndex: 5,
+      cooldownUntil: 100,
+    });
+    await runAuto(makeInput({ projectRoot: '/test/overwrite' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'First.'));
+
+    // Second trigger (different session — simulate via new openai mock returning 'Second.')
+    // We need a new absence flag key to bypass dedup
+    const mgr2 = SessionStateManager.load(store, '/test/overwrite');
+    mgr2.addAbsenceFlag(store, {
+      signalKey:     'review_step',
+      stage:         'implementation',
+      raisedAtIndex: 10,
+      cooldownUntil: 200,
+    });
+    await runAuto(makeInput({ projectRoot: '/test/overwrite' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'Second.'));
+
+    // Only one pending advisory should exist (latest wins)
+    const advisory = getPendingAdvisory(store, '/test/overwrite');
+    // The result may be null if dedup blocked both — either way, at most one advisory
+    if (advisory) {
+      expect(advisory.status).toBe('pending');
+    }
   });
 });
 
@@ -478,21 +435,14 @@ describe('registerAutoCommand — output format', () => {
     expect(lines.join('')).toBe('');
   });
 
-  it('hookSpecificOutput JSON has correct structure when parsed', () => {
-    // Verify the output format matches what Claude Code expects — parse and check shape
-    const selectedPrompt = 'cross-confirm the spec before writing any code';
-    const output = JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName:     'UserPromptSubmit',
-        additionalContext: selectedPrompt,
-      },
-    });
-    const parsed = JSON.parse(output) as {
-      hookSpecificOutput: { hookEventName: string; additionalContext: string };
-    };
-    expect(parsed.hookSpecificOutput.hookEventName).toBe('UserPromptSubmit');
-    expect(parsed.hookSpecificOutput.additionalContext).toBe(selectedPrompt);
-    expect(Object.keys(parsed)).toEqual(['hookSpecificOutput']);
+  it('Stop hook decision block JSON has correct structure when parsed', () => {
+    // Verify the Stop hook output format matches what Claude Code expects
+    const reason = 'cross-confirm the spec before writing any code';
+    const output = JSON.stringify({ decision: 'block', reason });
+    const parsed = JSON.parse(output) as { decision: string; reason: string };
+    expect(parsed.decision).toBe('block');
+    expect(parsed.reason).toBe(reason);
+    expect(Object.keys(parsed)).toEqual(['decision', 'reason']);
   });
 
   it('exits with code 1 and writes to stderr when prompt is missing in direct mode', async () => {

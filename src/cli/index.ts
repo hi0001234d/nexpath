@@ -8,6 +8,7 @@ import { storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAct
 import { installAction, uninstallAction } from './commands/install.js';
 import { initAction } from './commands/init.js';
 import { registerAutoCommand } from './commands/auto.js';
+import { registerStopCommand } from './commands/stop.js';
 import { registerOptimizeCommand } from './commands/optimize.js';
 import { registerStatusCommand } from './commands/status.js';
 
@@ -48,6 +49,7 @@ export function createProgram(): Command {
   // ── Guidance commands ─────────────────────────────────────────────────────────
 
   registerAutoCommand(program);
+  registerStopCommand(program);
 
   registerOptimizeCommand(program);
 

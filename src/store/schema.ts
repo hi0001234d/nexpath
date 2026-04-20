@@ -47,6 +47,21 @@ CREATE TABLE IF NOT EXISTS skipped_sessions (
 
 CREATE INDEX IF NOT EXISTS idx_skipped_sessions_project
   ON skipped_sessions (project_root, skipped_at);
+
+CREATE TABLE IF NOT EXISTS pending_advisories (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_root TEXT    NOT NULL,
+  stage        TEXT    NOT NULL,
+  flag_type    TEXT    NOT NULL,
+  pinch_label  TEXT    NOT NULL,
+  session_id   TEXT    NOT NULL,
+  prompt_count INTEGER NOT NULL,
+  status       TEXT    NOT NULL DEFAULT 'pending',
+  created_at   INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pending_advisories_project
+  ON pending_advisories (project_root, status, created_at);
 `;
 
 export function migrate(db: Database): void {

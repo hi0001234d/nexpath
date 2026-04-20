@@ -212,7 +212,7 @@ export function getClaudeSettingsPath(home: string): string {
 }
 
 /**
- * Build the shell command string written into the UserPromptSubmit hook entry.
+ * Build the shell command string for the UserPromptSubmit hook.
  *
  * Uses `node` explicitly with the absolute path to the running CLI so the hook
  * works regardless of whether nexpath is globally installed or run from a local
@@ -227,8 +227,15 @@ export function buildHookCommand(home: string, platform = process.platform): str
   return `node "${cliPath}" auto --db "${dbPath}"`;
 }
 
+/** Build the shell command string for the Stop hook. */
+export function buildStopHookCommand(home: string, platform = process.platform): string {
+  const cliPath = resolve(process.argv[1]).replace(/\\/g, '/');
+  const dbPath  = join(home, '.nexpath', 'prompt-store.db').replace(/\\/g, '/');
+  return `node "${cliPath}" stop --db "${dbPath}"`;
+}
+
 /**
- * Build the UserPromptSubmit hook entry object.
+ * Build the UserPromptSubmit + Stop hook entry objects.
  *
  * The `_nexpath_hook: true` field is the reliable deduplication and removal
  * marker — it survives path changes across reinstalls, unlike scanning the
@@ -251,45 +258,88 @@ export function buildHookEntry(home: string, platform = process.platform): Recor
         ],
       },
     ],
+    Stop: [
+      {
+        _nexpath_hook: true,
+        matcher:       '',
+        hooks: [
+          {
+            type:    'command',
+            command: buildStopHookCommand(home, platform),
+          },
+        ],
+      },
+    ],
   };
 }
 
 /**
- * Write the nexpath UserPromptSubmit hook into ~/.claude/settings.json.
+ * Write the nexpath UserPromptSubmit and Stop hooks into ~/.claude/settings.json.
  *
- * Uses a read-filter-append pattern so existing UserPromptSubmit hooks written
- * by other tools are preserved.  Any prior nexpath hook group (identified by
- * `_nexpath_hook: true`) is removed before appending the fresh entry, making
- * this operation idempotent on reinstall.
+ * Uses a read-filter-append pattern so existing hooks written by other tools are
+ * preserved.  Any prior nexpath hook group (identified by `_nexpath_hook: true`)
+ * is removed before appending the fresh entry, making this operation idempotent.
  */
 export function writeHookEntry(filePath: string, home: string, platform = process.platform): void {
-  const data     = readJsonSafe(filePath);
-  const hooks    = (data.hooks as Record<string, unknown> | undefined) ?? {};
-  const existing = (hooks.UserPromptSubmit as Array<Record<string, unknown>> | undefined) ?? [];
-  const filtered = existing.filter((g) => !g._nexpath_hook);
-  const entry    = buildHookEntry(home, platform);
-  hooks.UserPromptSubmit = [...filtered, ...(entry.UserPromptSubmit as unknown[])];
+  const data  = readJsonSafe(filePath);
+  const hooks = (data.hooks as Record<string, unknown> | undefined) ?? {};
+  const entry = buildHookEntry(home, platform);
+
+  // UserPromptSubmit
+  const existingUPS = (hooks.UserPromptSubmit as Array<Record<string, unknown>> | undefined) ?? [];
+  hooks.UserPromptSubmit = [
+    ...existingUPS.filter((g) => !g._nexpath_hook),
+    ...(entry.UserPromptSubmit as unknown[]),
+  ];
+
+  // Stop
+  const existingStop = (hooks.Stop as Array<Record<string, unknown>> | undefined) ?? [];
+  hooks.Stop = [
+    ...existingStop.filter((g) => !g._nexpath_hook),
+    ...(entry.Stop as unknown[]),
+  ];
+
   data.hooks = hooks;
   writeJson(filePath, data);
 }
 
 /**
- * Remove the nexpath UserPromptSubmit hook from ~/.claude/settings.json.
+ * Remove the nexpath UserPromptSubmit and Stop hooks from ~/.claude/settings.json.
  *
  * Identifies nexpath-written hook groups by the `_nexpath_hook: true` field.
- * Returns false if the file does not exist or no nexpath hook group was found.
+ * Returns false if the file does not exist or no nexpath hooks were found.
  */
 export function removeHookEntry(filePath: string): boolean {
   if (!existsSync(filePath)) return false;
-  const data     = readJsonSafe(filePath);
-  const hooks    = data.hooks as Record<string, unknown> | undefined;
+  const data  = readJsonSafe(filePath);
+  const hooks = data.hooks as Record<string, unknown> | undefined;
   if (!hooks) return false;
-  const groups   = hooks.UserPromptSubmit as Array<Record<string, unknown>> | undefined;
-  if (!groups) return false;
-  const filtered = groups.filter((g) => !g._nexpath_hook);
-  if (filtered.length === groups.length) return false;
-  if (filtered.length === 0) delete hooks.UserPromptSubmit;
-  else hooks.UserPromptSubmit = filtered;
+
+  let removed = false;
+
+  // UserPromptSubmit
+  const upsGroups = hooks.UserPromptSubmit as Array<Record<string, unknown>> | undefined;
+  if (upsGroups) {
+    const filtered = upsGroups.filter((g) => !g._nexpath_hook);
+    if (filtered.length < upsGroups.length) {
+      removed = true;
+      if (filtered.length === 0) delete hooks.UserPromptSubmit;
+      else hooks.UserPromptSubmit = filtered;
+    }
+  }
+
+  // Stop
+  const stopGroups = hooks.Stop as Array<Record<string, unknown>> | undefined;
+  if (stopGroups) {
+    const filtered = stopGroups.filter((g) => !g._nexpath_hook);
+    if (filtered.length < stopGroups.length) {
+      removed = true;
+      if (filtered.length === 0) delete hooks.Stop;
+      else hooks.Stop = filtered;
+    }
+  }
+
+  if (!removed) return false;
   data.hooks = hooks;
   writeJson(filePath, data);
   return true;
