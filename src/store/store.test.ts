@@ -10,6 +10,12 @@ import {
   deleteSkippedSession,
   deleteAllSkippedSessions,
 } from './skipped-sessions.js';
+import {
+  upsertPendingAdvisory,
+  getPendingAdvisory,
+  markAdvisoryShown,
+} from './pending-advisories.js';
+import type { UpsertPendingAdvisoryInput } from './pending-advisories.js';
 
 // ── redactSecrets ─────────────────────────────────────────────────────────────
 
@@ -83,6 +89,16 @@ describe('store — schema', () => {
   it('creates the index on skipped_sessions(project_root, skipped_at)', () => {
     const res = store.db.exec("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_skipped_sessions_project'");
     expect(res[0]?.values[0]?.[0]).toBe('idx_skipped_sessions_project');
+  });
+
+  it('creates the pending_advisories table', () => {
+    const res = store.db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='pending_advisories'");
+    expect(res[0]?.values[0]?.[0]).toBe('pending_advisories');
+  });
+
+  it('creates the index on pending_advisories(project_root, status, created_at)', () => {
+    const res = store.db.exec("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_pending_advisories_project'");
+    expect(res[0]?.values[0]?.[0]).toBe('idx_pending_advisories_project');
   });
 });
 
@@ -473,5 +489,107 @@ describe('store — skipped_sessions', () => {
     insertSkippedSession(store, { ...BASE, levelReached: 3 });
     const row = getSkippedSessions(store, '/proj/alpha')[0];
     expect(row.levelReached).toBe(3);
+  });
+});
+
+// ── pending_advisories CRUD ───────────────────────────────────────────────────
+
+describe('store — pending_advisories', () => {
+  let store: Store;
+
+  const BASE_ADVISORY: UpsertPendingAdvisoryInput = {
+    projectRoot: '/proj/main',
+    stage:       'implementation',
+    flagType:    'absence:test_creation',
+    pinchLabel:  'Hold up.',
+    sessionId:   'sess-abc',
+    promptCount: 7,
+  };
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('upsertPendingAdvisory inserts a row retrievable by getPendingAdvisory', () => {
+    upsertPendingAdvisory(store, BASE_ADVISORY);
+    const row = getPendingAdvisory(store, '/proj/main');
+    expect(row).not.toBeNull();
+    expect(row!.projectRoot).toBe('/proj/main');
+    expect(row!.stage).toBe('implementation');
+    expect(row!.flagType).toBe('absence:test_creation');
+    expect(row!.pinchLabel).toBe('Hold up.');
+    expect(row!.sessionId).toBe('sess-abc');
+    expect(row!.promptCount).toBe(7);
+    expect(row!.status).toBe('pending');
+  });
+
+  it('getPendingAdvisory returns null when no advisory exists for a project', () => {
+    const row = getPendingAdvisory(store, '/proj/none');
+    expect(row).toBeNull();
+  });
+
+  it('getPendingAdvisory only returns pending rows (not shown)', () => {
+    upsertPendingAdvisory(store, BASE_ADVISORY);
+    const row = getPendingAdvisory(store, '/proj/main');
+    markAdvisoryShown(store, row!.id);
+    expect(getPendingAdvisory(store, '/proj/main')).toBeNull();
+  });
+
+  it('markAdvisoryShown changes status to shown', () => {
+    upsertPendingAdvisory(store, BASE_ADVISORY);
+    const row = getPendingAdvisory(store, '/proj/main')!;
+    markAdvisoryShown(store, row.id);
+    const res = store.db.exec(
+      "SELECT status FROM pending_advisories WHERE id = ?",
+      [row.id],
+    );
+    expect(res[0]?.values[0]?.[0]).toBe('shown');
+  });
+
+  it('upsertPendingAdvisory replaces any existing advisory (one per project)', () => {
+    upsertPendingAdvisory(store, BASE_ADVISORY);
+    upsertPendingAdvisory(store, { ...BASE_ADVISORY, pinchLabel: 'Updated label.' });
+    const row = getPendingAdvisory(store, '/proj/main');
+    expect(row).not.toBeNull();
+    expect(row!.pinchLabel).toBe('Updated label.');
+    // Only one row should exist for the project
+    const res = store.db.exec(
+      "SELECT COUNT(*) FROM pending_advisories WHERE project_root = '/proj/main'",
+    );
+    expect(res[0]?.values[0]?.[0]).toBe(1);
+  });
+
+  it('advisories are isolated per project_root', () => {
+    upsertPendingAdvisory(store, BASE_ADVISORY);
+    upsertPendingAdvisory(store, { ...BASE_ADVISORY, projectRoot: '/proj/other', pinchLabel: 'Other label.' });
+    expect(getPendingAdvisory(store, '/proj/main')!.pinchLabel).toBe('Hold up.');
+    expect(getPendingAdvisory(store, '/proj/other')!.pinchLabel).toBe('Other label.');
+  });
+
+  it('created_at is set to a unix ms timestamp close to Date.now()', () => {
+    const before = Date.now();
+    upsertPendingAdvisory(store, BASE_ADVISORY);
+    const after = Date.now();
+    const row = getPendingAdvisory(store, '/proj/main')!;
+    expect(row.createdAt).toBeGreaterThanOrEqual(before);
+    expect(row.createdAt).toBeLessThanOrEqual(after);
+  });
+
+  it('upsertPendingAdvisory also removes old shown rows for the project', () => {
+    upsertPendingAdvisory(store, BASE_ADVISORY);
+    const first = getPendingAdvisory(store, '/proj/main')!;
+    markAdvisoryShown(store, first.id);
+    // Now upsert again — old shown row should be deleted
+    upsertPendingAdvisory(store, { ...BASE_ADVISORY, pinchLabel: 'Fresh.' });
+    const res = store.db.exec(
+      "SELECT COUNT(*) FROM pending_advisories WHERE project_root = '/proj/main'",
+    );
+    expect(res[0]?.values[0]?.[0]).toBe(1);
+    expect(getPendingAdvisory(store, '/proj/main')!.pinchLabel).toBe('Fresh.');
+  });
+
+  it('markAdvisoryShown is a no-op for a non-existent id', () => {
+    upsertPendingAdvisory(store, BASE_ADVISORY);
+    markAdvisoryShown(store, 9999); // id does not exist
+    expect(getPendingAdvisory(store, '/proj/main')).not.toBeNull();
   });
 });

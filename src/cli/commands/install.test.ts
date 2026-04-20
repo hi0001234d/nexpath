@@ -1054,6 +1054,17 @@ describe('writeHookEntry', () => {
     } finally { cleanup(); }
   });
 
+  it('creates settings.json with Stop hook when file is absent', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      const file = join(dir, 'settings.json');
+      writeHookEntry(file, '/home/user', 'linux');
+      const data  = readJson(file) as Record<string, unknown>;
+      const hooks = data.hooks as Record<string, unknown>;
+      expect(hooks).toHaveProperty('Stop');
+    } finally { cleanup(); }
+  });
+
   it('preserves existing UserPromptSubmit hooks from other tools', () => {
     const { dir, cleanup } = tmpDir();
     try {
@@ -1089,6 +1100,44 @@ describe('writeHookEntry', () => {
       const groups  = hooks.UserPromptSubmit as Array<Record<string, unknown>>;
       const nexpath = groups.filter((g) => g._nexpath_hook);
       expect(nexpath).toHaveLength(1);
+    } finally { cleanup(); }
+  });
+
+  it('replaces prior Stop hook on reinstall without duplicating', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      const file = join(dir, 'settings.json');
+      writeHookEntry(file, '/home/user', 'linux');
+      writeHookEntry(file, '/home/user', 'linux');
+      const data    = readJson(file) as Record<string, unknown>;
+      const hooks   = data.hooks as Record<string, unknown>;
+      const groups  = hooks.Stop as Array<Record<string, unknown>>;
+      const nexpath = groups.filter((g) => g._nexpath_hook);
+      expect(nexpath).toHaveLength(1);
+    } finally { cleanup(); }
+  });
+
+  it('preserves existing Stop hooks from other tools when writing', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      const file = join(dir, 'settings.json');
+      writeFileSync(file, JSON.stringify({
+        hooks: {
+          Stop: [
+            { matcher: '', hooks: [{ type: 'command', command: 'other-stop-tool' }] },
+          ],
+        },
+      }), 'utf8');
+      writeHookEntry(file, '/home/user', 'linux');
+      const data   = readJson(file) as Record<string, unknown>;
+      const hooks  = data.hooks as Record<string, unknown>;
+      const groups = hooks.Stop as Array<Record<string, unknown>>;
+      expect(groups.length).toBe(2);
+      const commands = groups.flatMap(
+        (g) => (g.hooks as Array<Record<string, unknown>>).map((h) => h.command as string),
+      );
+      expect(commands).toContain('other-stop-tool');
+      expect(commands.some((c) => c.includes('stop --db'))).toBe(true);
     } finally { cleanup(); }
   });
 
@@ -1138,6 +1187,7 @@ describe('removeHookEntry', () => {
       const data  = readJson(file) as Record<string, unknown>;
       const hooks = data.hooks as Record<string, unknown>;
       expect(hooks.UserPromptSubmit).toBeUndefined();
+      expect(hooks.Stop).toBeUndefined();
     } finally { cleanup(); }
   });
 

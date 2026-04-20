@@ -394,8 +394,8 @@ describe('SessionStateManager — firedDecisionSessions', () => {
 //
 // Tests verify the CLI action's output formatting without running the full
 // advisory pipeline.  We invoke registerAutoCommand through Commander with an
-// in-memory store and a selectFn that is never reached (pipeline returns
-// no_action for a single low-signal prompt), capturing stdout/stderr writes.
+// in-memory store (pipeline returns no_action for a single low-signal prompt),
+// capturing stdout/stderr writes.
 
 describe('registerAutoCommand — output format', () => {
   const originalStdout = process.stdout.write.bind(process.stdout);

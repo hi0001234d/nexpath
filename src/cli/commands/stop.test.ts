@@ -7,6 +7,7 @@ import { upsertPendingAdvisory, getPendingAdvisory } from '../../store/pending-a
 import { getSkippedSessions } from '../../store/skipped-sessions.js';
 import { SKIP_NOW } from '../../decision-session/options.js';
 import type { SelectFn } from '../../decision-session/DecisionSession.js';
+import * as TtySelectFnModule from '../../decision-session/TtySelectFn.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -61,6 +62,34 @@ describe('runStop — loop guard', () => {
     // Advisory should still be pending (not consumed)
     const advisory = getPendingAdvisory(store, '/test/project');
     expect(advisory).not.toBeNull();
+  });
+});
+
+// ── runStop — no_tty ─────────────────────────────────────────────────────────
+
+describe('runStop — no_tty', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => {
+    store.db.close();
+    vi.restoreAllMocks();
+  });
+
+  it('returns no_tty when createTtySelectFn returns null and no selectFn injected', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    vi.spyOn(TtySelectFnModule, 'createTtySelectFn').mockReturnValue(null);
+    // Do NOT pass selectFn so the real TTY resolution path is taken
+    const result = await runStop(makePayload(), store);
+    expect(result.outcome).toBe('no_tty');
+  });
+
+  it('marks advisory as shown even when TTY is unavailable', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    vi.spyOn(TtySelectFnModule, 'createTtySelectFn').mockReturnValue(null);
+    await runStop(makePayload(), store);
+    // Advisory should be marked shown so it doesn't re-show on next Stop
+    expect(getPendingAdvisory(store, '/test/project')).toBeNull();
   });
 });
 
