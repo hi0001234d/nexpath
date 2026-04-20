@@ -1,6 +1,10 @@
 import { ReadStream, WriteStream } from 'node:tty';
-import { openSync } from 'node:fs';
+import { openSync, writeFileSync, readFileSync, existsSync, unlinkSync } from 'node:fs';
 import { platform } from 'node:process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import * as rl from 'node:readline';
 import pc from 'picocolors';
 import type { SelectFn } from './DecisionSession.js';
@@ -17,48 +21,145 @@ interface TtyStreams {
   sharedFd: boolean;
 }
 
-// ── Platform-specific TTY stream opening ───────────────────────────────────────
+// ── ANSI stripper ──────────────────────────────────────────────────────────────
+
+function stripAnsi(s: string): string {
+  // eslint-disable-next-line no-control-regex
+  return s.replace(/\x1b\[[0-9;]*m/g, '');
+}
+
+// ── Windows: new console window via cmd /c start /WAIT ─────────────────────────
 
 /**
- * Open the console TTY device directly, bypassing the piped stdin/stdout of
- * the hook subprocess.
+ * Build the PS1 script content.
  *
- * Windows : opens \\.\CONIN$ (read) and \\.\CONOUT$ (write) as separate fds.
- * Linux/Mac: opens /dev/tty as a single shared fd for both read and write.
- *
- * Returns null if no TTY device is accessible (CI, no-console context, service).
- * The caller must fall back to no_action when null is returned.
- *
- * NOTE: Git Bash / MSYS2 translates \\.\CONIN$ → C:\.CONIN$ → ENOENT.
- *       Windows path only works in PowerShell / cmd / Windows Terminal.
+ * Includes a 60-second read timeout (via ReadLineAsync.Wait) so if the user
+ * misses or ignores the window, the hook auto-skips rather than blocking
+ * Claude's terminal indefinitely.
  */
-function openTtyStreams(): TtyStreams | null {
+function buildPs1Script(optFileFwd: string, resultFileFwd: string): string {
+  return [
+    `$opts    = Get-Content -Raw -LiteralPath '${optFileFwd}' | ConvertFrom-Json`,
+    `$message = $opts.message`,
+    `$options = $opts.options`,
+    ``,
+    `Write-Host ''`,
+    `Write-Host '  Nexpath \u2014 decision session' -ForegroundColor Cyan`,
+    `Write-Host '  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500' -ForegroundColor DarkGray`,
+    `Write-Host ''`,
+    `Write-Host "  $message"`,
+    `Write-Host ''`,
+    `for ($i = 0; $i -lt $options.Count; $i++) {`,
+    `  $n = $i + 1`,
+    `  Write-Host "  $n)  $($options[$i].label)" -ForegroundColor Green`,
+    `}`,
+    `Write-Host ''`,
+    `Write-Host "  Select (1-$($options.Count)) [auto-skips in 60s]: " -NoNewline`,
+    `$task = [System.Console]::In.ReadLineAsync()`,
+    `if ($task.Wait(60000)) {`,
+    `  $raw = $task.Result`,
+    `} else {`,
+    `  Write-Host ''`,
+    `  Write-Host '  [No selection \u2014 auto-skipping]' -ForegroundColor DarkGray`,
+    `  $raw = ''`,
+    `}`,
+    `$num = 0`,
+    `if ([int]::TryParse($raw.Trim(), [ref]$num) -and $num -ge 1 -and $num -le $options.Count) {`,
+    `  $value = $options[$num - 1].value`,
+    `  [System.IO.File]::WriteAllText('${resultFileFwd}', $value, [System.Text.Encoding]::UTF8)`,
+    `}`,
+  ].join('\r\n');
+}
+
+/**
+ * Windows-specific SelectFn that opens a new console window for user input.
+ *
+ * Why a new window instead of CONIN$/CONOUT$:
+ *   Claude Code's TUI holds the Windows console in raw mode. Any readline
+ *   opened on CONIN$ in a hook subprocess never receives keystrokes — the
+ *   parent process consumes them first.
+ *
+ * Why cmd /c start /WAIT instead of Start-Process -Wait:
+ *   Start-Process uses CreateProcess internally. The foreground activation
+ *   right does not reliably propagate through 3 process hops (Claude Code →
+ *   hook → outer powershell → inner powershell). cmd.exe's start command uses
+ *   ShellExecuteEx with SW_SHOWNORMAL, which is specifically designed to bring
+ *   new app windows to the foreground from a subprocess context.
+ *
+ * Additional reliability measures:
+ *   - 60s read timeout: auto-skip prevents indefinite Claude terminal block
+ *   - stderr message: textual cue in Claude terminal if window is missed
+ *   - Window title 'Nexpath — Action Required': findable in taskbar/Alt+Tab
+ */
+function buildWindowsNewWindowSelectFn(): SelectFn {
+  return (opts) =>
+    new Promise<string | symbol>((resolve) => {
+      const id         = randomUUID();
+      const optFile    = join(tmpdir(), `nexpath-opt-${id}.json`);
+      const resultFile = join(tmpdir(), `nexpath-res-${id}.txt`);
+      const scriptFile = join(tmpdir(), `nexpath-sel-${id}.ps1`);
+
+      const plainMessage = stripAnsi(opts.message);
+      const plainOptions = opts.options.map((o) => ({
+        label: stripAnsi(o.label),
+        value: o.value,
+      }));
+
+      writeFileSync(
+        optFile,
+        JSON.stringify({ message: plainMessage, options: plainOptions }),
+        'utf8',
+      );
+
+      const optFileFwd    = optFile.replace(/\\/g, '/');
+      const resultFileFwd = resultFile.replace(/\\/g, '/');
+
+      writeFileSync(scriptFile, buildPs1Script(optFileFwd, resultFileFwd), 'utf8');
+
+      // Textual cue in Claude terminal — visible even if window is missed
+      process.stderr.write('\n[nexpath] Please select an action in the new window\n');
+
+      // cmd /c start uses ShellExecuteEx → reliable foreground activation
+      // Title arg ('Nexpath — Action Required') appears in taskbar and Alt+Tab
+      spawnSync(
+        'cmd.exe',
+        ['/c', 'start', '/WAIT', 'Nexpath \u2014 Action Required',
+          'powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptFile],
+        { stdio: 'ignore' },
+      );
+
+      let result: string | symbol = Symbol('cancelled');
+      if (existsSync(resultFile)) {
+        const raw = readFileSync(resultFile, 'utf8').trim();
+        if (raw.length > 0) result = raw;
+      }
+
+      for (const f of [optFile, resultFile, scriptFile]) {
+        try { unlinkSync(f); } catch { /* ignore */ }
+      }
+
+      resolve(result);
+    });
+}
+
+// ── Unix: /dev/tty readline ───────────────────────────────────────────────────
+
+/**
+ * Open /dev/tty as a single shared fd for both read and write.
+ * Returns null if no controlling terminal is accessible (CI, headless).
+ */
+function openUnixTtyStreams(): TtyStreams | null {
   try {
-    if (platform === 'win32') {
-      // r+ (OPEN_EXISTING + GENERIC_READ|WRITE) — do NOT use 'w+' for CONOUT$,
-      // it implies truncation semantics on some Windows versions.
-      const inFd  = openSync('\\\\.\\CONIN$',  'r+');
-      const outFd = openSync('\\\\.\\CONOUT$', 'r+');
-      return {
-        input:    new ReadStream(inFd),
-        output:   new WriteStream(outFd),
-        sharedFd: false,
-      };
-    } else {
-      // Linux / Mac — single fd serves both read and write
-      const fd = openSync('/dev/tty', 'r+');
-      return {
-        input:    new ReadStream(fd),
-        output:   new WriteStream(fd),
-        sharedFd: true,
-      };
-    }
+    const fd = openSync('/dev/tty', 'r+');
+    return {
+      input:    new ReadStream(fd),
+      output:   new WriteStream(fd),
+      sharedFd: true,
+    };
   } catch {
     return null;
   }
 }
-
-// ── SelectFn builder ───────────────────────────────────────────────────────────
 
 /**
  * Build a SelectFn that uses a readline-based numbered menu over the direct
@@ -69,12 +170,8 @@ function openTtyStreams(): TtyStreams | null {
  *   fd=0 (piped stdin in hook context). uv_tty_init on a pipe returns EBADF.
  *   readline with terminal:false reads lines without raw mode or fd=0 access,
  *   so it works correctly in hook subprocesses.
- *
- * UX: numbered list (1-N) written to CONOUT$, user types a number + Enter.
- * No setRawMode required — the console's built-in cooked mode provides echo
- * and line buffering.
  */
-function buildSelectFn(streams: TtyStreams): SelectFn {
+function buildUnixSelectFn(streams: TtyStreams): SelectFn {
   return (opts) =>
     new Promise<string | symbol>((resolve) => {
       const options = opts.options;
@@ -89,7 +186,6 @@ function buildSelectFn(streams: TtyStreams): SelectFn {
         resolve(value);
       }
 
-      // Render numbered menu to CONOUT$ directly
       const menuLines = [
         pc.gray('│'),
         `${pc.cyan('◆')}  ${opts.message}`,
@@ -99,7 +195,6 @@ function buildSelectFn(streams: TtyStreams): SelectFn {
       streams.output.write(menuLines.join('\n') + '\n');
       streams.output.write(`${pc.cyan('└')}  Select (1-${options.length}): `);
 
-      // readline with terminal:false — line-mode read, no raw mode, no fd=0 access
       const iface = rl.createInterface({
         input:    streams.input as unknown as import('stream').Readable,
         terminal: false,
@@ -117,7 +212,6 @@ function buildSelectFn(streams: TtyStreams): SelectFn {
           );
           cleanup(selected.value);
         } else {
-          // Invalid input → treat as cancel/skip
           cleanup(Symbol('cancelled'));
         }
       });
@@ -129,18 +223,19 @@ function buildSelectFn(streams: TtyStreams): SelectFn {
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 /**
- * Create a TTY-aware SelectFn that opens the console TTY device directly,
- * bypassing the piped stdin in Claude Code's hook subprocess context.
+ * Create a platform-appropriate SelectFn for hook subprocess context.
  *
- * Returns null when no TTY device is accessible — the caller should fall back
- * to returning { outcome: 'no_action', reason: 'no_tty' }.
- *
- * Platform support:
- *   Windows  — \\.\CONIN$ / \\.\CONOUT$ (requires console attachment)
- *   Linux/Mac — /dev/tty (requires controlling terminal)
+ * Windows  — opens a new console window via cmd /c start /WAIT.
+ *            Returns a SelectFn that always resolves (cancelled if window closed
+ *            or 60s timeout reached). Never returns null on Windows.
+ * Linux/Mac — opens /dev/tty directly (requires controlling terminal).
+ *            Returns null when /dev/tty is not accessible (CI, no console).
  */
 export function createTtySelectFn(): SelectFn | null {
-  const streams = openTtyStreams();
+  if (platform === 'win32') {
+    return buildWindowsNewWindowSelectFn();
+  }
+  const streams = openUnixTtyStreams();
   if (!streams) return null;
-  return buildSelectFn(streams);
+  return buildUnixSelectFn(streams);
 }
