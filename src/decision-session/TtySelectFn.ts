@@ -9,7 +9,7 @@ import { createRequire } from 'node:module';
 import * as rl from 'node:readline';
 import pc from 'picocolors';
 import type { SelectFn } from './DecisionSession.js';
-import { CLIPBOARD_ONLY } from './DecisionSession.js';
+import { CLIPBOARD_ONLY, OPTION_SEPARATOR } from './DecisionSession.js';
 import { SKIP_NOW, SHOW_SIMPLER } from './options.js';
 
 // ── Windows: new console window running @clack/prompts via Node.js ─────────────
@@ -38,10 +38,13 @@ import { spawnSync } from 'node:child_process';
 const opts    = JSON.parse(readFileSync('${optFileFwd}', 'utf8'));
 const TIMEOUT = Symbol('timeout');
 
-const picked = await Promise.race([
-  select({ message: opts.message, options: opts.options }),
-  new Promise((r) => setTimeout(() => r(TIMEOUT), 60_000)),
-]);
+let picked;
+do {
+  picked = await Promise.race([
+    select({ message: opts.message, options: opts.options }),
+    new Promise((r) => setTimeout(() => r(TIMEOUT), 60_000)),
+  ]);
+} while (typeof picked === 'string' && picked.startsWith(opts.separatorPrefix));
 
 if (!isCancel(picked) && picked !== TIMEOUT && typeof picked === 'string'
     && picked !== opts.skipNow && picked !== opts.showSimpler) {
@@ -129,10 +132,11 @@ function buildWindowsNewWindowSelectFn(): SelectFn {
       writeFileSync(
         optFile,
         JSON.stringify({
-          message:     opts.message,
-          options:     opts.options,
-          skipNow:     SKIP_NOW,
-          showSimpler: SHOW_SIMPLER,
+          message:         opts.message,
+          options:         opts.options,
+          skipNow:         SKIP_NOW,
+          showSimpler:     SHOW_SIMPLER,
+          separatorPrefix: OPTION_SEPARATOR,
         }),
         'utf8',
       );
@@ -238,14 +242,21 @@ function buildUnixSelectFn(streams: TtyStreams): SelectFn {
         resolve(value);
       }
 
-      const menuLines = [
-        pc.gray('│'),
-        `${pc.cyan('◆')}  ${opts.message}`,
-        ...options.map((opt, i) => `${pc.cyan('│')}  ${pc.green(`${i + 1})`)} ${opt.label}`),
-        pc.cyan('│'),
-      ];
+      // Build numbered menu — separator items get a blank visual row, no number.
+      const indexToOption = new Map<number, (typeof options)[number]>();
+      const menuLines = [pc.gray('│'), `${pc.cyan('◆')}  ${opts.message}`];
+      let numIdx = 1;
+      for (const opt of options) {
+        if (opt.value.startsWith(OPTION_SEPARATOR)) {
+          menuLines.push(pc.cyan('│'));
+        } else {
+          menuLines.push(`${pc.cyan('│')}  ${pc.green(`${numIdx})`)} ${opt.label}`);
+          indexToOption.set(numIdx++, opt);
+        }
+      }
+      menuLines.push(pc.cyan('│'));
       streams.output.write(menuLines.join('\n') + '\n');
-      streams.output.write(`${pc.cyan('└')}  Select (1-${options.length}): `);
+      streams.output.write(`${pc.cyan('└')}  Select (1-${indexToOption.size}): `);
 
       const iface = rl.createInterface({
         input:    streams.input as unknown as import('stream').Readable,
@@ -257,8 +268,8 @@ function buildUnixSelectFn(streams: TtyStreams): SelectFn {
 
       iface.once('line', (answer) => {
         const num = parseInt(answer.trim(), 10);
-        if (!isNaN(num) && num >= 1 && num <= options.length) {
-          const selected = options[num - 1];
+        const selected = indexToOption.get(num);
+        if (selected !== undefined) {
           streams.output.write(
             `${pc.gray('│')}  ${pc.dim(selected.label)}\n${pc.gray('│')}\n`,
           );
@@ -288,7 +299,6 @@ function buildUnixSelectFn(streams: TtyStreams): SelectFn {
               copyToClipboardUnix(selected.value);
               cleanup(CLIPBOARD_ONLY);
             } else {
-              // 1 or any other input → send to Claude
               cleanup(selected.value);
             }
           });

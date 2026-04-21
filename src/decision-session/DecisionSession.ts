@@ -78,6 +78,13 @@ export type SelectFn = (opts: {
 export const CLIPBOARD_ONLY = '__NEXPATH_CLIP__';
 
 /**
+ * Prefix for blank visual separator items injected between option groups.
+ * TtySelectFn retries (Windows) or skips numbering (Unix) for these items.
+ * runLevel treats any separator value as 'skip' as a safety fallback.
+ */
+export const OPTION_SEPARATOR = '__nexpath_sep__';
+
+/**
  * Result of running a decision session.
  *   selectedPrompt  : the text to fill into the terminal (user made a selection)
  *   clipboard_only  : user chose to copy to clipboard; do not block Claude
@@ -125,10 +132,29 @@ export async function runLevel(
   const { options } = buildOptionList(content, level);
   const message  = buildSelectMessage(input.pinchLabel, content.question, level);
 
-  const clackOptions = options.map((opt) => ({ value: opt, label: opt }));
+  // Inject blank separator items between visual groups:
+  //   content options → 2 blank lines → SHOW_SIMPLER (if present) → 1 blank line → SKIP_NOW
+  //   when SHOW_SIMPLER absent: content options → 2 blank lines → SKIP_NOW
+  const hasShowSimpler = options.some((o) => o === SHOW_SIMPLER);
+  const clackOptions: Array<{ value: string; label: string }> = [];
+  let sepIdx = 0;
+  for (const opt of options) {
+    if (opt === SHOW_SIMPLER) {
+      clackOptions.push({ value: `${OPTION_SEPARATOR}${sepIdx++}`, label: '' });
+      clackOptions.push({ value: `${OPTION_SEPARATOR}${sepIdx++}`, label: '' });
+    } else if (opt === SKIP_NOW) {
+      clackOptions.push({ value: `${OPTION_SEPARATOR}${sepIdx++}`, label: '' });
+      if (!hasShowSimpler) {
+        clackOptions.push({ value: `${OPTION_SEPARATOR}${sepIdx++}`, label: '' });
+      }
+    }
+    clackOptions.push({ value: opt, label: opt });
+  }
+
   const result = await selectFn({ message, options: clackOptions });
 
   if (isCancel(result) || typeof result === 'symbol') return 'skip';
+  if (typeof result === 'string' && result.startsWith(OPTION_SEPARATOR)) return 'skip';
   if (result === CLIPBOARD_ONLY) return 'clipboard_only';
   if (result === SKIP_NOW) return 'skip';
   if (result === SHOW_SIMPLER) return 'next';

@@ -20,6 +20,7 @@ import {
   formatSubtitle,
   runLevel,
   runDecisionSession,
+  OPTION_SEPARATOR,
 } from './DecisionSession.js';
 import type { DecisionSessionInput, SelectFn } from './DecisionSession.js';
 import type { Store } from '../store/db.js';
@@ -512,15 +513,12 @@ describe('runLevel', () => {
     expect(values).not.toContain(SHOW_SIMPLER);
   });
 
-  it('value and label are equal for every option (options are pre-filled prompts)', () => {
-    const selectFn = mockSelect(SKIP_NOW);
-    // run and capture what was passed to selectFn
-    runLevel(makeInput(), 1, selectFn).catch(() => {});
-    // Since it's async, use an explicit assertion via calling with a spy
+  it('value and label are equal for every non-separator option (options are pre-filled prompts)', () => {
     const spy = vi.fn().mockResolvedValue(SKIP_NOW);
     return runLevel(makeInput(), 1, spy).then(() => {
-      const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options;
-      for (const opt of opts) {
+      const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
+      const realOpts = opts.filter((o) => !o.value.startsWith(OPTION_SEPARATOR));
+      for (const opt of realOpts) {
         expect(opt.value).toBe(opt.label);
       }
     });
