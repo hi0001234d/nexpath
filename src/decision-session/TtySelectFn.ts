@@ -9,6 +9,8 @@ import { createRequire } from 'node:module';
 import * as rl from 'node:readline';
 import pc from 'picocolors';
 import type { SelectFn } from './DecisionSession.js';
+import { CLIPBOARD_ONLY } from './DecisionSession.js';
+import { SKIP_NOW, SHOW_SIMPLER } from './options.js';
 
 // ── Windows: new console window running @clack/prompts via Node.js ─────────────
 
@@ -31,17 +33,42 @@ import type { SelectFn } from './DecisionSession.js';
 function buildMjsScript(clackUrl: string, optFileFwd: string, resultFileFwd: string): string {
   return `import { select, isCancel } from '${clackUrl}';
 import { readFileSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 
 const opts    = JSON.parse(readFileSync('${optFileFwd}', 'utf8'));
 const TIMEOUT = Symbol('timeout');
 
-const result = await Promise.race([
+const picked = await Promise.race([
   select({ message: opts.message, options: opts.options }),
   new Promise((r) => setTimeout(() => r(TIMEOUT), 60_000)),
 ]);
 
-if (!isCancel(result) && result !== TIMEOUT && typeof result === 'string') {
-  writeFileSync('${resultFileFwd}', result, 'utf8');
+if (!isCancel(picked) && picked !== TIMEOUT && typeof picked === 'string'
+    && picked !== opts.skipNow && picked !== opts.showSimpler) {
+
+  process.stdout.write('\\n\\x1b[2;3m  \\u21b5 hit enter to send directly to Claude\\x1b[0m\\n\\n');
+
+  const action = await Promise.race([
+    select({
+      message: 'What would you like to do?',
+      options: [
+        { value: 'send',      label: 'Send to Claude now' },
+        { value: 'clipboard', label: 'Copy to clipboard \\u2014 edit before sending' },
+      ],
+    }),
+    new Promise((r) => setTimeout(() => r(TIMEOUT), 60_000)),
+  ]);
+
+  if (!isCancel(action) && action !== TIMEOUT && typeof action === 'string') {
+    if (action === 'send') {
+      writeFileSync('${resultFileFwd}', picked, 'utf8');
+    } else {
+      spawnSync('clip', [], { input: picked, encoding: 'utf8', stdio: ['pipe', 'ignore', 'ignore'] });
+      writeFileSync('${resultFileFwd}', '__CLIP__', 'utf8');
+    }
+  }
+} else if (!isCancel(picked) && picked !== TIMEOUT && typeof picked === 'string') {
+  writeFileSync('${resultFileFwd}', picked, 'utf8');
 }
 
 process.exit(0);
@@ -97,10 +124,16 @@ function buildWindowsNewWindowSelectFn(): SelectFn {
       const optFileFwd    = optFile.replace(/\\/g, '/');
       const resultFileFwd = resultFile.replace(/\\/g, '/');
 
-      // Pass message + options as-is — @clack/prompts renders ANSI correctly
+      // Pass message + options + meta-option sentinels so the MJS script can
+      // distinguish real content selections from skip/simpler navigations.
       writeFileSync(
         optFile,
-        JSON.stringify({ message: opts.message, options: opts.options }),
+        JSON.stringify({
+          message:     opts.message,
+          options:     opts.options,
+          skipNow:     SKIP_NOW,
+          showSimpler: SHOW_SIMPLER,
+        }),
         'utf8',
       );
 
@@ -118,10 +151,18 @@ function buildWindowsNewWindowSelectFn(): SelectFn {
         { stdio: 'ignore' },
       );
 
+      // Result file format:
+      //   '__CLIP__' → user chose "Copy to clipboard" (clip.exe already called by MJS)
+      //   any other non-empty text → selected prompt text (send to Claude path)
+      //   (absent / empty) → cancelled / timed out
       let result: string | symbol = Symbol('cancelled');
       if (existsSync(resultFile)) {
         const raw = readFileSync(resultFile, 'utf8').trim();
-        if (raw.length > 0) result = raw;
+        if (raw === '__CLIP__') {
+          result = CLIPBOARD_ONLY;
+        } else if (raw.length > 0) {
+          result = raw;
+        }
       }
 
       for (const f of [optFile, resultFile, scriptFile]) {
@@ -171,6 +212,17 @@ function openUnixTtyStreams(): TtyStreams | null {
  *   readline with terminal:false reads lines without raw mode or fd=0 access,
  *   so it works correctly in hook subprocesses.
  */
+function copyToClipboardUnix(text: string): void {
+  const cmds: [string, string[]][] =
+    platform === 'darwin'
+      ? [['pbcopy', []]]
+      : [['xclip', ['-selection', 'clipboard']], ['wl-copy', []], ['xsel', ['--clipboard', '--input']]];
+  for (const [cmd, args] of cmds) {
+    const r = spawnSync(cmd, args, { input: text, encoding: 'utf8', stdio: ['pipe', 'ignore', 'ignore'], timeout: 3000 });
+    if (r.status === 0) return;
+  }
+}
+
 function buildUnixSelectFn(streams: TtyStreams): SelectFn {
   return (opts) =>
     new Promise<string | symbol>((resolve) => {
@@ -210,7 +262,36 @@ function buildUnixSelectFn(streams: TtyStreams): SelectFn {
           streams.output.write(
             `${pc.gray('│')}  ${pc.dim(selected.label)}\n${pc.gray('│')}\n`,
           );
-          cleanup(selected.value);
+
+          // For meta-options (skip / show simpler), return immediately — no second prompt.
+          if (selected.value === SKIP_NOW || selected.value === SHOW_SIMPLER) {
+            cleanup(selected.value);
+            return;
+          }
+
+          // Real content selection: show hint + send-vs-clipboard prompt.
+          streams.output.write(
+            `\n\x1b[2;3m  \u21b5 hit enter to send directly to Claude\x1b[0m\n\n`,
+          );
+          const actionLines = [
+            `${pc.cyan('◆')}  What would you like to do?`,
+            `${pc.cyan('│')}  ${pc.green('1)')} Send to Claude now`,
+            `${pc.cyan('│')}  ${pc.green('2)')} Copy to clipboard \u2014 edit before sending`,
+            pc.cyan('│'),
+          ];
+          streams.output.write(actionLines.join('\n') + '\n');
+          streams.output.write(`${pc.cyan('└')}  `);
+
+          iface.once('line', (actionAnswer) => {
+            const actionNum = parseInt(actionAnswer.trim(), 10);
+            if (actionNum === 2) {
+              copyToClipboardUnix(selected.value);
+              cleanup(CLIPBOARD_ONLY);
+            } else {
+              // 1 or any other input → send to Claude
+              cleanup(selected.value);
+            }
+          });
         } else {
           cleanup(Symbol('cancelled'));
         }

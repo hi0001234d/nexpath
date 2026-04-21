@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process';
 import { platform } from 'node:process';
 import type { Store } from '../../store/db.js';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
@@ -26,22 +25,6 @@ import { readStdin } from './auto.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function truncateWords(text: string, maxWords: number): string {
-  const words = text.trim().split(/\s+/);
-  if (words.length <= maxWords) return text;
-  return words.slice(0, maxWords).join(' ') + '...';
-}
-
-function copyToClipboard(text: string): void {
-  // Use clip.exe (built-in, no startup cost) — faster than powershell for clipboard writes
-  spawnSync('clip', [], {
-    input:    text,
-    encoding: 'utf8',
-    stdio:    ['pipe', 'ignore', 'ignore'],
-    timeout:  3000,
-  });
-}
-
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface StopPayload {
@@ -56,7 +39,8 @@ export type StopOutcome =
   | { outcome: 'loop_guard' }
   | { outcome: 'no_pending' }
   | { outcome: 'no_tty' }
-  | { outcome: 'blocked';  reason: string }
+  | { outcome: 'blocked';       reason: string }
+  | { outcome: 'clipboard_only' }
   | { outcome: 'skipped' };
 
 // ── Core logic ─────────────────────────────────────────────────────────────────
@@ -120,6 +104,11 @@ export async function runStop(
     return { outcome: 'blocked', reason: dsResult.selectedPrompt };
   }
 
+  if (dsResult.outcome === 'clipboard_only') {
+    logger.info('stop_clipboard_only', { cwd: payload.cwd });
+    return { outcome: 'clipboard_only' };
+  }
+
   logger.info('stop_skipped', { cwd: payload.cwd });
   return { outcome: 'skipped' };
 }
@@ -152,13 +141,7 @@ export function registerStopCommand(program: import('commander').Command): void 
         writeHookStats(payload.cwd, result.outcome);
 
         if (result.outcome === 'blocked') {
-          if (platform === 'win32') {
-            copyToClipboard(result.reason);
-            const preview = truncateWords(result.reason, 8);
-            process.stderr.write(
-              `\n[nexpath] Copied to clipboard: "${preview}" — press Ctrl+V then Enter\n`,
-            );
-          }
+          process.stderr.write('\n[nexpath] Prompt sent to Claude\n');
           // sql.js (WASM) keeps the event loop alive after db.close(), so the
           // process never exits naturally. Claude Code's 60-second hook timeout
           // would kill us and discard stdout. Force-exit after the write so the
@@ -168,6 +151,12 @@ export function registerStopCommand(program: import('commander').Command): void 
             JSON.stringify({ decision: 'block', reason: result.reason }) + '\n',
           );
           process.exit(0);
+        }
+
+        if (result.outcome === 'clipboard_only') {
+          if (platform === 'win32') {
+            process.stderr.write('\n[nexpath] Copied to clipboard — paste and edit in Claude terminal\n');
+          }
         }
         // All other outcomes → exit 0 (Claude stops normally)
       } finally {
