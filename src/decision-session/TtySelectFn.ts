@@ -5,126 +5,108 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import * as rl from 'node:readline';
 import pc from 'picocolors';
 import type { SelectFn } from './DecisionSession.js';
 
-// ── Types ──────────────────────────────────────────────────────────────────────
-
-interface TtyStreams {
-  input:    ReadStream;
-  output:   WriteStream;
-  /**
-   * True when input and output share the same underlying fd (Linux /dev/tty).
-   * Used to prevent double-destroy on cleanup.
-   */
-  sharedFd: boolean;
-}
-
-// ── ANSI stripper ──────────────────────────────────────────────────────────────
-
-function stripAnsi(s: string): string {
-  // eslint-disable-next-line no-control-regex
-  return s.replace(/\x1b\[[0-9;]*m/g, '');
-}
-
-// ── Windows: new console window via cmd /c start /WAIT ─────────────────────────
+// ── Windows: new console window running @clack/prompts via Node.js ─────────────
 
 /**
- * Build the PS1 script content.
+ * Build the .mjs script that runs inside the new console window.
  *
- * Includes a 60-second read timeout (via ReadLineAsync.Wait) so if the user
- * misses or ignores the window, the hook auto-skips rather than blocking
- * Claude's terminal indefinitely.
+ * The script:
+ *   - Imports @clack/prompts select() from the resolved clackUrl
+ *   - Reads opts (message + options) from optFileFwd
+ *   - Calls select() — full arrow-key UI, visual cursor, ANSI rendering
+ *   - Writes the selected value to resultFileFwd (or nothing on cancel/timeout)
+ *   - Exits with process.exit(0)
+ *
+ * 60-second timeout via Promise.race: if user ignores the window, the script
+ * exits cleanly without writing the result file → hook treats as 'skipped'.
+ *
+ * ANSI in message/labels is NOT stripped — @clack/prompts renders it correctly
+ * in the new Windows console (Win 10/11 ANSI VT support).
  */
-function buildPs1Script(optFileFwd: string, resultFileFwd: string): string {
-  return [
-    `$opts    = Get-Content -Raw -LiteralPath '${optFileFwd}' | ConvertFrom-Json`,
-    `$message = $opts.message`,
-    `$options = $opts.options`,
-    ``,
-    `Write-Host ''`,
-    `Write-Host '  Nexpath \u2014 decision session' -ForegroundColor Cyan`,
-    `Write-Host '  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500' -ForegroundColor DarkGray`,
-    `Write-Host ''`,
-    `Write-Host "  $message"`,
-    `Write-Host ''`,
-    `for ($i = 0; $i -lt $options.Count; $i++) {`,
-    `  $n = $i + 1`,
-    `  Write-Host "  $n)  $($options[$i].label)" -ForegroundColor Green`,
-    `}`,
-    `Write-Host ''`,
-    `Write-Host "  Select (1-$($options.Count)) [auto-skips in 60s]: " -NoNewline`,
-    `$task = [System.Console]::In.ReadLineAsync()`,
-    `if ($task.Wait(60000)) {`,
-    `  $raw = $task.Result`,
-    `} else {`,
-    `  Write-Host ''`,
-    `  Write-Host '  [No selection \u2014 auto-skipping]' -ForegroundColor DarkGray`,
-    `  $raw = ''`,
-    `}`,
-    `$num = 0`,
-    `if ([int]::TryParse($raw.Trim(), [ref]$num) -and $num -ge 1 -and $num -le $options.Count) {`,
-    `  $value = $options[$num - 1].value`,
-    `  [System.IO.File]::WriteAllText('${resultFileFwd}', $value, [System.Text.Encoding]::UTF8)`,
-    `}`,
-  ].join('\r\n');
+function buildMjsScript(clackUrl: string, optFileFwd: string, resultFileFwd: string): string {
+  return `import { select, isCancel } from '${clackUrl}';
+import { readFileSync, writeFileSync } from 'node:fs';
+
+const opts    = JSON.parse(readFileSync('${optFileFwd}', 'utf8'));
+const TIMEOUT = Symbol('timeout');
+
+const result = await Promise.race([
+  select({ message: opts.message, options: opts.options }),
+  new Promise((r) => setTimeout(() => r(TIMEOUT), 60_000)),
+]);
+
+if (!isCancel(result) && result !== TIMEOUT && typeof result === 'string') {
+  writeFileSync('${resultFileFwd}', result, 'utf8');
+}
+
+process.exit(0);
+`;
 }
 
 /**
- * Windows-specific SelectFn that opens a new console window for user input.
+ * Windows-specific SelectFn that opens a new console window running Node.js
+ * with @clack/prompts — preserving the full arrow-key, visual-cursor UI.
  *
- * Why a new window instead of CONIN$/CONOUT$:
- *   Claude Code's TUI holds the Windows console in raw mode. Any readline
- *   opened on CONIN$ in a hook subprocess never receives keystrokes — the
- *   parent process consumes them first.
+ * Architecture:
+ *   buildWindowsNewWindowSelectFn() returns a SelectFn. Each call to that
+ *   SelectFn opens ONE new console window for ONE cascade level. The cascade
+ *   loop in runDecisionSession calls selectFn per level — so "Show simpler
+ *   options →" closes window 1 and opens window 2 automatically.
  *
- * Why cmd /c start /WAIT instead of Start-Process -Wait:
- *   Start-Process uses CreateProcess internally. The foreground activation
- *   right does not reliably propagate through 3 process hops (Claude Code →
- *   hook → outer powershell → inner powershell). cmd.exe's start command uses
- *   ShellExecuteEx with SW_SHOWNORMAL, which is specifically designed to bring
- *   new app windows to the foreground from a subprocess context.
+ * Why @clack/prompts works here:
+ *   cmd /c start gives the child Node.js process its own Windows console.
+ *   process.stdin.isTTY === true in the new window.
+ *   process.stdin.setRawMode() works → arrow keys, ENTER, Ctrl+C all work.
  *
- * Additional reliability measures:
- *   - 60s read timeout: auto-skip prevents indefinite Claude terminal block
- *   - stderr message: textual cue in Claude terminal if window is missed
- *   - Window title 'Nexpath — Action Required': findable in taskbar/Alt+Tab
+ * Why createRequire for @clack/prompts path:
+ *   createRequire(import.meta.url) resolves packages relative to nexpath's
+ *   own node_modules — correct for both local dev, global install, and
+ *   npm link. The resolved absolute path is embedded in the .mjs script so
+ *   the child process needs no module resolution of its own.
+ *
+ * Foreground activation: cmd /c start uses ShellExecuteEx (SW_SHOWNORMAL)
+ * which reliably brings the new window to the foreground.
  */
 function buildWindowsNewWindowSelectFn(): SelectFn {
+  // Resolve @clack/prompts path from nexpath's module context (once per SelectFn build)
+  const _require  = createRequire(import.meta.url);
+  const clackPath = _require.resolve('@clack/prompts');
+  const clackUrl  = `file:///${clackPath.replace(/\\/g, '/')}`;
+
   return (opts) =>
     new Promise<string | symbol>((resolve) => {
       const id         = randomUUID();
       const optFile    = join(tmpdir(), `nexpath-opt-${id}.json`);
       const resultFile = join(tmpdir(), `nexpath-res-${id}.txt`);
-      const scriptFile = join(tmpdir(), `nexpath-sel-${id}.ps1`);
+      const scriptFile = join(tmpdir(), `nexpath-sel-${id}.mjs`);
 
-      const plainMessage = stripAnsi(opts.message);
-      const plainOptions = opts.options.map((o) => ({
-        label: stripAnsi(o.label),
-        value: o.value,
-      }));
-
-      writeFileSync(
-        optFile,
-        JSON.stringify({ message: plainMessage, options: plainOptions }),
-        'utf8',
-      );
-
+      // Forward-slash paths for embedding in the .mjs import/readFile calls
       const optFileFwd    = optFile.replace(/\\/g, '/');
       const resultFileFwd = resultFile.replace(/\\/g, '/');
 
-      writeFileSync(scriptFile, buildPs1Script(optFileFwd, resultFileFwd), 'utf8');
+      // Pass message + options as-is — @clack/prompts renders ANSI correctly
+      writeFileSync(
+        optFile,
+        JSON.stringify({ message: opts.message, options: opts.options }),
+        'utf8',
+      );
 
-      // Textual cue in Claude terminal — visible even if window is missed
+      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd), 'utf8');
+
+      // Textual cue in Claude terminal regardless of whether window is visible
       process.stderr.write('\n[nexpath] Please select an action in the new window\n');
 
-      // cmd /c start uses ShellExecuteEx → reliable foreground activation
-      // Title arg ('Nexpath — Action Required') appears in taskbar and Alt+Tab
+      // cmd /c start → ShellExecuteEx → reliable foreground activation
+      // Title arg appears in taskbar and Alt+Tab for discoverability
       spawnSync(
         'cmd.exe',
         ['/c', 'start', '/WAIT', 'Nexpath \u2014 Action Required',
-          'powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptFile],
+          'node', scriptFile],
         { stdio: 'ignore' },
       );
 
@@ -143,6 +125,16 @@ function buildWindowsNewWindowSelectFn(): SelectFn {
 }
 
 // ── Unix: /dev/tty readline ───────────────────────────────────────────────────
+
+interface TtyStreams {
+  input:    ReadStream;
+  output:   WriteStream;
+  /**
+   * True when input and output share the same underlying fd (Linux /dev/tty).
+   * Used to prevent double-destroy on cleanup.
+   */
+  sharedFd: boolean;
+}
 
 /**
  * Open /dev/tty as a single shared fd for both read and write.
@@ -163,7 +155,7 @@ function openUnixTtyStreams(): TtyStreams | null {
 
 /**
  * Build a SelectFn that uses a readline-based numbered menu over the direct
- * TTY streams.
+ * /dev/tty streams.
  *
  * Why readline instead of @clack/core's SelectPrompt:
  *   SelectPrompt.prompt() internally calls `new WriteStream(0)` — hardcoded
@@ -225,9 +217,10 @@ function buildUnixSelectFn(streams: TtyStreams): SelectFn {
 /**
  * Create a platform-appropriate SelectFn for hook subprocess context.
  *
- * Windows  — opens a new console window via cmd /c start /WAIT.
- *            Returns a SelectFn that always resolves (cancelled if window closed
- *            or 60s timeout reached). Never returns null on Windows.
+ * Windows  — opens a new console window running Node.js + @clack/prompts.
+ *            Full arrow-key UI, visual cursor, ANSI. 60s auto-timeout.
+ *            Always returns a SelectFn (never null) — cancelled/timeout
+ *            resolves as Symbol.
  * Linux/Mac — opens /dev/tty directly (requires controlling terminal).
  *            Returns null when /dev/tty is not accessible (CI, no console).
  */

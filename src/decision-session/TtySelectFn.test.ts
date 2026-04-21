@@ -17,10 +17,10 @@ const { spawnSync }         = await import('node:child_process');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const UUID         = 'test-uuid-tty';
-const OPT_FILE     = join(tmpdir(), `nexpath-opt-${UUID}.json`);
-const RESULT_FILE  = join(tmpdir(), `nexpath-res-${UUID}.txt`);
-const SCRIPT_FILE  = join(tmpdir(), `nexpath-sel-${UUID}.ps1`);
+const UUID        = 'test-uuid-tty';
+const OPT_FILE    = join(tmpdir(), `nexpath-opt-${UUID}.json`);
+const RESULT_FILE = join(tmpdir(), `nexpath-res-${UUID}.txt`);
+const SCRIPT_FILE = join(tmpdir(), `nexpath-sel-${UUID}.mjs`); // .mjs — ESM Node.js script
 
 function cleanTempFiles(): void {
   for (const f of [OPT_FILE, RESULT_FILE, SCRIPT_FILE]) {
@@ -69,7 +69,7 @@ describe('createTtySelectFn — Windows (win32)', () => {
 
   it('resolves with Symbol when window is closed without selecting', async () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
-      // no result file written — simulates window closed
+      // no result file written — simulates window closed or Ctrl+C
     });
     const result = await createTtySelectFn()!(makeOpts());
     expect(typeof result).toBe('symbol');
@@ -84,7 +84,6 @@ describe('createTtySelectFn — Windows (win32)', () => {
   });
 
   it('resolves with Symbol on 60s timeout (no result file written)', async () => {
-    // The PS1 auto-skip writes nothing; hook sees missing result file
     (spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({ status: 0 });
     const result = await createTtySelectFn()!(makeOpts());
     expect(typeof result).toBe('symbol');
@@ -99,7 +98,8 @@ describe('createTtySelectFn — Windows (win32)', () => {
     expect(args[0]).toBe('/c');
     expect(args[1]).toBe('start');
     expect(args[2]).toBe('/WAIT');
-    expect(args[4]).toBe('powershell.exe');
+    // Runs Node.js — not PowerShell — for full @clack/prompts arrow-key UI
+    expect(args[4]).toBe('node');
   });
 
   it('passes a branded window title for taskbar discoverability', async () => {
@@ -111,49 +111,53 @@ describe('createTtySelectFn — Windows (win32)', () => {
     expect(title).toContain('Nexpath');
   });
 
-  it('passes the PS1 script file path as last arg to cmd.exe', async () => {
+  it('passes the .mjs script file path as last arg to node', async () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({ status: 0 });
     await createTtySelectFn()!(makeOpts());
 
     const args = (spawnSync as ReturnType<typeof vi.fn>).mock.calls[0][1] as string[];
     const scriptArg = args[args.length - 1];
     expect(scriptArg).toContain('nexpath-sel-');
-    expect(scriptArg).toContain('.ps1');
+    expect(scriptArg).toContain('.mjs');
   });
 
-  it('strips ANSI escape codes from message and labels before writing opts JSON', async () => {
+  it('preserves ANSI codes in message — @clack/prompts renders them in the new window', async () => {
     let capturedOptContent = '';
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
       if (existsSync(OPT_FILE)) capturedOptContent = readFileSync(OPT_FILE, 'utf8');
     });
     await createTtySelectFn()!({
-      message: '\x1b[32mTest\x1b[0m gap spotted.',
-      options: [{ label: '\x1b[31mOption A\x1b[0m', value: 'val-a' }],
+      message: '\x1b[1;96mHold up.\x1b[0m',
+      options: [{ label: '\x1b[32mOption A\x1b[0m', value: 'val-a' }],
     });
     const parsed = JSON.parse(capturedOptContent) as { message: string; options: { label: string }[] };
-    expect(parsed.message).toBe('Test gap spotted.');
-    expect(parsed.options[0].label).toBe('Option A');
+    // ANSI preserved — @clack/prompts handles rendering, unlike the old PS1 approach
+    expect(parsed.message).toContain('\x1b[1;96m');
+    expect(parsed.options[0].label).toContain('\x1b[32m');
   });
 
-  it('writes opts JSON with forward-slash paths (PS1-safe)', async () => {
+  it('.mjs script imports @clack/prompts and uses Promise.race for 60s timeout', async () => {
     let capturedScript = '';
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
       if (existsSync(SCRIPT_FILE)) capturedScript = readFileSync(SCRIPT_FILE, 'utf8');
     });
     await createTtySelectFn()!(makeOpts());
-    // PS1 file must use forward slashes so LiteralPath and WriteAllText work
-    expect(capturedScript).not.toMatch(/LiteralPath '.*\\.+'/);
-    expect(capturedScript).toContain('ReadLineAsync');
+    expect(capturedScript).toContain('@clack/prompts');
+    expect(capturedScript).toContain('Promise.race');
+    expect(capturedScript).toContain('60_000');
+    expect(capturedScript).toContain('select(');
+    expect(capturedScript).toContain('isCancel(');
   });
 
-  it('PS1 script contains 60-second read timeout', async () => {
+  it('.mjs script uses forward-slash file paths for cross-platform Node.js reads', async () => {
     let capturedScript = '';
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
       if (existsSync(SCRIPT_FILE)) capturedScript = readFileSync(SCRIPT_FILE, 'utf8');
     });
     await createTtySelectFn()!(makeOpts());
-    expect(capturedScript).toContain('ReadLineAsync');
-    expect(capturedScript).toContain('60000');
+    // Backslashes in embedded paths would break readFileSync on some Node versions
+    expect(capturedScript).not.toMatch(/readFileSync\('.*\\.+.*'\)/);
+    expect(capturedScript).not.toMatch(/writeFileSync\('.*\\.+.*'\)/);
   });
 
   it('writes stderr message before spawning the window', async () => {
@@ -165,9 +169,9 @@ describe('createTtySelectFn — Windows (win32)', () => {
 
     const stderrCalls = stderrSpy.mock.calls.map((c) => String(c[0]));
     expect(stderrCalls.some((msg) => msg.toLowerCase().includes('nexpath'))).toBe(true);
-    // stderr must have been written before spawnSync was called
-    const stderrOrder  = stderrSpy.mock.invocationCallOrder[0];
-    const spawnOrder   = spawnMock.mock.invocationCallOrder[0];
+    // stderr must fire before spawnSync
+    const stderrOrder = stderrSpy.mock.invocationCallOrder[0];
+    const spawnOrder  = spawnMock.mock.invocationCallOrder[0];
     expect(stderrOrder).toBeLessThan(spawnOrder!);
   });
 
@@ -188,7 +192,7 @@ describe('createTtySelectFn — Windows (win32)', () => {
     expect(existsSync(SCRIPT_FILE)).toBe(false);
   });
 
-  it('preserves option value as-is (no ANSI strip on value field)', async () => {
+  it('preserves option value as-is through the result file', async () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
       writeFileSync(RESULT_FILE, 'option-b-value', 'utf8');
     });
