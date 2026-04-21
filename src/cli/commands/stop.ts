@@ -18,8 +18,10 @@ import { readStdin } from './auto.js';
  *   1. Exits immediately when stop_hook_active is true (loop guard).
  *   2. Looks up a pending advisory for the project (stored by the auto hook).
  *   3. If found: marks it shown, opens /dev/tty, renders the decision session UI.
- *   4. If the user picks an option: copies it to clipboard (Windows) and writes
- *      { decision: "block", reason: <option> } so Claude Code shows the selection.
+ *   4. If the user picks "Send to Claude": writes { decision: "block", reason }
+ *      so Claude Code receives the prompt as the next user turn.
+ *      If the user picks "Copy to clipboard": text is already in clipboard
+ *      (copied by the popup window); exits 0, Claude stops normally.
  *   5. On dismiss / skip / no advisory: exits 0 silently (Claude stops normally).
  */
 
