@@ -136,13 +136,15 @@ describe('createTtySelectFn — Windows (win32)', () => {
     expect(parsed.options[0].label).toContain('\x1b[32m');
   });
 
-  it('.mjs script imports @clack/prompts and uses Promise.race for 60s timeout', async () => {
+  it('.mjs script imports @clack/prompts ESM entry (.mjs not .cjs) and uses Promise.race', async () => {
     let capturedScript = '';
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
       if (existsSync(SCRIPT_FILE)) capturedScript = readFileSync(SCRIPT_FILE, 'utf8');
     });
     await createTtySelectFn()!(makeOpts());
-    expect(capturedScript).toContain('@clack/prompts');
+    // Must point to the ESM entry — CJS entry breaks named imports in .mjs context
+    expect(capturedScript).toContain('index.mjs');
+    expect(capturedScript).not.toContain('index.cjs');
     expect(capturedScript).toContain('Promise.race');
     expect(capturedScript).toContain('60_000');
     expect(capturedScript).toContain('select(');

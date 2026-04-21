@@ -2,7 +2,7 @@ import { ReadStream, WriteStream } from 'node:tty';
 import { openSync, writeFileSync, readFileSync, existsSync, unlinkSync } from 'node:fs';
 import { platform } from 'node:process';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
@@ -73,10 +73,18 @@ process.exit(0);
  * which reliably brings the new window to the foreground.
  */
 function buildWindowsNewWindowSelectFn(): SelectFn {
-  // Resolve @clack/prompts path from nexpath's module context (once per SelectFn build)
-  const _require  = createRequire(import.meta.url);
-  const clackPath = _require.resolve('@clack/prompts');
-  const clackUrl  = `file:///${clackPath.replace(/\\/g, '/')}`;
+  // Resolve @clack/prompts ESM entry from nexpath's module context (once per SelectFn build).
+  // createRequire().resolve('@clack/prompts') returns the CJS entry (dist/index.cjs).
+  // The .mjs script needs the ESM entry (exports['.'].import = dist/index.mjs) so that
+  // named imports { select, isCancel } work correctly from an ESM context.
+  const _require      = createRequire(import.meta.url);
+  const clackPkgPath  = _require.resolve('@clack/prompts/package.json');
+  const clackPkg      = JSON.parse(readFileSync(clackPkgPath, 'utf8')) as {
+    exports: { '.': { import: string } };
+  };
+  const clackEsmEntry = clackPkg.exports['.'].import;
+  const clackEsmPath  = join(dirname(clackPkgPath), clackEsmEntry);
+  const clackUrl      = `file:///${clackEsmPath.replace(/\\/g, '/')}`;
 
   return (opts) =>
     new Promise<string | symbol>((resolve) => {
