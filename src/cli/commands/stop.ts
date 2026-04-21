@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+import { platform } from 'node:process';
 import type { Store } from '../../store/db.js';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
 import { getPendingAdvisory, markAdvisoryShown } from '../../store/pending-advisories.js';
@@ -17,10 +19,28 @@ import { readStdin } from './auto.js';
  *   1. Exits immediately when stop_hook_active is true (loop guard).
  *   2. Looks up a pending advisory for the project (stored by the auto hook).
  *   3. If found: marks it shown, opens /dev/tty, renders the decision session UI.
- *   4. If the user picks an option: returns { decision: "block", reason: <option> }
- *      so Claude processes the selection without the user typing anything extra.
+ *   4. If the user picks an option: copies it to clipboard (Windows) and writes
+ *      { decision: "block", reason: <option> } so Claude Code shows the selection.
  *   5. On dismiss / skip / no advisory: exits 0 silently (Claude stops normally).
  */
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function truncateWords(text: string, maxWords: number): string {
+  const words = text.trim().split(/\s+/);
+  if (words.length <= maxWords) return text;
+  return words.slice(0, maxWords).join(' ') + '...';
+}
+
+function copyToClipboard(text: string): void {
+  // Use clip.exe (built-in, no startup cost) — faster than powershell for clipboard writes
+  spawnSync('clip', [], {
+    input:    text,
+    encoding: 'utf8',
+    stdio:    ['pipe', 'ignore', 'ignore'],
+    timeout:  3000,
+  });
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -132,9 +152,22 @@ export function registerStopCommand(program: import('commander').Command): void 
         writeHookStats(payload.cwd, result.outcome);
 
         if (result.outcome === 'blocked') {
+          if (platform === 'win32') {
+            copyToClipboard(result.reason);
+            const preview = truncateWords(result.reason, 8);
+            process.stderr.write(
+              `\n[nexpath] Copied to clipboard: "${preview}" — press Ctrl+V then Enter\n`,
+            );
+          }
+          // sql.js (WASM) keeps the event loop alive after db.close(), so the
+          // process never exits naturally. Claude Code's 60-second hook timeout
+          // would kill us and discard stdout. Force-exit after the write so the
+          // block decision reaches Claude Code on a clean exit.
+          closeStore(store);
           process.stdout.write(
             JSON.stringify({ decision: 'block', reason: result.reason }) + '\n',
           );
+          process.exit(0);
         }
         // All other outcomes → exit 0 (Claude stops normally)
       } finally {
