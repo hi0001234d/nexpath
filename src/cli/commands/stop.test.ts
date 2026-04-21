@@ -6,6 +6,7 @@ import type { StopPayload } from './stop.js';
 import { upsertPendingAdvisory, getPendingAdvisory } from '../../store/pending-advisories.js';
 import { getSkippedSessions } from '../../store/skipped-sessions.js';
 import { SKIP_NOW } from '../../decision-session/options.js';
+import { CLIPBOARD_ONLY } from '../../decision-session/DecisionSession.js';
 import type { SelectFn } from '../../decision-session/DecisionSession.js';
 import * as TtySelectFnModule from '../../decision-session/TtySelectFn.js';
 
@@ -139,6 +140,28 @@ describe('runStop — user picks option', () => {
     await runStop(makePayload(), store, mockSelect('some option'));
     const advisory = getPendingAdvisory(store, '/test/project');
     expect(advisory).toBeNull(); // shown advisory no longer returned as pending
+  });
+});
+
+// ── runStop — clipboard only ──────────────────────────────────────────────────
+
+describe('runStop — clipboard_only', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('returns clipboard_only when selectFn returns CLIPBOARD_ONLY sentinel', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    const result = await runStop(makePayload(), store, mockSelect(CLIPBOARD_ONLY));
+    expect(result.outcome).toBe('clipboard_only');
+  });
+
+  it('does not record a skipped_sessions row on clipboard_only', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    await runStop(makePayload(), store, mockSelect(CLIPBOARD_ONLY));
+    const rows = getSkippedSessions(store, '/test/project');
+    expect(rows).toHaveLength(0);
   });
 });
 

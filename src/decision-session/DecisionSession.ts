@@ -71,12 +71,21 @@ export type SelectFn = (opts: {
 }) => Promise<string | symbol>;
 
 /**
+ * Sentinel string returned by SelectFn when the user chose "copy to clipboard"
+ * instead of sending directly to Claude.  Handled in runLevel before any
+ * content-option logic runs.
+ */
+export const CLIPBOARD_ONLY = '__NEXPATH_CLIP__';
+
+/**
  * Result of running a decision session.
- *   selectedPrompt : the text to fill into the terminal (user made a selection)
- *   skipped        : user chose "Skip for now" or pressed Ctrl+C / Escape
+ *   selectedPrompt  : the text to fill into the terminal (user made a selection)
+ *   clipboard_only  : user chose to copy to clipboard; do not block Claude
+ *   skipped         : user chose "Skip for now" or pressed Ctrl+C / Escape
  */
 export type DecisionSessionResult =
-  | { outcome: 'selected';  selectedPrompt: string }
+  | { outcome: 'selected';       selectedPrompt: string }
+  | { outcome: 'clipboard_only' }
   | { outcome: 'skipped' };
 
 // ── Message builder ────────────────────────────────────────────────────────────
@@ -102,15 +111,16 @@ export function buildSelectMessage(
 /**
  * Run a single level of the cascade.
  *
- * @returns 'skip'   — user skipped / Ctrl+C
- *          'next'   — user selected "Show simpler options →"
- *          string   — a content option was selected (the pre-filled prompt text)
+ * @returns 'skip'           — user skipped / Ctrl+C
+ *          'next'           — user selected "Show simpler options →"
+ *          'clipboard_only' — user chose copy-to-clipboard path (no Claude block)
+ *          string           — a content option was selected (the pre-filled prompt text)
  */
 export async function runLevel(
   input:     DecisionSessionInput,
   level:     1 | 2 | 3,
   selectFn:  SelectFn,
-): Promise<'skip' | 'next' | string> {
+): Promise<'skip' | 'next' | 'clipboard_only' | string> {
   const content  = resolveDecisionContent(input.stage, input.flagType);
   const { options } = buildOptionList(content, level);
   const message  = buildSelectMessage(input.pinchLabel, content.question, level);
@@ -119,6 +129,7 @@ export async function runLevel(
   const result = await selectFn({ message, options: clackOptions });
 
   if (isCancel(result) || typeof result === 'symbol') return 'skip';
+  if (result === CLIPBOARD_ONLY) return 'clipboard_only';
   if (result === SKIP_NOW) return 'skip';
   if (result === SHOW_SIMPLER) return 'next';
 
@@ -160,6 +171,10 @@ export async function runDecisionSession(
         });
       }
       return { outcome: 'skipped' };
+    }
+
+    if (levelResult === 'clipboard_only') {
+      return { outcome: 'clipboard_only' };
     }
 
     if (levelResult === 'next') {

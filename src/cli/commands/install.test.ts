@@ -730,6 +730,8 @@ describe('installAction', () => {
       const hooks = data.hooks as Record<string, unknown>;
       const groups = hooks.UserPromptSubmit as Array<Record<string, unknown>>;
       expect(groups.some((g) => g._nexpath_hook === true)).toBe(true);
+      const stopGroups = hooks.Stop as Array<Record<string, unknown>>;
+      expect(stopGroups.some((g) => g._nexpath_hook === true)).toBe(true);
     } finally { cleanup(); }
   });
 
@@ -747,6 +749,8 @@ describe('installAction', () => {
       const hooks = data.hooks as Record<string, unknown>;
       const groups = hooks.UserPromptSubmit as Array<Record<string, unknown>>;
       expect(groups.some((g) => g._nexpath_hook === true)).toBe(true);
+      const stopGroups = hooks.Stop as Array<Record<string, unknown>>;
+      expect(stopGroups.some((g) => g._nexpath_hook === true)).toBe(true);
     } finally { cleanup(); }
   });
 

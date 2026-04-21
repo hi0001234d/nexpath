@@ -1,3 +1,4 @@
+import { platform } from 'node:process';
 import type { Store } from '../../store/db.js';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
 import { getPendingAdvisory, markAdvisoryShown } from '../../store/pending-advisories.js';
@@ -17,10 +18,14 @@ import { readStdin } from './auto.js';
  *   1. Exits immediately when stop_hook_active is true (loop guard).
  *   2. Looks up a pending advisory for the project (stored by the auto hook).
  *   3. If found: marks it shown, opens /dev/tty, renders the decision session UI.
- *   4. If the user picks an option: returns { decision: "block", reason: <option> }
- *      so Claude processes the selection without the user typing anything extra.
+ *   4. If the user picks "Send to Claude": writes { decision: "block", reason }
+ *      so Claude Code receives the prompt as the next user turn.
+ *      If the user picks "Copy to clipboard": text is already in clipboard
+ *      (copied by the popup window); exits 0, Claude stops normally.
  *   5. On dismiss / skip / no advisory: exits 0 silently (Claude stops normally).
  */
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -36,7 +41,8 @@ export type StopOutcome =
   | { outcome: 'loop_guard' }
   | { outcome: 'no_pending' }
   | { outcome: 'no_tty' }
-  | { outcome: 'blocked';  reason: string }
+  | { outcome: 'blocked';       reason: string }
+  | { outcome: 'clipboard_only' }
   | { outcome: 'skipped' };
 
 // ── Core logic ─────────────────────────────────────────────────────────────────
@@ -100,6 +106,11 @@ export async function runStop(
     return { outcome: 'blocked', reason: dsResult.selectedPrompt };
   }
 
+  if (dsResult.outcome === 'clipboard_only') {
+    logger.info('stop_clipboard_only', { cwd: payload.cwd });
+    return { outcome: 'clipboard_only' };
+  }
+
   logger.info('stop_skipped', { cwd: payload.cwd });
   return { outcome: 'skipped' };
 }
@@ -132,9 +143,22 @@ export function registerStopCommand(program: import('commander').Command): void 
         writeHookStats(payload.cwd, result.outcome);
 
         if (result.outcome === 'blocked') {
+          process.stderr.write('\n[nexpath] Prompt sent to Claude\n');
+          // sql.js (WASM) keeps the event loop alive after db.close(), so the
+          // process never exits naturally. Claude Code's 60-second hook timeout
+          // would kill us and discard stdout. Force-exit after the write so the
+          // block decision reaches Claude Code on a clean exit.
+          closeStore(store);
           process.stdout.write(
             JSON.stringify({ decision: 'block', reason: result.reason }) + '\n',
           );
+          process.exit(0);
+        }
+
+        if (result.outcome === 'clipboard_only') {
+          if (platform === 'win32') {
+            process.stderr.write('\n[nexpath] Copied to clipboard — paste and edit in Claude terminal\n');
+          }
         }
         // All other outcomes → exit 0 (Claude stops normally)
       } finally {
