@@ -228,6 +228,47 @@ describe('runStop — project isolation', () => {
   });
 });
 
+// ── runStop — decisionSessionCount wiring (Phase H) ──────────────────────────
+
+describe('runStop — decisionSessionCount wiring', () => {
+  let store: Store;
+
+  beforeEach(async () => {
+    store = await openStore(':memory:');
+    upsertProject(store, { projectRoot: '/test/project', name: 'Test' });
+  });
+  afterEach(() => { store.db.close(); });
+
+  it('decision_session_count increments after a decision session is shown', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    expect(getProject(store, '/test/project')?.decisionSessionCount).toBe(0);
+
+    await runStop(makePayload(), store, mockSelect(SKIP_NOW));
+
+    expect(getProject(store, '/test/project')?.decisionSessionCount).toBe(1);
+  });
+
+  it('decision_session_count increments even when user picks an option (not just skips)', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    await runStop(makePayload(), store, mockSelect('write unit tests'));
+    expect(getProject(store, '/test/project')?.decisionSessionCount).toBe(1);
+  });
+
+  it('decision_session_count does NOT increment when there is no pending advisory', async () => {
+    // No advisory → runStop returns no_pending before reaching runDecisionSession
+    await runStop(makePayload(), store, mockSelect(SKIP_NOW));
+    expect(getProject(store, '/test/project')?.decisionSessionCount).toBe(0);
+  });
+
+  it('createTtySelectFn is called with store and projectRoot when TTY path is taken', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    const spy = vi.spyOn(TtySelectFnModule, 'createTtySelectFn').mockReturnValue(null);
+    // No selectFn injected → real TTY path taken → createTtySelectFn called
+    await runStop(makePayload(), store);
+    expect(spy).toHaveBeenCalledWith(store, '/test/project');
+  });
+});
+
 // ── Stop hook output format ───────────────────────────────────────────────────
 
 describe('Stop hook output format', () => {

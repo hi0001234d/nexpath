@@ -158,6 +158,25 @@ export async function runAuto(
     return { outcome: 'no_action' };
   }
 
+  // ── 6.5. Advisory frequency gate ────────────────────────────────────────────
+  const freq =
+    getConfig(store.db, `advisory_frequency:${input.projectRoot}`) ??
+    getConfig(store.db, 'advisory_frequency') ??
+    'every_event';
+
+  if (freq === 'off') {
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_off' });
+    return { outcome: 'no_action' };
+  }
+  if (freq === 'major_only' && flagType !== 'stage_transition') {
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_major_only', flagType });
+    return { outcome: 'no_action' };
+  }
+  if (freq === 'once_per_session' && mgr.current.firedDecisionSessions.length > 0) {
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_once_per_session' });
+    return { outcome: 'no_action' };
+  }
+
   // ── 7. Stage 2 LLM cross-confirmation ───────────────────────────────────────
   const stage2Input = {
     state:         mgr.current as import('../../classifier/types.js').SessionState,

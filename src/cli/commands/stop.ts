@@ -78,6 +78,9 @@ export async function runStop(
     logger.debug('stop_lang_detected', { cwd: payload.cwd, detected: detected ?? null });
   }
 
+  // 1.7. Read decision_session_count for help-line gating in the decision session UI
+  const decisionSessionCount = getProject(store, payload.cwd)?.decisionSessionCount ?? 0;
+
   // 2. Check for a pending advisory stored by the auto hook
   const advisory = getPendingAdvisory(store, payload.cwd);
   if (!advisory) {
@@ -91,7 +94,7 @@ export async function runStop(
   // 4. TTY resolution — Stop hook stdin is always piped; open /dev/tty directly
   let effectiveSelectFn: SelectFn | undefined = selectFn;
   if (!effectiveSelectFn) {
-    const ttySel = createTtySelectFn();
+    const ttySel = createTtySelectFn(store, payload.cwd);
     if (!ttySel) {
       logger.info('stop_no_tty', { cwd: payload.cwd });
       return { outcome: 'no_tty' };
@@ -103,12 +106,13 @@ export async function runStop(
   // 5. Render decision session UI
   const dsResult = await runDecisionSession(
     {
-      stage:       advisory.stage,
-      flagType:    advisory.flagType,
-      pinchLabel:  advisory.pinchLabel,
-      sessionId:   advisory.sessionId,
-      projectRoot: payload.cwd,
-      promptCount: advisory.promptCount,
+      stage:                advisory.stage,
+      flagType:             advisory.flagType,
+      pinchLabel:           advisory.pinchLabel,
+      sessionId:            advisory.sessionId,
+      projectRoot:          payload.cwd,
+      promptCount:          advisory.promptCount,
+      decisionSessionCount,
     },
     store,
     effectiveSelectFn,
