@@ -3,6 +3,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { confirm, isCancel } from '@clack/prompts';
+import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
+import { isConfigSet, setConfig } from '../../store/config.js';
 
 export const MCP_SERVER_NAME = 'nexpath-prompt-store';
 
@@ -385,13 +387,31 @@ export async function installAction(
     paths = resolveAgentPaths(),
     execFn,
     confirmFn = defaultConfirm,
+    dbPath = ':memory:',
   }: {
     isWin?: boolean;
     paths?: AgentPaths;
     execFn?: ExecFn;
     confirmFn?: ConfirmFn;
+    dbPath?: string;
   } = {},
 ): Promise<void> {
+  // ── First-run disclosure ───────────────────────────────────────────────────
+  const disclosureStore = await openStore(dbPath);
+  try {
+    if (!isConfigSet(disclosureStore.db, 'first_run_shown')) {
+      console.log('');
+      console.log('Before installing nexpath, a few things to know:');
+      console.log('  1. An OpenAI API key is required (OPENAI_API_KEY) for advisory generation');
+      console.log(`  2. Prompts are stored locally at ${DEFAULT_DB_PATH} — nothing leaves your machine`);
+      console.log('  3. To opt out at any time: press Ctrl+X during an advisory, or run nexpath uninstall');
+      console.log('');
+      setConfig(disclosureStore, 'first_run_shown', 'true');
+    }
+  } finally {
+    closeStore(disclosureStore);
+  }
+
   const agents = detectAgents(paths);
 
   if (agents.length === 0) {

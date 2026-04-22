@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { DEFAULT_DB_PATH } from '../store/db.js';
 import { configGetAction, configSetAction, configUnsetAction } from './commands/config.js';
 import { logAction } from './commands/log.js';
 import { storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAction } from './commands/store.js';
@@ -23,8 +24,9 @@ export function createProgram(): Command {
     .command('install')
     .description('Register nexpath-serve MCP server with all detected AI coding agents')
     .option('-y, --yes', 'Skip confirmation prompt')
-    .action(async (opts: { yes?: boolean }) => {
-      await installAction(opts);
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (opts: { yes?: boolean; db?: string }) => {
+      await installAction(opts, { dbPath: opts.db ?? DEFAULT_DB_PATH });
     });
 
   program
