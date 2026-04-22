@@ -8,14 +8,10 @@ import { shouldFireStage2, runStage2 } from '../../classifier/Stage2Trigger.js';
 import { generatePinchLabel } from '../../decision-session/PinchGenerator.js';
 import type { Stage } from '../../classifier/types.js';
 import type { FlagType } from '../../classifier/Stage2Trigger.js';
-import {
-  detectLanguage,
-  resolveLanguage,
-  LANG_WINDOW,
-  LANG_DETECT_INTERVAL,
-} from '../../classifier/LanguageDetector.js';
+import { resolveLanguage } from '../../classifier/LanguageDetector.js';
 import { insertPrompt } from '../../store/prompts.js';
 import { getConfig } from '../../store/config.js';
+import { getProject } from '../../store/projects.js';
 import { logger, initLogger } from '../../logger.js';
 import type { LogLevel } from '../../logger.js';
 import { writeHookStats } from '../../store/hook-stats.js';
@@ -101,21 +97,10 @@ export async function runAuto(
   mgr.processPrompt(store, input.promptText, classification);
   logger.debug('after_process', { stage: mgr.current.currentStage, stageConfidence: mgr.current.stageConfidence });
 
-  // ── 3.5. Language detection (every LANG_DETECT_INTERVAL prompts or first time) ─
-  const shouldDetectLang = mgr.current.detectedLanguage === undefined
-    || mgr.current.promptCount % LANG_DETECT_INTERVAL === 0;
-
-  if (shouldDetectLang) {
-    const historyTexts = mgr.current.promptHistory.map((r) => r.text);
-    const langOverride  = getConfig(store.db, 'language_override');
-    const detected      = detectLanguage(
-      historyTexts.slice(-LANG_WINDOW),
-      mgr.current.detectedLanguage,
-    );
-    const resolved      = resolveLanguage(langOverride, detected);
-    mgr.setDetectedLanguage(store, resolved);
-  }
-  const effectiveLang = mgr.current.detectedLanguage;
+  // ── 3.5. Effective language — read from projects table (detection runs in nexpath stop) ──
+  const langOverride  = getConfig(store.db, 'language_override');
+  const detectedLang  = getProject(store, input.projectRoot)?.detectedLanguage ?? undefined;
+  const effectiveLang = resolveLanguage(langOverride, detectedLang);
   logger.debug('language', { effectiveLang: effectiveLang ?? null });
 
   // ── 4. Absence detection ─────────────────────────────────────────────────────

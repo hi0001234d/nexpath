@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { openStore, type Store } from './db.js';
 import { insertPrompt, getRecentPrompts, deleteProjectPrompts, deleteAllPrompts, pruneOlderThan, getPromptStats } from './prompts.js';
 import { getConfig, setConfig, getAllConfig, isConfigSet } from './config.js';
+import { upsertProject, getProject, setDetectedLanguage } from './projects.js';
 import { redactSecrets } from './redact.js';
 import {
   insertSkippedSession,
@@ -688,5 +689,40 @@ describe('store — pending_advisories', () => {
     upsertPendingAdvisory(store, BASE_ADVISORY);
     markAdvisoryShown(store, 9999); // id does not exist
     expect(getPendingAdvisory(store, '/proj/main')).not.toBeNull();
+  });
+});
+
+// ── setDetectedLanguage ───────────────────────────────────────────────────────
+
+describe('setDetectedLanguage', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('sets detected_language for an existing project; getProject returns it', () => {
+    upsertProject(store, { projectRoot: '/proj/a', name: 'A' });
+    setDetectedLanguage(store, '/proj/a', 'fr');
+    const proj = getProject(store, '/proj/a');
+    expect(proj?.detectedLanguage).toBe('fr');
+  });
+
+  it('calling with undefined stores null; getProject returns null', () => {
+    upsertProject(store, { projectRoot: '/proj/b', name: 'B' });
+    setDetectedLanguage(store, '/proj/b', 'de');
+    setDetectedLanguage(store, '/proj/b', undefined);
+    const proj = getProject(store, '/proj/b');
+    expect(proj?.detectedLanguage).toBeNull();
+  });
+
+  it('no-op when project does not exist (no error thrown)', () => {
+    expect(() => setDetectedLanguage(store, '/nonexistent', 'hi')).not.toThrow();
+  });
+
+  it('getProject includes detectedLanguage: null for newly upserted projects', () => {
+    upsertProject(store, { projectRoot: '/proj/c', name: 'C' });
+    const proj = getProject(store, '/proj/c');
+    expect(proj).not.toBeNull();
+    expect(proj?.detectedLanguage).toBeNull();
   });
 });

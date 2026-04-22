@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { configGetAction, configSetAction } from './commands/config.js';
+import { configGetAction, configSetAction, configUnsetAction } from './commands/config.js';
 import { logAction } from './commands/log.js';
 import { storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAction } from './commands/store.js';
 import { installAction, uninstallAction } from './commands/install.js';
@@ -85,6 +85,14 @@ export function createProgram(): Command {
     .option('--db <path>', 'Path to the SQLite database file')
     .action(async (key: string, opts: { db?: string }) => {
       await configGetAction(key, opts.db);
+    });
+
+  configCmd
+    .command('unset <key>')
+    .description('Remove a config value (reverts to built-in default if one exists)')
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (key: string, opts: { db?: string }) => {
+      await configUnsetAction(key, opts.db);
     });
 
   // ── Store command ─────────────────────────────────────────────────────────────

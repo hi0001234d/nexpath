@@ -650,3 +650,27 @@ describe('runAuto — prompt persistence', () => {
     expect(res[0]?.values[0]?.[0]).toBe('claude-code');
   });
 });
+
+// ── runAuto — effectiveLang from DB ──────────────────────────────────────────
+
+describe('runAuto — effectiveLang from DB', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('effectiveLang is undefined when projects.detected_language is null and no language_override', async () => {
+    // No project row, no config — effectiveLang should be undefined (silent)
+    // Just assert runAuto completes without error and returns no_action (< 3 prompts)
+    const result = await runAuto({ promptText: 'first prompt', projectRoot: '/test/project' }, store);
+    expect(result.outcome).toBe('no_action');
+  });
+
+  it('detection no longer runs inside runAuto — session detectedLanguage is never updated by runAuto', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    await runAuto({ promptText: 'I want to add a login page', projectRoot: '/test/project' }, store);
+    const mgr = SessionStateManager.load(store, '/test/project');
+    // detectedLanguage on session state is undefined — auto no longer runs detection
+    expect(mgr.current.detectedLanguage).toBeUndefined();
+  });
+});

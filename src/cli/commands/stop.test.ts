@@ -9,6 +9,9 @@ import { SKIP_NOW } from '../../decision-session/options.js';
 import { CLIPBOARD_ONLY } from '../../decision-session/DecisionSession.js';
 import type { SelectFn } from '../../decision-session/DecisionSession.js';
 import * as TtySelectFnModule from '../../decision-session/TtySelectFn.js';
+import { insertPrompt } from '../../store/prompts.js';
+import { upsertProject, getProject } from '../../store/projects.js';
+import { LANG_DETECT_INTERVAL } from '../../classifier/LanguageDetector.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -234,5 +237,65 @@ describe('Stop hook output format', () => {
     const parsed = JSON.parse(output) as { decision: string; reason: string };
     expect(parsed.decision).toBe('block');
     expect(parsed.reason).toBe(reason);
+  });
+});
+
+// ── runStop — language detection (step 1.5) ───────────────────────────────────
+
+describe('runStop — language detection', () => {
+  let store: Store;
+
+  beforeEach(async () => {
+    store = await openStore(':memory:');
+    upsertProject(store, { projectRoot: '/test/project', name: 'Test' });
+  });
+  afterEach(() => { store.db.close(); });
+
+  it('does not update detected_language when fewer than LANG_DETECT_INTERVAL prompts exist', async () => {
+    // Insert LANG_DETECT_INTERVAL - 1 prompts (threshold not met)
+    for (let i = 0; i < LANG_DETECT_INTERVAL - 1; i++) {
+      insertPrompt(store, { projectRoot: '/test/project', promptText: 'I want to add a feature' });
+    }
+    await runStop(makePayload(), store, mockSelect(SKIP_NOW));
+    const proj = getProject(store, '/test/project');
+    expect(proj?.detectedLanguage).toBeNull(); // detection did not fire
+  });
+
+  it('updates detected_language when >= LANG_DETECT_INTERVAL prompts exist', async () => {
+    // Insert enough English prompts to meet the threshold
+    const englishPrompt = 'I want to add a login page so users can reset their password and access settings';
+    for (let i = 0; i < LANG_DETECT_INTERVAL; i++) {
+      insertPrompt(store, { projectRoot: '/test/project', promptText: englishPrompt });
+    }
+    await runStop(makePayload(), store, mockSelect(SKIP_NOW));
+    const proj = getProject(store, '/test/project');
+    // Detection ran — detectedLanguage should be set (may be 'en' or whatever tinyld returns)
+    // We only assert it is no longer null (detection fired)
+    expect(proj?.detectedLanguage).not.toBeNull();
+  });
+
+  it('detection fires even when no advisory is pending (outcome no_pending)', async () => {
+    const englishPrompt = 'I want to add a login page so users can reset their password';
+    for (let i = 0; i < LANG_DETECT_INTERVAL; i++) {
+      insertPrompt(store, { projectRoot: '/test/project', promptText: englishPrompt });
+    }
+    // No advisory upserted → outcome should be no_pending
+    const result = await runStop(makePayload(), store);
+    expect(result.outcome).toBe('no_pending');
+    // Detection still fired
+    const proj = getProject(store, '/test/project');
+    expect(proj?.detectedLanguage).not.toBeNull();
+  });
+
+  it('detection does NOT fire when stop_hook_active is true (loop guard exits first)', async () => {
+    const englishPrompt = 'I want to add a login page so users can reset their password';
+    for (let i = 0; i < LANG_DETECT_INTERVAL; i++) {
+      insertPrompt(store, { projectRoot: '/test/project', promptText: englishPrompt });
+    }
+    const result = await runStop(makePayload({ stop_hook_active: true }), store);
+    expect(result.outcome).toBe('loop_guard');
+    // Loop guard exited before step 1.5 — detected_language stays null
+    const proj = getProject(store, '/test/project');
+    expect(proj?.detectedLanguage).toBeNull();
   });
 });

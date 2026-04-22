@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { rmSync } from 'node:fs';
-import { openStore, closeStore, setConfig, saveStore } from '../../store/index.js';
-import { configGetAction, configSetAction } from './config.js';
+import { openStore, closeStore, setConfig, deleteConfig } from '../../store/index.js';
+import { configGetAction, configSetAction, configUnsetAction } from './config.js';
 
 // Creates a real temp DB, optionally pre-populates it, closes it (flushed to disk).
 async function tempDb(setup?: (store: Awaited<ReturnType<typeof openStore>>) => void) {
@@ -52,6 +52,55 @@ describe('configGetAction', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     await configGetAction('prompt_capture_enabled', path);
     expect(spy.mock.calls[0][0]).toBe('prompt_capture_enabled = false');
+    cleanup();
+  });
+});
+
+describe('deleteConfig', () => {
+  it('deletes an existing key so getConfig returns the default', async () => {
+    const { path, cleanup } = await tempDb((store) => {
+      setConfig(store, 'log_level', 'debug');
+    });
+    const store = await openStore(path);
+    deleteConfig(store, 'log_level');
+    closeStore(store);
+
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await configGetAction('log_level', path);
+    expect(spy.mock.calls[0][0]).toBe('log_level = info'); // reverts to built-in default
+    cleanup();
+  });
+
+  it('does not throw when key does not exist', async () => {
+    const { path, cleanup } = await tempDb();
+    const store = await openStore(path);
+    expect(() => deleteConfig(store, 'nonexistent_key')).not.toThrow();
+    closeStore(store);
+    cleanup();
+  });
+});
+
+describe('configUnsetAction', () => {
+  it('prints "<key> unset" confirmation', async () => {
+    const { path, cleanup } = await tempDb((store) => {
+      setConfig(store, 'log_level', 'debug');
+    });
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await configUnsetAction('log_level', path);
+    expect(spy.mock.calls[0][0]).toBe('log_level unset');
+    cleanup();
+  });
+
+  it('removes the key so configGetAction returns the built-in default', async () => {
+    const { path, cleanup } = await tempDb((store) => {
+      setConfig(store, 'log_level', 'debug');
+    });
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    await configUnsetAction('log_level', path);
+
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await configGetAction('log_level', path);
+    expect(spy.mock.calls[0][0]).toBe('log_level = info'); // back to default
     cleanup();
   });
 });

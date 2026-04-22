@@ -32,6 +32,12 @@ export function setConfig(store: Store, key: string, value: string): void {
   saveStore(store);
 }
 
+/** Delete a config key from the store. Falls back to default if one exists. */
+export function deleteConfig(store: Store, key: string): void {
+  store.db.run('DELETE FROM config WHERE key = ?', [key]);
+  saveStore(store);
+}
+
 /** Returns all config keys merged with defaults (stored values take precedence). */
 export function getAllConfig(db: Database): Record<string, string> {
   const result = db.exec('SELECT key, value FROM config ORDER BY key');

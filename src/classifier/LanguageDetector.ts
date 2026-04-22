@@ -19,8 +19,8 @@ import { detectAll } from 'tinyld';
 export const LANG_WINDOW          = 20;
 export const LANG_MIN_ACCURACY    = 0.5;
 export const LANG_MIN_GAP         = 0.15;
-/** Re-detect language every N prompts (stickiness cadence — matches depth classifier). */
-export const LANG_DETECT_INTERVAL = 10;
+/** Minimum prompt count in the window before language detection is attempted. */
+export const LANG_DETECT_INTERVAL = 15;
 
 /**
  * Validate a language code before injecting into an LLM prompt.
@@ -34,8 +34,8 @@ export function isValidLanguageCode(s: string): boolean {
 /** English programming keywords that inflate English scores — stripped before detection. */
 const ENG_KEYWORDS = new Set([
   'const', 'let', 'var', 'function', 'return', 'async', 'await',
-  'null', 'undefined', 'true', 'false', 'import', 'export',
-  'class', 'new', 'this',
+  'null', 'undefined', 'import', 'export', 'from',
+  'class', 'if', 'else', 'for', 'while',
 ]);
 
 // ── Text preprocessing ────────────────────────────────────────────────────────
@@ -158,7 +158,8 @@ export function resolveLanguage(
   languageOverride?: string,
   detectedLanguage?: string,
 ): string | undefined {
-  if (languageOverride && languageOverride.trim()) return languageOverride.trim();
+  const override = languageOverride?.trim();
+  if (override && isValidLanguageCode(override)) return override;
   if (detectedLanguage && detectedLanguage.trim()) return detectedLanguage.trim();
   return undefined;
 }

@@ -6,6 +6,9 @@ import { runDecisionSession } from '../../decision-session/DecisionSession.js';
 import type { SelectFn } from '../../decision-session/DecisionSession.js';
 import { createTtySelectFn } from '../../decision-session/TtySelectFn.js';
 import { getConfig } from '../../store/config.js';
+import { detectLanguage, LANG_WINDOW, LANG_DETECT_INTERVAL } from '../../classifier/LanguageDetector.js';
+import { getRecentPrompts } from '../../store/prompts.js';
+import { getProject, setDetectedLanguage } from '../../store/projects.js';
 import { logger, initLogger } from '../../logger.js';
 import type { LogLevel } from '../../logger.js';
 import { writeHookStats } from '../../store/hook-stats.js';
@@ -63,6 +66,16 @@ export async function runStop(
   if (payload.stop_hook_active) {
     logger.debug('stop_loop_guard', { cwd: payload.cwd });
     return { outcome: 'loop_guard' };
+  }
+
+  // 1.5. Language detection — runs post-response, invisible latency
+  //      Only fires when >= LANG_DETECT_INTERVAL prompts have been captured for this project.
+  const recentPrompts = getRecentPrompts(store, payload.cwd, LANG_WINDOW);
+  if (recentPrompts.length >= LANG_DETECT_INTERVAL) {
+    const currentDetected = getProject(store, payload.cwd)?.detectedLanguage ?? undefined;
+    const detected = detectLanguage(recentPrompts.map((p) => p.text), currentDetected);
+    setDetectedLanguage(store, payload.cwd, detected);
+    logger.debug('stop_lang_detected', { cwd: payload.cwd, detected: detected ?? null });
   }
 
   // 2. Check for a pending advisory stored by the auto hook

@@ -1,4 +1,4 @@
-import { openStore, closeStore, DEFAULT_DB_PATH, getConfig, setConfig } from '../../store/index.js';
+import { openStore, closeStore, DEFAULT_DB_PATH, getConfig, setConfig, deleteConfig } from '../../store/index.js';
 
 export async function configGetAction(key: string, dbPath = DEFAULT_DB_PATH): Promise<void> {
   const store = await openStore(dbPath);
@@ -17,4 +17,11 @@ export async function configSetAction(key: string, value: string, dbPath = DEFAU
   setConfig(store, key, value);
   closeStore(store);
   console.log(`${key} = ${value}`);
+}
+
+export async function configUnsetAction(key: string, dbPath = DEFAULT_DB_PATH): Promise<void> {
+  const store = await openStore(dbPath);
+  deleteConfig(store, key);
+  closeStore(store);
+  console.log(`${key} unset`);
 }
