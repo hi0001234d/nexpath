@@ -18,13 +18,15 @@ CREATE TABLE IF NOT EXISTS config (
 );
 
 CREATE TABLE IF NOT EXISTS projects (
-  id           INTEGER PRIMARY KEY AUTOINCREMENT,
-  project_root TEXT    NOT NULL UNIQUE,
-  name         TEXT    NOT NULL,
-  project_type TEXT,
-  language     TEXT,
-  description  TEXT,
-  created_at   INTEGER NOT NULL
+  id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_root           TEXT    NOT NULL UNIQUE,
+  name                   TEXT    NOT NULL,
+  project_type           TEXT,
+  language               TEXT,
+  description            TEXT,
+  detected_language      TEXT,
+  decision_session_count INTEGER NOT NULL DEFAULT 0,
+  created_at             INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS session_states (
