@@ -8,6 +8,7 @@ import { NATURE_DEPTH_RECOMPUTE_INTERVAL, classifyMoodOnly } from './UserProfile
 import { detectAbsenceFlags, ABSENCE_MIN_PROMPTS, ABSENCE_COOLDOWN_PROMPTS } from './AbsenceDetector.js';
 import { detectSignals, initialSignalCounters, SIGNAL_DEFINITIONS, SIGNAL_MAP } from './signals.js';
 import { openStore, closeStore } from '../store/index.js';
+import { upsertProject, setDetectedLanguage } from '../store/projects.js';
 import type { SessionState, ClassificationResult } from './types.js';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -1279,6 +1280,91 @@ describe('SessionStateManager — detectedLanguage', () => {
 
     const mgr2 = SessionStateManager.load(store, '/project/lang-c');
     expect(mgr2.current.detectedLanguage).toBeUndefined();
+    closeStore(store);
+  });
+});
+
+// ── SessionStateManager — language persistence across session gap (Phase E) ───
+
+describe('SessionStateManager — detectedLanguage survives session gap', () => {
+  it('load() with no prior state restores detectedLanguage from projects table', async () => {
+    const store = await openStore(':memory:');
+    upsertProject(store, { projectRoot: '/project/gap-a', name: 'A' });
+    setDetectedLanguage(store, '/project/gap-a', 'hi');
+
+    // No prior session state — should restore from projects table
+    const mgr = SessionStateManager.load(store, '/project/gap-a');
+    expect(mgr.current.detectedLanguage).toBe('hi');
+    closeStore(store);
+  });
+
+  it('load() after session gap restores detectedLanguage from projects table', async () => {
+    const now = Date.now();
+    const store = await openStore(':memory:');
+    upsertProject(store, { projectRoot: '/project/gap-b', name: 'B' });
+
+    // Active session with language set
+    const mgr1 = SessionStateManager.load(store, '/project/gap-b', now);
+    mgr1.setDetectedLanguage(store, 'fr');
+    // Also persist to projects table (normally done by stop.ts via setDetectedLanguage)
+    setDetectedLanguage(store, '/project/gap-b', 'fr');
+
+    // Load after SESSION_GAP_MS — creates new session
+    const future = now + SESSION_GAP_MS + 1;
+    const mgr2 = SessionStateManager.load(store, '/project/gap-b', future);
+    // New session but detectedLanguage restored from projects table
+    expect(mgr2.current.detectedLanguage).toBe('fr');
+    closeStore(store);
+  });
+
+  it('load() after session gap returns undefined when projects table has no detected_language', async () => {
+    const now = Date.now();
+    const store = await openStore(':memory:');
+    // No project row → getProject returns null → detectedLanguage stays undefined
+    const mgr1 = SessionStateManager.load(store, '/project/gap-c', now);
+    mgr1.setDetectedLanguage(store, 'de'); // set on session state only (no projects row)
+
+    const future = now + SESSION_GAP_MS + 1;
+    const mgr2 = SessionStateManager.load(store, '/project/gap-c', future);
+    // No project row → undefined (not 'de' from old session state)
+    expect(mgr2.current.detectedLanguage).toBeUndefined();
+    closeStore(store);
+  });
+
+  it('processPrompt() in-place gap reset restores detectedLanguage from projects table', async () => {
+    const now = Date.now();
+    const store = await openStore(':memory:');
+    upsertProject(store, { projectRoot: '/project/gap-d', name: 'D' });
+    setDetectedLanguage(store, '/project/gap-d', 'zh');
+
+    const mgr = SessionStateManager.load(store, '/project/gap-d', now);
+    // Process a first prompt to establish session
+    await mgr.processPrompt(store, 'first prompt', makeResult('idea', 0.6), now);
+    // Sanity: session detectedLanguage should be 'zh' (restored on load)
+    expect(mgr.current.detectedLanguage).toBe('zh');
+
+    // Process after gap — triggers in-place reset inside processPrompt()
+    const afterGap = now + SESSION_GAP_MS + 1;
+    await mgr.processPrompt(store, 'post-gap prompt', makeResult('idea', 0.5), afterGap);
+    // detectedLanguage restored from projects table after in-place reset
+    expect(mgr.current.detectedLanguage).toBe('zh');
+    closeStore(store);
+  });
+
+  it('active session within gap keeps session detectedLanguage, does not re-read projects table', async () => {
+    const now = Date.now();
+    const store = await openStore(':memory:');
+    upsertProject(store, { projectRoot: '/project/gap-e', name: 'E' });
+    setDetectedLanguage(store, '/project/gap-e', 'fr'); // projects table says 'fr'
+
+    // Session is active and has a different language set on it
+    const mgr1 = SessionStateManager.load(store, '/project/gap-e', now);
+    mgr1.setDetectedLanguage(store, 'de'); // session says 'de'
+
+    // Load within the gap window — uses persisted session state, not projects table
+    const soonNow = now + SESSION_GAP_MS - 1000;
+    const mgr2 = SessionStateManager.load(store, '/project/gap-e', soonNow);
+    expect(mgr2.current.detectedLanguage).toBe('de'); // session value preserved
     closeStore(store);
   });
 });

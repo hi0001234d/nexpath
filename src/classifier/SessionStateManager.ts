@@ -4,6 +4,7 @@ import { saveStore } from '../store/db.js';
 import type { SessionState, Stage, PromptRecord, ClassificationResult } from './types.js';
 import { detectSignals, initialSignalCounters } from './signals.js';
 import { classifyUserProfile, isProfileStale, classifyMoodOnly } from './UserProfileClassifier.js';
+import { getProject } from '../store/projects.js';
 
 /** Gap in ms after which the session resets (30 minutes per research). */
 export const SESSION_GAP_MS = 30 * 60 * 1000;
@@ -87,7 +88,10 @@ export class SessionStateManager {
     if (persisted && now - persisted.lastPromptAt < SESSION_GAP_MS) {
       return new SessionStateManager(persisted);
     }
-    return new SessionStateManager(newSession(projectRoot, now));
+    // New session — restore detected_language from projects table so it survives the gap
+    const fresh = newSession(projectRoot, now);
+    fresh.detectedLanguage = getProject(store, projectRoot)?.detectedLanguage ?? undefined;
+    return new SessionStateManager(fresh);
   }
 
   /**
@@ -109,6 +113,8 @@ export class SessionStateManager {
       }
       // Reset to new session in-place (keeps projectRoot, resets everything else)
       const fresh = newSession(s.projectRoot, now);
+      // Restore detected_language from projects table — survives the inactivity gap
+      fresh.detectedLanguage = getProject(store, s.projectRoot)?.detectedLanguage ?? undefined;
       Object.assign(s, fresh);
     }
 
