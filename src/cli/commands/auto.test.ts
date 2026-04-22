@@ -578,4 +578,19 @@ describe('runAuto — prompt persistence', () => {
     expect(rows[1].text).toBe('second');
     expect(rows[2].text).toBe('first');
   });
+
+  it('stores a capturedAt timestamp close to Date.now()', async () => {
+    const before = Date.now();
+    await runAuto({ promptText: 'timestamp check', projectRoot: '/test/project' }, store);
+    const after = Date.now();
+    const rows = getRecentPrompts(store, '/test/project', 1);
+    expect(rows[0].capturedAt).toBeGreaterThanOrEqual(before);
+    expect(rows[0].capturedAt).toBeLessThanOrEqual(after);
+  });
+
+  it('stores agent as claude-code', async () => {
+    await runAuto({ promptText: 'agent check', projectRoot: '/test/project' }, store);
+    const res = store.db.exec("SELECT agent FROM prompts WHERE project_root = '/test/project'");
+    expect(res[0]?.values[0]?.[0]).toBe('claude-code');
+  });
 });
