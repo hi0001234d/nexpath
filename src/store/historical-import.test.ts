@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, utimesSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { openStore } from './db.js';
@@ -180,7 +180,7 @@ describe('importHistoricalPrompts', () => {
   // 10. Bootstrap — detected_language is written to projects table
   it('writes detected_language to projects table when enough non-English prompts are present', async () => {
     const projDir = setupProjDir(tmpDir);
-    // 20 clear French prompts (LANG_WINDOW=20, LANG_DETECT_INTERVAL=15)
+    // 20 identical French sentences — well above LANG_WINDOW=20, no ENG_KEYWORDS to inflate score
     const frenchPrompts = Array.from({ length: 20 }, () =>
       makeUserLine('je veux ajouter une nouvelle page à mon application'),
     );
@@ -189,8 +189,9 @@ describe('importHistoricalPrompts', () => {
     await importHistoricalPrompts(store, PROJECT_ROOT);
 
     const project = getProject(store, PROJECT_ROOT);
-    // Detection may or may not fire depending on the threshold; assert it didn't error
     expect(project).not.toBeNull();
+    // tinyld should detect French from 20 identical French sentences with high confidence
+    expect(project?.detectedLanguage).not.toBeNull();
   });
 
   // 11. Bootstrap — session state is pre-seeded (profile and mood non-null)
@@ -230,5 +231,79 @@ describe('importHistoricalPrompts', () => {
     const mgr = SessionStateManager.load(store, PROJECT_ROOT);
     // No bootstrap happened — fresh session with promptCount = 0
     expect(mgr.current.promptCount).toBe(0);
+  });
+
+  // 14. File discovery — projDir exists but has no .jsonl files
+  it('returns silently when projDir exists but contains no .jsonl files', async () => {
+    const projDir = setupProjDir(tmpDir);
+    // Write a non-.jsonl file only — should be ignored
+    writeFileSync(join(projDir, 'notes.txt'), makeUserLine('ignored') + '\n', 'utf8');
+
+    await importHistoricalPrompts(store, PROJECT_ROOT);
+
+    const rows = getRecentPrompts(store, PROJECT_ROOT, 10);
+    expect(rows).toHaveLength(0);
+    const mgr = SessionStateManager.load(store, PROJECT_ROOT);
+    expect(mgr.current.promptCount).toBe(0);
+  });
+
+  // 15. Bootstrap no-op — bootstrapFromHistory does not overwrite existing session state
+  it('bootstrapFromHistory is a no-op when session state already exists', async () => {
+    const projDir = setupProjDir(tmpDir);
+    const lines = Array.from({ length: 5 }, (_, i) => makeUserLine(`prompt ${i}`));
+    writeJsonl(projDir, 'session.jsonl', lines);
+
+    // First import: creates session state with promptCount = 5
+    await importHistoricalPrompts(store, PROJECT_ROOT);
+    const mgr1 = SessionStateManager.load(store, PROJECT_ROOT);
+    expect(mgr1.current.promptCount).toBe(5);
+
+    // Manually call bootstrapFromHistory again — session state now exists, so it is a no-op
+    const { SessionStateManager: SSM } = await import('../classifier/SessionStateManager.js');
+    SSM.bootstrapFromHistory(store, PROJECT_ROOT, [], 999);
+
+    const mgr2 = SessionStateManager.load(store, PROJECT_ROOT);
+    // promptCount must still be 5, not 999
+    expect(mgr2.current.promptCount).toBe(5);
+  });
+
+  // 16. Bootstrap — detectedLanguage in session state reads from projects table
+  it('bootstrapped session state has detectedLanguage from projects table', async () => {
+    const { setDetectedLanguage } = await import('./projects.js');
+    const projDir = setupProjDir(tmpDir);
+    const lines = Array.from({ length: 5 }, (_, i) => makeUserLine(`prompt ${i}`));
+    writeJsonl(projDir, 'session.jsonl', lines);
+
+    // Pre-set detected_language on the project row before import
+    setDetectedLanguage(store, PROJECT_ROOT, 'de');
+    await importHistoricalPrompts(store, PROJECT_ROOT);
+
+    const mgr = SessionStateManager.load(store, PROJECT_ROOT);
+    // bootstrapFromHistory reads from projects table — should have 'de'
+    // (import's own detectLanguage may overwrite, but 5 English prompts won't trigger detection)
+    expect(mgr.current.detectedLanguage).toBe('de');
+  });
+
+  // 17. File ordering — newest-file prompts precede older-file prompts in collected array
+  it('newest file prompts come first in collected order (most recent session is slice(0,...))', async () => {
+    const projDir = setupProjDir(tmpDir);
+
+    // Write old file first, give it an explicit old mtime (1 hour ago)
+    writeJsonl(projDir, 'old-session.jsonl', [makeUserLine('old prompt a'), makeUserLine('old prompt b')]);
+    const oneHourAgo = (Date.now() - 3_600_000) / 1000;
+    utimesSync(join(projDir, 'old-session.jsonl'), oneHourAgo, oneHourAgo);
+
+    // Write new file — default mtime is now (newer than old)
+    writeJsonl(projDir, 'new-session.jsonl', [makeUserLine('new prompt a'), makeUserLine('new prompt b')]);
+
+    await importHistoricalPrompts(store, PROJECT_ROOT);
+
+    const mgr = SessionStateManager.load(store, PROJECT_ROOT);
+    // promptHistory is built from collected.slice(0, MAX_HISTORY)
+    // collected[0] = new prompt a (from newest file), collected[2] = old prompt a
+    expect(mgr.current.promptHistory[0].text).toBe('new prompt a');
+    expect(mgr.current.promptHistory[1].text).toBe('new prompt b');
+    expect(mgr.current.promptHistory[2].text).toBe('old prompt a');
+    expect(mgr.current.promptHistory[3].text).toBe('old prompt b');
   });
 });

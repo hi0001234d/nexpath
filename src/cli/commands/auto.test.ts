@@ -662,16 +662,40 @@ describe('runAuto — implicit project registration', () => {
   afterEach(() => { store.db.close(); });
 
   it('auto-registers project row on first call when project does not exist in DB', async () => {
-    // Project root that was never registered via nexpath init
     const projectRoot = '/test/implicit-init-project';
     expect(getProject(store, projectRoot)).toBeNull();
 
     await runAuto({ promptText: 'first prompt', projectRoot }, store);
 
-    // Project row should now exist
     const project = getProject(store, projectRoot);
     expect(project).not.toBeNull();
     expect(project?.projectRoot).toBe(projectRoot);
+  });
+
+  it('project name falls back to basename of projectRoot when no package.json exists', async () => {
+    const projectRoot = '/test/my-cool-project';
+    await runAuto({ promptText: 'first prompt', projectRoot }, store);
+
+    const project = getProject(store, projectRoot);
+    expect(project?.name).toBe('my-cool-project');
+  });
+
+  it('second runAuto call does not re-trigger implicit init (project already registered)', async () => {
+    const projectRoot = '/test/no-reinit';
+
+    // First call — registers the project
+    await runAuto({ promptText: 'first prompt', projectRoot }, store);
+    const after1 = getProject(store, projectRoot);
+    expect(after1).not.toBeNull();
+
+    // Manually rename the project to detect if upsertProject would be called again
+    // (upsertProject on conflict updates name if called; we set a sentinel name)
+    store.db.run("UPDATE projects SET name = 'sentinel' WHERE project_root = ?", [projectRoot]);
+
+    // Second call — must NOT overwrite name since getProject() returns non-null → step 0.0 skipped
+    await runAuto({ promptText: 'second prompt', projectRoot }, store);
+    const after2 = getProject(store, projectRoot);
+    expect(after2?.name).toBe('sentinel');
   });
 });
 
