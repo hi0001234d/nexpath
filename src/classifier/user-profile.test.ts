@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { classifyNature, quadrantToNature, NATURE_HIGH_THRESHOLD } from './NatureClassifier.js';
 import { classifyMood, extractMoodFeatures } from './MoodClassifier.js';
 import { classifyDepth, scorePromptDepth, DEPTH_HIGH_THRESHOLD, DEPTH_MEDIUM_THRESHOLD } from './DepthClassifier.js';
-import { classifyUserProfile, isProfileStale, PROFILE_RECOMPUTE_INTERVAL } from './UserProfileClassifier.js';
+import { classifyUserProfile, isProfileStale, NATURE_DEPTH_RECOMPUTE_INTERVAL } from './UserProfileClassifier.js';
 import type { PromptRecord, UserProfile } from './types.js';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -656,22 +656,22 @@ describe('UserProfileClassifier — isProfileStale', () => {
 
   it('returns false when within recompute interval', () => {
     const profile = fakeProfile(0);
-    expect(isProfileStale(profile, PROFILE_RECOMPUTE_INTERVAL - 1)).toBe(false);
+    expect(isProfileStale(profile, NATURE_DEPTH_RECOMPUTE_INTERVAL - 1)).toBe(false);
   });
 
   it('returns true when at recompute interval boundary', () => {
     const profile = fakeProfile(0);
-    expect(isProfileStale(profile, PROFILE_RECOMPUTE_INTERVAL)).toBe(true);
+    expect(isProfileStale(profile, NATURE_DEPTH_RECOMPUTE_INTERVAL)).toBe(true);
   });
 
   it('returns true when well past recompute interval', () => {
     const profile = fakeProfile(0);
-    expect(isProfileStale(profile, PROFILE_RECOMPUTE_INTERVAL * 3)).toBe(true);
+    expect(isProfileStale(profile, NATURE_DEPTH_RECOMPUTE_INTERVAL * 3)).toBe(true);
   });
 
   it('uses computedAt correctly when not starting at 0', () => {
     const profile = fakeProfile(10);
-    expect(isProfileStale(profile, 14)).toBe(false); // 14-10=4 < 5
-    expect(isProfileStale(profile, 15)).toBe(true);  // 15-10=5 >= 5
+    expect(isProfileStale(profile, 12)).toBe(false); // 12-10=2 < 3
+    expect(isProfileStale(profile, 13)).toBe(true);  // 13-10=3 >= 3
   });
 });

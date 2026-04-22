@@ -3,7 +3,7 @@ import type { Store } from '../store/db.js';
 import { saveStore } from '../store/db.js';
 import type { SessionState, Stage, PromptRecord, ClassificationResult } from './types.js';
 import { detectSignals, initialSignalCounters } from './signals.js';
-import { classifyUserProfile, isProfileStale } from './UserProfileClassifier.js';
+import { classifyUserProfile, isProfileStale, classifyMoodOnly } from './UserProfileClassifier.js';
 
 /** Gap in ms after which the session resets (30 minutes per research). */
 export const SESSION_GAP_MS = 30 * 60 * 1000;
@@ -60,6 +60,7 @@ function newSession(projectRoot: string, now: number): SessionState {
     absenceFlags:            [],
     firedDecisionSessions:   [],
     profile:                 null,
+    mood:                    undefined,
     detectedLanguage:        undefined,
   };
 }
@@ -148,11 +149,14 @@ export class SessionStateManager {
       }
     }
 
+    // ── Mood — every prompt, 0.0088ms/call ───────────────────────────────────
+    s.mood = classifyMoodOnly(s.promptHistory);
+
     // ── Advance counter ───────────────────────────────────────────────────────
     s.promptCount   += 1;
     s.lastPromptAt   = now;
 
-    // ── User profile (recompute when stale) ───────────────────────────────────
+    // ── User profile — nature + depth, every NATURE_DEPTH_RECOMPUTE_INTERVAL prompts ──
     if (isProfileStale(s.profile, s.promptCount)) {
       s.profile = classifyUserProfile(s.promptHistory, s.promptCount);
     }

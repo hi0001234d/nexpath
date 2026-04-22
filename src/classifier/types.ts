@@ -70,8 +70,10 @@ export interface SessionState {
    * Enforces the "once per stage transition event, never re-fires same event same session" rule.
    */
   firedDecisionSessions: string[];
-  /** Cached user profile — null until ≥ PROFILE_RECOMPUTE_INTERVAL prompts processed. */
+  /** Cached user profile — null until first prompt processed. Updated every NATURE_DEPTH_RECOMPUTE_INTERVAL prompts. */
   profile: UserProfile | null;
+  /** Per-prompt mood — updated unconditionally on every processPrompt() call. */
+  mood?: UserMood;
   /** Last successfully detected/resolved language code. undefined = not yet detected. */
   detectedLanguage: string | undefined;
 }

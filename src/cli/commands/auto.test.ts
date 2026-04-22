@@ -526,6 +526,38 @@ describe('readStdin', () => {
   });
 });
 
+// ── runAuto — MIN_PROMPTS_BEFORE_ADVISORY guard (Issue 4) ────────────────────
+
+describe('runAuto — MIN_PROMPTS_BEFORE_ADVISORY guard', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('returns no_action for first 2 prompts even when Stage 2 mock would fire', async () => {
+    // Pre-seed an absence flag so shouldFireStage2 would fire if the guard weren't present
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/min-guard');
+    mgr.addAbsenceFlag(store, {
+      signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 0, cooldownUntil: 100,
+    });
+
+    const openai = makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.');
+    const createFn = openai.chat.completions.create as ReturnType<typeof vi.fn>;
+
+    // promptCount becomes 1 after this call → guard fires (1 < 3)
+    const result1 = await runAuto(makeInput({ projectRoot: '/test/min-guard' }), store, openai);
+    expect(result1.outcome).toBe('no_action');
+
+    // promptCount becomes 2 → guard fires (2 < 3)
+    const result2 = await runAuto(makeInput({ projectRoot: '/test/min-guard' }), store, openai);
+    expect(result2.outcome).toBe('no_action');
+
+    // Stage 2 (OpenAI) was never reached — guard exited before shouldFireStage2
+    expect(createFn).not.toHaveBeenCalled();
+  });
+});
+
 // ── runAuto — prompt persistence (Issue 1) ────────────────────────────────────
 
 describe('runAuto — prompt persistence', () => {

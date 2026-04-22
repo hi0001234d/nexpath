@@ -41,6 +41,8 @@ import { upsertPendingAdvisory } from '../../store/pending-advisories.js';
  * If no action is needed, returns silently in < 50ms with no output.
  */
 
+const MIN_PROMPTS_BEFORE_ADVISORY = 3;
+
 // ── Fired-event key helpers ────────────────────────────────────────────────────
 
 /**
@@ -122,6 +124,12 @@ export async function runAuto(
     mgr.addAbsenceFlag(store, flag);
   }
   logger.debug('absence_flags', { new: newFlags.length, total: mgr.current.absenceFlags.length });
+
+  // ── 4.5. Minimum prompt guard ────────────────────────────────────────────────
+  if (mgr.current.promptCount < MIN_PROMPTS_BEFORE_ADVISORY) {
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'min_prompts_not_reached' });
+    return { outcome: 'no_action' };
+  }
 
   // ── 5. Should Stage 2 fire? ──────────────────────────────────────────────────
   const flagType = shouldFireStage2(
