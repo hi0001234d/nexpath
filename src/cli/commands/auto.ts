@@ -1,4 +1,6 @@
 import OpenAI from 'openai';
+import { readFileSync } from 'node:fs';
+import { join, basename } from 'node:path';
 import type { Store } from '../../store/db.js';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
 import { classifyPrompt } from '../../classifier/PromptClassifier.js';
@@ -11,7 +13,8 @@ import type { FlagType } from '../../classifier/Stage2Trigger.js';
 import { resolveLanguage } from '../../classifier/LanguageDetector.js';
 import { insertPrompt } from '../../store/prompts.js';
 import { getConfig } from '../../store/config.js';
-import { getProject } from '../../store/projects.js';
+import { getProject, upsertProject } from '../../store/projects.js';
+import { importHistoricalPrompts } from '../../store/historical-import.js';
 import { logger, initLogger } from '../../logger.js';
 import type { LogLevel } from '../../logger.js';
 import { writeHookStats } from '../../store/hook-stats.js';
@@ -38,6 +41,16 @@ import { upsertPendingAdvisory } from '../../store/pending-advisories.js';
  */
 
 const MIN_PROMPTS_BEFORE_ADVISORY = 3;
+
+function resolveProjectName(projectRoot: string): string {
+  try {
+    const pkg = JSON.parse(
+      readFileSync(join(projectRoot, 'package.json'), 'utf8'),
+    ) as { name?: unknown };
+    if (typeof pkg.name === 'string' && pkg.name.trim()) return pkg.name.trim();
+  } catch { /* fall through */ }
+  return basename(projectRoot);
+}
 
 // ── Fired-event key helpers ────────────────────────────────────────────────────
 
@@ -81,6 +94,13 @@ export async function runAuto(
   store:   Store,
   openai?: OpenAI,
 ): Promise<AutoOutcome> {
+  // ── 0.0. Implicit project registration (Issue 6) ─────────────────────────────
+  if (!getProject(store, input.projectRoot)) {
+    const name = resolveProjectName(input.projectRoot);
+    upsertProject(store, { projectRoot: input.projectRoot, name });
+    await importHistoricalPrompts(store, input.projectRoot);
+  }
+
   // ── 0. Persist prompt text — runs before classifier so prompt is stored even if pipeline errors ──
   insertPrompt(store, { projectRoot: input.projectRoot, promptText: input.promptText, agent: 'claude-code' });
 

@@ -24,6 +24,7 @@ export {
   type SkippedSessionRecord,
   type InsertSkippedSessionInput,
 } from './skipped-sessions.js';
+export { importHistoricalPrompts } from './historical-import.js';
 export {
   upsertPendingAdvisory,
   getPendingAdvisory,

@@ -209,4 +209,31 @@ export class SessionStateManager {
       saveState(store, this.state);
     }
   }
+
+  /**
+   * Pre-seed session state from imported historical prompts.
+   * Called once per project after importHistoricalPrompts().
+   * No-op if a session state already exists for this project.
+   */
+  static bootstrapFromHistory(
+    store:         Store,
+    projectRoot:   string,
+    history:       import('./types.js').PromptRecord[],
+    totalImported: number,
+  ): void {
+    if (loadState(store, projectRoot)) return;
+
+    const now   = Date.now();
+    const state = newSession(projectRoot, now);
+
+    state.promptHistory = history;
+    state.promptCount   = totalImported;
+    state.lastPromptAt  = now;
+    state.mood          = classifyMoodOnly(history);
+    state.profile       = classifyUserProfile(history, totalImported);
+    state.detectedLanguage =
+      getProject(store, projectRoot)?.detectedLanguage ?? undefined;
+
+    saveState(store, state);
+  }
 }

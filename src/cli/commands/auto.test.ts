@@ -6,7 +6,7 @@ import { getRecentPrompts } from '../../store/prompts.js';
 import { buildFiredKey, runAuto, readStdin } from './auto.js';
 import type { AutoInput } from './auto.js';
 import { getPendingAdvisory } from '../../store/pending-advisories.js';
-import { upsertProject, setDetectedLanguage } from '../../store/projects.js';
+import { upsertProject, setDetectedLanguage, getProject } from '../../store/projects.js';
 import { setConfig } from '../../store/config.js';
 import type OpenAI from 'openai';
 
@@ -650,6 +650,28 @@ describe('runAuto — prompt persistence', () => {
     await runAuto({ promptText: 'agent check', projectRoot: '/test/project' }, store);
     const res = store.db.exec("SELECT agent FROM prompts WHERE project_root = '/test/project'");
     expect(res[0]?.values[0]?.[0]).toBe('claude-code');
+  });
+});
+
+// ── runAuto — implicit project registration (Issue 6) ────────────────────────
+
+describe('runAuto — implicit project registration', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('auto-registers project row on first call when project does not exist in DB', async () => {
+    // Project root that was never registered via nexpath init
+    const projectRoot = '/test/implicit-init-project';
+    expect(getProject(store, projectRoot)).toBeNull();
+
+    await runAuto({ promptText: 'first prompt', projectRoot }, store);
+
+    // Project row should now exist
+    const project = getProject(store, projectRoot);
+    expect(project).not.toBeNull();
+    expect(project?.projectRoot).toBe(projectRoot);
   });
 });
 
