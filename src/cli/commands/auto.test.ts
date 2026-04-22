@@ -6,6 +6,8 @@ import { getRecentPrompts } from '../../store/prompts.js';
 import { buildFiredKey, runAuto, readStdin } from './auto.js';
 import type { AutoInput } from './auto.js';
 import { getPendingAdvisory } from '../../store/pending-advisories.js';
+import { upsertProject, setDetectedLanguage } from '../../store/projects.js';
+import { setConfig } from '../../store/config.js';
 import type OpenAI from 'openai';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -659,18 +661,31 @@ describe('runAuto — effectiveLang from DB', () => {
   beforeEach(async () => { store = await openStore(':memory:'); });
   afterEach(() => { store.db.close(); });
 
-  it('effectiveLang is undefined when projects.detected_language is null and no language_override', async () => {
-    // No project row, no config — effectiveLang should be undefined (silent)
-    // Just assert runAuto completes without error and returns no_action (< 3 prompts)
+  it('completes without error when projects.detected_language is null and no language_override', async () => {
     const result = await runAuto({ promptText: 'first prompt', projectRoot: '/test/project' }, store);
     expect(result.outcome).toBe('no_action');
   });
 
-  it('detection no longer runs inside runAuto — session detectedLanguage is never updated by runAuto', async () => {
+  it('reads detected_language from projects table — getProject returns it after setDetectedLanguage', async () => {
+    upsertProject(store, { projectRoot: '/test/project', name: 'Test' });
+    setDetectedLanguage(store, '/test/project', 'fr');
+    // runAuto should read 'fr' from DB without errors (verified by successful completion)
+    const result = await runAuto({ promptText: 'je veux ajouter une page', projectRoot: '/test/project' }, store);
+    expect(result.outcome).toBe('no_action'); // < 3 prompts, but pipeline ran
+  });
+
+  it('language_override in config takes precedence (resolveLanguage honours override)', async () => {
+    upsertProject(store, { projectRoot: '/test/project', name: 'Test' });
+    setDetectedLanguage(store, '/test/project', 'fr');
+    setConfig(store, 'language_override', 'hi'); // override should win
+    const result = await runAuto({ promptText: 'mujhe ek page chahiye', projectRoot: '/test/project' }, store);
+    expect(result.outcome).toBe('no_action');
+  });
+
+  it('detection no longer runs inside runAuto — session detectedLanguage stays undefined', async () => {
     const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
     await runAuto({ promptText: 'I want to add a login page', projectRoot: '/test/project' }, store);
     const mgr = SessionStateManager.load(store, '/test/project');
-    // detectedLanguage on session state is undefined — auto no longer runs detection
     expect(mgr.current.detectedLanguage).toBeUndefined();
   });
 });

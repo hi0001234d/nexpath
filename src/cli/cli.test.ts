@@ -27,11 +27,11 @@ describe('nexpath CLI — metadata', () => {
     );
   });
 
-  it('config registers set and get sub-commands', () => {
+  it('config registers set, get, and unset sub-commands', () => {
     const prog = createProgram();
     const configCmd = prog.commands.find((c) => c.name() === 'config')!;
     const subNames = configCmd.commands.map((c) => c.name());
-    expect(subNames).toEqual(expect.arrayContaining(['set', 'get']));
+    expect(subNames).toEqual(expect.arrayContaining(['set', 'get', 'unset']));
   });
 
   it('store registers enable, disable, delete, and prune sub-commands', () => {
