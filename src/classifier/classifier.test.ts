@@ -4,7 +4,7 @@ import { classifyWithTFIDF, resetTFIDFModel } from './TFIDFClassifier.js';
 import { createEmbeddingClassifier } from './EmbeddingClassifier.js';
 import { classifyPrompt } from './PromptClassifier.js';
 import { SessionStateManager, SESSION_GAP_MS, STAGE_CONFIRM_THRESHOLD } from './SessionStateManager.js';
-import { NATURE_DEPTH_RECOMPUTE_INTERVAL } from './UserProfileClassifier.js';
+import { NATURE_DEPTH_RECOMPUTE_INTERVAL, classifyMoodOnly } from './UserProfileClassifier.js';
 import { detectAbsenceFlags, ABSENCE_MIN_PROMPTS, ABSENCE_COOLDOWN_PROMPTS } from './AbsenceDetector.js';
 import { detectSignals, initialSignalCounters, SIGNAL_DEFINITIONS, SIGNAL_MAP } from './signals.js';
 import { openStore, closeStore } from '../store/index.js';
@@ -1167,6 +1167,86 @@ describe('SessionStateManager — per-prompt mood', () => {
     mgr.processPrompt(store, 'yes', makeResult('implementation', 0.8));
     expect(mgr.current.mood).toBe('rushed');
     expect(mgr.current.profile?.computedAt).toBe(1); // unchanged — mood moved, profile did not
+    closeStore(store);
+  });
+});
+
+// ── classifyMoodOnly — direct unit tests ──────────────────────────────────────
+
+describe('classifyMoodOnly', () => {
+  function rec(text: string): import('./types.js').PromptRecord {
+    return { index: 0, text, capturedAt: 0, classifiedStage: 'implementation', confidence: 0.8 };
+  }
+
+  it('returns casual for empty history', () => {
+    expect(classifyMoodOnly([])).toBe('casual');
+  });
+
+  it('returns rushed for short prompts (avgWordCount < 8)', () => {
+    const history = ['ok', 'yes', 'done', 'go', 'next'].map(rec);
+    expect(classifyMoodOnly(history)).toBe('rushed');
+  });
+
+  it('returns frustrated when neg lexicon hits > 2', () => {
+    const history = ['why is this broken again ugh still not working'].map(rec);
+    expect(classifyMoodOnly(history)).toBe('frustrated');
+  });
+
+  it('returns frustrated for ALL CAPS word (3+ chars)', () => {
+    const history = ['this is BROKEN please fix it'].map(rec);
+    expect(classifyMoodOnly(history)).toBe('frustrated');
+  });
+
+  it('uses only last MOOD_WINDOW=5 records from history', () => {
+    // Fill 6 records — first is frustrated, last 5 are short/calm → rushed
+    const history = [
+      rec('why is this BROKEN again ugh still failing'),
+      rec('ok'), rec('ok'), rec('ok'), rec('ok'), rec('ok'),
+    ];
+    expect(classifyMoodOnly(history)).toBe('rushed');
+  });
+});
+
+// ── SessionStateManager — mood persistence and session reset ──────────────────
+
+describe('SessionStateManager — mood persistence and session reset', () => {
+  it('mood persists through save/load round-trip', async () => {
+    const store = await openStore(':memory:');
+    const mgr1 = SessionStateManager.load(store, '/project/mood-persist');
+    mgr1.processPrompt(store, 'ok', makeResult('implementation', 0.8));
+    const savedMood = mgr1.current.mood;
+    expect(savedMood).toBeDefined();
+
+    const mgr2 = SessionStateManager.load(store, '/project/mood-persist');
+    expect(mgr2.current.mood).toBe(savedMood);
+    closeStore(store);
+  });
+
+  it('mood resets to undefined when session gap triggers a new session on load', async () => {
+    const store = await openStore(':memory:');
+    const now = Date.now();
+    const mgr1 = SessionStateManager.load(store, '/project/mood-gap', now);
+    mgr1.processPrompt(store, 'implement this', makeResult('implementation', 0.8), now);
+    expect(mgr1.current.mood).toBeDefined();
+
+    // Load after session gap — new session created, mood resets to undefined
+    const future = now + SESSION_GAP_MS + 1;
+    const mgr2 = SessionStateManager.load(store, '/project/mood-gap', future);
+    expect(mgr2.current.mood).toBeUndefined();
+    closeStore(store);
+  });
+
+  it('mood is set on the first prompt of a new session after a gap', async () => {
+    const store = await openStore(':memory:');
+    const now = Date.now();
+    const mgr = SessionStateManager.load(store, '/project/mood-gap2', now);
+    mgr.processPrompt(store, 'original work', makeResult('implementation', 0.8), now);
+
+    // Gap resets session in-place on the next processPrompt call
+    const future = now + SESSION_GAP_MS + 1;
+    mgr.processPrompt(store, 'ok', makeResult('implementation', 0.8), future);
+    expect(mgr.current.mood).toBeDefined(); // set immediately after gap-reset processPrompt
+    expect(mgr.current.promptCount).toBe(1); // confirms it was a fresh session
     closeStore(store);
   });
 });
