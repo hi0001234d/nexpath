@@ -77,8 +77,8 @@ describe('buildClineEntry', () => {
     expect(buildClineEntry(false).disabled).toBe(false);
   });
 
-  it('includes alwaysAllow with capture_prompt', () => {
-    expect(buildClineEntry(false).alwaysAllow).toContain('capture_prompt');
+  it('does not include alwaysAllow (capture_prompt removed)', () => {
+    expect(buildClineEntry(false)).not.toHaveProperty('alwaysAllow');
   });
 
   it('does NOT include a type field', () => {
@@ -105,8 +105,8 @@ describe('buildKiloEntry', () => {
     expect(buildKiloEntry(false).disabled).toBe(false);
   });
 
-  it('includes alwaysAllow with capture_prompt', () => {
-    expect(buildKiloEntry(false).alwaysAllow).toContain('capture_prompt');
+  it('does not include alwaysAllow (capture_prompt removed)', () => {
+    expect(buildKiloEntry(false)).not.toHaveProperty('alwaysAllow');
   });
 });
 
@@ -619,65 +619,63 @@ describe('installAction', () => {
     }
   });
 
-  it('writes Cursor config file when Cursor is detected', async () => {
+  // REGISTER_MCP_SERVER = false: MCP config files are NOT written for non-claude-cli agents.
+  // These tests verify that behaviour — re-enable and flip assertions when MCP tools are added.
+  it('does not write Cursor MCP config while REGISTER_MCP_SERVER is false', async () => {
     const { dir, cleanup } = tmpDir();
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       mkdirSync(join(dir, '.cursor'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
       await installAction({ yes: true }, { paths, isWin: false, execFn: () => {} });
-      const data = readJson(paths.cursor);
-      expect((data.mcpServers as Record<string, unknown>)[MCP_SERVER_NAME]).toBeDefined();
+      expect(() => readJson(paths.cursor)).toThrow();
     } finally {
       cleanup();
     }
   });
 
-  it('writes Windsurf config file when Windsurf is detected', async () => {
+  it('does not write Windsurf MCP config while REGISTER_MCP_SERVER is false', async () => {
     const { dir, cleanup } = tmpDir();
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       mkdirSync(join(dir, '.codeium', 'windsurf'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
       await installAction({ yes: true }, { paths, isWin: false, execFn: () => {} });
-      const data = readJson(paths.windsurf);
-      expect((data.mcpServers as Record<string, unknown>)[MCP_SERVER_NAME]).toBeDefined();
+      expect(() => readJson(paths.windsurf)).toThrow();
     } finally {
       cleanup();
     }
   });
 
-  it('writes KiloCode config with type:stdio when detected', async () => {
+  it('does not write KiloCode MCP config while REGISTER_MCP_SERVER is false', async () => {
     const { dir, cleanup } = tmpDir();
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       mkdirSync(join(dir, '.kilocode'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
       await installAction({ yes: true }, { paths, isWin: false, execFn: () => {} });
-      const entry = ((readJson(paths.kiloCode).mcpServers as Record<string, unknown>)[MCP_SERVER_NAME]) as { type: string };
-      expect(entry.type).toBe('stdio');
+      expect(() => readJson(paths.kiloCode)).toThrow();
     } finally {
       cleanup();
     }
   });
 
-  it('writes OpenCode config with mcp key when detected', async () => {
+  it('does not write OpenCode MCP config while REGISTER_MCP_SERVER is false', async () => {
     const { dir, cleanup } = tmpDir();
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       mkdirSync(join(dir, '.config', 'opencode'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
       await installAction({ yes: true }, { paths, isWin: false, execFn: () => {} });
-      const data = readJson(paths.openCodeGlobal);
-      expect((data.mcp as Record<string, unknown>)[MCP_SERVER_NAME]).toBeDefined();
+      expect(() => readJson(paths.openCodeGlobal)).toThrow();
     } finally {
       cleanup();
     }
   });
 
-  it('falls back to file write when Claude CLI fails', async () => {
+  it('does not fall back to file write for claude-cli when REGISTER_MCP_SERVER is false', async () => {
     const { dir, cleanup } = tmpDir();
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
       await installAction({ yes: true }, {
@@ -685,8 +683,7 @@ describe('installAction', () => {
         isWin: false,
         execFn: () => { throw new Error('claude not found'); },
       });
-      const data = readJson(paths.claudeJson);
-      expect((data.mcpServers as Record<string, unknown>)[MCP_SERVER_NAME]).toBeDefined();
+      expect(() => readJson(paths.claudeJson)).toThrow();
     } finally {
       cleanup();
     }
@@ -706,15 +703,16 @@ describe('installAction', () => {
     }
   });
 
-  it('writes Windows cmd/c format when isWin is true', async () => {
+  it('still writes advisory hook when isWin is true (REGISTER_MCP_SERVER has no effect on hooks)', async () => {
     const { dir, cleanup } = tmpDir();
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
-      mkdirSync(join(dir, '.cursor'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
       await installAction({ yes: true }, { paths, isWin: true, execFn: () => {} });
-      const entry = ((readJson(paths.cursor).mcpServers as Record<string, unknown>)[MCP_SERVER_NAME]) as { command: string };
-      expect(entry.command).toBe('cmd');
+      const data = readJson(paths.claudeSettings) as Record<string, unknown>;
+      const hooks = data.hooks as Record<string, unknown>;
+      const groups = hooks.UserPromptSubmit as Array<Record<string, unknown>>;
+      expect(groups.some((g) => g._nexpath_hook === true)).toBe(true);
     } finally {
       cleanup();
     }
