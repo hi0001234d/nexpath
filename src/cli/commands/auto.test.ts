@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PassThrough } from 'node:stream';
 import { openStore } from '../../store/db.js';
 import type { Store } from '../../store/db.js';
+import { getRecentPrompts } from '../../store/prompts.js';
 import { buildFiredKey, runAuto, readStdin } from './auto.js';
 import type { AutoInput } from './auto.js';
 import { getPendingAdvisory } from '../../store/pending-advisories.js';
@@ -522,5 +523,59 @@ describe('readStdin', () => {
     await vi.advanceTimersByTimeAsync(5001);
     const result = await promise;
     expect(result).toBe('partial data');
+  });
+});
+
+// ── runAuto — prompt persistence (Issue 1) ────────────────────────────────────
+
+describe('runAuto — prompt persistence', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('inserts the prompt text into the store on every call', async () => {
+    await runAuto({ promptText: 'test prompt', projectRoot: '/test/project' }, store);
+    const rows = getRecentPrompts(store, '/test/project', 10);
+    expect(rows.length).toBeGreaterThanOrEqual(1);
+    expect(rows[0].text).toBe('test prompt');
+  });
+
+  it('stores under the correct project root', async () => {
+    await runAuto({ promptText: 'alpha', projectRoot: '/proj/alpha' }, store);
+    await runAuto({ promptText: 'beta',  projectRoot: '/proj/beta'  }, store);
+    const alpha = getRecentPrompts(store, '/proj/alpha', 10);
+    const beta  = getRecentPrompts(store, '/proj/beta',  10);
+    expect(alpha).toHaveLength(1);
+    expect(beta).toHaveLength(1);
+    expect(alpha[0].text).toBe('alpha');
+    expect(beta[0].text).toBe('beta');
+  });
+
+  it('inserts even when pipeline returns no_action', async () => {
+    // Weak prompt — stage classifier stays at idea, no flag fires, no OpenAI call
+    await runAuto({ promptText: 'hello', projectRoot: '/test/project' }, store);
+    const rows = getRecentPrompts(store, '/test/project', 10);
+    expect(rows.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('applies secret redaction before storing', async () => {
+    await runAuto(
+      { promptText: 'token=sk-abc123def456ghi789jkl012mno345pqr', projectRoot: '/test/project' },
+      store,
+    );
+    const rows = getRecentPrompts(store, '/test/project', 10);
+    expect(rows[0].text).toContain('sk-[REDACTED]');
+    expect(rows[0].text).not.toContain('sk-abc123');
+  });
+
+  it('accumulates multiple prompts in insertion order (newest first from getRecentPrompts)', async () => {
+    await runAuto({ promptText: 'first',  projectRoot: '/test/project' }, store);
+    await runAuto({ promptText: 'second', projectRoot: '/test/project' }, store);
+    await runAuto({ promptText: 'third',  projectRoot: '/test/project' }, store);
+    const rows = getRecentPrompts(store, '/test/project', 10);
+    expect(rows[0].text).toBe('third');
+    expect(rows[1].text).toBe('second');
+    expect(rows[2].text).toBe('first');
   });
 });

@@ -14,6 +14,7 @@ import {
   LANG_WINDOW,
   LANG_DETECT_INTERVAL,
 } from '../../classifier/LanguageDetector.js';
+import { insertPrompt } from '../../store/prompts.js';
 import { getConfig } from '../../store/config.js';
 import { logger, initLogger } from '../../logger.js';
 import type { LogLevel } from '../../logger.js';
@@ -82,6 +83,9 @@ export async function runAuto(
   store:   Store,
   openai?: OpenAI,
 ): Promise<AutoOutcome> {
+  // ── 0. Persist prompt text — runs before classifier so prompt is stored even if pipeline errors ──
+  insertPrompt(store, { projectRoot: input.projectRoot, promptText: input.promptText, agent: 'claude-code' });
+
   // ── 1. Load session state ────────────────────────────────────────────────────
   const mgr = SessionStateManager.load(store, input.projectRoot);
   const prevStage: Stage = mgr.current.currentStage;
