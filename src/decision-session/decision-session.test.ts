@@ -822,36 +822,48 @@ describe('runDecisionSession — decisionSessionCount increment', () => {
 });
 
 describe('runLevel — help line injection', () => {
-  it('injects help hint into message when decisionSessionCount < 3', async () => {
-    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
-    await runLevel(makeInput({ decisionSessionCount: 0 }), 1, spy as SelectFn);
-    const msg = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].message as string;
-    expect(msg).toContain('Ctrl+X');
-    expect(msg).toContain('Ctrl+T');
-  });
-
-  it('does NOT inject help hint into message when decisionSessionCount >= 3', async () => {
-    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
-    await runLevel(makeInput({ decisionSessionCount: 3 }), 1, spy as SelectFn);
-    const msg = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].message as string;
-    expect(msg).not.toContain('Ctrl+X');
-    expect(msg).not.toContain('Ctrl+T');
-  });
-
-  it('help hint is non-empty (renders styled text in message header)', async () => {
-    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
-    await runLevel(makeInput({ decisionSessionCount: 1 }), 1, spy as SelectFn);
-    const msg = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].message as string;
-    expect(msg.length).toBeGreaterThan(0);
-    expect(msg).toContain('Ctrl+X');
-  });
-
-  it('help hint is NOT in options list (not a selectable item)', async () => {
+  it('injects help item at bottom of options when decisionSessionCount < 3', async () => {
     const spy = vi.fn().mockResolvedValue(SKIP_NOW);
     await runLevel(makeInput({ decisionSessionCount: 0 }), 1, spy as SelectFn);
     const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
     const helpItem = opts.find((o) => o.value === `${OPTION_SEPARATOR}help`);
+    expect(helpItem).toBeDefined();
+    expect(helpItem?.label).toContain('Ctrl+X');
+    expect(helpItem?.label).toContain('Ctrl+T');
+  });
+
+  it('does NOT inject help item when decisionSessionCount >= 3', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ decisionSessionCount: 3 }), 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
+    const helpItem = opts.find((o) => o.value === `${OPTION_SEPARATOR}help`);
     expect(helpItem).toBeUndefined();
+  });
+
+  it('help item has non-empty styled label', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ decisionSessionCount: 1 }), 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
+    const helpItem = opts.find((o) => o.value === `${OPTION_SEPARATOR}help`);
+    expect(helpItem?.label.trim().length).toBeGreaterThan(0);
+  });
+
+  it('help item is preceded by 2 blank separator lines', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ decisionSessionCount: 0 }), 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
+    const helpIdx = opts.findIndex((o) => o.value === `${OPTION_SEPARATOR}help`);
+    expect(helpIdx).toBeGreaterThanOrEqual(2);
+    expect(opts[helpIdx - 1]?.label).toBe('');
+    expect(opts[helpIdx - 2]?.label).toBe('');
+  });
+
+  it('help hint is NOT in message header', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ decisionSessionCount: 0 }), 1, spy as SelectFn);
+    const msg = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].message as string;
+    expect(msg).not.toContain('Ctrl+X');
+    expect(msg).not.toContain('Ctrl+T');
   });
 });
 

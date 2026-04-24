@@ -36,8 +36,9 @@ import {
 const BOLD_CYAN    = '\x1b[1;96m';
 const BOLD_WHITE   = '\x1b[1;97m';
 const DIM_YELLOW   = '\x1b[2;33m';
-const BOLD_YELLOW  = '\x1b[1;33m';
 const DIM_GRAY     = '\x1b[2m';
+const ITALIC_DIM   = '\x1b[3;2m';
+const ITALIC_AMBER = '\x1b[3;33m';
 const BOLD         = '\x1b[1m';
 const RESET        = '\x1b[0m';
 
@@ -45,8 +46,8 @@ const SKIP_NOW_LABEL =
   `${BOLD}Skip for now${RESET}${DIM_GRAY}  — nexpath optimize will remind you${RESET}`;
 
 const HELP_LABEL =
-  `${DIM_GRAY}  Press ${RESET}${BOLD_YELLOW}Ctrl+X${RESET}${DIM_GRAY} to opt out forever` +
-  `  ·  Press ${RESET}${BOLD_YELLOW}Ctrl+T${RESET}${DIM_GRAY} to adjust frequency${RESET}`;
+  `${ITALIC_DIM}  Press ${RESET}${ITALIC_AMBER}Ctrl+X${RESET}${ITALIC_DIM} to opt out forever` +
+  `  ·  Press ${RESET}${ITALIC_AMBER}Ctrl+T${RESET}${ITALIC_DIM} to adjust frequency${RESET}`;
 
 export function formatPinchLabel(label: string): string {
   return `${BOLD_CYAN}${label}${RESET}`;
@@ -120,20 +121,17 @@ export type DecisionSessionResult =
 
 /**
  * Build the `message` string for @clack/prompts' select prompt.
- * Combines: pinch label, optional subtitle, question line, optional help hint.
- * The help hint is non-interactive — it appears as display text above the options.
+ * Combines: pinch label, optional subtitle, question line.
  */
 export function buildSelectMessage(
-  pinchLabel:  string,
-  question:    string,
-  level:       1 | 2 | 3,
-  showHelp:    boolean = false,
+  pinchLabel: string,
+  question:   string,
+  level:      1 | 2 | 3,
 ): string {
   const subtitle = getLevelSubtitle(level);
   const parts: string[] = [formatPinchLabel(pinchLabel)];
   if (subtitle) parts.push(formatSubtitle(subtitle));
   parts.push(formatQuestion(question));
-  if (showHelp) parts.push(HELP_LABEL);
   return parts.join('\n');
 }
 
@@ -154,12 +152,12 @@ export async function runLevel(
 ): Promise<'skip' | 'next' | 'clipboard_only' | string> {
   const content  = resolveDecisionContent(input.stage, input.flagType);
   const { options } = buildOptionList(content, level);
-  const showHelp = input.decisionSessionCount < 3;
-  const message  = buildSelectMessage(input.pinchLabel, content.question, level, showHelp);
+  const message  = buildSelectMessage(input.pinchLabel, content.question, level);
 
   // Inject blank separator items between visual groups:
   //   content options → 2 blank lines → SHOW_SIMPLER (if present) → 1 blank line → SKIP_NOW
   //   when SHOW_SIMPLER absent: content options → 2 blank lines → SKIP_NOW
+  //   after SKIP_NOW: 2 blank lines → help hint (first 3 appearances only)
   const hasShowSimpler = options.some((o) => o === SHOW_SIMPLER);
   const clackOptions: Array<{ value: string; label: string }> = [];
   let sepIdx = 0;
@@ -178,6 +176,13 @@ export async function runLevel(
       label: opt === SKIP_NOW ? SKIP_NOW_LABEL : opt,
     });
   }
+  // Help hint — 2 blank lines of breathing room then the styled hint row
+  if (input.decisionSessionCount < 3) {
+    clackOptions.push({ value: `${OPTION_SEPARATOR}${sepIdx++}`, label: '' });
+    clackOptions.push({ value: `${OPTION_SEPARATOR}${sepIdx++}`, label: '' });
+    clackOptions.push({ value: `${OPTION_SEPARATOR}help`, label: HELP_LABEL });
+  }
+
   const result = await selectFn({ message, options: clackOptions });
 
   if (isCancel(result) || typeof result === 'symbol') return 'skip';
