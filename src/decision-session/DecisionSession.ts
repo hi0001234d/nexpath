@@ -46,8 +46,8 @@ const SKIP_NOW_LABEL =
   `${BOLD}Skip for now${RESET}${DIM_GRAY}  — nexpath optimize will remind you${RESET}`;
 
 const HELP_LABEL =
-  `${ITALIC_DIM}  Press ${RESET}${ITALIC_AMBER}Ctrl+X${RESET}${ITALIC_DIM} to opt out forever` +
-  `  ·  Press ${RESET}${ITALIC_AMBER}Ctrl+T${RESET}${ITALIC_DIM} to adjust frequency${RESET}`;
+  `${ITALIC_DIM}  don't need nexpath here?  press ${RESET}${ITALIC_AMBER}Ctrl+X${RESET}${ITALIC_DIM} to disable for this project` +
+  `  ·  press ${RESET}${ITALIC_AMBER}Ctrl+T${RESET}${ITALIC_DIM} to adjust frequency${RESET}`;
 
 export function formatPinchLabel(label: string): string {
   return `${BOLD_CYAN}${label}${RESET}`;
