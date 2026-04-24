@@ -120,17 +120,20 @@ export type DecisionSessionResult =
 
 /**
  * Build the `message` string for @clack/prompts' select prompt.
- * Combines: pinch label, optional subtitle, question line.
+ * Combines: pinch label, optional subtitle, question line, optional help hint.
+ * The help hint is non-interactive — it appears as display text above the options.
  */
 export function buildSelectMessage(
-  pinchLabel: string,
-  question:   string,
-  level:      1 | 2 | 3,
+  pinchLabel:  string,
+  question:    string,
+  level:       1 | 2 | 3,
+  showHelp:    boolean = false,
 ): string {
   const subtitle = getLevelSubtitle(level);
   const parts: string[] = [formatPinchLabel(pinchLabel)];
   if (subtitle) parts.push(formatSubtitle(subtitle));
   parts.push(formatQuestion(question));
+  if (showHelp) parts.push(HELP_LABEL);
   return parts.join('\n');
 }
 
@@ -151,7 +154,8 @@ export async function runLevel(
 ): Promise<'skip' | 'next' | 'clipboard_only' | string> {
   const content  = resolveDecisionContent(input.stage, input.flagType);
   const { options } = buildOptionList(content, level);
-  const message  = buildSelectMessage(input.pinchLabel, content.question, level);
+  const showHelp = input.decisionSessionCount < 3;
+  const message  = buildSelectMessage(input.pinchLabel, content.question, level, showHelp);
 
   // Inject blank separator items between visual groups:
   //   content options → 2 blank lines → SHOW_SIMPLER (if present) → 1 blank line → SKIP_NOW
@@ -174,11 +178,6 @@ export async function runLevel(
       label: opt === SKIP_NOW ? SKIP_NOW_LABEL : opt,
     });
   }
-  // Help line: shown on early encounters so users discover Ctrl+X / Ctrl+T shortcuts
-  if (input.decisionSessionCount < 3) {
-    clackOptions.push({ value: `${OPTION_SEPARATOR}help`, label: HELP_LABEL });
-  }
-
   const result = await selectFn({ message, options: clackOptions });
 
   if (isCancel(result) || typeof result === 'symbol') return 'skip';
