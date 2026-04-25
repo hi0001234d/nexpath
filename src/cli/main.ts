@@ -1,6 +1,7 @@
 import { Command } from 'commander';
-import { DEFAULT_DB_PATH } from '../store/db.js';
+import { openStore, closeStore, DEFAULT_DB_PATH } from '../store/db.js';
 import { configGetAction, configSetAction, configUnsetAction } from './commands/config.js';
+import { runMigrations } from '../store/schema.js';
 import { logAction } from './commands/log.js';
 import { storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAction } from './commands/store.js';
 import { installAction, uninstallAction } from './commands/install.js';
@@ -137,6 +138,24 @@ export function createProgram(): Command {
     .option('--db <path>', 'Path to the SQLite database file')
     .action(async (opts: { olderThan?: string; project?: string; db?: string }) => {
       await storePruneAction(opts, opts.db);
+    });
+
+  // ── DB command ────────────────────────────────────────────────────────────────
+
+  const dbCmd = program
+    .command('db')
+    .description('Database maintenance commands');
+
+  dbCmd
+    .command('migrate')
+    .description('Apply schema migrations to an existing database (safe to re-run)')
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (opts: { db?: string }) => {
+      const store = await openStore(opts.db ?? DEFAULT_DB_PATH);
+      console.log('Running migrations...');
+      runMigrations(store.db);
+      closeStore(store);
+      console.log('Done.');
     });
 
   return program;

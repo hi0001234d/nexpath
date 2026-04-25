@@ -91,6 +91,18 @@ export async function runStop(
   // 3. Mark as shown immediately — prevents duplicate UI on rapid Stop re-fires
   markAdvisoryShown(store, advisory.id);
 
+  // 3.5. Advisory frequency gate — honour opt-out / frequency setting even for
+  //      already-queued pending advisories (e.g. user pressed Ctrl+X on a prior
+  //      advisory while a second was already pending in the DB).
+  const freq =
+    getConfig(store.db, `advisory_frequency:${payload.cwd}`) ??
+    getConfig(store.db, 'advisory_frequency') ??
+    'every_event';
+  if (freq === 'off') {
+    logger.info('stop_freq_gate', { cwd: payload.cwd, reason: 'freq_off' });
+    return { outcome: 'skipped' };
+  }
+
   // 4. TTY resolution — Stop hook stdin is always piped; open /dev/tty directly
   let effectiveSelectFn: SelectFn | undefined = selectFn;
   if (!effectiveSelectFn) {

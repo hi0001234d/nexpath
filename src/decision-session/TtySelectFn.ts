@@ -49,8 +49,14 @@ if (process.stdin.isTTY) {
 }
 let specialKey = null;
 process.stdin.on('keypress', (ch, key) => {
-  if (key?.sequence === '\\x18') specialKey = 'opt_out';   // Ctrl+X
-  if (key?.sequence === '\\x14') specialKey = 'freq_menu'; // Ctrl+T
+  if (key?.sequence === '\\x18') {   // Ctrl+X → exit immediately
+    writeFileSync('${resultFileFwd}', '__NEXPATH_OPT_OUT__', 'utf8');
+    process.exit(0);
+  }
+  if (key?.sequence === '\\x14') {   // Ctrl+T → show freq menu in new window; exit immediately
+    writeFileSync('${resultFileFwd}', '__FREQ_MENU_PENDING__', 'utf8');
+    process.exit(0);
+  }
 });
 
 let picked;
@@ -60,32 +66,6 @@ do {
     new Promise((r) => setTimeout(() => r(TIMEOUT), 60_000)),
   ]);
 } while (typeof picked === 'string' && picked.startsWith(opts.separatorPrefix));
-
-// Ctrl+X → opt-out sentinel; caller (DecisionSession) writes config
-if (specialKey === 'opt_out') {
-  writeFileSync('${resultFileFwd}', '__NEXPATH_OPT_OUT__', 'utf8');
-  process.exit(0);
-}
-
-// Ctrl+T → show frequency sub-menu; write __FREQ__:<value> to result
-if (specialKey === 'freq_menu') {
-  const freqPicked = await Promise.race([
-    select({
-      message: 'Advisory frequency',
-      options: [
-        { value: 'every_event',      label: 'Every qualifying event (default)' },
-        { value: 'major_only',       label: 'Major transitions only (stage changes)' },
-        { value: 'once_per_session', label: 'Once per coding session' },
-        { value: 'off',              label: 'Off \\u2014 disable all advisories' },
-      ],
-    }),
-    new Promise((r) => setTimeout(() => r(TIMEOUT), 60_000)),
-  ]);
-  if (!isCancel(freqPicked) && freqPicked !== TIMEOUT && typeof freqPicked === 'string') {
-    writeFileSync('${resultFileFwd}', \`__FREQ__:\${freqPicked}\`, 'utf8');
-  }
-  process.exit(0);
-}
 
 if (!isCancel(picked) && picked !== TIMEOUT && typeof picked === 'string'
     && picked !== opts.skipNow && picked !== opts.showSimpler) {
@@ -113,6 +93,32 @@ if (!isCancel(picked) && picked !== TIMEOUT && typeof picked === 'string'
   }
 } else if (!isCancel(picked) && picked !== TIMEOUT && typeof picked === 'string') {
   writeFileSync('${resultFileFwd}', picked, 'utf8');
+}
+
+process.exit(0);
+`;
+}
+
+function buildFreqMjsScript(clackUrl: string, resultFileFwd: string): string {
+  return `import { select, isCancel } from '${clackUrl}';
+import { writeFileSync } from 'node:fs';
+
+const TIMEOUT = Symbol('timeout');
+const picked = await Promise.race([
+  select({
+    message: 'Advisory frequency',
+    options: [
+      { value: 'every_event',      label: 'Every qualifying event (default)' },
+      { value: 'major_only',       label: 'Major transitions only (stage changes)' },
+      { value: 'once_per_session', label: 'Once per coding session' },
+      { value: 'off',              label: 'Off \\u2014 disable all advisories' },
+    ],
+  }),
+  new Promise((r) => setTimeout(() => r(TIMEOUT), 60_000)),
+]);
+
+if (!isCancel(picked) && picked !== TIMEOUT && typeof picked === 'string') {
+  writeFileSync('${resultFileFwd}', \`__FREQ__:\${picked}\`, 'utf8');
 }
 
 process.exit(0);
@@ -197,11 +203,12 @@ function buildWindowsNewWindowSelectFn(_store?: Store, _projectRoot?: string): S
       );
 
       // Result file format:
-      //   '__CLIP__'              → user chose "Copy to clipboard" (clip.exe already called)
-      //   '__NEXPATH_OPT_OUT__'   → user pressed Ctrl+X; runDecisionSession writes config
-      //   '__FREQ__:<value>'      → user pressed Ctrl+T + picked freq; runDecisionSession writes config
-      //   any other non-empty     → selected prompt text (send to Claude path)
-      //   (absent / empty)        → cancelled / timed out
+      //   '__CLIP__'               → user chose "Copy to clipboard" (clip.exe already called)
+      //   '__NEXPATH_OPT_OUT__'    → user pressed Ctrl+X; runDecisionSession writes config
+      //   '__FREQ_MENU_PENDING__'  → user pressed Ctrl+T; spawn a second freq-selection window
+      //   '__FREQ__:<value>'       → freq picked in second window; runDecisionSession writes config
+      //   any other non-empty      → selected prompt text (send to Claude path)
+      //   (absent / empty)         → cancelled / timed out
       let result: string | symbol = Symbol('cancelled');
       if (existsSync(resultFile)) {
         const raw = readFileSync(resultFile, 'utf8').trim();
@@ -209,6 +216,24 @@ function buildWindowsNewWindowSelectFn(_store?: Store, _projectRoot?: string): S
           result = CLIPBOARD_ONLY;
         } else if (raw === '__NEXPATH_OPT_OUT__') {
           result = OPT_OUT_SENTINEL;
+        } else if (raw === '__FREQ_MENU_PENDING__') {
+          const freqId         = randomUUID();
+          const freqResultFile = join(tmpdir(), `nexpath-freq-res-${freqId}.txt`);
+          const freqScriptFile = join(tmpdir(), `nexpath-freq-sel-${freqId}.mjs`);
+          const freqResultFwd  = freqResultFile.replace(/\\/g, '/');
+          writeFileSync(freqScriptFile, buildFreqMjsScript(clackUrl, freqResultFwd), 'utf8');
+          spawnSync(
+            'cmd.exe',
+            ['/c', 'start', '/WAIT', 'Nexpath \u2014 Frequency', 'node', freqScriptFile],
+            { stdio: 'ignore' },
+          );
+          if (existsSync(freqResultFile)) {
+            const freqRaw = readFileSync(freqResultFile, 'utf8').trim();
+            if (freqRaw.startsWith('__FREQ__:')) result = freqRaw;
+          }
+          for (const f of [freqScriptFile, freqResultFile]) {
+            try { unlinkSync(f); } catch { /* ignore */ }
+          }
         } else if (raw.startsWith('__FREQ__:')) {
           result = raw;
         } else if (raw.length > 0) {

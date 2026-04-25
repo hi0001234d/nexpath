@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { openStore, type Store } from './db.js';
 import { insertPrompt, getRecentPrompts, deleteProjectPrompts, deleteAllPrompts, pruneOlderThan, getPromptStats } from './prompts.js';
 import { getConfig, setConfig, getAllConfig, isConfigSet } from './config.js';
-import { upsertProject, getProject, setDetectedLanguage } from './projects.js';
+import { upsertProject, getProject, setDetectedLanguage, incrementDecisionSessionCount, listProjects } from './projects.js';
 import { redactSecrets } from './redact.js';
 import {
   insertSkippedSession,
@@ -724,5 +724,82 @@ describe('setDetectedLanguage', () => {
     const proj = getProject(store, '/proj/c');
     expect(proj).not.toBeNull();
     expect(proj?.detectedLanguage).toBeNull();
+  });
+});
+
+// ── incrementDecisionSessionCount (Phase H) ───────────────────────────────────
+
+describe('incrementDecisionSessionCount', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('starts at 0 for a newly upserted project', () => {
+    upsertProject(store, { projectRoot: '/proj/dsc', name: 'DSC' });
+    expect(getProject(store, '/proj/dsc')?.decisionSessionCount).toBe(0);
+  });
+
+  it('increments to 1 on first call', () => {
+    upsertProject(store, { projectRoot: '/proj/dsc1', name: 'DSC1' });
+    incrementDecisionSessionCount(store, '/proj/dsc1');
+    expect(getProject(store, '/proj/dsc1')?.decisionSessionCount).toBe(1);
+  });
+
+  it('increments correctly on successive calls', () => {
+    upsertProject(store, { projectRoot: '/proj/dsc2', name: 'DSC2' });
+    incrementDecisionSessionCount(store, '/proj/dsc2');
+    incrementDecisionSessionCount(store, '/proj/dsc2');
+    incrementDecisionSessionCount(store, '/proj/dsc2');
+    expect(getProject(store, '/proj/dsc2')?.decisionSessionCount).toBe(3);
+  });
+
+  it('is a no-op (no crash) when project does not exist', () => {
+    expect(() => incrementDecisionSessionCount(store, '/proj/nonexistent')).not.toThrow();
+  });
+
+  it('does not affect other projects', () => {
+    upsertProject(store, { projectRoot: '/proj/a1', name: 'A1' });
+    upsertProject(store, { projectRoot: '/proj/b1', name: 'B1' });
+    incrementDecisionSessionCount(store, '/proj/a1');
+    incrementDecisionSessionCount(store, '/proj/a1');
+    expect(getProject(store, '/proj/a1')?.decisionSessionCount).toBe(2);
+    expect(getProject(store, '/proj/b1')?.decisionSessionCount).toBe(0);
+  });
+});
+
+// ── listProjects — decisionSessionCount (Phase H) ────────────────────────────
+
+describe('listProjects — decisionSessionCount', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('returns decisionSessionCount: 0 for new projects', () => {
+    upsertProject(store, { projectRoot: '/proj/list1', name: 'List1' });
+    const projects = listProjects(store);
+    expect(projects[0].decisionSessionCount).toBe(0);
+  });
+
+  it('returns correct decisionSessionCount after increments', () => {
+    upsertProject(store, { projectRoot: '/proj/list2', name: 'List2' });
+    incrementDecisionSessionCount(store, '/proj/list2');
+    incrementDecisionSessionCount(store, '/proj/list2');
+    const projects = listProjects(store);
+    expect(projects[0].decisionSessionCount).toBe(2);
+  });
+
+  it('returns decisionSessionCount for multiple projects independently', () => {
+    upsertProject(store, { projectRoot: '/proj/ma', name: 'MA' });
+    upsertProject(store, { projectRoot: '/proj/mb', name: 'MB' });
+    incrementDecisionSessionCount(store, '/proj/ma');
+    incrementDecisionSessionCount(store, '/proj/ma');
+    incrementDecisionSessionCount(store, '/proj/ma');
+    const projects = listProjects(store);
+    const ma = projects.find((p) => p.projectRoot === '/proj/ma');
+    const mb = projects.find((p) => p.projectRoot === '/proj/mb');
+    expect(ma?.decisionSessionCount).toBe(3);
+    expect(mb?.decisionSessionCount).toBe(0);
   });
 });

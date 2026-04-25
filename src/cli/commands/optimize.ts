@@ -102,10 +102,11 @@ export async function runOptimize(
       {
         stage,
         flagType,
-        pinchLabel:  content.pinchFallback,
-        sessionId:   item.sessionId,
-        projectRoot: input.projectRoot,
-        promptCount: item.skippedAtPromptCount,
+        pinchLabel:           content.pinchFallback,
+        sessionId:            item.sessionId,
+        projectRoot:          input.projectRoot,
+        promptCount:          item.skippedAtPromptCount,
+        decisionSessionCount: 0,
       },
       undefined,  // no store → skip during optimize does not re-insert
       selectFn,

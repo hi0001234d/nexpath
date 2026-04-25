@@ -69,3 +69,25 @@ CREATE INDEX IF NOT EXISTS idx_pending_advisories_project
 export function migrate(db: Database): void {
   db.run(DDL);
 }
+
+/**
+ * Apply incremental schema migrations to an existing database.
+ * Safe to run multiple times — each step checks column existence before ALTER.
+ * Run via: nexpath db migrate
+ */
+export function runMigrations(db: Database): void {
+  const addIfMissing = (table: string, column: string, definition: string): void => {
+    const res = db.exec(`PRAGMA table_info(${table})`);
+    const cols = (res[0]?.values ?? []).map((row) => row[1] as string);
+    if (!cols.includes(column)) {
+      db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+      console.log(`  + ${table}.${column}`);
+    } else {
+      console.log(`  ✓ ${table}.${column} (already present)`);
+    }
+  };
+
+  // v0.1.1 — Phase B
+  addIfMissing('projects', 'detected_language',      'TEXT');
+  addIfMissing('projects', 'decision_session_count', 'INTEGER NOT NULL DEFAULT 0');
+}

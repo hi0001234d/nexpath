@@ -760,12 +760,8 @@ describe('runAuto — advisory_frequency gate', () => {
     }
     // Force shouldFireStage2 to return an absence flag by running the already-flagged state
     const result = await runAuto(makeInput({ projectRoot: '/test/freq-major' }), store, openai);
-    // Outcome is no_action (absence flag gated by major_only) or no_action for other reasons
-    // The key invariant: if outcome would have been 'pending' via absence, it's blocked
-    // We verify Stage 2 was NOT called (gate fires before Stage 2)
-    if (result.outcome === 'no_action') {
-      expect(createFn).not.toHaveBeenCalled();
-    }
+    expect(result.outcome).toBe('no_action');
+    expect(createFn).not.toHaveBeenCalled();
   });
 
   it('returns no_action for second event when frequency is "once_per_session"', async () => {
