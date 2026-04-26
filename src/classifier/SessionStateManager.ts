@@ -19,7 +19,7 @@ export const STAGE_CONFIRM_THRESHOLD = 0.33;
  * Minimum confidence a cross-stage classification must have to trigger a stage change.
  * Below this floor, low-signal prompts (e.g. "ok", "sure") cannot wipe accumulated state.
  */
-export const MIN_STAGE_CHANGE_CONFIDENCE = 0.20;
+export const MIN_STAGE_CHANGE_CONFIDENCE = 0.50;
 
 // ── Persistence helpers ────────────────────────────────────────────────────────
 

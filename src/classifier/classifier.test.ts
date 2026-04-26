@@ -647,7 +647,7 @@ describe('SessionStateManager', () => {
   it('stageConfirmedAt is set when confidence reaches threshold', async () => {
     const store = await openStore(':memory:');
     const mgr = SessionStateManager.load(store, '/project/g');
-    mgr.processPrompt(store, 'implement this', makeResult('implementation', STAGE_CONFIRM_THRESHOLD + 0.01));
+    mgr.processPrompt(store, 'implement this', makeResult('implementation', MIN_STAGE_CHANGE_CONFIDENCE + 0.01));
     expect(mgr.current.stageConfirmedAt).toBe(0);
     closeStore(store);
   });
@@ -731,7 +731,7 @@ describe('SessionStateManager', () => {
     const mgr = SessionStateManager.load(store, '/project/ema2');
     // Start with low confidence — EMA will ramp up
     mgr.processPrompt(store, 'p0', makeResult('implementation', 0.20));
-    expect(mgr.current.stageConfirmedAt).toBe(-1); // 0.20 < 0.33 → not confirmed
+    expect(mgr.current.stageConfirmedAt).toBe(-1); // 0.20 < MIN_STAGE_CHANGE_CONFIDENCE → stage change ignored
 
     // Feed several prompts with confidence 0.9 to drive EMA above STAGE_CONFIRM_THRESHOLD
     for (let i = 1; i <= 6; i++) {
