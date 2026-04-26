@@ -299,7 +299,7 @@ export function registerAutoCommand(program: import('commander').Command): void 
 
       // Load project .env so OPENAI_API_KEY is available for Stage 2 calls.
       // Does not override variables already set in the process environment.
-      loadDotenv({ path: join(opts.project, '.env') });
+      loadDotenv({ path: join(opts.project, '.env'), override: true });
 
       const store = await openStore(opts.db);
       // Initialise logger — level from config key, then NEXPATH_LOG_LEVEL env var
