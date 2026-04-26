@@ -3,7 +3,7 @@ import { matchKeywords } from './KeywordMatcher.js';
 import { classifyWithTFIDF, resetTFIDFModel } from './TFIDFClassifier.js';
 import { createEmbeddingClassifier } from './EmbeddingClassifier.js';
 import { classifyPrompt } from './PromptClassifier.js';
-import { SessionStateManager, SESSION_GAP_MS, STAGE_CONFIRM_THRESHOLD } from './SessionStateManager.js';
+import { SessionStateManager, SESSION_GAP_MS, STAGE_CONFIRM_THRESHOLD, MIN_STAGE_CHANGE_CONFIDENCE } from './SessionStateManager.js';
 import { NATURE_DEPTH_RECOMPUTE_INTERVAL, classifyMoodOnly } from './UserProfileClassifier.js';
 import { detectAbsenceFlags, ABSENCE_MIN_PROMPTS, ABSENCE_COOLDOWN_PROMPTS } from './AbsenceDetector.js';
 import { detectSignals, initialSignalCounters, SIGNAL_DEFINITIONS, SIGNAL_MAP } from './signals.js';
@@ -836,6 +836,32 @@ describe('SessionStateManager', () => {
     const b2 = SessionStateManager.load(store, '/project/beta');
     expect(a2.current.currentStage).toBe('implementation');
     expect(b2.current.currentStage).toBe('prd');
+    closeStore(store);
+  });
+
+  it('low-confidence cross-stage prompt does not wipe confirmed stage state', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/gate-block');
+    // Confirm implementation stage
+    mgr.processPrompt(store, 'implement the login page', makeResult('implementation', 0.9));
+    const confirmedAt = mgr.current.stageConfirmedAt;
+    const confBefore  = mgr.current.stageConfidence;
+    // Short generic prompt classifies as a different stage below the gate
+    mgr.processPrompt(store, 'ok', makeResult('idea', MIN_STAGE_CHANGE_CONFIDENCE - 0.01));
+    expect(mgr.current.currentStage).toBe('implementation');
+    expect(mgr.current.stageConfidence).toBe(confBefore);
+    expect(mgr.current.stageConfirmedAt).toBe(confirmedAt);
+    closeStore(store);
+  });
+
+  it('cross-stage prompt at or above MIN_STAGE_CHANGE_CONFIDENCE still applies stage change', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/gate-allow');
+    mgr.processPrompt(store, 'implement the login page', makeResult('implementation', 0.9));
+    // Legitimate cross-stage prompt meets the gate
+    mgr.processPrompt(store, 'deploy to production', makeResult('release', MIN_STAGE_CHANGE_CONFIDENCE));
+    expect(mgr.current.currentStage).toBe('release');
+    expect(mgr.current.stageConfidence).toBe(MIN_STAGE_CHANGE_CONFIDENCE);
     closeStore(store);
   });
 });

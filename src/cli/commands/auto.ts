@@ -16,6 +16,7 @@ import { getConfig } from '../../store/config.js';
 import { getProject, upsertProject } from '../../store/projects.js';
 import { importHistoricalPrompts } from '../../store/historical-import.js';
 import { logger, initLogger } from '../../logger.js';
+import { extractApiError } from '../../utils/api-error.js';
 import type { LogLevel } from '../../logger.js';
 import { writeHookStats } from '../../store/hook-stats.js';
 import { upsertPendingAdvisory } from '../../store/pending-advisories.js';
@@ -190,7 +191,7 @@ export async function runAuto(
     stage2Output = await runStage2(stage2Input, openai);
     logger.debug('stage2_result', { fire: stage2Output.fire_decision_session, confidence: stage2Output.stage_confidence, reason: stage2Output.reason });
   } catch (err) {
-    logger.warn('stage2_error', { error: (err as Error).message, stage: mgr.current.currentStage });
+    logger.warn('stage2_error', { ...extractApiError(err, 'openai'), stage: mgr.current.currentStage });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'stage2_error' });
     // Stage 2 API failure → skip silently (non-blocking)
     return { outcome: 'no_action' };

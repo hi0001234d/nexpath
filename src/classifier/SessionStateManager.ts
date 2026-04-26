@@ -15,6 +15,12 @@ export const MAX_HISTORY = 30;
 /** Minimum stage confidence required before stage is considered "confirmed". */
 export const STAGE_CONFIRM_THRESHOLD = 0.70;
 
+/**
+ * Minimum confidence a cross-stage classification must have to trigger a stage change.
+ * Below this floor, low-signal prompts (e.g. "ok", "sure") cannot wipe accumulated state.
+ */
+export const MIN_STAGE_CHANGE_CONFIDENCE = 0.20;
+
 // ── Persistence helpers ────────────────────────────────────────────────────────
 
 function loadState(store: Store, projectRoot: string): SessionState | null {
@@ -121,19 +127,21 @@ export class SessionStateManager {
     const promptIndex = s.promptCount;
 
     // ── Stage update ─────────────────────────────────────────────────────────
-    if (classification.stage !== s.currentStage) {
+    if (classification.stage !== s.currentStage
+        && classification.confidence >= MIN_STAGE_CHANGE_CONFIDENCE) {
       s.currentStage    = classification.stage;
       s.stageConfidence = classification.confidence;
       s.stageConfirmedAt = classification.confidence >= STAGE_CONFIRM_THRESHOLD
         ? promptIndex
         : -1;
-    } else {
+    } else if (classification.stage === s.currentStage) {
       // Exponential moving average on confidence within the same stage
       s.stageConfidence = 0.7 * s.stageConfidence + 0.3 * classification.confidence;
       if (s.stageConfirmedAt === -1 && s.stageConfidence >= STAGE_CONFIRM_THRESHOLD) {
         s.stageConfirmedAt = promptIndex;
       }
     }
+    // else: cross-stage classification below MIN_STAGE_CHANGE_CONFIDENCE — skip
 
     // ── Prompt history ────────────────────────────────────────────────────────
     const record: PromptRecord = {
