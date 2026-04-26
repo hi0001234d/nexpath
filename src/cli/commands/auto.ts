@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { readFileSync } from 'node:fs';
 import { join, basename } from 'node:path';
+import { config as loadDotenv } from 'dotenv';
 import type { Store } from '../../store/db.js';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
 import { classifyPrompt } from '../../classifier/PromptClassifier.js';
@@ -295,6 +296,10 @@ export function registerAutoCommand(program: import('commander').Command): void 
         process.stderr.write('nexpath auto: prompt text is required\n');
         process.exit(1);
       }
+
+      // Load project .env so OPENAI_API_KEY is available for Stage 2 calls.
+      // Does not override variables already set in the process environment.
+      loadDotenv({ path: join(opts.project, '.env') });
 
       const store = await openStore(opts.db);
       // Initialise logger — level from config key, then NEXPATH_LOG_LEVEL env var

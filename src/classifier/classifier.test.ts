@@ -730,14 +730,14 @@ describe('SessionStateManager', () => {
     const store = await openStore(':memory:');
     const mgr = SessionStateManager.load(store, '/project/ema2');
     // Start with low confidence — EMA will ramp up
-    mgr.processPrompt(store, 'p0', makeResult('implementation', 0.5));
-    expect(mgr.current.stageConfirmedAt).toBe(-1); // 0.5 < 0.7 → not confirmed
+    mgr.processPrompt(store, 'p0', makeResult('implementation', 0.20));
+    expect(mgr.current.stageConfirmedAt).toBe(-1); // 0.20 < 0.33 → not confirmed
 
-    // Feed several prompts with confidence 0.9 to drive EMA above 0.70
+    // Feed several prompts with confidence 0.9 to drive EMA above STAGE_CONFIRM_THRESHOLD
     for (let i = 1; i <= 6; i++) {
       mgr.processPrompt(store, `p${i}`, makeResult('implementation', 0.9));
     }
-    expect(mgr.current.stageConfirmedAt).toBeGreaterThan(-1); // EMA reached ≥ 0.70
+    expect(mgr.current.stageConfirmedAt).toBeGreaterThan(-1); // EMA reached ≥ STAGE_CONFIRM_THRESHOLD
     closeStore(store);
   });
 
@@ -870,7 +870,7 @@ describe('SessionStateManager', () => {
 
 describe('AbsenceDetector', () => {
   it('returns no flags when stageConfidence < STAGE_CONFIRM_THRESHOLD', () => {
-    const state = makeState({ stageConfidence: 0.5 });
+    const state = makeState({ stageConfidence: 0.20 });
     expect(detectAbsenceFlags(state)).toHaveLength(0);
   });
 
@@ -1068,9 +1068,9 @@ describe('AbsenceDetector', () => {
     }
   });
 
-  it('passes confidence gate at exactly 0.70', () => {
+  it('passes confidence gate at exactly STAGE_CONFIRM_THRESHOLD', () => {
     const state = makeState({
-      stageConfidence:  0.70, // exactly at threshold
+      stageConfidence:  STAGE_CONFIRM_THRESHOLD, // exactly at threshold
       stageConfirmedAt: 0,
       promptCount:      20,
       currentStage:     'implementation',

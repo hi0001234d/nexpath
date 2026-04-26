@@ -13,7 +13,7 @@ export const SESSION_GAP_MS = 30 * 60 * 1000;
 export const MAX_HISTORY = 30;
 
 /** Minimum stage confidence required before stage is considered "confirmed". */
-export const STAGE_CONFIRM_THRESHOLD = 0.70;
+export const STAGE_CONFIRM_THRESHOLD = 0.33;
 
 /**
  * Minimum confidence a cross-stage classification must have to trigger a stage change.
