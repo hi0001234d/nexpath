@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { config as loadDotenv } from 'dotenv';
 import type { Store } from '../../store/db.js';
@@ -298,13 +298,24 @@ export function registerAutoCommand(program: import('commander').Command): void 
       }
 
       // Load project .env so OPENAI_API_KEY is available for Stage 2 calls.
-      // Does not override variables already set in the process environment.
-      loadDotenv({ path: join(opts.project, '.env'), override: true });
+      // Uses override:true so the project key always wins over any ambient env var.
+      const envPath = join(opts.project, '.env');
+      loadDotenv({ path: envPath, override: true });
 
       const store = await openStore(opts.db);
       // Initialise logger — level from config key, then NEXPATH_LOG_LEVEL env var
       const logLevel = getConfig(store.db, 'log_level') as LogLevel | undefined;
       initLogger('auto', logLevel);
+
+      // Diagnostic: log env resolution details so CWD mismatches are visible in the log
+      // instead of silently producing a missing-credentials error in Stage 2.
+      logger.debug('env_load', {
+        cwd:      process.cwd(),
+        project:  opts.project,
+        envPath,
+        envExists: existsSync(envPath),
+        keyFound:  !!process.env['OPENAI_API_KEY'],
+      });
 
       try {
         const result = await runAuto(
