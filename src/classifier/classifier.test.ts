@@ -19,20 +19,21 @@ function makeResult(stage: import('./types.js').Stage, confidence: number): Clas
 
 function makeState(overrides: Partial<SessionState> = {}): SessionState {
   return {
-    sessionId:             'test-session',
-    projectRoot:           '/test/project',
-    startedAt:             1000,
-    lastPromptAt:          1000,
-    currentStage:          'implementation',
-    stageConfidence:       0.80,
-    stageConfirmedAt:      0,
-    promptCount:           20,
-    promptHistory:         [],
-    signalCounters:        initialSignalCounters(),
-    absenceFlags:          [],
-    firedDecisionSessions: [],
-    profile:               null,
-    detectedLanguage:      undefined,
+    sessionId:              'test-session',
+    projectRoot:            '/test/project',
+    startedAt:              1000,
+    lastPromptAt:           1000,
+    currentStage:           'implementation',
+    stageConfidence:        0.80,
+    stageConfirmedAt:       0,
+    promptsInCurrentStage:  20,
+    promptCount:            20,
+    promptHistory:          [],
+    signalCounters:         initialSignalCounters(),
+    absenceFlags:           [],
+    firedDecisionSessions:  [],
+    profile:                null,
+    detectedLanguage:       undefined,
     ...overrides,
   };
 }
@@ -864,6 +865,51 @@ describe('SessionStateManager', () => {
     expect(mgr.current.stageConfidence).toBe(MIN_STAGE_CHANGE_CONFIDENCE);
     closeStore(store);
   });
+
+  it('promptsInCurrentStage increments when same-stage prompts are processed', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/pics-same');
+    // First prompt: idea → implementation transition → resets counter to 0
+    mgr.processPrompt(store, 'implement login', makeResult('implementation', 0.9));
+    expect(mgr.current.promptsInCurrentStage).toBe(0);
+    // Second prompt: same stage → increments
+    mgr.processPrompt(store, 'implement logout', makeResult('implementation', 0.9));
+    expect(mgr.current.promptsInCurrentStage).toBe(1);
+    // Third prompt: same stage → increments again
+    mgr.processPrompt(store, 'implement settings', makeResult('implementation', 0.9));
+    expect(mgr.current.promptsInCurrentStage).toBe(2);
+    closeStore(store);
+  });
+
+  it('promptsInCurrentStage resets to 0 on a genuine stage transition', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/pics-reset');
+    // idea → implementation (transition, counter = 0)
+    mgr.processPrompt(store, 'implement login', makeResult('implementation', 0.9));
+    // same stage (counter = 1)
+    mgr.processPrompt(store, 'implement logout', makeResult('implementation', 0.9));
+    expect(mgr.current.promptsInCurrentStage).toBe(1);
+    // Legitimate cross-stage transition resets the counter
+    mgr.processPrompt(store, 'deploy to production', makeResult('release', 0.9));
+    expect(mgr.current.currentStage).toBe('release');
+    expect(mgr.current.promptsInCurrentStage).toBe(0);
+    closeStore(store);
+  });
+
+  it('promptsInCurrentStage still increments when cross-stage prompt is below gate', async () => {
+    // A cross-stage prompt that does not clear MIN_STAGE_CHANGE_CONFIDENCE should NOT
+    // reset the stage, and the stage-time counter should still advance.
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/pics-gate');
+    // idea → implementation (transition, counter = 0)
+    mgr.processPrompt(store, 'implement login', makeResult('implementation', 0.9));
+    expect(mgr.current.promptsInCurrentStage).toBe(0);
+    // Noise prompt — cross-stage but below gate; stage stays, counter advances
+    mgr.processPrompt(store, 'ok', makeResult('idea', MIN_STAGE_CHANGE_CONFIDENCE - 0.01));
+    expect(mgr.current.currentStage).toBe('implementation'); // stage unchanged
+    expect(mgr.current.promptsInCurrentStage).toBe(1);       // counter still advanced
+    closeStore(store);
+  });
 });
 
 // ── AbsenceDetector ────────────────────────────────────────────────────────────
@@ -874,38 +920,36 @@ describe('AbsenceDetector', () => {
     expect(detectAbsenceFlags(state)).toHaveLength(0);
   });
 
-  it('returns no flags when stageConfirmedAt = -1 (not confirmed)', () => {
-    const state = makeState({ stageConfirmedAt: -1, stageConfidence: 0.8 });
+  it('returns no flags when promptsInCurrentStage < 5 (not in stage long enough)', () => {
+    const state = makeState({ promptsInCurrentStage: 4, stageConfidence: 0.8 });
     expect(detectAbsenceFlags(state)).toHaveLength(0);
   });
 
-  it('returns no flags when fewer than 5 prompts since stageConfirmedAt', () => {
+  it('returns no flags when fewer than 5 prompts in current stage', () => {
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 16, // promptCount=20, 20-16=4 — too early
-      promptCount:      20,
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 4, // too early — minimum gate is 5
     });
     expect(detectAbsenceFlags(state)).toHaveLength(0);
   });
 
   it('returns no flags when below signal absenceThreshold', () => {
-    // test_creation has absenceThreshold=15; promptsSinceConfirmed=10
+    // test_creation has absenceThreshold=15; promptsInCurrentStage=10 < 15
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 10,
-      promptCount:      20, // 20-10=10 < 15
-      currentStage:     'implementation',
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 10,
+      currentStage:          'implementation',
     });
     expect(detectAbsenceFlags(state)).toHaveLength(0);
   });
 
   it('raises a flag when all conditions are met and signal never seen', () => {
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      ABSENCE_MIN_PROMPTS + 5, // well past threshold
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(), // all absent
+      stageConfidence:       0.85,
+      promptsInCurrentStage: ABSENCE_MIN_PROMPTS + 5,
+      promptCount:           ABSENCE_MIN_PROMPTS + 5,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(), // all absent
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.length).toBeGreaterThan(0);
@@ -916,11 +960,11 @@ describe('AbsenceDetector', () => {
     const counters = initialSignalCounters();
     counters['test_creation'].lastSeenAt = 5; // was seen at prompt 5
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      30,
-      currentStage:     'implementation',
-      signalCounters:   counters,
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 30,
+      promptCount:           30,
+      currentStage:          'implementation',
+      signalCounters:        counters,
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.map((f) => f.signalKey)).not.toContain('test_creation');
@@ -928,11 +972,11 @@ describe('AbsenceDetector', () => {
 
   it('respects cooldown — does not re-raise flag within ABSENCE_COOLDOWN_PROMPTS', () => {
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      ABSENCE_MIN_PROMPTS + 5,
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: ABSENCE_MIN_PROMPTS + 5,
+      promptCount:           ABSENCE_MIN_PROMPTS + 5,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
       absenceFlags: [
         {
           signalKey:     'test_creation',
@@ -949,25 +993,24 @@ describe('AbsenceDetector', () => {
   it('does NOT flag signals for wrong stage', () => {
     // rollback_planning is only expected in 'release' stage
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      30,
-      currentStage:     'prd', // not a stage where rollback_planning is expected
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 30,
+      promptCount:           30,
+      currentStage:          'prd', // not a stage where rollback_planning is expected
+      signalCounters:        initialSignalCounters(),
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.map((f) => f.signalKey)).not.toContain('rollback_planning');
   });
 
   it('re-raises flag once cooldownUntil has passed', () => {
-    // Flag was raised at index 0, cooldown expires at index 30
-    // Current promptCount=35 → past cooldown → should raise again
+    // Cooldown expires at index 30; current promptCount=35 → past cooldown → should raise again
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      35,
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 35,
+      promptCount:           35,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
       absenceFlags: [
         {
           signalKey:        'test_creation',
@@ -982,48 +1025,34 @@ describe('AbsenceDetector', () => {
     expect(flags.map((f) => f.signalKey)).toContain('test_creation');
   });
 
-  it('passes gate at exactly 5 prompts since stageConfirmedAt', () => {
-    const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 15,
-      promptCount:      20, // 20-15=5 — exactly at boundary, should pass
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
-    });
-    // Should potentially raise flags (not suppress them)
-    // test_creation has absenceThreshold=15; 20-15=5 < 15 → still suppressed by signal threshold
-    // So use a signal with absenceThreshold=5... none exist at 5. Use promptCount larger enough.
-    // Let's just verify the 5-prompt gate itself passes (no longer blocked by that gate)
-    // by using a state where absenceThreshold is also met
+  it('passes gate at exactly 5 prompts in current stage', () => {
+    // 5 prompts in stage passes the minimum gate, but all signals need ≥15 — so still no flags
     const state2 = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      5, // exactly 5 since confirmed
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 5,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
     });
-    // Signals with absenceThreshold=15 won't fire at 5 prompts, so flags=0 but for the right reason
-    expect(detectAbsenceFlags(state2)).toHaveLength(0); // threshold not met, not gate-5 reason
-    // Now confirm gate-5 itself passes when threshold also met
+    expect(detectAbsenceFlags(state2)).toHaveLength(0); // signal threshold not met
+    // Confirm signals fire when both the gate and the signal threshold are met
     const state3 = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      15, // 15-0=15, exactly meets absenceThreshold=15 and > 5
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
     });
     const flags = detectAbsenceFlags(state3);
-    expect(flags.length).toBeGreaterThan(0); // flags are raised
+    expect(flags.length).toBeGreaterThan(0);
   });
 
   it('raises flags at exactly the absenceThreshold boundary', () => {
-    // test_creation absenceThreshold=15; promptsSinceConfirmed must be >= 15
+    // test_creation absenceThreshold=15; promptsInCurrentStage must be >= 15
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      15, // exactly at threshold
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.map((f) => f.signalKey)).toContain('test_creation');
@@ -1031,11 +1060,11 @@ describe('AbsenceDetector', () => {
 
   it('does NOT raise flags one below absenceThreshold', () => {
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      14, // 14 < 15 = absenceThreshold
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 14, // 14 < 15 = absenceThreshold
+      promptCount:           14,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.map((f) => f.signalKey)).not.toContain('test_creation');
@@ -1043,11 +1072,11 @@ describe('AbsenceDetector', () => {
 
   it('multiple absence flags raised in one call when multiple signals absent', () => {
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      30,
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(), // all absent
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 30,
+      promptCount:           30,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(), // all absent
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.length).toBeGreaterThan(1); // multiple signals flagged at once
@@ -1055,11 +1084,11 @@ describe('AbsenceDetector', () => {
 
   it('raisedAtIndex on new flag matches current promptCount', () => {
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      20,
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.length).toBeGreaterThan(0);
@@ -1070,11 +1099,11 @@ describe('AbsenceDetector', () => {
 
   it('passes confidence gate at exactly STAGE_CONFIRM_THRESHOLD', () => {
     const state = makeState({
-      stageConfidence:  STAGE_CONFIRM_THRESHOLD, // exactly at threshold
-      stageConfirmedAt: 0,
-      promptCount:      20,
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       STAGE_CONFIRM_THRESHOLD, // exactly at threshold
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.length).toBeGreaterThan(0); // should not be blocked
@@ -1082,11 +1111,11 @@ describe('AbsenceDetector', () => {
 
   it('test_creation also flagged in review_testing stage (expected in both stages)', () => {
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      20,
-      currentStage:     'review_testing', // test_creation expected here too
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'review_testing', // test_creation expected here too
+      signalCounters:        initialSignalCounters(),
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.map((f) => f.signalKey)).toContain('test_creation');
@@ -1094,11 +1123,11 @@ describe('AbsenceDetector', () => {
 
   it('raised flags include cooldownUntil = raisedAtIndex + ABSENCE_COOLDOWN_PROMPTS', () => {
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      ABSENCE_MIN_PROMPTS + 5,
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: ABSENCE_MIN_PROMPTS + 5,
+      promptCount:           ABSENCE_MIN_PROMPTS + 5,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
     });
     const flags = detectAbsenceFlags(state);
     for (const f of flags) {

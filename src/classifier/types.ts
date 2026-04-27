@@ -59,7 +59,16 @@ export interface SessionState {
   lastPromptAt: number;         // unix ms — used for gap-based reset
   currentStage: Stage;
   stageConfidence: number;      // 0–1
-  stageConfirmedAt: number;     // prompt index when stage reached ≥ 0.70 confidence
+  stageConfirmedAt: number;     // prompt index when stage confidence first crossed STAGE_CONFIRM_THRESHOLD (EMA epoch marker — NOT used by AbsenceDetector)
+  /**
+   * Rolling count of prompts processed while currentStage has remained unchanged.
+   * Resets to 0 on every genuine stage transition; increments on every other prompt
+   * (same-stage classification or cross-stage classification below the confidence gate).
+   * Used by AbsenceDetector as the "time in stage" metric instead of
+   * (promptCount - stageConfirmedAt).  Decoupled from stageConfirmedAt so that
+   * tuning the cross-stage confidence gate does not inadvertently delay absence detection.
+   */
+  promptsInCurrentStage: number;
   promptCount: number;          // total prompts processed this session
   promptHistory: PromptRecord[]; // capped at 30
   signalCounters: Record<string, SignalCounter>;
