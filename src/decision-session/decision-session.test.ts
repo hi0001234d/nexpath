@@ -989,3 +989,130 @@ describe('runDecisionSession — __FREQ__ sentinel handling', () => {
     }
   });
 });
+
+// ── generatedOptions — runLevel and runDecisionSession ────────────────────────
+
+describe('runLevel — generatedOptions wiring', () => {
+  const GEN_L1 = ['[adapted] Do a quick spec review before continuing', '[adapted] Run the test suite now', '[adapted] Cross-check your task list'];
+  const GEN_L2 = ['[adapted] Verify coverage on the happy path', '[adapted] Check the edge cases'];
+  const GEN_L3 = ['[adapted] What one thing could break this?'];
+
+  const generatedOptions = { l1: GEN_L1, l2: GEN_L2, l3: GEN_L3 };
+
+  it('uses generated L1 options (not static) when generatedOptions is provided', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ generatedOptions }), 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string }[];
+    const values = opts.map((o) => o.value);
+    expect(values).toContain(GEN_L1[0]);
+    expect(values).toContain(GEN_L1[1]);
+    expect(values).toContain(GEN_L1[2]);
+  });
+
+  it('does NOT include static L1 options when generated options are provided', async () => {
+    const staticContent = resolveDecisionContent('implementation', 'stage_transition');
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ generatedOptions }), 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string }[];
+    const values = opts.map((o) => o.value);
+    for (const staticOpt of staticContent.L1) {
+      expect(values).not.toContain(staticOpt);
+    }
+  });
+
+  it('uses generated L2 options at level 2', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ generatedOptions }), 2, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string }[];
+    const values = opts.map((o) => o.value);
+    expect(values).toContain(GEN_L2[0]);
+    expect(values).toContain(GEN_L2[1]);
+  });
+
+  it('uses generated L3 options at level 3', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ generatedOptions }), 3, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string }[];
+    const values = opts.map((o) => o.value);
+    expect(values).toContain(GEN_L3[0]);
+  });
+
+  it('question line in message is always from static content, not from generatedOptions', async () => {
+    const staticContent = resolveDecisionContent('implementation', 'stage_transition');
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ generatedOptions }), 1, spy as SelectFn);
+    const msg = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].message as string;
+    expect(msg).toContain(staticContent.question);
+  });
+
+  it('selecting a generated L1 option returns that option text', async () => {
+    const result = await runLevel(makeInput({ generatedOptions }), 1, mockSelect(GEN_L1[0]));
+    expect(result).toBe(GEN_L1[0]);
+  });
+
+  it('selecting a generated L3 option returns that option text', async () => {
+    const result = await runLevel(makeInput({ generatedOptions }), 3, mockSelect(GEN_L3[0]));
+    expect(result).toBe(GEN_L3[0]);
+  });
+
+  it('SHOW_SIMPLER and SKIP_NOW are still present alongside generated options at level 1', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ generatedOptions }), 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string }[];
+    const values = opts.map((o) => o.value);
+    expect(values).toContain(SHOW_SIMPLER);
+    expect(values).toContain(SKIP_NOW);
+  });
+
+  it('uses static options when generatedOptions is undefined', async () => {
+    const staticContent = resolveDecisionContent('implementation', 'stage_transition');
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ generatedOptions: undefined }), 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string }[];
+    const values = opts.map((o) => o.value);
+    expect(values).toContain(staticContent.L1[0]);
+  });
+});
+
+describe('runDecisionSession — generatedOptions wiring', () => {
+  const GEN_L1 = ['[adapted] Do a quick spec review before continuing', '[adapted] Run the test suite now', '[adapted] Cross-check your task list'];
+  const GEN_L2 = ['[adapted] Verify coverage on the happy path', '[adapted] Check the edge cases'];
+  const GEN_L3 = ['[adapted] What one thing could break this?'];
+  const generatedOptions = { l1: GEN_L1, l2: GEN_L2, l3: GEN_L3 };
+
+  it('returns selected outcome with generated option text when user picks generated L1 option', async () => {
+    const result = await runDecisionSession(makeInput({ generatedOptions }), undefined, mockSelect(GEN_L1[0]));
+    expect(result.outcome).toBe('selected');
+    if (result.outcome === 'selected') {
+      expect(result.selectedPrompt).toBe(GEN_L1[0]);
+    }
+  });
+
+  it('advances to L2 and returns generated L2 option text', async () => {
+    const selectFn = vi.fn()
+      .mockResolvedValueOnce(SHOW_SIMPLER)
+      .mockResolvedValueOnce(GEN_L2[0]);
+    const result = await runDecisionSession(makeInput({ generatedOptions }), undefined, selectFn as SelectFn);
+    expect(result.outcome).toBe('selected');
+    if (result.outcome === 'selected') {
+      expect(result.selectedPrompt).toBe(GEN_L2[0]);
+    }
+  });
+
+  it('advances to L3 and returns generated L3 option text', async () => {
+    const selectFn = vi.fn()
+      .mockResolvedValueOnce(SHOW_SIMPLER)
+      .mockResolvedValueOnce(SHOW_SIMPLER)
+      .mockResolvedValueOnce(GEN_L3[0]);
+    const result = await runDecisionSession(makeInput({ generatedOptions }), undefined, selectFn as SelectFn);
+    expect(result.outcome).toBe('selected');
+    if (result.outcome === 'selected') {
+      expect(result.selectedPrompt).toBe(GEN_L3[0]);
+    }
+  });
+
+  it('skip still works normally when generatedOptions is provided', async () => {
+    const result = await runDecisionSession(makeInput({ generatedOptions }), undefined, mockSelect(SKIP_NOW));
+    expect(result.outcome).toBe('skipped');
+  });
+});
