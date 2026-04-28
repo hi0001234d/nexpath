@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { openStore, type Store } from './db.js';
+import { openStore, getSql, type Store } from './db.js';
+import { migrate } from './schema.js';
 import { insertPrompt, getRecentPrompts, deleteProjectPrompts, deleteAllPrompts, pruneOlderThan, getPromptStats } from './prompts.js';
 import { getConfig, setConfig, getAllConfig, isConfigSet } from './config.js';
 import { upsertProject, getProject, setDetectedLanguage, incrementDecisionSessionCount, listProjects } from './projects.js';
@@ -100,6 +101,54 @@ describe('store — schema', () => {
   it('creates the index on pending_advisories(project_root, status, created_at)', () => {
     const res = store.db.exec("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_pending_advisories_project'");
     expect(res[0]?.values[0]?.[0]).toBe('idx_pending_advisories_project');
+  });
+});
+
+// ── applyIncrementalMigrations via openStore ───────────────────────────────────
+
+describe('store — applyIncrementalMigrations via openStore', () => {
+  it('adds generated_l1/l2/l3 columns to an existing pending_advisories table that lacks them', async () => {
+    // Simulate an old DB: create the table without the new columns, then call openStore
+    const SQL = await getSql();
+    const db = new SQL.Database();
+    // Apply DDL (creates pending_advisories without the 3 columns)
+    migrate(db);
+    // Drop new columns by recreating old-style table (simulate pre-v0.1.1 DB)
+    db.run(`
+      CREATE TABLE pending_advisories_old AS
+        SELECT id, project_root, stage, flag_type, pinch_label, session_id, prompt_count, status, created_at
+        FROM pending_advisories;
+      DROP TABLE pending_advisories;
+      ALTER TABLE pending_advisories_old RENAME TO pending_advisories;
+    `);
+
+    // Verify the columns are missing
+    const before = db.exec('PRAGMA table_info(pending_advisories)');
+    const colsBefore = (before[0]?.values ?? []).map((r) => r[1] as string);
+    expect(colsBefore).not.toContain('generated_l1');
+
+    // Export to buffer and re-open via openStore — applyIncrementalMigrations should run
+    const buf = Buffer.from(db.export());
+    db.close();
+
+    const fs = await import('node:fs');
+    const os = await import('node:os');
+    const path = await import('node:path');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nexpath-test-'));
+    const tmpDb = path.join(tmpDir, 'test.db');
+    fs.writeFileSync(tmpDb, buf);
+
+    const store = await openStore(tmpDb);
+    const after = store.db.exec('PRAGMA table_info(pending_advisories)');
+    const colsAfter = (after[0]?.values ?? []).map((r) => r[1] as string);
+
+    expect(colsAfter).toContain('generated_l1');
+    expect(colsAfter).toContain('generated_l2');
+    expect(colsAfter).toContain('generated_l3');
+
+    store.db.close();
+    store._releaseLock();
+    fs.rmSync(tmpDir, { recursive: true });
   });
 });
 

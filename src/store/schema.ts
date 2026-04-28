@@ -74,7 +74,31 @@ export function migrate(db: Database): void {
 }
 
 /**
- * Apply incremental schema migrations to an existing database.
+ * Silently apply incremental schema migrations — no console output.
+ * Safe to call from openStore() on every startup; each step checks column
+ * existence before attempting ALTER TABLE.
+ */
+export function applyIncrementalMigrations(db: Database): void {
+  const addIfMissing = (table: string, column: string, definition: string): void => {
+    const res = db.exec(`PRAGMA table_info(${table})`);
+    const cols = (res[0]?.values ?? []).map((row) => row[1] as string);
+    if (!cols.includes(column)) {
+      db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    }
+  };
+
+  // v0.1.1 — Phase B
+  addIfMissing('projects', 'detected_language',      'TEXT');
+  addIfMissing('projects', 'decision_session_count', 'INTEGER NOT NULL DEFAULT 0');
+
+  // v0.1.1 — options-text-generation
+  addIfMissing('pending_advisories', 'generated_l1', 'TEXT');
+  addIfMissing('pending_advisories', 'generated_l2', 'TEXT');
+  addIfMissing('pending_advisories', 'generated_l3', 'TEXT');
+}
+
+/**
+ * Apply incremental schema migrations with console output.
  * Safe to run multiple times — each step checks column existence before ALTER.
  * Run via: nexpath db migrate
  */
