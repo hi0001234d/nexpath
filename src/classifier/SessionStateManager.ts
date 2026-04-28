@@ -70,6 +70,8 @@ function newSession(projectRoot: string, now: number): SessionState {
     profile:                 null,
     mood:                    undefined,
     detectedLanguage:        undefined,
+    lastInjectedPrompt:      null,
+    lastAdvisoryPromptIndex: -1,
   };
 }
 
@@ -235,6 +237,15 @@ export class SessionStateManager {
   }
 
   /**
+   * Record that an advisory was stored.  Sets lastAdvisoryPromptIndex so the
+   * post-advisory cooldown gate in auto.ts suppresses rapid-fire follow-up advisories.
+   */
+  markAdvisoryFired(store: Store): void {
+    this.state.lastAdvisoryPromptIndex = this.state.promptCount;
+    saveState(store, this.state);
+  }
+
+  /**
    * Record that a decision session fired for the given event key.
    * Persists to the store so restarts within the same session don't re-fire.
    */
@@ -244,6 +255,22 @@ export class SessionStateManager {
       this.state.firedDecisionSessions.push(key);
       saveState(store, this.state);
     }
+  }
+
+  /** Store the advisory option text injected by the stop hook. Auto clears it on first read. */
+  setInjectedPrompt(store: Store, text: string): void {
+    this.state.lastInjectedPrompt = text;
+    saveState(store, this.state);
+  }
+
+  /**
+   * Clear the injected prompt field.  Always called by auto on its first invocation
+   * after a stop-hook block — whether or not the prompt matched — so stale state
+   * cannot accumulate if the injected execution was cancelled before auto ran.
+   */
+  clearInjectedPrompt(store: Store): void {
+    this.state.lastInjectedPrompt = null;
+    saveState(store, this.state);
   }
 
   /**

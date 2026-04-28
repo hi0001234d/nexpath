@@ -235,12 +235,15 @@ export async function runStage2(
   const openai = client ?? new OpenAI();
   const prompt = buildStage2Prompt(input);
 
-  const response = await openai.chat.completions.create({
-    model:       STAGE2_MODEL,
-    messages:    [{ role: 'user', content: prompt }],
-    temperature: 0,
-    max_tokens:  STAGE2_MAX_OUTPUT_TOKENS,
-  });
+  const response = await openai.chat.completions.create(
+    {
+      model:       STAGE2_MODEL,
+      messages:    [{ role: 'user', content: prompt }],
+      temperature: 0,
+      max_tokens:  STAGE2_MAX_OUTPUT_TOKENS,
+    },
+    { timeout: 6_000 },
+  );
 
   const raw = response.choices[0]?.message?.content ?? '';
   return parseStage2Response(raw);

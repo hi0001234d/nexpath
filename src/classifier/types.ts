@@ -85,6 +85,20 @@ export interface SessionState {
   mood?: UserMood;
   /** Last successfully detected/resolved language code. undefined = not yet detected. */
   detectedLanguage: string | undefined;
+  /**
+   * Exact text of the advisory option last injected by the stop hook via { decision: 'block' }.
+   * The auto hook reads and always clears this on its first invocation after a block.
+   * If the incoming prompt matches, it is advisory-injected and all processing is skipped.
+   * null when no injection is pending.
+   */
+  lastInjectedPrompt?: string | null;
+  /**
+   * promptCount value at the time the most recent advisory was stored (upsertPendingAdvisory).
+   * Used to enforce a post-advisory cooldown: no new advisory fires within
+   * POST_ADVISORY_COOLDOWN prompts of the last one.
+   * -1 = no advisory has fired this session.
+   */
+  lastAdvisoryPromptIndex?: number;
 }
 
 // ── User nature / mood / depth (item 9) ───────────────────────────────────────

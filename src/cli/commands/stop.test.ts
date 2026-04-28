@@ -340,3 +340,48 @@ describe('runStop — language detection', () => {
     expect(proj?.detectedLanguage).toBeNull();
   });
 });
+
+// ── runStop — lastInjectedPrompt flag ─────────────────────────────────────────
+
+describe('runStop — lastInjectedPrompt flag', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('sets lastInjectedPrompt in session when user selects an option', async () => {
+    const selectedText = 'write unit tests before continuing';
+    upsertPendingAdvisory(store, makeAdvisory());
+    await runStop(makePayload(), store, mockSelect(selectedText));
+
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/project');
+    expect(mgr.current.lastInjectedPrompt).toBe(selectedText);
+  });
+
+  it('does NOT set lastInjectedPrompt when user skips', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    await runStop(makePayload(), store, mockSelect(SKIP_NOW));
+
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/project');
+    expect(mgr.current.lastInjectedPrompt ?? null).toBeNull();
+  });
+
+  it('does NOT set lastInjectedPrompt on clipboard_only', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    await runStop(makePayload(), store, mockSelect(CLIPBOARD_ONLY));
+
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/project');
+    expect(mgr.current.lastInjectedPrompt ?? null).toBeNull();
+  });
+
+  it('does NOT set lastInjectedPrompt when no advisory is pending', async () => {
+    await runStop(makePayload(), store, mockSelect('some option'));
+
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/project');
+    expect(mgr.current.lastInjectedPrompt ?? null).toBeNull();
+  });
+});

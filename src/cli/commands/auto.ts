@@ -43,6 +43,8 @@ import { upsertPendingAdvisory } from '../../store/pending-advisories.js';
  */
 
 const MIN_PROMPTS_BEFORE_ADVISORY = 3;
+/** Prompts to suppress after any advisory fires — prevents rapid back-to-back advisories. */
+const POST_ADVISORY_COOLDOWN = 3;
 
 function resolveProjectName(projectRoot: string): string {
   try {
@@ -96,6 +98,26 @@ export async function runAuto(
   store:   Store,
   openai?: OpenAI,
 ): Promise<AutoOutcome> {
+  // ── -1. Advisory-injected prompt guard ──────────────────────────────────────
+  // When the stop hook injects an advisory option as a new Claude turn (block decision),
+  // Claude Code fires UserPromptSubmit with that option text — it arrives here like any
+  // real user prompt.  We must skip ALL processing: the text is synthetic and would
+  // corrupt signals, stage confidence, user profile, mood, and can re-fire an advisory.
+  //
+  // The field is always cleared (match or no match) so a cancelled injection cannot
+  // leave stale state that silently skips the next genuine user prompt.
+  {
+    const guardMgr = SessionStateManager.load(store, input.projectRoot);
+    const injectedText = guardMgr.current.lastInjectedPrompt ?? null;
+    if (injectedText !== null) {
+      guardMgr.clearInjectedPrompt(store);
+      if (injectedText === input.promptText) {
+        logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'advisory_injected' });
+        return { outcome: 'no_action' };
+      }
+    }
+  }
+
   // ── 0.0. Implicit project registration (Issue 6) ─────────────────────────────
   if (!getProject(store, input.projectRoot)) {
     const name = resolveProjectName(input.projectRoot);
@@ -179,6 +201,13 @@ export async function runAuto(
     return { outcome: 'no_action' };
   }
 
+  // ── 6.6. Post-advisory cooldown — suppress rapid back-to-back advisories ─────
+  const lastAdvisory = mgr.current.lastAdvisoryPromptIndex ?? -1;
+  if (lastAdvisory >= 0 && mgr.current.promptCount - lastAdvisory < POST_ADVISORY_COOLDOWN) {
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'post_advisory_cooldown', promptsSinceLast: mgr.current.promptCount - lastAdvisory });
+    return { outcome: 'no_action' };
+  }
+
   // ── 7. Stage 2 LLM cross-confirmation ───────────────────────────────────────
   const stage2Input = {
     state:         mgr.current as import('../../classifier/types.js').SessionState,
@@ -227,6 +256,7 @@ export async function runAuto(
     sessionId:   mgr.current.sessionId,
     promptCount: mgr.current.promptCount,
   });
+  mgr.markAdvisoryFired(store);
 
   logger.info('pipeline_outcome', { outcome: 'pending', pinchLabel });
   return { outcome: 'pending' };

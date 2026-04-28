@@ -7,6 +7,7 @@ import type { SelectFn } from '../../decision-session/DecisionSession.js';
 import { createTtySelectFn } from '../../decision-session/TtySelectFn.js';
 import { getConfig } from '../../store/config.js';
 import { detectLanguage, LANG_WINDOW, LANG_DETECT_INTERVAL } from '../../classifier/LanguageDetector.js';
+import { SessionStateManager } from '../../classifier/SessionStateManager.js';
 import { getRecentPrompts } from '../../store/prompts.js';
 import { getProject, setDetectedLanguage } from '../../store/projects.js';
 import { logger, initLogger } from '../../logger.js';
@@ -131,6 +132,10 @@ export async function runStop(
   );
 
   if (dsResult.outcome === 'selected') {
+    // Store injected text in session — auto reads and clears this on its next invocation
+    // to skip all pipeline processing for the advisory-injected prompt.
+    const mgr = SessionStateManager.load(store, payload.cwd);
+    mgr.setInjectedPrompt(store, dsResult.selectedPrompt);
     logger.info('stop_blocked', { cwd: payload.cwd, reason: dsResult.selectedPrompt });
     return { outcome: 'blocked', reason: dsResult.selectedPrompt };
   }

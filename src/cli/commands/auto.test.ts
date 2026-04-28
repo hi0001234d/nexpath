@@ -830,3 +830,94 @@ describe('runAuto — effectiveLang from DB', () => {
     expect(mgr.current.detectedLanguage).toBeUndefined();
   });
 });
+
+// ── runAuto — advisory_injected guard ────────────────────────────────────────
+
+describe('runAuto — advisory_injected guard', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('returns no_action with reason advisory_injected when prompt matches lastInjectedPrompt', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const injectedText = 'Review the code just generated for this task: does the implementation match the spec and acceptance criteria?';
+
+    const mgr = SessionStateManager.load(store, '/test/guard');
+    mgr.setInjectedPrompt(store, injectedText);
+
+    const result = await runAuto(
+      makeInput({ promptText: injectedText, projectRoot: '/test/guard' }),
+      store,
+    );
+    expect(result.outcome).toBe('no_action');
+  });
+
+  it('stores no prompt in DB when advisory_injected guard fires', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const injectedText = 'Cross-confirm the spec: given what I\'ve described, what are the top 3 things that should be clarified before I start building?';
+
+    const mgr = SessionStateManager.load(store, '/test/guard-noprompt');
+    mgr.setInjectedPrompt(store, injectedText);
+
+    await runAuto(
+      makeInput({ promptText: injectedText, projectRoot: '/test/guard-noprompt' }),
+      store,
+    );
+
+    const stored = getRecentPrompts(store, '/test/guard-noprompt', 10);
+    expect(stored).toHaveLength(0);
+  });
+
+  it('clears lastInjectedPrompt after a match', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const injectedText = 'List the 3 most important acceptance criteria for this project so we can check them before release.';
+
+    const mgr = SessionStateManager.load(store, '/test/guard-clear');
+    mgr.setInjectedPrompt(store, injectedText);
+
+    await runAuto(
+      makeInput({ promptText: injectedText, projectRoot: '/test/guard-clear' }),
+      store,
+    );
+
+    const mgr2 = SessionStateManager.load(store, '/test/guard-clear');
+    expect(mgr2.current.lastInjectedPrompt ?? null).toBeNull();
+  });
+
+  it('clears lastInjectedPrompt and processes normally when prompt does NOT match', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const injectedText = 'Review the code just generated for this task.';
+    const realPrompt   = 'add authentication middleware to the express app';
+
+    const mgr = SessionStateManager.load(store, '/test/guard-mismatch');
+    mgr.setInjectedPrompt(store, injectedText);
+
+    const result = await runAuto(
+      makeInput({ promptText: realPrompt, projectRoot: '/test/guard-mismatch' }),
+      store,
+    );
+
+    // Field is cleared regardless of match
+    const mgr2 = SessionStateManager.load(store, '/test/guard-mismatch');
+    expect(mgr2.current.lastInjectedPrompt ?? null).toBeNull();
+
+    // Real prompt was stored and processed normally
+    const stored = getRecentPrompts(store, '/test/guard-mismatch', 10);
+    expect(stored.length).toBeGreaterThan(0);
+    expect(stored[0].text).toBe(realPrompt);
+    // Pipeline ran (no_action is fine — what matters is it didn't skip due to advisory_injected)
+    expect(result.outcome).toBe('no_action');
+  });
+
+  it('processes normally when lastInjectedPrompt is null (no prior injection)', async () => {
+    const result = await runAuto(
+      makeInput({ promptText: 'add a login page', projectRoot: '/test/guard-null' }),
+      store,
+    );
+    // No guard triggered — pipeline ran normally
+    const stored = getRecentPrompts(store, '/test/guard-null', 10);
+    expect(stored.length).toBeGreaterThan(0);
+    expect(result.outcome).toBe('no_action');
+  });
+});

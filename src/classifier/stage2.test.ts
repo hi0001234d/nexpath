@@ -481,6 +481,7 @@ describe('runStage2', () => {
     const createFn = (client.chat.completions.create as ReturnType<typeof vi.fn>);
     expect(createFn).toHaveBeenCalledWith(
       expect.objectContaining({ model: STAGE2_MODEL }),
+      expect.anything(),
     );
   });
 
@@ -492,6 +493,7 @@ describe('runStage2', () => {
     const createFn = (client.chat.completions.create as ReturnType<typeof vi.fn>);
     expect(createFn).toHaveBeenCalledWith(
       expect.objectContaining({ temperature: 0 }),
+      expect.anything(),
     );
   });
 
