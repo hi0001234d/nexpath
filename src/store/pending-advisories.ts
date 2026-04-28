@@ -13,15 +13,21 @@ export interface PendingAdvisory {
   promptCount: number;
   status:      'pending' | 'shown';
   createdAt:   number;
+  generatedL1: string[] | null;
+  generatedL2: string[] | null;
+  generatedL3: string[] | null;
 }
 
 export interface UpsertPendingAdvisoryInput {
-  projectRoot: string;
-  stage:       Stage;
-  flagType:    FlagType;
-  pinchLabel:  string;
-  sessionId:   string;
-  promptCount: number;
+  projectRoot:  string;
+  stage:        Stage;
+  flagType:     FlagType;
+  pinchLabel:   string;
+  sessionId:    string;
+  promptCount:  number;
+  generatedL1?: string[];
+  generatedL2?: string[];
+  generatedL3?: string[];
 }
 
 /**
@@ -38,8 +44,9 @@ export function upsertPendingAdvisory(
   );
   store.db.run(
     `INSERT INTO pending_advisories
-       (project_root, stage, flag_type, pinch_label, session_id, prompt_count, status, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
+       (project_root, stage, flag_type, pinch_label, session_id, prompt_count, status, created_at,
+        generated_l1, generated_l2, generated_l3)
+     VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
     [
       input.projectRoot,
       input.stage,
@@ -48,9 +55,25 @@ export function upsertPendingAdvisory(
       input.sessionId,
       input.promptCount,
       Date.now(),
+      input.generatedL1 !== undefined ? JSON.stringify(input.generatedL1) : null,
+      input.generatedL2 !== undefined ? JSON.stringify(input.generatedL2) : null,
+      input.generatedL3 !== undefined ? JSON.stringify(input.generatedL3) : null,
     ],
   );
   saveStore(store);
+}
+
+function parseJsonArray(raw: unknown): string[] | null {
+  if (raw === null || raw === undefined) return null;
+  try {
+    const parsed = JSON.parse(raw as string);
+    if (Array.isArray(parsed) && parsed.every((x) => typeof x === 'string')) {
+      return parsed as string[];
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /** Return the most recent pending advisory for a project, or null if none. */
@@ -59,7 +82,8 @@ export function getPendingAdvisory(
   projectRoot: string,
 ): PendingAdvisory | null {
   const result = store.db.exec(
-    `SELECT id, project_root, stage, flag_type, pinch_label, session_id, prompt_count, status, created_at
+    `SELECT id, project_root, stage, flag_type, pinch_label, session_id, prompt_count, status,
+            created_at, generated_l1, generated_l2, generated_l3
      FROM pending_advisories
      WHERE project_root = ? AND status = 'pending'
      ORDER BY created_at DESC
@@ -78,6 +102,9 @@ export function getPendingAdvisory(
     promptCount: row[6] as number,
     status:      row[7] as 'pending' | 'shown',
     createdAt:   row[8] as number,
+    generatedL1: parseJsonArray(row[9]),
+    generatedL2: parseJsonArray(row[10]),
+    generatedL3: parseJsonArray(row[11]),
   };
 }
 

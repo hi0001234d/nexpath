@@ -59,7 +59,10 @@ CREATE TABLE IF NOT EXISTS pending_advisories (
   session_id   TEXT    NOT NULL,
   prompt_count INTEGER NOT NULL,
   status       TEXT    NOT NULL DEFAULT 'pending',
-  created_at   INTEGER NOT NULL
+  created_at   INTEGER NOT NULL,
+  generated_l1 TEXT,
+  generated_l2 TEXT,
+  generated_l3 TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_pending_advisories_project
@@ -90,4 +93,9 @@ export function runMigrations(db: Database): void {
   // v0.1.1 — Phase B
   addIfMissing('projects', 'detected_language',      'TEXT');
   addIfMissing('projects', 'decision_session_count', 'INTEGER NOT NULL DEFAULT 0');
+
+  // v0.1.1 — options-text-generation
+  addIfMissing('pending_advisories', 'generated_l1', 'TEXT');
+  addIfMissing('pending_advisories', 'generated_l2', 'TEXT');
+  addIfMissing('pending_advisories', 'generated_l3', 'TEXT');
 }

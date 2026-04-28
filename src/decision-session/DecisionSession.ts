@@ -12,6 +12,7 @@ import {
   SHOW_SIMPLER,
   SKIP_NOW,
 } from './options.js';
+import type { GeneratedOptions } from './OptionGenerator.js';
 
 /**
  * Decision session terminal UI (per decision-session-ux-research.md).
@@ -74,6 +75,8 @@ export interface DecisionSessionInput {
   promptCount:          number;
   /** Total decision sessions shown for this project — gates help line display. */
   decisionSessionCount: number;
+  /** Personalised option text from OptionGenerator. When present, overrides static L1/L2/L3. */
+  generatedOptions?:    GeneratedOptions;
 }
 
 /**
@@ -151,7 +154,11 @@ export async function runLevel(
   selectFn:  SelectFn,
 ): Promise<'skip' | 'next' | 'clipboard_only' | string> {
   const content  = resolveDecisionContent(input.stage, input.flagType);
-  const { options } = buildOptionList(content, level);
+  const gen      = input.generatedOptions;
+  const effective = gen
+    ? { ...content, L1: gen.l1, L2: gen.l2, L3: gen.l3 }
+    : content;
+  const { options } = buildOptionList(effective, level);
   const message  = buildSelectMessage(input.pinchLabel, content.question, level);
 
   // Inject blank separator items between visual groups:

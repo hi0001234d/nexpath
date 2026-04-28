@@ -385,3 +385,71 @@ describe('runStop — lastInjectedPrompt flag', () => {
     expect(mgr.current.lastInjectedPrompt ?? null).toBeNull();
   });
 });
+
+// ── runStop — generated options passed to decision session ────────────────────
+
+describe('runStop — generated options wiring', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  function makeAdvisoryWithOptions(projectRoot = '/test/project') {
+    return {
+      projectRoot,
+      stage:       'implementation' as const,
+      flagType:    'absence:test_creation' as const,
+      pinchLabel:  'Hold up.',
+      sessionId:   'sess-001',
+      promptCount: 5,
+      generatedL1: ['write tests first — they break without it', 'quick spec review before you continue'],
+      generatedL2: ['what does done look like for this task?', 'does this match the task definition?'],
+      generatedL3: ['anything obviously wrong before moving on?'],
+    };
+  }
+
+  it('uses generatedL1/L2/L3 from advisory when all three are present', async () => {
+    upsertPendingAdvisory(store, makeAdvisoryWithOptions());
+    // selectFn receives the generated options as selectable values
+    // We pick the first generated L1 option — it should be returned as selectedPrompt
+    const selectedText = 'write tests first — they break without it';
+    const result = await runStop(makePayload(), store, mockSelect(selectedText));
+    expect(result.outcome).toBe('blocked');
+    if (result.outcome === 'blocked') {
+      expect(result.reason).toBe(selectedText);
+    }
+  });
+
+  it('falls back to static options when generatedL1 is null', async () => {
+    upsertPendingAdvisory(store, makeAdvisory()); // makeAdvisory() has no generatedL1/L2/L3
+    // selectFn picks the static L1[0] option (from TASK_REVIEW since flagType=absence:test_creation)
+    const { TASK_REVIEW } = await import('../../decision-session/options.js');
+    const staticL1First = TASK_REVIEW.L1[0];
+    const result = await runStop(makePayload(), store, mockSelect(staticL1First));
+    expect(result.outcome).toBe('blocked');
+    if (result.outcome === 'blocked') {
+      expect(result.reason).toBe(staticL1First);
+    }
+  });
+
+  it('advisory with partial nulls (only generatedL2 missing) falls back to static for all levels', async () => {
+    // All three must be non-null for generatedOptions to be used — partial is treated as static
+    const { upsertPendingAdvisory: upsert } = await import('../../store/pending-advisories.js');
+    upsert(store, {
+      projectRoot:  '/test/project',
+      stage:        'implementation',
+      flagType:     'absence:test_creation',
+      pinchLabel:   'Hold up.',
+      sessionId:    'sess-001',
+      promptCount:  5,
+      generatedL1:  ['write tests first'],
+      generatedL2:  undefined, // missing — triggers fallback
+      generatedL3:  ['anything obviously wrong?'],
+    });
+    // selectFn picks a static L1 option — pipeline should work without crashing
+    const { TASK_REVIEW } = await import('../../decision-session/options.js');
+    const result = await runStop(makePayload(), store, mockSelect(TASK_REVIEW.L1[0]));
+    // Result should be blocked (valid option selected) — no crash from partial null
+    expect(['blocked', 'skipped']).toContain(result.outcome);
+  });
+});

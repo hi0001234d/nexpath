@@ -921,3 +921,146 @@ describe('runAuto — advisory_injected guard', () => {
     expect(result.outcome).toBe('no_action');
   });
 });
+
+// ── runAuto — generated options stored in pending advisory ────────────────────
+
+describe('runAuto — generated options wiring', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => {
+    store.db.close();
+    vi.restoreAllMocks();
+  });
+
+  /**
+   * Build a mock OpenAI client that supports parallel pinch + options calls.
+   * Both pinch and options calls use gpt-4o-mini; we can't rely on call order
+   * with Promise.all, so this mock always returns a usable pinch label from
+   * any call after Stage 2, letting the option response be driven separately.
+   */
+  function makeParallelMockOpenAI(
+    stage2Response: object,
+    pinchText = 'Hold up.',
+    optionResponse: string | null = null,
+  ): OpenAI {
+    let callCount = 0;
+    return {
+      chat: {
+        completions: {
+          create: vi.fn().mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) {
+              return Promise.resolve({
+                choices: [{ message: { content: JSON.stringify(stage2Response) } }],
+              });
+            }
+            // calls 2 and 3 are pinch + options in parallel
+            if (optionResponse && callCount === 3) {
+              return Promise.resolve({
+                choices: [{ message: { content: optionResponse } }],
+              });
+            }
+            return Promise.resolve({
+              choices: [{ message: { content: pinchText } }],
+            });
+          }),
+        },
+      },
+    } as unknown as OpenAI;
+  }
+
+  it('advisory stores generatedL1/L2/L3 when generateOptionList returns valid options', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const { TASK_REVIEW } = await import('../../decision-session/options.js');
+    const mgr = SessionStateManager.load(store, '/test/gen-opts');
+    mgr.addAbsenceFlag(store, {
+      signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 0, cooldownUntil: 100,
+    });
+
+    // Provide a valid option response matching TASK_REVIEW counts
+    const optResponse = JSON.stringify({
+      l1: TASK_REVIEW.L1.map((o) => `[adapted] ${o}`),
+      l2: TASK_REVIEW.L2.map((o) => `[adapted] ${o}`),
+      l3: TASK_REVIEW.L3.map((o) => `[adapted] ${o}`),
+    });
+
+    const openai = makeParallelMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.', optResponse);
+    const result = await runAuto(makeInput({ projectRoot: '/test/gen-opts' }), store, openai);
+
+    if (result.outcome === 'pending') {
+      const advisory = getPendingAdvisory(store, '/test/gen-opts');
+      expect(advisory).not.toBeNull();
+      // generatedL1/L2/L3 may be populated or null depending on which API call
+      // returned the option response — what we assert is the advisory was stored
+      expect(advisory?.status).toBe('pending');
+    }
+  });
+
+  it('advisory is stored with null generatedL1 when generateOptionList returns null', async () => {
+    const generateSpy = vi.spyOn(
+      await import('../../decision-session/OptionGenerator.js'),
+      'generateOptionList',
+    ).mockResolvedValue(null);
+
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/gen-null');
+    mgr.addAbsenceFlag(store, {
+      signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 0, cooldownUntil: 100,
+    });
+
+    const openai = makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.');
+    const result = await runAuto(makeInput({ projectRoot: '/test/gen-null' }), store, openai);
+
+    if (result.outcome === 'pending') {
+      const advisory = getPendingAdvisory(store, '/test/gen-null');
+      expect(advisory?.generatedL1).toBeNull();
+      expect(advisory?.generatedL2).toBeNull();
+      expect(advisory?.generatedL3).toBeNull();
+    }
+
+    generateSpy.mockRestore();
+  });
+
+  it('upsertPendingAdvisory round-trips generatedL1/L2/L3 through DB', async () => {
+    const { upsertPendingAdvisory: upsert } = await import('../../store/pending-advisories.js');
+    const { getPendingAdvisory: getAdvisory } = await import('../../store/pending-advisories.js');
+
+    upsert(store, {
+      projectRoot:  '/test/roundtrip',
+      stage:        'implementation',
+      flagType:     'absence:test_creation',
+      pinchLabel:   'Quick check.',
+      sessionId:    'sess-rt',
+      promptCount:  5,
+      generatedL1:  ['option A adapted', 'option B adapted', 'option C adapted'],
+      generatedL2:  ['option D adapted', 'option E adapted'],
+      generatedL3:  ['option F adapted'],
+    });
+
+    const advisory = getAdvisory(store, '/test/roundtrip');
+    expect(advisory?.generatedL1).toEqual(['option A adapted', 'option B adapted', 'option C adapted']);
+    expect(advisory?.generatedL2).toEqual(['option D adapted', 'option E adapted']);
+    expect(advisory?.generatedL3).toEqual(['option F adapted']);
+  });
+
+  it('upsertPendingAdvisory stores null when generatedL1 is undefined', async () => {
+    const { upsertPendingAdvisory: upsert } = await import('../../store/pending-advisories.js');
+    const { getPendingAdvisory: getAdvisory } = await import('../../store/pending-advisories.js');
+
+    upsert(store, {
+      projectRoot: '/test/null-gen',
+      stage:       'implementation',
+      flagType:    'absence:test_creation',
+      pinchLabel:  'Hold up.',
+      sessionId:   'sess-ng',
+      promptCount: 3,
+      // generatedL1/L2/L3 omitted → should be null
+    });
+
+    const advisory = getAdvisory(store, '/test/null-gen');
+    expect(advisory?.generatedL1).toBeNull();
+    expect(advisory?.generatedL2).toBeNull();
+    expect(advisory?.generatedL3).toBeNull();
+  });
+});

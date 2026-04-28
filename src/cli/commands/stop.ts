@@ -117,6 +117,11 @@ export async function runStop(
   }
 
   // 5. Render decision session UI
+  const generatedOptions =
+    advisory.generatedL1 && advisory.generatedL2 && advisory.generatedL3
+      ? { l1: advisory.generatedL1, l2: advisory.generatedL2, l3: advisory.generatedL3 }
+      : undefined;
+
   const dsResult = await runDecisionSession(
     {
       stage:                advisory.stage,
@@ -126,6 +131,7 @@ export async function runStop(
       projectRoot:          payload.cwd,
       promptCount:          advisory.promptCount,
       decisionSessionCount,
+      generatedOptions,
     },
     store,
     effectiveSelectFn,
