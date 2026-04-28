@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { openStore, type Store } from './db.js';
-import { insertPrompt, deleteProjectPrompts, deleteAllPrompts, pruneOlderThan, getPromptStats } from './prompts.js';
+import { insertPrompt, getRecentPrompts, deleteProjectPrompts, deleteAllPrompts, pruneOlderThan, getPromptStats } from './prompts.js';
 import { getConfig, setConfig, getAllConfig, isConfigSet } from './config.js';
+import { upsertProject, getProject, setDetectedLanguage, incrementDecisionSessionCount, listProjects } from './projects.js';
 import { redactSecrets } from './redact.js';
 import {
   insertSkippedSession,
@@ -155,6 +156,103 @@ describe('store — prompt CRUD', () => {
     deleteAllPrompts(store);
     const res = store.db.exec('SELECT COUNT(*) FROM prompts');
     expect(res[0]?.values[0]?.[0]).toBe(0);
+  });
+});
+
+// ── getRecentPrompts ──────────────────────────────────────────────────────────
+
+describe('store — getRecentPrompts', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('returns empty array when no prompts exist for the project', () => {
+    const rows = getRecentPrompts(store, '/proj/a', 10);
+    expect(rows).toEqual([]);
+  });
+
+  it('returns empty array for unknown project even when other projects have prompts', () => {
+    insertPrompt(store, { projectRoot: '/proj/a', promptText: 'hello' });
+    const rows = getRecentPrompts(store, '/proj/unknown', 10);
+    expect(rows).toEqual([]);
+  });
+
+  it('returns prompts in newest-first order', () => {
+    insertPrompt(store, { projectRoot: '/proj/a', promptText: 'first' });
+    insertPrompt(store, { projectRoot: '/proj/a', promptText: 'second' });
+    insertPrompt(store, { projectRoot: '/proj/a', promptText: 'third' });
+    const rows = getRecentPrompts(store, '/proj/a', 10);
+    expect(rows[0].text).toBe('third');
+    expect(rows[1].text).toBe('second');
+    expect(rows[2].text).toBe('first');
+  });
+
+  it('respects the limit — returns at most limit rows', () => {
+    for (let i = 0; i < 10; i++) {
+      insertPrompt(store, { projectRoot: '/proj/a', promptText: `p-${i}` });
+    }
+    const rows = getRecentPrompts(store, '/proj/a', 3);
+    expect(rows).toHaveLength(3);
+  });
+
+  it('with limit=3 returns the 3 most recent prompts', () => {
+    for (let i = 0; i < 5; i++) {
+      insertPrompt(store, { projectRoot: '/proj/a', promptText: `p-${i}` });
+    }
+    const rows = getRecentPrompts(store, '/proj/a', 3);
+    expect(rows.map((r) => r.text)).toEqual(['p-4', 'p-3', 'p-2']);
+  });
+
+  it('returns all rows when limit exceeds total count', () => {
+    insertPrompt(store, { projectRoot: '/proj/a', promptText: 'only' });
+    const rows = getRecentPrompts(store, '/proj/a', 100);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].text).toBe('only');
+  });
+
+  it('returns empty array when limit is 0', () => {
+    insertPrompt(store, { projectRoot: '/proj/a', promptText: 'hello' });
+    const rows = getRecentPrompts(store, '/proj/a', 0);
+    expect(rows).toEqual([]);
+  });
+
+  it('isolates by project root — does not include other projects', () => {
+    insertPrompt(store, { projectRoot: '/proj/a', promptText: 'a-prompt' });
+    insertPrompt(store, { projectRoot: '/proj/b', promptText: 'b-prompt' });
+    const rows = getRecentPrompts(store, '/proj/a', 10);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].text).toBe('a-prompt');
+  });
+
+  it('returns the text field correctly', () => {
+    insertPrompt(store, { projectRoot: '/proj/a', promptText: 'exact text here' });
+    const rows = getRecentPrompts(store, '/proj/a', 1);
+    expect(rows[0].text).toBe('exact text here');
+  });
+
+  it('returns a valid capturedAt timestamp close to Date.now()', () => {
+    const before = Date.now();
+    insertPrompt(store, { projectRoot: '/proj/a', promptText: 'ts check' });
+    const after = Date.now();
+    const rows = getRecentPrompts(store, '/proj/a', 1);
+    expect(rows[0].capturedAt).toBeGreaterThanOrEqual(before);
+    expect(rows[0].capturedAt).toBeLessThanOrEqual(after);
+  });
+
+  it('returns redacted text (secret removed by insertPrompt)', () => {
+    insertPrompt(store, { projectRoot: '/proj/a', promptText: 'key sk-abc123def456ghi789jkl012mno' });
+    const rows = getRecentPrompts(store, '/proj/a', 1);
+    expect(rows[0].text).toContain('sk-[REDACTED]');
+    expect(rows[0].text).not.toContain('sk-abc123');
+  });
+
+  it('with limit=1 returns only the single most recent prompt', () => {
+    insertPrompt(store, { projectRoot: '/proj/a', promptText: 'older' });
+    insertPrompt(store, { projectRoot: '/proj/a', promptText: 'newer' });
+    const rows = getRecentPrompts(store, '/proj/a', 1);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].text).toBe('newer');
   });
 });
 
@@ -591,5 +689,117 @@ describe('store — pending_advisories', () => {
     upsertPendingAdvisory(store, BASE_ADVISORY);
     markAdvisoryShown(store, 9999); // id does not exist
     expect(getPendingAdvisory(store, '/proj/main')).not.toBeNull();
+  });
+});
+
+// ── setDetectedLanguage ───────────────────────────────────────────────────────
+
+describe('setDetectedLanguage', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('sets detected_language for an existing project; getProject returns it', () => {
+    upsertProject(store, { projectRoot: '/proj/a', name: 'A' });
+    setDetectedLanguage(store, '/proj/a', 'fr');
+    const proj = getProject(store, '/proj/a');
+    expect(proj?.detectedLanguage).toBe('fr');
+  });
+
+  it('calling with undefined stores null; getProject returns null', () => {
+    upsertProject(store, { projectRoot: '/proj/b', name: 'B' });
+    setDetectedLanguage(store, '/proj/b', 'de');
+    setDetectedLanguage(store, '/proj/b', undefined);
+    const proj = getProject(store, '/proj/b');
+    expect(proj?.detectedLanguage).toBeNull();
+  });
+
+  it('no-op when project does not exist (no error thrown)', () => {
+    expect(() => setDetectedLanguage(store, '/nonexistent', 'hi')).not.toThrow();
+  });
+
+  it('getProject includes detectedLanguage: null for newly upserted projects', () => {
+    upsertProject(store, { projectRoot: '/proj/c', name: 'C' });
+    const proj = getProject(store, '/proj/c');
+    expect(proj).not.toBeNull();
+    expect(proj?.detectedLanguage).toBeNull();
+  });
+});
+
+// ── incrementDecisionSessionCount (Phase H) ───────────────────────────────────
+
+describe('incrementDecisionSessionCount', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('starts at 0 for a newly upserted project', () => {
+    upsertProject(store, { projectRoot: '/proj/dsc', name: 'DSC' });
+    expect(getProject(store, '/proj/dsc')?.decisionSessionCount).toBe(0);
+  });
+
+  it('increments to 1 on first call', () => {
+    upsertProject(store, { projectRoot: '/proj/dsc1', name: 'DSC1' });
+    incrementDecisionSessionCount(store, '/proj/dsc1');
+    expect(getProject(store, '/proj/dsc1')?.decisionSessionCount).toBe(1);
+  });
+
+  it('increments correctly on successive calls', () => {
+    upsertProject(store, { projectRoot: '/proj/dsc2', name: 'DSC2' });
+    incrementDecisionSessionCount(store, '/proj/dsc2');
+    incrementDecisionSessionCount(store, '/proj/dsc2');
+    incrementDecisionSessionCount(store, '/proj/dsc2');
+    expect(getProject(store, '/proj/dsc2')?.decisionSessionCount).toBe(3);
+  });
+
+  it('is a no-op (no crash) when project does not exist', () => {
+    expect(() => incrementDecisionSessionCount(store, '/proj/nonexistent')).not.toThrow();
+  });
+
+  it('does not affect other projects', () => {
+    upsertProject(store, { projectRoot: '/proj/a1', name: 'A1' });
+    upsertProject(store, { projectRoot: '/proj/b1', name: 'B1' });
+    incrementDecisionSessionCount(store, '/proj/a1');
+    incrementDecisionSessionCount(store, '/proj/a1');
+    expect(getProject(store, '/proj/a1')?.decisionSessionCount).toBe(2);
+    expect(getProject(store, '/proj/b1')?.decisionSessionCount).toBe(0);
+  });
+});
+
+// ── listProjects — decisionSessionCount (Phase H) ────────────────────────────
+
+describe('listProjects — decisionSessionCount', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('returns decisionSessionCount: 0 for new projects', () => {
+    upsertProject(store, { projectRoot: '/proj/list1', name: 'List1' });
+    const projects = listProjects(store);
+    expect(projects[0].decisionSessionCount).toBe(0);
+  });
+
+  it('returns correct decisionSessionCount after increments', () => {
+    upsertProject(store, { projectRoot: '/proj/list2', name: 'List2' });
+    incrementDecisionSessionCount(store, '/proj/list2');
+    incrementDecisionSessionCount(store, '/proj/list2');
+    const projects = listProjects(store);
+    expect(projects[0].decisionSessionCount).toBe(2);
+  });
+
+  it('returns decisionSessionCount for multiple projects independently', () => {
+    upsertProject(store, { projectRoot: '/proj/ma', name: 'MA' });
+    upsertProject(store, { projectRoot: '/proj/mb', name: 'MB' });
+    incrementDecisionSessionCount(store, '/proj/ma');
+    incrementDecisionSessionCount(store, '/proj/ma');
+    incrementDecisionSessionCount(store, '/proj/ma');
+    const projects = listProjects(store);
+    const ma = projects.find((p) => p.projectRoot === '/proj/ma');
+    const mb = projects.find((p) => p.projectRoot === '/proj/mb');
+    expect(ma?.decisionSessionCount).toBe(3);
+    expect(mb?.decisionSessionCount).toBe(0);
   });
 });

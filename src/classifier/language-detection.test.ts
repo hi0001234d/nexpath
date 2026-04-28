@@ -118,21 +118,21 @@ describe('preprocessText', () => {
     expect(result).toContain('feature');
   });
 
-  it('strips remaining ENG_KEYWORDS: let, var, true, false', () => {
+  it('strips let, var; keeps true and false (not ENG_KEYWORDS)', () => {
     const result = preprocessText('let var true false the feature is ready to test');
     expect(result).not.toContain('let');
     expect(result).not.toContain('var');
-    expect(result).not.toContain('true');
-    expect(result).not.toContain('false');
+    expect(result).toContain('true');   // NOT filtered — removed from ENG_KEYWORDS
+    expect(result).toContain('false');  // NOT filtered — removed from ENG_KEYWORDS
     expect(result).toContain('feature');
   });
 
-  it('strips remaining ENG_KEYWORDS: export, class, new, this', () => {
+  it('strips export, class; keeps new and this (not ENG_KEYWORDS)', () => {
     const result = preprocessText('export class new this the feature is ready to test');
     expect(result).not.toContain('export');
     expect(result).not.toContain('class');
-    expect(result).not.toContain('new');
-    expect(result).not.toContain('this');
+    expect(result).toContain('new');   // NOT filtered — removed from ENG_KEYWORDS
+    expect(result).toContain('this');  // NOT filtered — removed from ENG_KEYWORDS
     expect(result).toContain('feature');
   });
 
@@ -359,7 +359,7 @@ describe('resolveLanguage', () => {
     expect(resolveLanguage('gu', 'hi')).toBe('gu');
   });
 
-  it('accepts any ISO 639-1 code as override — no validation enforced', () => {
+  it('accepts valid ISO 639-1 codes as override', () => {
     expect(resolveLanguage('ja')).toBe('ja');
     expect(resolveLanguage('ar')).toBe('ar');
     expect(resolveLanguage('ko')).toBe('ko');
@@ -401,7 +401,8 @@ describe('runDetection', () => {
 
   it('returns empty array when input is only ENG_KEYWORDS (all stripped → empty after preprocess)', () => {
     // All words are ENG_KEYWORDS → filtered away → line becomes empty → dropped → '' → []
-    const results = runDetection('const let var function return async await null undefined true false import export class new this');
+    // Note: 'true','false','new','this' are NOT ENG_KEYWORDS — use only keywords that are filtered
+    const results = runDetection('const let var function return async await null undefined import export from class if else for while');
     expect(Array.isArray(results)).toBe(true);
     expect(results.length).toBe(0);
   });
@@ -449,11 +450,71 @@ describe('runDetection', () => {
   });
 });
 
+// ── ENG_KEYWORDS final list correctness ──────────────────────────────────────
+
+describe('preprocessText — ENG_KEYWORDS final list', () => {
+  it('drops from, if, else, for, while (new additions)', () => {
+    const result = preprocessText('from if else for while a feature is working correctly');
+    expect(result).not.toContain('from');
+    expect(result).not.toContain('if');
+    expect(result).not.toContain('else');
+    expect(result).not.toContain('for');
+    expect(result).not.toContain('while');
+    expect(result).toContain('feature');
+  });
+
+  it('keeps null and undefined (retained — purely code-specific)', () => {
+    const result = preprocessText('null undefined the value should be handled');
+    // null and undefined are still in ENG_KEYWORDS → filtered
+    expect(result).not.toContain('null');
+    expect(result).not.toContain('undefined');
+    expect(result).toContain('handled');
+  });
+
+  it('keeps true, false, new, this (removed from ENG_KEYWORDS — common English)', () => {
+    const result = preprocessText('true false new this the value should be handled');
+    expect(result).toContain('true');
+    expect(result).toContain('false');
+    expect(result).toContain('new');
+    expect(result).toContain('this');
+    expect(result).toContain('handled');
+  });
+});
+
+// ── resolveLanguage — isValidLanguageCode guard ───────────────────────────────
+
+describe('resolveLanguage — isValidLanguageCode guard', () => {
+  it('valid ISO 639-1 code is returned unchanged', () => {
+    expect(resolveLanguage('fr')).toBe('fr');
+    expect(resolveLanguage('hi')).toBe('hi');
+  });
+
+  it('invalid override with space is silently ignored, falls through to detectedLanguage', () => {
+    expect(resolveLanguage('not a code', 'hi')).toBe('hi');
+  });
+
+  it('invalid override longer than 8 chars is ignored', () => {
+    expect(resolveLanguage('toolongcod', 'fr')).toBe('fr');
+  });
+
+  it('empty override falls through to detectedLanguage', () => {
+    expect(resolveLanguage('', 'de')).toBe('de');
+  });
+
+  it('valid override wins over detectedLanguage', () => {
+    expect(resolveLanguage('zh', 'en')).toBe('zh');
+  });
+
+  it('invalid override with no detectedLanguage returns undefined', () => {
+    expect(resolveLanguage('inject me')).toBeUndefined();
+  });
+});
+
 // ── LANG_DETECT_INTERVAL (Gap 2) ─────────────────────────────────────────────
 
 describe('LANG_DETECT_INTERVAL', () => {
-  it('exports as 10', () => {
-    expect(LANG_DETECT_INTERVAL).toBe(10);
+  it('exports as 15', () => {
+    expect(LANG_DETECT_INTERVAL).toBe(15);
   });
 });
 

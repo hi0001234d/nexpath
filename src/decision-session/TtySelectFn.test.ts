@@ -12,8 +12,9 @@ vi.mock('node:child_process', () => ({
 }));
 
 // Deferred import so mocks are in place before module is evaluated
-const { createTtySelectFn } = await import('./TtySelectFn.js');
-const { spawnSync }         = await import('node:child_process');
+const { createTtySelectFn }  = await import('./TtySelectFn.js');
+const { OPT_OUT_SENTINEL }   = await import('./DecisionSession.js');
+const { spawnSync }          = await import('node:child_process');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -200,5 +201,53 @@ describe('createTtySelectFn — Windows (win32)', () => {
     });
     const result = await createTtySelectFn()!(makeOpts());
     expect(result).toBe('option-b-value');
+  });
+
+  it('resolves with OPT_OUT_SENTINEL when result file contains __NEXPATH_OPT_OUT__', async () => {
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      writeFileSync(RESULT_FILE, '__NEXPATH_OPT_OUT__', 'utf8');
+    });
+    const result = await createTtySelectFn()!(makeOpts());
+    expect(result).toBe(OPT_OUT_SENTINEL);
+  });
+
+  it('resolves with raw __FREQ__:<value> string when result file contains it', async () => {
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      writeFileSync(RESULT_FILE, '__FREQ__:major_only', 'utf8');
+    });
+    const result = await createTtySelectFn()!(makeOpts());
+    expect(result).toBe('__FREQ__:major_only');
+  });
+
+  it('.mjs script contains emitKeypressEvents and Ctrl+X/T sentinel output', async () => {
+    let capturedScript = '';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      if (existsSync(SCRIPT_FILE)) capturedScript = readFileSync(SCRIPT_FILE, 'utf8');
+    });
+    await createTtySelectFn()!(makeOpts());
+    expect(capturedScript).toContain('emitKeypressEvents');
+    expect(capturedScript).toContain('__NEXPATH_OPT_OUT__');
+    expect(capturedScript).toContain('__FREQ_MENU_PENDING__');
+  });
+
+  it('freq script contains frequency sub-menu options when __FREQ_MENU_PENDING__ is returned', async () => {
+    const FREQ_SCRIPT_FILE = join(tmpdir(), `nexpath-freq-sel-${UUID}.mjs`);
+    let capturedFreqScript = '';
+    let callCount = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        // Main window: user pressed Ctrl+T → trigger freq flow
+        writeFileSync(RESULT_FILE, '__FREQ_MENU_PENDING__', 'utf8');
+      } else if (callCount === 2) {
+        // Freq window: capture the freq script
+        if (existsSync(FREQ_SCRIPT_FILE)) capturedFreqScript = readFileSync(FREQ_SCRIPT_FILE, 'utf8');
+      }
+    });
+    await createTtySelectFn()!(makeOpts());
+    expect(capturedFreqScript).toContain('major_only');
+    expect(capturedFreqScript).toContain('once_per_session');
+    expect(capturedFreqScript).toContain('every_event');
+    try { unlinkSync(FREQ_SCRIPT_FILE); } catch { /* ignore */ }
   });
 });

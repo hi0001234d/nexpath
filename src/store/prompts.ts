@@ -87,6 +87,23 @@ export function pruneOlderThan(store: Store, olderThanMs: number, projectRoot?: 
   return deleted;
 }
 
+export type RecentPrompt = {
+  text:        string;
+  capturedAt:  number;
+};
+
+/** Return the most recent `limit` prompts for a project, newest first. */
+export function getRecentPrompts(store: Store, projectRoot: string, limit: number): RecentPrompt[] {
+  const res = store.db.exec(
+    'SELECT prompt_text, captured_at FROM prompts WHERE project_root = ? ORDER BY id DESC LIMIT ?',
+    [projectRoot, limit],
+  );
+  return (res[0]?.values ?? []).map((row) => ({
+    text:       row[0] as string,
+    capturedAt: row[1] as number,
+  }));
+}
+
 /** Aggregate statistics for the status command. */
 export function getPromptStats(store: Store): PromptStats {
   const totalRes = store.db.exec('SELECT COUNT(*) FROM prompts');

@@ -3,11 +3,12 @@ import { matchKeywords } from './KeywordMatcher.js';
 import { classifyWithTFIDF, resetTFIDFModel } from './TFIDFClassifier.js';
 import { createEmbeddingClassifier } from './EmbeddingClassifier.js';
 import { classifyPrompt } from './PromptClassifier.js';
-import { SessionStateManager, SESSION_GAP_MS, STAGE_CONFIRM_THRESHOLD } from './SessionStateManager.js';
-import { PROFILE_RECOMPUTE_INTERVAL } from './UserProfileClassifier.js';
+import { SessionStateManager, SESSION_GAP_MS, STAGE_CONFIRM_THRESHOLD, MIN_STAGE_CHANGE_CONFIDENCE } from './SessionStateManager.js';
+import { NATURE_DEPTH_RECOMPUTE_INTERVAL, classifyMoodOnly } from './UserProfileClassifier.js';
 import { detectAbsenceFlags, ABSENCE_MIN_PROMPTS, ABSENCE_COOLDOWN_PROMPTS } from './AbsenceDetector.js';
 import { detectSignals, initialSignalCounters, SIGNAL_DEFINITIONS, SIGNAL_MAP } from './signals.js';
 import { openStore, closeStore } from '../store/index.js';
+import { upsertProject, setDetectedLanguage } from '../store/projects.js';
 import type { SessionState, ClassificationResult } from './types.js';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -18,20 +19,21 @@ function makeResult(stage: import('./types.js').Stage, confidence: number): Clas
 
 function makeState(overrides: Partial<SessionState> = {}): SessionState {
   return {
-    sessionId:             'test-session',
-    projectRoot:           '/test/project',
-    startedAt:             1000,
-    lastPromptAt:          1000,
-    currentStage:          'implementation',
-    stageConfidence:       0.80,
-    stageConfirmedAt:      0,
-    promptCount:           20,
-    promptHistory:         [],
-    signalCounters:        initialSignalCounters(),
-    absenceFlags:          [],
-    firedDecisionSessions: [],
-    profile:               null,
-    detectedLanguage:      undefined,
+    sessionId:              'test-session',
+    projectRoot:            '/test/project',
+    startedAt:              1000,
+    lastPromptAt:           1000,
+    currentStage:           'implementation',
+    stageConfidence:        0.80,
+    stageConfirmedAt:       0,
+    promptsInCurrentStage:  20,
+    promptCount:            20,
+    promptHistory:          [],
+    signalCounters:         initialSignalCounters(),
+    absenceFlags:           [],
+    firedDecisionSessions:  [],
+    profile:                null,
+    detectedLanguage:       undefined,
     ...overrides,
   };
 }
@@ -646,7 +648,7 @@ describe('SessionStateManager', () => {
   it('stageConfirmedAt is set when confidence reaches threshold', async () => {
     const store = await openStore(':memory:');
     const mgr = SessionStateManager.load(store, '/project/g');
-    mgr.processPrompt(store, 'implement this', makeResult('implementation', STAGE_CONFIRM_THRESHOLD + 0.01));
+    mgr.processPrompt(store, 'implement this', makeResult('implementation', MIN_STAGE_CHANGE_CONFIDENCE + 0.01));
     expect(mgr.current.stageConfirmedAt).toBe(0);
     closeStore(store);
   });
@@ -729,14 +731,14 @@ describe('SessionStateManager', () => {
     const store = await openStore(':memory:');
     const mgr = SessionStateManager.load(store, '/project/ema2');
     // Start with low confidence — EMA will ramp up
-    mgr.processPrompt(store, 'p0', makeResult('implementation', 0.5));
-    expect(mgr.current.stageConfirmedAt).toBe(-1); // 0.5 < 0.7 → not confirmed
+    mgr.processPrompt(store, 'p0', makeResult('implementation', 0.20));
+    expect(mgr.current.stageConfirmedAt).toBe(-1); // 0.20 < MIN_STAGE_CHANGE_CONFIDENCE → stage change ignored
 
-    // Feed several prompts with confidence 0.9 to drive EMA above 0.70
+    // Feed several prompts with confidence 0.9 to drive EMA above STAGE_CONFIRM_THRESHOLD
     for (let i = 1; i <= 6; i++) {
       mgr.processPrompt(store, `p${i}`, makeResult('implementation', 0.9));
     }
-    expect(mgr.current.stageConfirmedAt).toBeGreaterThan(-1); // EMA reached ≥ 0.70
+    expect(mgr.current.stageConfirmedAt).toBeGreaterThan(-1); // EMA reached ≥ STAGE_CONFIRM_THRESHOLD
     closeStore(store);
   });
 
@@ -837,48 +839,117 @@ describe('SessionStateManager', () => {
     expect(b2.current.currentStage).toBe('prd');
     closeStore(store);
   });
+
+  it('low-confidence cross-stage prompt does not wipe confirmed stage state', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/gate-block');
+    // Confirm implementation stage
+    mgr.processPrompt(store, 'implement the login page', makeResult('implementation', 0.9));
+    const confirmedAt = mgr.current.stageConfirmedAt;
+    const confBefore  = mgr.current.stageConfidence;
+    // Short generic prompt classifies as a different stage below the gate
+    mgr.processPrompt(store, 'ok', makeResult('idea', MIN_STAGE_CHANGE_CONFIDENCE - 0.01));
+    expect(mgr.current.currentStage).toBe('implementation');
+    expect(mgr.current.stageConfidence).toBe(confBefore);
+    expect(mgr.current.stageConfirmedAt).toBe(confirmedAt);
+    closeStore(store);
+  });
+
+  it('cross-stage prompt at or above MIN_STAGE_CHANGE_CONFIDENCE still applies stage change', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/gate-allow');
+    mgr.processPrompt(store, 'implement the login page', makeResult('implementation', 0.9));
+    // Legitimate cross-stage prompt meets the gate
+    mgr.processPrompt(store, 'deploy to production', makeResult('release', MIN_STAGE_CHANGE_CONFIDENCE));
+    expect(mgr.current.currentStage).toBe('release');
+    expect(mgr.current.stageConfidence).toBe(MIN_STAGE_CHANGE_CONFIDENCE);
+    closeStore(store);
+  });
+
+  it('promptsInCurrentStage increments when same-stage prompts are processed', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/pics-same');
+    // First prompt: idea → implementation transition → resets counter to 0
+    mgr.processPrompt(store, 'implement login', makeResult('implementation', 0.9));
+    expect(mgr.current.promptsInCurrentStage).toBe(0);
+    // Second prompt: same stage → increments
+    mgr.processPrompt(store, 'implement logout', makeResult('implementation', 0.9));
+    expect(mgr.current.promptsInCurrentStage).toBe(1);
+    // Third prompt: same stage → increments again
+    mgr.processPrompt(store, 'implement settings', makeResult('implementation', 0.9));
+    expect(mgr.current.promptsInCurrentStage).toBe(2);
+    closeStore(store);
+  });
+
+  it('promptsInCurrentStage resets to 0 on a genuine stage transition', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/pics-reset');
+    // idea → implementation (transition, counter = 0)
+    mgr.processPrompt(store, 'implement login', makeResult('implementation', 0.9));
+    // same stage (counter = 1)
+    mgr.processPrompt(store, 'implement logout', makeResult('implementation', 0.9));
+    expect(mgr.current.promptsInCurrentStage).toBe(1);
+    // Legitimate cross-stage transition resets the counter
+    mgr.processPrompt(store, 'deploy to production', makeResult('release', 0.9));
+    expect(mgr.current.currentStage).toBe('release');
+    expect(mgr.current.promptsInCurrentStage).toBe(0);
+    closeStore(store);
+  });
+
+  it('promptsInCurrentStage still increments when cross-stage prompt is below gate', async () => {
+    // A cross-stage prompt that does not clear MIN_STAGE_CHANGE_CONFIDENCE should NOT
+    // reset the stage, and the stage-time counter should still advance.
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/pics-gate');
+    // idea → implementation (transition, counter = 0)
+    mgr.processPrompt(store, 'implement login', makeResult('implementation', 0.9));
+    expect(mgr.current.promptsInCurrentStage).toBe(0);
+    // Noise prompt — cross-stage but below gate; stage stays, counter advances
+    mgr.processPrompt(store, 'ok', makeResult('idea', MIN_STAGE_CHANGE_CONFIDENCE - 0.01));
+    expect(mgr.current.currentStage).toBe('implementation'); // stage unchanged
+    expect(mgr.current.promptsInCurrentStage).toBe(1);       // counter still advanced
+    closeStore(store);
+  });
 });
 
 // ── AbsenceDetector ────────────────────────────────────────────────────────────
 
 describe('AbsenceDetector', () => {
   it('returns no flags when stageConfidence < STAGE_CONFIRM_THRESHOLD', () => {
-    const state = makeState({ stageConfidence: 0.5 });
+    const state = makeState({ stageConfidence: 0.20 });
     expect(detectAbsenceFlags(state)).toHaveLength(0);
   });
 
-  it('returns no flags when stageConfirmedAt = -1 (not confirmed)', () => {
-    const state = makeState({ stageConfirmedAt: -1, stageConfidence: 0.8 });
+  it('returns no flags when promptsInCurrentStage < 5 (not in stage long enough)', () => {
+    const state = makeState({ promptsInCurrentStage: 4, stageConfidence: 0.8 });
     expect(detectAbsenceFlags(state)).toHaveLength(0);
   });
 
-  it('returns no flags when fewer than 5 prompts since stageConfirmedAt', () => {
+  it('returns no flags when fewer than 5 prompts in current stage', () => {
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 16, // promptCount=20, 20-16=4 — too early
-      promptCount:      20,
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 4, // too early — minimum gate is 5
     });
     expect(detectAbsenceFlags(state)).toHaveLength(0);
   });
 
   it('returns no flags when below signal absenceThreshold', () => {
-    // test_creation has absenceThreshold=15; promptsSinceConfirmed=10
+    // test_creation has absenceThreshold=15; promptsInCurrentStage=10 < 15
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 10,
-      promptCount:      20, // 20-10=10 < 15
-      currentStage:     'implementation',
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 10,
+      currentStage:          'implementation',
     });
     expect(detectAbsenceFlags(state)).toHaveLength(0);
   });
 
   it('raises a flag when all conditions are met and signal never seen', () => {
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      ABSENCE_MIN_PROMPTS + 5, // well past threshold
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(), // all absent
+      stageConfidence:       0.85,
+      promptsInCurrentStage: ABSENCE_MIN_PROMPTS + 5,
+      promptCount:           ABSENCE_MIN_PROMPTS + 5,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(), // all absent
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.length).toBeGreaterThan(0);
@@ -889,11 +960,11 @@ describe('AbsenceDetector', () => {
     const counters = initialSignalCounters();
     counters['test_creation'].lastSeenAt = 5; // was seen at prompt 5
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      30,
-      currentStage:     'implementation',
-      signalCounters:   counters,
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 30,
+      promptCount:           30,
+      currentStage:          'implementation',
+      signalCounters:        counters,
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.map((f) => f.signalKey)).not.toContain('test_creation');
@@ -901,11 +972,11 @@ describe('AbsenceDetector', () => {
 
   it('respects cooldown — does not re-raise flag within ABSENCE_COOLDOWN_PROMPTS', () => {
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      ABSENCE_MIN_PROMPTS + 5,
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: ABSENCE_MIN_PROMPTS + 5,
+      promptCount:           ABSENCE_MIN_PROMPTS + 5,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
       absenceFlags: [
         {
           signalKey:     'test_creation',
@@ -922,25 +993,24 @@ describe('AbsenceDetector', () => {
   it('does NOT flag signals for wrong stage', () => {
     // rollback_planning is only expected in 'release' stage
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      30,
-      currentStage:     'prd', // not a stage where rollback_planning is expected
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 30,
+      promptCount:           30,
+      currentStage:          'prd', // not a stage where rollback_planning is expected
+      signalCounters:        initialSignalCounters(),
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.map((f) => f.signalKey)).not.toContain('rollback_planning');
   });
 
   it('re-raises flag once cooldownUntil has passed', () => {
-    // Flag was raised at index 0, cooldown expires at index 30
-    // Current promptCount=35 → past cooldown → should raise again
+    // Cooldown expires at index 30; current promptCount=35 → past cooldown → should raise again
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      35,
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 35,
+      promptCount:           35,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
       absenceFlags: [
         {
           signalKey:        'test_creation',
@@ -955,48 +1025,34 @@ describe('AbsenceDetector', () => {
     expect(flags.map((f) => f.signalKey)).toContain('test_creation');
   });
 
-  it('passes gate at exactly 5 prompts since stageConfirmedAt', () => {
-    const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 15,
-      promptCount:      20, // 20-15=5 — exactly at boundary, should pass
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
-    });
-    // Should potentially raise flags (not suppress them)
-    // test_creation has absenceThreshold=15; 20-15=5 < 15 → still suppressed by signal threshold
-    // So use a signal with absenceThreshold=5... none exist at 5. Use promptCount larger enough.
-    // Let's just verify the 5-prompt gate itself passes (no longer blocked by that gate)
-    // by using a state where absenceThreshold is also met
+  it('passes gate at exactly 5 prompts in current stage', () => {
+    // 5 prompts in stage passes the minimum gate, but all signals need ≥15 — so still no flags
     const state2 = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      5, // exactly 5 since confirmed
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 5,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
     });
-    // Signals with absenceThreshold=15 won't fire at 5 prompts, so flags=0 but for the right reason
-    expect(detectAbsenceFlags(state2)).toHaveLength(0); // threshold not met, not gate-5 reason
-    // Now confirm gate-5 itself passes when threshold also met
+    expect(detectAbsenceFlags(state2)).toHaveLength(0); // signal threshold not met
+    // Confirm signals fire when both the gate and the signal threshold are met
     const state3 = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      15, // 15-0=15, exactly meets absenceThreshold=15 and > 5
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
     });
     const flags = detectAbsenceFlags(state3);
-    expect(flags.length).toBeGreaterThan(0); // flags are raised
+    expect(flags.length).toBeGreaterThan(0);
   });
 
   it('raises flags at exactly the absenceThreshold boundary', () => {
-    // test_creation absenceThreshold=15; promptsSinceConfirmed must be >= 15
+    // test_creation absenceThreshold=15; promptsInCurrentStage must be >= 15
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      15, // exactly at threshold
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.map((f) => f.signalKey)).toContain('test_creation');
@@ -1004,11 +1060,11 @@ describe('AbsenceDetector', () => {
 
   it('does NOT raise flags one below absenceThreshold', () => {
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      14, // 14 < 15 = absenceThreshold
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 14, // 14 < 15 = absenceThreshold
+      promptCount:           14,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.map((f) => f.signalKey)).not.toContain('test_creation');
@@ -1016,11 +1072,11 @@ describe('AbsenceDetector', () => {
 
   it('multiple absence flags raised in one call when multiple signals absent', () => {
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      30,
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(), // all absent
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 30,
+      promptCount:           30,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(), // all absent
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.length).toBeGreaterThan(1); // multiple signals flagged at once
@@ -1028,11 +1084,11 @@ describe('AbsenceDetector', () => {
 
   it('raisedAtIndex on new flag matches current promptCount', () => {
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      20,
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.length).toBeGreaterThan(0);
@@ -1041,13 +1097,13 @@ describe('AbsenceDetector', () => {
     }
   });
 
-  it('passes confidence gate at exactly 0.70', () => {
+  it('passes confidence gate at exactly STAGE_CONFIRM_THRESHOLD', () => {
     const state = makeState({
-      stageConfidence:  0.70, // exactly at threshold
-      stageConfirmedAt: 0,
-      promptCount:      20,
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       STAGE_CONFIRM_THRESHOLD, // exactly at threshold
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.length).toBeGreaterThan(0); // should not be blocked
@@ -1055,11 +1111,11 @@ describe('AbsenceDetector', () => {
 
   it('test_creation also flagged in review_testing stage (expected in both stages)', () => {
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      20,
-      currentStage:     'review_testing', // test_creation expected here too
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'review_testing', // test_creation expected here too
+      signalCounters:        initialSignalCounters(),
     });
     const flags = detectAbsenceFlags(state);
     expect(flags.map((f) => f.signalKey)).toContain('test_creation');
@@ -1067,11 +1123,11 @@ describe('AbsenceDetector', () => {
 
   it('raised flags include cooldownUntil = raisedAtIndex + ABSENCE_COOLDOWN_PROMPTS', () => {
     const state = makeState({
-      stageConfidence:  0.85,
-      stageConfirmedAt: 0,
-      promptCount:      ABSENCE_MIN_PROMPTS + 5,
-      currentStage:     'implementation',
-      signalCounters:   initialSignalCounters(),
+      stageConfidence:       0.85,
+      promptsInCurrentStage: ABSENCE_MIN_PROMPTS + 5,
+      promptCount:           ABSENCE_MIN_PROMPTS + 5,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
     });
     const flags = detectAbsenceFlags(state);
     for (const f of flags) {
@@ -1111,15 +1167,15 @@ describe('SessionStateManager — user profile', () => {
     closeStore(store);
   });
 
-  it('profile is recomputed when stale (promptCount - computedAt >= PROFILE_RECOMPUTE_INTERVAL)', async () => {
+  it('profile is recomputed when stale (promptCount - computedAt >= NATURE_DEPTH_RECOMPUTE_INTERVAL)', async () => {
     const store = await openStore(':memory:');
     const mgr = SessionStateManager.load(store, '/project/profile-d');
     // First prompt: computedAt=1, promptCount=1
     mgr.processPrompt(store, 'prompt 0', makeResult('implementation', 0.8));
     const firstComputedAt = mgr.current.profile?.computedAt; // 1
 
-    // Process PROFILE_RECOMPUTE_INTERVAL more prompts to make it stale: promptCount=1+5=6, diff=5 >= 5
-    for (let i = 0; i < PROFILE_RECOMPUTE_INTERVAL; i++) {
+    // Process NATURE_DEPTH_RECOMPUTE_INTERVAL more prompts: promptCount=4, diff=3 >= 3 → stale
+    for (let i = 0; i < NATURE_DEPTH_RECOMPUTE_INTERVAL; i++) {
       mgr.processPrompt(store, `prompt ${i + 1}`, makeResult('implementation', 0.8));
     }
     expect(mgr.current.profile?.computedAt).toBeGreaterThan(firstComputedAt!);
@@ -1133,11 +1189,120 @@ describe('SessionStateManager — user profile', () => {
     mgr.processPrompt(store, 'prompt 0', makeResult('implementation', 0.8));
     const firstComputedAt = mgr.current.profile?.computedAt; // 1
 
-    // Process 3 more prompts: promptCount=4, diff=3 < 5 → not stale
-    for (let i = 0; i < 3; i++) {
+    // Process 2 more prompts: promptCount=3, diff=2 < 3 → not yet stale
+    for (let i = 0; i < 2; i++) {
       mgr.processPrompt(store, `prompt ${i + 1}`, makeResult('implementation', 0.8));
     }
     expect(mgr.current.profile?.computedAt).toBe(firstComputedAt);
+    closeStore(store);
+  });
+});
+
+// ── SessionStateManager — per-prompt mood ─────────────────────────────────────
+
+describe('SessionStateManager — per-prompt mood', () => {
+  it('mood is set on the very first prompt', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/mood-a');
+    expect(mgr.current.mood).toBeUndefined();
+    mgr.processPrompt(store, 'implement the login flow', makeResult('implementation', 0.8));
+    expect(mgr.current.mood).toBeDefined();
+    closeStore(store);
+  });
+
+  it('mood updates on every prompt even before profile recomputes', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/mood-b');
+
+    // Prompt 1: profile computed (null → computedAt=1); mood set from 1-prompt window
+    mgr.processPrompt(store, 'ok', makeResult('implementation', 0.8));
+    expect(mgr.current.profile?.computedAt).toBe(1);
+
+    // Prompt 2: promptCount=2, diff=2-1=1 < NATURE_DEPTH_RECOMPUTE_INTERVAL=3 → profile NOT recomputed
+    // Mood IS updated unconditionally — window is now ["ok", "yes"] → avgWordCount=1 < 8 → rushed
+    mgr.processPrompt(store, 'yes', makeResult('implementation', 0.8));
+    expect(mgr.current.mood).toBe('rushed');
+    expect(mgr.current.profile?.computedAt).toBe(1); // unchanged — mood moved, profile did not
+    closeStore(store);
+  });
+});
+
+// ── classifyMoodOnly — direct unit tests ──────────────────────────────────────
+
+describe('classifyMoodOnly', () => {
+  function rec(text: string): import('./types.js').PromptRecord {
+    return { index: 0, text, capturedAt: 0, classifiedStage: 'implementation', confidence: 0.8 };
+  }
+
+  it('returns casual for empty history', () => {
+    expect(classifyMoodOnly([])).toBe('casual');
+  });
+
+  it('returns rushed for short prompts (avgWordCount < 8)', () => {
+    const history = ['ok', 'yes', 'done', 'go', 'next'].map(rec);
+    expect(classifyMoodOnly(history)).toBe('rushed');
+  });
+
+  it('returns frustrated when neg lexicon hits > 2', () => {
+    const history = ['why is this broken again ugh still not working'].map(rec);
+    expect(classifyMoodOnly(history)).toBe('frustrated');
+  });
+
+  it('returns frustrated for ALL CAPS word (3+ chars)', () => {
+    const history = ['this is BROKEN please fix it'].map(rec);
+    expect(classifyMoodOnly(history)).toBe('frustrated');
+  });
+
+  it('uses only last MOOD_WINDOW=5 records from history', () => {
+    // Fill 6 records — first is frustrated, last 5 are short/calm → rushed
+    const history = [
+      rec('why is this BROKEN again ugh still failing'),
+      rec('ok'), rec('ok'), rec('ok'), rec('ok'), rec('ok'),
+    ];
+    expect(classifyMoodOnly(history)).toBe('rushed');
+  });
+});
+
+// ── SessionStateManager — mood persistence and session reset ──────────────────
+
+describe('SessionStateManager — mood persistence and session reset', () => {
+  it('mood persists through save/load round-trip', async () => {
+    const store = await openStore(':memory:');
+    const mgr1 = SessionStateManager.load(store, '/project/mood-persist');
+    mgr1.processPrompt(store, 'ok', makeResult('implementation', 0.8));
+    const savedMood = mgr1.current.mood;
+    expect(savedMood).toBeDefined();
+
+    const mgr2 = SessionStateManager.load(store, '/project/mood-persist');
+    expect(mgr2.current.mood).toBe(savedMood);
+    closeStore(store);
+  });
+
+  it('mood resets to undefined when session gap triggers a new session on load', async () => {
+    const store = await openStore(':memory:');
+    const now = Date.now();
+    const mgr1 = SessionStateManager.load(store, '/project/mood-gap', now);
+    mgr1.processPrompt(store, 'implement this', makeResult('implementation', 0.8), now);
+    expect(mgr1.current.mood).toBeDefined();
+
+    // Load after session gap — new session created, mood resets to undefined
+    const future = now + SESSION_GAP_MS + 1;
+    const mgr2 = SessionStateManager.load(store, '/project/mood-gap', future);
+    expect(mgr2.current.mood).toBeUndefined();
+    closeStore(store);
+  });
+
+  it('mood is set on the first prompt of a new session after a gap', async () => {
+    const store = await openStore(':memory:');
+    const now = Date.now();
+    const mgr = SessionStateManager.load(store, '/project/mood-gap2', now);
+    mgr.processPrompt(store, 'original work', makeResult('implementation', 0.8), now);
+
+    // Gap resets session in-place on the next processPrompt call
+    const future = now + SESSION_GAP_MS + 1;
+    mgr.processPrompt(store, 'ok', makeResult('implementation', 0.8), future);
+    expect(mgr.current.mood).toBeDefined(); // set immediately after gap-reset processPrompt
+    expect(mgr.current.promptCount).toBe(1); // confirms it was a fresh session
     closeStore(store);
   });
 });
@@ -1170,6 +1335,91 @@ describe('SessionStateManager — detectedLanguage', () => {
 
     const mgr2 = SessionStateManager.load(store, '/project/lang-c');
     expect(mgr2.current.detectedLanguage).toBeUndefined();
+    closeStore(store);
+  });
+});
+
+// ── SessionStateManager — language persistence across session gap (Phase E) ───
+
+describe('SessionStateManager — detectedLanguage survives session gap', () => {
+  it('load() with no prior state restores detectedLanguage from projects table', async () => {
+    const store = await openStore(':memory:');
+    upsertProject(store, { projectRoot: '/project/gap-a', name: 'A' });
+    setDetectedLanguage(store, '/project/gap-a', 'hi');
+
+    // No prior session state — should restore from projects table
+    const mgr = SessionStateManager.load(store, '/project/gap-a');
+    expect(mgr.current.detectedLanguage).toBe('hi');
+    closeStore(store);
+  });
+
+  it('load() after session gap restores detectedLanguage from projects table', async () => {
+    const now = Date.now();
+    const store = await openStore(':memory:');
+    upsertProject(store, { projectRoot: '/project/gap-b', name: 'B' });
+
+    // Active session with language set
+    const mgr1 = SessionStateManager.load(store, '/project/gap-b', now);
+    mgr1.setDetectedLanguage(store, 'fr');
+    // Also persist to projects table (normally done by stop.ts via setDetectedLanguage)
+    setDetectedLanguage(store, '/project/gap-b', 'fr');
+
+    // Load after SESSION_GAP_MS — creates new session
+    const future = now + SESSION_GAP_MS + 1;
+    const mgr2 = SessionStateManager.load(store, '/project/gap-b', future);
+    // New session but detectedLanguage restored from projects table
+    expect(mgr2.current.detectedLanguage).toBe('fr');
+    closeStore(store);
+  });
+
+  it('load() after session gap returns undefined when projects table has no detected_language', async () => {
+    const now = Date.now();
+    const store = await openStore(':memory:');
+    // No project row → getProject returns null → detectedLanguage stays undefined
+    const mgr1 = SessionStateManager.load(store, '/project/gap-c', now);
+    mgr1.setDetectedLanguage(store, 'de'); // set on session state only (no projects row)
+
+    const future = now + SESSION_GAP_MS + 1;
+    const mgr2 = SessionStateManager.load(store, '/project/gap-c', future);
+    // No project row → undefined (not 'de' from old session state)
+    expect(mgr2.current.detectedLanguage).toBeUndefined();
+    closeStore(store);
+  });
+
+  it('processPrompt() in-place gap reset restores detectedLanguage from projects table', async () => {
+    const now = Date.now();
+    const store = await openStore(':memory:');
+    upsertProject(store, { projectRoot: '/project/gap-d', name: 'D' });
+    setDetectedLanguage(store, '/project/gap-d', 'zh');
+
+    const mgr = SessionStateManager.load(store, '/project/gap-d', now);
+    // Process a first prompt to establish session
+    await mgr.processPrompt(store, 'first prompt', makeResult('idea', 0.6), now);
+    // Sanity: session detectedLanguage should be 'zh' (restored on load)
+    expect(mgr.current.detectedLanguage).toBe('zh');
+
+    // Process after gap — triggers in-place reset inside processPrompt()
+    const afterGap = now + SESSION_GAP_MS + 1;
+    await mgr.processPrompt(store, 'post-gap prompt', makeResult('idea', 0.5), afterGap);
+    // detectedLanguage restored from projects table after in-place reset
+    expect(mgr.current.detectedLanguage).toBe('zh');
+    closeStore(store);
+  });
+
+  it('active session within gap keeps session detectedLanguage, does not re-read projects table', async () => {
+    const now = Date.now();
+    const store = await openStore(':memory:');
+    upsertProject(store, { projectRoot: '/project/gap-e', name: 'E' });
+    setDetectedLanguage(store, '/project/gap-e', 'fr'); // projects table says 'fr'
+
+    // Session is active and has a different language set on it
+    const mgr1 = SessionStateManager.load(store, '/project/gap-e', now);
+    mgr1.setDetectedLanguage(store, 'de'); // session says 'de'
+
+    // Load within the gap window — uses persisted session state, not projects table
+    const soonNow = now + SESSION_GAP_MS - 1000;
+    const mgr2 = SessionStateManager.load(store, '/project/gap-e', soonNow);
+    expect(mgr2.current.detectedLanguage).toBe('de'); // session value preserved
     closeStore(store);
   });
 });

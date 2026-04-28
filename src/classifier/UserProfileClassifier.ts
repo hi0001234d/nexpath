@@ -1,4 +1,4 @@
-import type { PromptRecord, UserProfile } from './types.js';
+import type { PromptRecord, UserProfile, UserMood } from './types.js';
 import { classifyNature } from './NatureClassifier.js';
 import { classifyMood } from './MoodClassifier.js';
 import { classifyDepth } from './DepthClassifier.js';
@@ -12,13 +12,11 @@ import { classifyDepth } from './DepthClassifier.js';
  *   Depth:  last 10 prompts
  *
  * All classifiers operate on raw prompt text — PromptRecord.text is extracted.
- * This function is pure (no side effects); call it whenever a profile is needed
- * before firing the decision session.
+ * This function is pure (no side effects); used for the nature/depth recompute cycle.
  *
- * Stickiness (re-evaluation cadence per research):
- *   Mood:  re-evaluate every 5 prompts
- *   Depth: re-evaluate every 10 prompts
- * Stickiness enforcement is the caller's responsibility (check computedAt).
+ * Mood cadence: mood is re-evaluated every prompt via classifyMoodOnly() in
+ * SessionStateManager.processPrompt() — NOT governed by NATURE_DEPTH_RECOMPUTE_INTERVAL.
+ * Nature + depth: re-evaluated every NATURE_DEPTH_RECOMPUTE_INTERVAL prompts.
  */
 
 const NATURE_WINDOW = 20;
@@ -51,21 +49,19 @@ export function classifyUserProfile(
   };
 }
 
-/**
- * Returns true if the cached profile should be recomputed.
- *
- * Rules:
- *   - Mood:  re-evaluate every 5 prompts
- *   - Depth: re-evaluate every 10 prompts
- *   - Nature: re-evaluate every 10 prompts (less volatile than mood)
- * => Recompute when any dimension is stale (every 5 prompts = mood cadence).
- */
-export const PROFILE_RECOMPUTE_INTERVAL = 5;
+/** Recompute nature + depth every N prompts. Mood is handled separately (every prompt). */
+export const NATURE_DEPTH_RECOMPUTE_INTERVAL = 3;
 
 export function isProfileStale(
   profile: UserProfile | null,
   currentPromptCount: number,
 ): boolean {
   if (!profile) return true;
-  return (currentPromptCount - profile.computedAt) >= PROFILE_RECOMPUTE_INTERVAL;
+  return (currentPromptCount - profile.computedAt) >= NATURE_DEPTH_RECOMPUTE_INTERVAL;
+}
+
+/** Classify mood from the most recent MOOD_WINDOW prompt records. Called every prompt. */
+export function classifyMoodOnly(history: PromptRecord[]): UserMood {
+  const texts = history.slice(-MOOD_WINDOW).map((r) => r.text);
+  return classifyMood(texts);
 }

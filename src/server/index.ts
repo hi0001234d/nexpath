@@ -21,18 +21,13 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { openStore, closeStore } from '../store/index.js';
 import { TOOLS } from './tools.js';
-import { handleCapturePrompt, type CapturePromptParams } from './handlers.js';
 
 // ── Open prompt store ─────────────────────────────────────────────────────────
-// Opened once on startup; stays open for the full agent session.
-// Crash safety: insertPrompt serializes to disk on every call — at most one
-// in-flight prompt is lost on an unclean exit.
 
 const store = await openStore();
 process.stderr.write(`[nexpath-serve] store opened\n`);
 
 // ── Shutdown handlers ─────────────────────────────────────────────────────────
-// Close the SQLite connection cleanly so the last write is flushed.
 
 process.stdin.on('end', () => {
   process.stderr.write('[nexpath-serve] stdin closed — shutting down\n');
@@ -53,34 +48,9 @@ const server = new Server(
   { capabilities: { tools: {} } }
 );
 
-// List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 
-// Handle tool calls
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  if (request.params.name === 'capture_prompt') {
-    const args = request.params.arguments as CapturePromptParams | undefined;
-
-    if (!args?.prompt) {
-      return {
-        content: [{ type: 'text', text: 'Error: prompt argument is required' }],
-        isError: true,
-      };
-    }
-
-    try {
-      const result = handleCapturePrompt(store, args);
-      const text = result.status === 'disabled' ? 'capture disabled' : 'captured';
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      process.stderr.write(`[nexpath-serve] capture_prompt error: ${err}\n`);
-      return {
-        content: [{ type: 'text', text: `Error: ${(err as Error).message}` }],
-        isError: true,
-      };
-    }
-  }
-
   return {
     content: [{ type: 'text', text: `Unknown tool: ${request.params.name}` }],
     isError: true,

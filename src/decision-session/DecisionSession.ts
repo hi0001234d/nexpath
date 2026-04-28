@@ -3,6 +3,8 @@ import type { Stage } from '../classifier/types.js';
 import type { FlagType } from '../classifier/Stage2Trigger.js';
 import type { Store } from '../store/db.js';
 import { insertSkippedSession } from '../store/skipped-sessions.js';
+import { incrementDecisionSessionCount } from '../store/projects.js';
+import { setConfig } from '../store/config.js';
 import {
   resolveDecisionContent,
   buildOptionList,
@@ -34,7 +36,18 @@ import {
 const BOLD_CYAN    = '\x1b[1;96m';
 const BOLD_WHITE   = '\x1b[1;97m';
 const DIM_YELLOW   = '\x1b[2;33m';
+const DIM_GRAY     = '\x1b[2m';
+const ITALIC_DIM   = '\x1b[3;2m';
+const ITALIC_AMBER = '\x1b[3;33m';
+const BOLD         = '\x1b[1m';
 const RESET        = '\x1b[0m';
+
+const SKIP_NOW_LABEL =
+  `${BOLD}Skip for now${RESET}${DIM_GRAY}  — nexpath optimize will remind you${RESET}`;
+
+const HELP_LABEL =
+  `${ITALIC_DIM}  don't need nexpath here?  press ${RESET}${ITALIC_AMBER}Ctrl+X${RESET}${ITALIC_DIM} to disable for this project` +
+  `  ·  press ${RESET}${ITALIC_AMBER}Ctrl+T${RESET}${ITALIC_DIM} to adjust frequency${RESET}`;
 
 export function formatPinchLabel(label: string): string {
   return `${BOLD_CYAN}${label}${RESET}`;
@@ -51,14 +64,16 @@ export function formatSubtitle(subtitle: string): string {
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface DecisionSessionInput {
-  stage:        Stage;
-  flagType:     FlagType;
+  stage:                Stage;
+  flagType:             FlagType;
   /** 2-3 word pinch label from PinchGenerator (or fallback static label). */
-  pinchLabel:   string;
-  sessionId:    string;
-  projectRoot:  string;
+  pinchLabel:           string;
+  sessionId:            string;
+  projectRoot:          string;
   /** Current prompt count in session — stored on skip for optimize queue ordering. */
-  promptCount:  number;
+  promptCount:          number;
+  /** Total decision sessions shown for this project — gates help line display. */
+  decisionSessionCount: number;
 }
 
 /**
@@ -83,6 +98,13 @@ export const CLIPBOARD_ONLY = '__NEXPATH_CLIP__';
  * runLevel treats any separator value as 'skip' as a safety fallback.
  */
 export const OPTION_SEPARATOR = '__nexpath_sep__';
+
+/**
+ * Sentinel returned by the Windows TtySelectFn when the user pressed Ctrl+X
+ * (opt-out forever) during the decision session UI.
+ * runDecisionSession writes advisory_frequency:<projectRoot>=off and returns skipped.
+ */
+export const OPT_OUT_SENTINEL = '__NEXPATH_OPT_OUT__';
 
 /**
  * Result of running a decision session.
@@ -135,6 +157,7 @@ export async function runLevel(
   // Inject blank separator items between visual groups:
   //   content options → 2 blank lines → SHOW_SIMPLER (if present) → 1 blank line → SKIP_NOW
   //   when SHOW_SIMPLER absent: content options → 2 blank lines → SKIP_NOW
+  //   after SKIP_NOW: 2 blank lines → help hint (first 3 appearances only)
   const hasShowSimpler = options.some((o) => o === SHOW_SIMPLER);
   const clackOptions: Array<{ value: string; label: string }> = [];
   let sepIdx = 0;
@@ -148,7 +171,16 @@ export async function runLevel(
         clackOptions.push({ value: `${OPTION_SEPARATOR}${sepIdx++}`, label: '' });
       }
     }
-    clackOptions.push({ value: opt, label: opt });
+    clackOptions.push({
+      value: opt,
+      label: opt === SKIP_NOW ? SKIP_NOW_LABEL : opt,
+    });
+  }
+  // Help hint — 2 blank lines of breathing room then the styled hint row
+  if (input.decisionSessionCount < 3) {
+    clackOptions.push({ value: `${OPTION_SEPARATOR}${sepIdx++}`, label: '' });
+    clackOptions.push({ value: `${OPTION_SEPARATOR}${sepIdx++}`, label: '' });
+    clackOptions.push({ value: `${OPTION_SEPARATOR}help`, label: HELP_LABEL });
   }
 
   const result = await selectFn({ message, options: clackOptions });
@@ -180,10 +212,27 @@ export async function runDecisionSession(
   store?:   Store,
   selectFn: SelectFn = select as SelectFn,
 ): Promise<DecisionSessionResult> {
+  // Increment per-project counter once per UI appearance, regardless of outcome.
+  if (store) {
+    incrementDecisionSessionCount(store, input.projectRoot);
+  }
+
   let level: 1 | 2 | 3 = 1;
 
   while (true) {
     const levelResult = await runLevel(input, level, selectFn);
+
+    // Windows sentinel: Ctrl+X opt-out — write config and skip (no skipped_sessions entry)
+    if (levelResult === OPT_OUT_SENTINEL) {
+      if (store) setConfig(store, `advisory_frequency:${input.projectRoot}`, 'off');
+      return { outcome: 'skipped' };
+    }
+    // Windows sentinel: Ctrl+T frequency change — write config and skip
+    if (typeof levelResult === 'string' && levelResult.startsWith('__FREQ__:')) {
+      const newFreq = levelResult.slice('__FREQ__:'.length);
+      if (store) setConfig(store, `advisory_frequency:${input.projectRoot}`, newFreq);
+      return { outcome: 'skipped' };
+    }
 
     if (levelResult === 'skip') {
       if (store) {

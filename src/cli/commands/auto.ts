@@ -1,4 +1,7 @@
 import OpenAI from 'openai';
+import { readFileSync, existsSync } from 'node:fs';
+import { join, basename } from 'node:path';
+import { config as loadDotenv } from 'dotenv';
 import type { Store } from '../../store/db.js';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
 import { classifyPrompt } from '../../classifier/PromptClassifier.js';
@@ -8,14 +11,13 @@ import { shouldFireStage2, runStage2 } from '../../classifier/Stage2Trigger.js';
 import { generatePinchLabel } from '../../decision-session/PinchGenerator.js';
 import type { Stage } from '../../classifier/types.js';
 import type { FlagType } from '../../classifier/Stage2Trigger.js';
-import {
-  detectLanguage,
-  resolveLanguage,
-  LANG_WINDOW,
-  LANG_DETECT_INTERVAL,
-} from '../../classifier/LanguageDetector.js';
+import { resolveLanguage } from '../../classifier/LanguageDetector.js';
+import { insertPrompt } from '../../store/prompts.js';
 import { getConfig } from '../../store/config.js';
+import { getProject, upsertProject } from '../../store/projects.js';
+import { importHistoricalPrompts } from '../../store/historical-import.js';
 import { logger, initLogger } from '../../logger.js';
+import { extractApiError } from '../../utils/api-error.js';
 import type { LogLevel } from '../../logger.js';
 import { writeHookStats } from '../../store/hook-stats.js';
 import { upsertPendingAdvisory } from '../../store/pending-advisories.js';
@@ -39,6 +41,20 @@ import { upsertPendingAdvisory } from '../../store/pending-advisories.js';
  * Called between agent responses before the user types their next prompt.
  * If no action is needed, returns silently in < 50ms with no output.
  */
+
+const MIN_PROMPTS_BEFORE_ADVISORY = 3;
+/** Prompts to suppress after any advisory fires — prevents rapid back-to-back advisories. */
+const POST_ADVISORY_COOLDOWN = 3;
+
+function resolveProjectName(projectRoot: string): string {
+  try {
+    const pkg = JSON.parse(
+      readFileSync(join(projectRoot, 'package.json'), 'utf8'),
+    ) as { name?: unknown };
+    if (typeof pkg.name === 'string' && pkg.name.trim()) return pkg.name.trim();
+  } catch { /* fall through */ }
+  return basename(projectRoot);
+}
 
 // ── Fired-event key helpers ────────────────────────────────────────────────────
 
@@ -82,6 +98,36 @@ export async function runAuto(
   store:   Store,
   openai?: OpenAI,
 ): Promise<AutoOutcome> {
+  // ── -1. Advisory-injected prompt guard ──────────────────────────────────────
+  // When the stop hook injects an advisory option as a new Claude turn (block decision),
+  // Claude Code fires UserPromptSubmit with that option text — it arrives here like any
+  // real user prompt.  We must skip ALL processing: the text is synthetic and would
+  // corrupt signals, stage confidence, user profile, mood, and can re-fire an advisory.
+  //
+  // The field is always cleared (match or no match) so a cancelled injection cannot
+  // leave stale state that silently skips the next genuine user prompt.
+  {
+    const guardMgr = SessionStateManager.load(store, input.projectRoot);
+    const injectedText = guardMgr.current.lastInjectedPrompt ?? null;
+    if (injectedText !== null) {
+      guardMgr.clearInjectedPrompt(store);
+      if (injectedText === input.promptText) {
+        logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'advisory_injected' });
+        return { outcome: 'no_action' };
+      }
+    }
+  }
+
+  // ── 0.0. Implicit project registration (Issue 6) ─────────────────────────────
+  if (!getProject(store, input.projectRoot)) {
+    const name = resolveProjectName(input.projectRoot);
+    upsertProject(store, { projectRoot: input.projectRoot, name });
+    await importHistoricalPrompts(store, input.projectRoot);
+  }
+
+  // ── 0. Persist prompt text — runs before classifier so prompt is stored even if pipeline errors ──
+  insertPrompt(store, { projectRoot: input.projectRoot, promptText: input.promptText, agent: 'claude-code' });
+
   // ── 1. Load session state ────────────────────────────────────────────────────
   const mgr = SessionStateManager.load(store, input.projectRoot);
   const prevStage: Stage = mgr.current.currentStage;
@@ -95,21 +141,10 @@ export async function runAuto(
   mgr.processPrompt(store, input.promptText, classification);
   logger.debug('after_process', { stage: mgr.current.currentStage, stageConfidence: mgr.current.stageConfidence });
 
-  // ── 3.5. Language detection (every LANG_DETECT_INTERVAL prompts or first time) ─
-  const shouldDetectLang = mgr.current.detectedLanguage === undefined
-    || mgr.current.promptCount % LANG_DETECT_INTERVAL === 0;
-
-  if (shouldDetectLang) {
-    const historyTexts = mgr.current.promptHistory.map((r) => r.text);
-    const langOverride  = getConfig(store.db, 'language_override');
-    const detected      = detectLanguage(
-      historyTexts.slice(-LANG_WINDOW),
-      mgr.current.detectedLanguage,
-    );
-    const resolved      = resolveLanguage(langOverride, detected);
-    mgr.setDetectedLanguage(store, resolved);
-  }
-  const effectiveLang = mgr.current.detectedLanguage;
+  // ── 3.5. Effective language — read from projects table (detection runs in nexpath stop) ──
+  const langOverride  = getConfig(store.db, 'language_override');
+  const detectedLang  = getProject(store, input.projectRoot)?.detectedLanguage ?? undefined;
+  const effectiveLang = resolveLanguage(langOverride, detectedLang);
   logger.debug('language', { effectiveLang: effectiveLang ?? null });
 
   // ── 4. Absence detection ─────────────────────────────────────────────────────
@@ -118,6 +153,12 @@ export async function runAuto(
     mgr.addAbsenceFlag(store, flag);
   }
   logger.debug('absence_flags', { new: newFlags.length, total: mgr.current.absenceFlags.length });
+
+  // ── 4.5. Minimum prompt guard ────────────────────────────────────────────────
+  if (mgr.current.promptCount < MIN_PROMPTS_BEFORE_ADVISORY) {
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'min_prompts_not_reached' });
+    return { outcome: 'no_action' };
+  }
 
   // ── 5. Should Stage 2 fire? ──────────────────────────────────────────────────
   const flagType = shouldFireStage2(
@@ -141,6 +182,32 @@ export async function runAuto(
     return { outcome: 'no_action' };
   }
 
+  // ── 6.5. Advisory frequency gate ────────────────────────────────────────────
+  const freq =
+    getConfig(store.db, `advisory_frequency:${input.projectRoot}`) ??
+    getConfig(store.db, 'advisory_frequency') ??
+    'every_event';
+
+  if (freq === 'off') {
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_off' });
+    return { outcome: 'no_action' };
+  }
+  if (freq === 'major_only' && flagType !== 'stage_transition') {
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_major_only', flagType });
+    return { outcome: 'no_action' };
+  }
+  if (freq === 'once_per_session' && mgr.current.firedDecisionSessions.length > 0) {
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_once_per_session' });
+    return { outcome: 'no_action' };
+  }
+
+  // ── 6.6. Post-advisory cooldown — suppress rapid back-to-back advisories ─────
+  const lastAdvisory = mgr.current.lastAdvisoryPromptIndex ?? -1;
+  if (lastAdvisory >= 0 && mgr.current.promptCount - lastAdvisory < POST_ADVISORY_COOLDOWN) {
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'post_advisory_cooldown', promptsSinceLast: mgr.current.promptCount - lastAdvisory });
+    return { outcome: 'no_action' };
+  }
+
   // ── 7. Stage 2 LLM cross-confirmation ───────────────────────────────────────
   const stage2Input = {
     state:         mgr.current as import('../../classifier/types.js').SessionState,
@@ -154,7 +221,7 @@ export async function runAuto(
     stage2Output = await runStage2(stage2Input, openai);
     logger.debug('stage2_result', { fire: stage2Output.fire_decision_session, confidence: stage2Output.stage_confidence, reason: stage2Output.reason });
   } catch (err) {
-    logger.warn('stage2_error', { error: (err as Error).message, stage: mgr.current.currentStage });
+    logger.warn('stage2_error', { ...extractApiError(err, 'openai'), stage: mgr.current.currentStage });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'stage2_error' });
     // Stage 2 API failure → skip silently (non-blocking)
     return { outcome: 'no_action' };
@@ -189,6 +256,7 @@ export async function runAuto(
     sessionId:   mgr.current.sessionId,
     promptCount: mgr.current.promptCount,
   });
+  mgr.markAdvisoryFired(store);
 
   logger.info('pipeline_outcome', { outcome: 'pending', pinchLabel });
   return { outcome: 'pending' };
@@ -259,10 +327,25 @@ export function registerAutoCommand(program: import('commander').Command): void 
         process.exit(1);
       }
 
+      // Load project .env so OPENAI_API_KEY is available for Stage 2 calls.
+      // Uses override:true so the project key always wins over any ambient env var.
+      const envPath = join(opts.project, '.env');
+      loadDotenv({ path: envPath, override: true });
+
       const store = await openStore(opts.db);
       // Initialise logger — level from config key, then NEXPATH_LOG_LEVEL env var
       const logLevel = getConfig(store.db, 'log_level') as LogLevel | undefined;
       initLogger('auto', logLevel);
+
+      // Diagnostic: log env resolution details so CWD mismatches are visible in the log
+      // instead of silently producing a missing-credentials error in Stage 2.
+      logger.debug('env_load', {
+        cwd:      process.cwd(),
+        project:  opts.project,
+        envPath,
+        envExists: existsSync(envPath),
+        keyFound:  !!process.env['OPENAI_API_KEY'],
+      });
 
       try {
         const result = await runAuto(

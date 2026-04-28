@@ -9,6 +9,9 @@ import { SKIP_NOW } from '../../decision-session/options.js';
 import { CLIPBOARD_ONLY } from '../../decision-session/DecisionSession.js';
 import type { SelectFn } from '../../decision-session/DecisionSession.js';
 import * as TtySelectFnModule from '../../decision-session/TtySelectFn.js';
+import { insertPrompt } from '../../store/prompts.js';
+import { upsertProject, getProject } from '../../store/projects.js';
+import { LANG_DETECT_INTERVAL } from '../../classifier/LanguageDetector.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -225,6 +228,47 @@ describe('runStop — project isolation', () => {
   });
 });
 
+// ── runStop — decisionSessionCount wiring (Phase H) ──────────────────────────
+
+describe('runStop — decisionSessionCount wiring', () => {
+  let store: Store;
+
+  beforeEach(async () => {
+    store = await openStore(':memory:');
+    upsertProject(store, { projectRoot: '/test/project', name: 'Test' });
+  });
+  afterEach(() => { store.db.close(); });
+
+  it('decision_session_count increments after a decision session is shown', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    expect(getProject(store, '/test/project')?.decisionSessionCount).toBe(0);
+
+    await runStop(makePayload(), store, mockSelect(SKIP_NOW));
+
+    expect(getProject(store, '/test/project')?.decisionSessionCount).toBe(1);
+  });
+
+  it('decision_session_count increments even when user picks an option (not just skips)', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    await runStop(makePayload(), store, mockSelect('write unit tests'));
+    expect(getProject(store, '/test/project')?.decisionSessionCount).toBe(1);
+  });
+
+  it('decision_session_count does NOT increment when there is no pending advisory', async () => {
+    // No advisory → runStop returns no_pending before reaching runDecisionSession
+    await runStop(makePayload(), store, mockSelect(SKIP_NOW));
+    expect(getProject(store, '/test/project')?.decisionSessionCount).toBe(0);
+  });
+
+  it('createTtySelectFn is called with store and projectRoot when TTY path is taken', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    const spy = vi.spyOn(TtySelectFnModule, 'createTtySelectFn').mockReturnValue(null);
+    // No selectFn injected → real TTY path taken → createTtySelectFn called
+    await runStop(makePayload(), store);
+    expect(spy).toHaveBeenCalledWith(store, '/test/project');
+  });
+});
+
 // ── Stop hook output format ───────────────────────────────────────────────────
 
 describe('Stop hook output format', () => {
@@ -234,5 +278,110 @@ describe('Stop hook output format', () => {
     const parsed = JSON.parse(output) as { decision: string; reason: string };
     expect(parsed.decision).toBe('block');
     expect(parsed.reason).toBe(reason);
+  });
+});
+
+// ── runStop — language detection (step 1.5) ───────────────────────────────────
+
+describe('runStop — language detection', () => {
+  let store: Store;
+
+  beforeEach(async () => {
+    store = await openStore(':memory:');
+    upsertProject(store, { projectRoot: '/test/project', name: 'Test' });
+  });
+  afterEach(() => { store.db.close(); });
+
+  it('does not update detected_language when fewer than LANG_DETECT_INTERVAL prompts exist', async () => {
+    // Insert LANG_DETECT_INTERVAL - 1 prompts (threshold not met)
+    for (let i = 0; i < LANG_DETECT_INTERVAL - 1; i++) {
+      insertPrompt(store, { projectRoot: '/test/project', promptText: 'I want to add a feature' });
+    }
+    await runStop(makePayload(), store, mockSelect(SKIP_NOW));
+    const proj = getProject(store, '/test/project');
+    expect(proj?.detectedLanguage).toBeNull(); // detection did not fire
+  });
+
+  it('updates detected_language when >= LANG_DETECT_INTERVAL prompts exist', async () => {
+    // Insert enough English prompts to meet the threshold
+    const englishPrompt = 'I want to add a login page so users can reset their password and access settings';
+    for (let i = 0; i < LANG_DETECT_INTERVAL; i++) {
+      insertPrompt(store, { projectRoot: '/test/project', promptText: englishPrompt });
+    }
+    await runStop(makePayload(), store, mockSelect(SKIP_NOW));
+    const proj = getProject(store, '/test/project');
+    // Detection ran — detectedLanguage should be set (may be 'en' or whatever tinyld returns)
+    // We only assert it is no longer null (detection fired)
+    expect(proj?.detectedLanguage).not.toBeNull();
+  });
+
+  it('detection fires even when no advisory is pending (outcome no_pending)', async () => {
+    const englishPrompt = 'I want to add a login page so users can reset their password';
+    for (let i = 0; i < LANG_DETECT_INTERVAL; i++) {
+      insertPrompt(store, { projectRoot: '/test/project', promptText: englishPrompt });
+    }
+    // No advisory upserted → outcome should be no_pending
+    const result = await runStop(makePayload(), store);
+    expect(result.outcome).toBe('no_pending');
+    // Detection still fired
+    const proj = getProject(store, '/test/project');
+    expect(proj?.detectedLanguage).not.toBeNull();
+  });
+
+  it('detection does NOT fire when stop_hook_active is true (loop guard exits first)', async () => {
+    const englishPrompt = 'I want to add a login page so users can reset their password';
+    for (let i = 0; i < LANG_DETECT_INTERVAL; i++) {
+      insertPrompt(store, { projectRoot: '/test/project', promptText: englishPrompt });
+    }
+    const result = await runStop(makePayload({ stop_hook_active: true }), store);
+    expect(result.outcome).toBe('loop_guard');
+    // Loop guard exited before step 1.5 — detected_language stays null
+    const proj = getProject(store, '/test/project');
+    expect(proj?.detectedLanguage).toBeNull();
+  });
+});
+
+// ── runStop — lastInjectedPrompt flag ─────────────────────────────────────────
+
+describe('runStop — lastInjectedPrompt flag', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('sets lastInjectedPrompt in session when user selects an option', async () => {
+    const selectedText = 'write unit tests before continuing';
+    upsertPendingAdvisory(store, makeAdvisory());
+    await runStop(makePayload(), store, mockSelect(selectedText));
+
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/project');
+    expect(mgr.current.lastInjectedPrompt).toBe(selectedText);
+  });
+
+  it('does NOT set lastInjectedPrompt when user skips', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    await runStop(makePayload(), store, mockSelect(SKIP_NOW));
+
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/project');
+    expect(mgr.current.lastInjectedPrompt ?? null).toBeNull();
+  });
+
+  it('does NOT set lastInjectedPrompt on clipboard_only', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    await runStop(makePayload(), store, mockSelect(CLIPBOARD_ONLY));
+
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/project');
+    expect(mgr.current.lastInjectedPrompt ?? null).toBeNull();
+  });
+
+  it('does NOT set lastInjectedPrompt when no advisory is pending', async () => {
+    await runStop(makePayload(), store, mockSelect('some option'));
+
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/project');
+    expect(mgr.current.lastInjectedPrompt ?? null).toBeNull();
   });
 });

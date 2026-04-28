@@ -59,7 +59,16 @@ export interface SessionState {
   lastPromptAt: number;         // unix ms — used for gap-based reset
   currentStage: Stage;
   stageConfidence: number;      // 0–1
-  stageConfirmedAt: number;     // prompt index when stage reached ≥ 0.70 confidence
+  stageConfirmedAt: number;     // prompt index when stage confidence first crossed STAGE_CONFIRM_THRESHOLD (EMA epoch marker — NOT used by AbsenceDetector)
+  /**
+   * Rolling count of prompts processed while currentStage has remained unchanged.
+   * Resets to 0 on every genuine stage transition; increments on every other prompt
+   * (same-stage classification or cross-stage classification below the confidence gate).
+   * Used by AbsenceDetector as the "time in stage" metric instead of
+   * (promptCount - stageConfirmedAt).  Decoupled from stageConfirmedAt so that
+   * tuning the cross-stage confidence gate does not inadvertently delay absence detection.
+   */
+  promptsInCurrentStage: number;
   promptCount: number;          // total prompts processed this session
   promptHistory: PromptRecord[]; // capped at 30
   signalCounters: Record<string, SignalCounter>;
@@ -70,10 +79,26 @@ export interface SessionState {
    * Enforces the "once per stage transition event, never re-fires same event same session" rule.
    */
   firedDecisionSessions: string[];
-  /** Cached user profile — null until ≥ PROFILE_RECOMPUTE_INTERVAL prompts processed. */
+  /** Cached user profile — null until first prompt processed. Updated every NATURE_DEPTH_RECOMPUTE_INTERVAL prompts. */
   profile: UserProfile | null;
+  /** Per-prompt mood — updated unconditionally on every processPrompt() call. */
+  mood?: UserMood;
   /** Last successfully detected/resolved language code. undefined = not yet detected. */
   detectedLanguage: string | undefined;
+  /**
+   * Exact text of the advisory option last injected by the stop hook via { decision: 'block' }.
+   * The auto hook reads and always clears this on its first invocation after a block.
+   * If the incoming prompt matches, it is advisory-injected and all processing is skipped.
+   * null when no injection is pending.
+   */
+  lastInjectedPrompt?: string | null;
+  /**
+   * promptCount value at the time the most recent advisory was stored (upsertPendingAdvisory).
+   * Used to enforce a post-advisory cooldown: no new advisory fires within
+   * POST_ADVISORY_COOLDOWN prompts of the last one.
+   * -1 = no advisory has fired this session.
+   */
+  lastAdvisoryPromptIndex?: number;
 }
 
 // ── User nature / mood / depth (item 9) ───────────────────────────────────────

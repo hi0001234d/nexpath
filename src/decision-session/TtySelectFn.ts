@@ -9,8 +9,10 @@ import { createRequire } from 'node:module';
 import * as rl from 'node:readline';
 import pc from 'picocolors';
 import type { SelectFn } from './DecisionSession.js';
-import { CLIPBOARD_ONLY, OPTION_SEPARATOR } from './DecisionSession.js';
+import { CLIPBOARD_ONLY, OPTION_SEPARATOR, OPT_OUT_SENTINEL } from './DecisionSession.js';
 import { SKIP_NOW, SHOW_SIMPLER } from './options.js';
+import type { Store } from '../store/db.js';
+import { setConfig } from '../store/config.js';
 
 // ── Windows: new console window running @clack/prompts via Node.js ─────────────
 
@@ -34,9 +36,28 @@ function buildMjsScript(clackUrl: string, optFileFwd: string, resultFileFwd: str
   return `import { select, isCancel } from '${clackUrl}';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { emitKeypressEvents } from 'node:readline';
 
 const opts    = JSON.parse(readFileSync('${optFileFwd}', 'utf8'));
 const TIMEOUT = Symbol('timeout');
+
+// Capture Ctrl+X (opt-out) and Ctrl+T (frequency) pressed during the select UI.
+// @clack/prompts sets raw mode; our listener receives events it doesn't consume.
+if (process.stdin.isTTY) {
+  emitKeypressEvents(process.stdin);
+  process.stdin.setRawMode(true);
+}
+let specialKey = null;
+process.stdin.on('keypress', (ch, key) => {
+  if (key?.sequence === '\\x18') {   // Ctrl+X → exit immediately
+    writeFileSync('${resultFileFwd}', '__NEXPATH_OPT_OUT__', 'utf8');
+    process.exit(0);
+  }
+  if (key?.sequence === '\\x14') {   // Ctrl+T → show freq menu in new window; exit immediately
+    writeFileSync('${resultFileFwd}', '__FREQ_MENU_PENDING__', 'utf8');
+    process.exit(0);
+  }
+});
 
 let picked;
 do {
@@ -78,6 +99,32 @@ process.exit(0);
 `;
 }
 
+function buildFreqMjsScript(clackUrl: string, resultFileFwd: string): string {
+  return `import { select, isCancel } from '${clackUrl}';
+import { writeFileSync } from 'node:fs';
+
+const TIMEOUT = Symbol('timeout');
+const picked = await Promise.race([
+  select({
+    message: 'Advisory frequency',
+    options: [
+      { value: 'every_event',      label: 'Every qualifying event (default)' },
+      { value: 'major_only',       label: 'Major transitions only (stage changes)' },
+      { value: 'once_per_session', label: 'Once per coding session' },
+      { value: 'off',              label: 'Off \\u2014 disable all advisories' },
+    ],
+  }),
+  new Promise((r) => setTimeout(() => r(TIMEOUT), 60_000)),
+]);
+
+if (!isCancel(picked) && picked !== TIMEOUT && typeof picked === 'string') {
+  writeFileSync('${resultFileFwd}', \`__FREQ__:\${picked}\`, 'utf8');
+}
+
+process.exit(0);
+`;
+}
+
 /**
  * Windows-specific SelectFn that opens a new console window running Node.js
  * with @clack/prompts — preserving the full arrow-key, visual-cursor UI.
@@ -102,7 +149,7 @@ process.exit(0);
  * Foreground activation: cmd /c start uses ShellExecuteEx (SW_SHOWNORMAL)
  * which reliably brings the new window to the foreground.
  */
-function buildWindowsNewWindowSelectFn(): SelectFn {
+function buildWindowsNewWindowSelectFn(_store?: Store, _projectRoot?: string): SelectFn {
   // Resolve @clack/prompts ESM entry from nexpath's module context (once per SelectFn build).
   // createRequire().resolve('@clack/prompts') returns the CJS entry (dist/index.cjs).
   // The .mjs script needs the ESM entry (exports['.'].import = dist/index.mjs) so that
@@ -156,14 +203,39 @@ function buildWindowsNewWindowSelectFn(): SelectFn {
       );
 
       // Result file format:
-      //   '__CLIP__' → user chose "Copy to clipboard" (clip.exe already called by MJS)
-      //   any other non-empty text → selected prompt text (send to Claude path)
-      //   (absent / empty) → cancelled / timed out
+      //   '__CLIP__'               → user chose "Copy to clipboard" (clip.exe already called)
+      //   '__NEXPATH_OPT_OUT__'    → user pressed Ctrl+X; runDecisionSession writes config
+      //   '__FREQ_MENU_PENDING__'  → user pressed Ctrl+T; spawn a second freq-selection window
+      //   '__FREQ__:<value>'       → freq picked in second window; runDecisionSession writes config
+      //   any other non-empty      → selected prompt text (send to Claude path)
+      //   (absent / empty)         → cancelled / timed out
       let result: string | symbol = Symbol('cancelled');
       if (existsSync(resultFile)) {
         const raw = readFileSync(resultFile, 'utf8').trim();
         if (raw === '__CLIP__') {
           result = CLIPBOARD_ONLY;
+        } else if (raw === '__NEXPATH_OPT_OUT__') {
+          result = OPT_OUT_SENTINEL;
+        } else if (raw === '__FREQ_MENU_PENDING__') {
+          const freqId         = randomUUID();
+          const freqResultFile = join(tmpdir(), `nexpath-freq-res-${freqId}.txt`);
+          const freqScriptFile = join(tmpdir(), `nexpath-freq-sel-${freqId}.mjs`);
+          const freqResultFwd  = freqResultFile.replace(/\\/g, '/');
+          writeFileSync(freqScriptFile, buildFreqMjsScript(clackUrl, freqResultFwd), 'utf8');
+          spawnSync(
+            'cmd.exe',
+            ['/c', 'start', '/WAIT', 'Nexpath \u2014 Frequency', 'node', freqScriptFile],
+            { stdio: 'ignore' },
+          );
+          if (existsSync(freqResultFile)) {
+            const freqRaw = readFileSync(freqResultFile, 'utf8').trim();
+            if (freqRaw.startsWith('__FREQ__:')) result = freqRaw;
+          }
+          for (const f of [freqScriptFile, freqResultFile]) {
+            try { unlinkSync(f); } catch { /* ignore */ }
+          }
+        } else if (raw.startsWith('__FREQ__:')) {
+          result = raw;
         } else if (raw.length > 0) {
           result = raw;
         }
@@ -227,7 +299,46 @@ function copyToClipboardUnix(text: string): void {
   }
 }
 
-function buildUnixSelectFn(streams: TtyStreams): SelectFn {
+function runFrequencySubMenu(
+  streams:     TtyStreams,
+  iface:       rl.Interface,
+  store:       Store | undefined,
+  projectRoot: string | undefined,
+  cleanup:     (value: string | symbol) => void,
+): void {
+  const freqOptions = [
+    { num: 1, value: 'every_event',      label: 'Every qualifying event (default)' },
+    { num: 2, value: 'major_only',       label: 'Major transitions only (stage changes)' },
+    { num: 3, value: 'once_per_session', label: 'Once per coding session' },
+    { num: 4, value: 'off',              label: 'Off \u2014 disable all advisories' },
+  ];
+  const menuLines = [
+    pc.cyan('│'),
+    `${pc.cyan('◆')}  ${pc.bold('Advisory frequency')}`,
+    ...freqOptions.map((o) => `${pc.cyan('│')}  ${pc.green(`${o.num})`)} ${o.label}`),
+    pc.cyan('│'),
+  ];
+  streams.output.write(menuLines.join('\n') + '\n');
+  streams.output.write(`${pc.cyan('└')}  Select (1-4): `);
+
+  iface.once('line', (answer) => {
+    const num = parseInt(answer.trim(), 10);
+    const choice = freqOptions.find((o) => o.num === num);
+    if (choice && store && projectRoot) {
+      setConfig(store, `advisory_frequency:${projectRoot}`, choice.value);
+      streams.output.write(
+        `${pc.cyan('│')}  ${pc.dim(`Frequency set to: ${choice.label}`)}\n${pc.cyan('│')}\n`,
+      );
+    }
+    cleanup(SKIP_NOW);
+  });
+}
+
+function buildUnixSelectFn(
+  streams:      TtyStreams,
+  store?:       Store,
+  projectRoot?: string,
+): SelectFn {
   return (opts) =>
     new Promise<string | symbol>((resolve) => {
       const options = opts.options;
@@ -242,13 +353,18 @@ function buildUnixSelectFn(streams: TtyStreams): SelectFn {
         resolve(value);
       }
 
-      // Build numbered menu — separator items get a blank visual row, no number.
+      // Build numbered menu — separator items with a non-empty label render their label;
+      // separator items with an empty label render as a blank visual row.
       const indexToOption = new Map<number, (typeof options)[number]>();
       const menuLines = [pc.gray('│'), `${pc.cyan('◆')}  ${opts.message}`];
       let numIdx = 1;
       for (const opt of options) {
         if (opt.value.startsWith(OPTION_SEPARATOR)) {
-          menuLines.push(pc.cyan('│'));
+          if (opt.label) {
+            menuLines.push(`${pc.cyan('│')}  ${opt.label}`);
+          } else {
+            menuLines.push(pc.cyan('│'));
+          }
         } else {
           menuLines.push(`${pc.cyan('│')}  ${pc.green(`${numIdx})`)} ${opt.label}`);
           indexToOption.set(numIdx++, opt);
@@ -267,6 +383,24 @@ function buildUnixSelectFn(streams: TtyStreams): SelectFn {
       streams.output.once('error', () => cleanup(Symbol('tty_error')));
 
       iface.once('line', (answer) => {
+        // Ctrl+X → opt-out forever
+        if (answer.charCodeAt(0) === 0x18) {
+          if (store && projectRoot) {
+            setConfig(store, `advisory_frequency:${projectRoot}`, 'off');
+          }
+          streams.output.write(
+            `${pc.cyan('│')}  ${pc.dim('Advisory disabled. Run nexpath config set advisory_frequency every_event to re-activate.')}\n${pc.cyan('│')}\n`,
+          );
+          cleanup(SKIP_NOW);
+          return;
+        }
+
+        // Ctrl+T → frequency sub-menu
+        if (answer.charCodeAt(0) === 0x14) {
+          runFrequencySubMenu(streams, iface, store, projectRoot, cleanup);
+          return;
+        }
+
         const num = parseInt(answer.trim(), 10);
         const selected = indexToOption.get(num);
         if (selected !== undefined) {
@@ -323,11 +457,11 @@ function buildUnixSelectFn(streams: TtyStreams): SelectFn {
  * Linux/Mac — opens /dev/tty directly (requires controlling terminal).
  *            Returns null when /dev/tty is not accessible (CI, no console).
  */
-export function createTtySelectFn(): SelectFn | null {
+export function createTtySelectFn(store?: Store, projectRoot?: string): SelectFn | null {
   if (platform === 'win32') {
-    return buildWindowsNewWindowSelectFn();
+    return buildWindowsNewWindowSelectFn(store, projectRoot);
   }
   const streams = openUnixTtyStreams();
   if (!streams) return null;
-  return buildUnixSelectFn(streams);
+  return buildUnixSelectFn(streams, store, projectRoot);
 }

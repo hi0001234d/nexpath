@@ -6,6 +6,10 @@ import { runDecisionSession } from '../../decision-session/DecisionSession.js';
 import type { SelectFn } from '../../decision-session/DecisionSession.js';
 import { createTtySelectFn } from '../../decision-session/TtySelectFn.js';
 import { getConfig } from '../../store/config.js';
+import { detectLanguage, LANG_WINDOW, LANG_DETECT_INTERVAL } from '../../classifier/LanguageDetector.js';
+import { SessionStateManager } from '../../classifier/SessionStateManager.js';
+import { getRecentPrompts } from '../../store/prompts.js';
+import { getProject, setDetectedLanguage } from '../../store/projects.js';
 import { logger, initLogger } from '../../logger.js';
 import type { LogLevel } from '../../logger.js';
 import { writeHookStats } from '../../store/hook-stats.js';
@@ -65,6 +69,19 @@ export async function runStop(
     return { outcome: 'loop_guard' };
   }
 
+  // 1.5. Language detection — runs post-response, invisible latency
+  //      Only fires when >= LANG_DETECT_INTERVAL prompts have been captured for this project.
+  const recentPrompts = getRecentPrompts(store, payload.cwd, LANG_WINDOW);
+  if (recentPrompts.length >= LANG_DETECT_INTERVAL) {
+    const currentDetected = getProject(store, payload.cwd)?.detectedLanguage ?? undefined;
+    const detected = detectLanguage(recentPrompts.map((p) => p.text), currentDetected);
+    setDetectedLanguage(store, payload.cwd, detected);
+    logger.debug('stop_lang_detected', { cwd: payload.cwd, detected: detected ?? null });
+  }
+
+  // 1.7. Read decision_session_count for help-line gating in the decision session UI
+  const decisionSessionCount = getProject(store, payload.cwd)?.decisionSessionCount ?? 0;
+
   // 2. Check for a pending advisory stored by the auto hook
   const advisory = getPendingAdvisory(store, payload.cwd);
   if (!advisory) {
@@ -75,10 +92,22 @@ export async function runStop(
   // 3. Mark as shown immediately — prevents duplicate UI on rapid Stop re-fires
   markAdvisoryShown(store, advisory.id);
 
+  // 3.5. Advisory frequency gate — honour opt-out / frequency setting even for
+  //      already-queued pending advisories (e.g. user pressed Ctrl+X on a prior
+  //      advisory while a second was already pending in the DB).
+  const freq =
+    getConfig(store.db, `advisory_frequency:${payload.cwd}`) ??
+    getConfig(store.db, 'advisory_frequency') ??
+    'every_event';
+  if (freq === 'off') {
+    logger.info('stop_freq_gate', { cwd: payload.cwd, reason: 'freq_off' });
+    return { outcome: 'skipped' };
+  }
+
   // 4. TTY resolution — Stop hook stdin is always piped; open /dev/tty directly
   let effectiveSelectFn: SelectFn | undefined = selectFn;
   if (!effectiveSelectFn) {
-    const ttySel = createTtySelectFn();
+    const ttySel = createTtySelectFn(store, payload.cwd);
     if (!ttySel) {
       logger.info('stop_no_tty', { cwd: payload.cwd });
       return { outcome: 'no_tty' };
@@ -90,18 +119,23 @@ export async function runStop(
   // 5. Render decision session UI
   const dsResult = await runDecisionSession(
     {
-      stage:       advisory.stage,
-      flagType:    advisory.flagType,
-      pinchLabel:  advisory.pinchLabel,
-      sessionId:   advisory.sessionId,
-      projectRoot: payload.cwd,
-      promptCount: advisory.promptCount,
+      stage:                advisory.stage,
+      flagType:             advisory.flagType,
+      pinchLabel:           advisory.pinchLabel,
+      sessionId:            advisory.sessionId,
+      projectRoot:          payload.cwd,
+      promptCount:          advisory.promptCount,
+      decisionSessionCount,
     },
     store,
     effectiveSelectFn,
   );
 
   if (dsResult.outcome === 'selected') {
+    // Store injected text in session — auto reads and clears this on its next invocation
+    // to skip all pipeline processing for the advisory-injected prompt.
+    const mgr = SessionStateManager.load(store, payload.cwd);
+    mgr.setInjectedPrompt(store, dsResult.selectedPrompt);
     logger.info('stop_blocked', { cwd: payload.cwd, reason: dsResult.selectedPrompt });
     return { outcome: 'blocked', reason: dsResult.selectedPrompt };
   }

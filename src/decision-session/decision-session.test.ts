@@ -21,22 +21,26 @@ import {
   runLevel,
   runDecisionSession,
   OPTION_SEPARATOR,
+  OPT_OUT_SENTINEL,
 } from './DecisionSession.js';
 import type { DecisionSessionInput, SelectFn } from './DecisionSession.js';
 import type { Store } from '../store/db.js';
 import { openStore } from '../store/db.js';
 import { getSkippedSessions } from '../store/skipped-sessions.js';
+import { getProject, upsertProject } from '../store/projects.js';
+import { getConfig } from '../store/config.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 function makeInput(overrides: Partial<DecisionSessionInput> = {}): DecisionSessionInput {
   return {
-    stage:       'implementation',
-    flagType:    'stage_transition',
-    pinchLabel:  'Hold up.',
-    sessionId:   'session-test',
-    projectRoot: '/test/project',
-    promptCount: 20,
+    stage:                'implementation',
+    flagType:             'stage_transition',
+    pinchLabel:           'Hold up.',
+    sessionId:            'session-test',
+    projectRoot:          '/test/project',
+    promptCount:          20,
+    decisionSessionCount: 5,
     ...overrides,
   };
 }
@@ -513,11 +517,13 @@ describe('runLevel', () => {
     expect(values).not.toContain(SHOW_SIMPLER);
   });
 
-  it('value and label are equal for every non-separator option (options are pre-filled prompts)', () => {
+  it('value and label are equal for every non-separator, non-SKIP_NOW option (content prompts are pre-filled)', () => {
     const spy = vi.fn().mockResolvedValue(SKIP_NOW);
     return runLevel(makeInput(), 1, spy).then(() => {
       const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
-      const realOpts = opts.filter((o) => !o.value.startsWith(OPTION_SEPARATOR));
+      const realOpts = opts.filter(
+        (o) => !o.value.startsWith(OPTION_SEPARATOR) && o.value !== SKIP_NOW,
+      );
       for (const opt of realOpts) {
         expect(opt.value).toBe(opt.label);
       }
@@ -786,5 +792,200 @@ describe('IMPLEMENTATION_TO_REVIEW — v0.3.0 addition', () => {
     expect(IMPLEMENTATION_TO_REVIEW.L1[1]).toContain('Check the spec acceptance criteria');
     expect(IMPLEMENTATION_TO_REVIEW.L1[2]).toContain('Cross-confirm the full implementation');
     expect(IMPLEMENTATION_TO_REVIEW.L1[3]).toContain('Review for regression');
+  });
+});
+
+// ── Phase H — decisionSessionCount, help line, SKIP_NOW label, sentinels ────────
+
+describe('runDecisionSession — decisionSessionCount increment', () => {
+  it('increments decision_session_count in projects table on each call', async () => {
+    const store = await openStore(':memory:');
+    try {
+      upsertProject(store, { projectRoot: '/proj/count', name: 'count' });
+      const input = makeInput({ projectRoot: '/proj/count' });
+
+      await runDecisionSession(input, store, mockSelect(SKIP_NOW));
+      expect(getProject(store, '/proj/count')?.decisionSessionCount).toBe(1);
+
+      await runDecisionSession(input, store, mockSelect(SKIP_NOW));
+      expect(getProject(store, '/proj/count')?.decisionSessionCount).toBe(2);
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('does not crash when store is undefined (no increment, no error)', async () => {
+    const input = makeInput({ projectRoot: '/proj/no-store' });
+    const result = await runDecisionSession(input, undefined, mockSelect(SKIP_NOW));
+    expect(result.outcome).toBe('skipped');
+  });
+});
+
+describe('runLevel — help line injection', () => {
+  it('injects help item at bottom of options when decisionSessionCount < 3', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ decisionSessionCount: 0 }), 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
+    const helpItem = opts.find((o) => o.value === `${OPTION_SEPARATOR}help`);
+    expect(helpItem).toBeDefined();
+    expect(helpItem?.label).toContain('Ctrl+X');
+    expect(helpItem?.label).toContain('Ctrl+T');
+  });
+
+  it('does NOT inject help item when decisionSessionCount >= 3', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ decisionSessionCount: 3 }), 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
+    const helpItem = opts.find((o) => o.value === `${OPTION_SEPARATOR}help`);
+    expect(helpItem).toBeUndefined();
+  });
+
+  it('help item has non-empty styled label', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ decisionSessionCount: 1 }), 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
+    const helpItem = opts.find((o) => o.value === `${OPTION_SEPARATOR}help`);
+    expect(helpItem?.label.trim().length).toBeGreaterThan(0);
+  });
+
+  it('help item is preceded by 2 blank separator lines', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ decisionSessionCount: 0 }), 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
+    const helpIdx = opts.findIndex((o) => o.value === `${OPTION_SEPARATOR}help`);
+    expect(helpIdx).toBeGreaterThanOrEqual(2);
+    expect(opts[helpIdx - 1]?.label).toBe('');
+    expect(opts[helpIdx - 2]?.label).toBe('');
+  });
+
+  it('help hint is NOT in message header', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ decisionSessionCount: 0 }), 1, spy as SelectFn);
+    const msg = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].message as string;
+    expect(msg).not.toContain('Ctrl+X');
+    expect(msg).not.toContain('Ctrl+T');
+  });
+});
+
+describe('runLevel — SKIP_NOW label split', () => {
+  it('SKIP_NOW option has value === SKIP_NOW constant', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ decisionSessionCount: 5 }), 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
+    const skipItem = opts.find((o) => o.value === SKIP_NOW);
+    expect(skipItem).toBeDefined();
+  });
+
+  it('SKIP_NOW option label differs from its value (styled bold)', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput({ decisionSessionCount: 5 }), 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
+    const skipItem = opts.find((o) => o.value === SKIP_NOW);
+    expect(skipItem?.label).not.toBe(SKIP_NOW);
+    expect(skipItem?.label).toContain('\x1b[1m'); // bold ANSI escape
+  });
+
+  it('SKIP_NOW still resolves as "skip" outcome despite label change', async () => {
+    const result = await runDecisionSession(
+      makeInput({ decisionSessionCount: 5 }),
+      undefined,
+      mockSelect(SKIP_NOW),
+    );
+    expect(result.outcome).toBe('skipped');
+  });
+});
+
+describe('runDecisionSession — OPT_OUT_SENTINEL handling', () => {
+  it('returns skipped outcome when selectFn returns OPT_OUT_SENTINEL', async () => {
+    const store = await openStore(':memory:');
+    try {
+      upsertProject(store, { projectRoot: '/proj/optout', name: 'optout' });
+      const result = await runDecisionSession(
+        makeInput({ projectRoot: '/proj/optout' }),
+        store,
+        mockSelect(OPT_OUT_SENTINEL),
+      );
+      expect(result.outcome).toBe('skipped');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('writes advisory_frequency:<projectRoot>=off to config on OPT_OUT_SENTINEL', async () => {
+    const store = await openStore(':memory:');
+    try {
+      upsertProject(store, { projectRoot: '/proj/optout2', name: 'optout2' });
+      await runDecisionSession(
+        makeInput({ projectRoot: '/proj/optout2' }),
+        store,
+        mockSelect(OPT_OUT_SENTINEL),
+      );
+      expect(getConfig(store.db, 'advisory_frequency:/proj/optout2')).toBe('off');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('does NOT record a skipped_sessions row on OPT_OUT_SENTINEL (config change, not a skip)', async () => {
+    const store = await openStore(':memory:');
+    try {
+      upsertProject(store, { projectRoot: '/proj/optout3', name: 'optout3' });
+      await runDecisionSession(
+        makeInput({ projectRoot: '/proj/optout3' }),
+        store,
+        mockSelect(OPT_OUT_SENTINEL),
+      );
+      const rows = getSkippedSessions(store, '/proj/optout3');
+      expect(rows).toHaveLength(0);
+    } finally {
+      store.db.close();
+    }
+  });
+});
+
+describe('runDecisionSession — __FREQ__ sentinel handling', () => {
+  it('returns skipped outcome when selectFn returns __FREQ__:major_only', async () => {
+    const store = await openStore(':memory:');
+    try {
+      upsertProject(store, { projectRoot: '/proj/freq', name: 'freq' });
+      const result = await runDecisionSession(
+        makeInput({ projectRoot: '/proj/freq' }),
+        store,
+        mockSelect('__FREQ__:major_only'),
+      );
+      expect(result.outcome).toBe('skipped');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('writes the chosen frequency to config on __FREQ__:<value>', async () => {
+    const store = await openStore(':memory:');
+    try {
+      upsertProject(store, { projectRoot: '/proj/freq2', name: 'freq2' });
+      await runDecisionSession(
+        makeInput({ projectRoot: '/proj/freq2' }),
+        store,
+        mockSelect('__FREQ__:once_per_session'),
+      );
+      expect(getConfig(store.db, 'advisory_frequency:/proj/freq2')).toBe('once_per_session');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('writes off when __FREQ__:off is returned', async () => {
+    const store = await openStore(':memory:');
+    try {
+      upsertProject(store, { projectRoot: '/proj/freq3', name: 'freq3' });
+      await runDecisionSession(
+        makeInput({ projectRoot: '/proj/freq3' }),
+        store,
+        mockSelect('__FREQ__:off'),
+      );
+      expect(getConfig(store.db, 'advisory_frequency:/proj/freq3')).toBe('off');
+    } finally {
+      store.db.close();
+    }
   });
 });

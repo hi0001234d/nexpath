@@ -88,8 +88,9 @@ export function buildPinchPrompt(
     ? buildToneHint(profile)
     : 'Motivating and friendly, not judgmental. Like a trusted colleague tapping them on the shoulder.';
 
-  const langInstruction = language && isValidLanguageCode(language)
-    ? `\n\nLanguage: Respond with the label in "${language}".`
+  const isKnownEnglish = language === 'en';
+  const plainEnglishNote = !isKnownEnglish
+    ? '\n\nStyle note: Use plain, jargon-free English — no idioms or cultural references. The developer may not be a native English speaker.'
     : '';
 
   return `Context: A developer is using an AI coding agent. The system has detected that the developer may benefit from a quick check-in. The situation: ${question}
@@ -105,7 +106,7 @@ Audience: A developer who is moving fast with an AI coding agent. They may be mi
 Response format: Output ONLY the 2-3 word label. No punctuation at the end. No quotes. No explanation. Examples of the right style: "Hold up.", "Quick check.", "Before coding.", "Worth a pause."
 
 Flag type context: ${flagType}
-Current stage: ${currentStage}${langInstruction}
+Current stage: ${currentStage}${plainEnglishNote}
 
 Output the label now:`;
 }

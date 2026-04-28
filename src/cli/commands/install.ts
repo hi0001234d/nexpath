@@ -3,6 +3,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { confirm, isCancel } from '@clack/prompts';
+import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
+import { isConfigSet, setConfig } from '../../store/config.js';
 
 export const MCP_SERVER_NAME = 'nexpath-prompt-store';
 
@@ -15,12 +17,11 @@ export function buildStandardEntry(isWin = process.platform === 'win32') {
     : { command: 'npx', args: ['-y', 'nexpath-serve'] };
 }
 
-/** Cline / Roo Code entry — adds disabled flag and alwaysAllow to avoid per-prompt dialogs. */
+/** Cline / Roo Code entry — adds disabled flag to avoid per-prompt dialogs. */
 export function buildClineEntry(isWin = process.platform === 'win32') {
   return {
     ...buildStandardEntry(isWin),
     disabled: false,
-    alwaysAllow: ['capture_prompt'],
   };
 }
 
@@ -30,7 +31,6 @@ export function buildKiloEntry(isWin = process.platform === 'win32') {
     type: 'stdio' as const,
     ...buildStandardEntry(isWin),
     disabled: false,
-    alwaysAllow: ['capture_prompt'],
   };
 }
 
@@ -387,13 +387,31 @@ export async function installAction(
     paths = resolveAgentPaths(),
     execFn,
     confirmFn = defaultConfirm,
+    dbPath = ':memory:',
   }: {
     isWin?: boolean;
     paths?: AgentPaths;
     execFn?: ExecFn;
     confirmFn?: ConfirmFn;
+    dbPath?: string;
   } = {},
 ): Promise<void> {
+  // ── First-run disclosure ───────────────────────────────────────────────────
+  const disclosureStore = await openStore(dbPath);
+  try {
+    if (!isConfigSet(disclosureStore.db, 'first_run_shown')) {
+      console.log('');
+      console.log('Before installing nexpath, a few things to know:');
+      console.log('  1. An OpenAI API key is required (OPENAI_API_KEY) for advisory generation');
+      console.log(`  2. Prompts are stored locally at ${DEFAULT_DB_PATH} — nothing leaves your machine`);
+      console.log('  3. To opt out at any time: press Ctrl+X during an advisory, or run nexpath uninstall');
+      console.log('');
+      setConfig(disclosureStore, 'first_run_shown', 'true');
+    }
+  } finally {
+    closeStore(disclosureStore);
+  }
+
   const agents = detectAgents(paths);
 
   if (agents.length === 0) {
@@ -412,16 +430,22 @@ export async function installAction(
     }
   }
 
+  // NOTE: Enable REGISTER_MCP_SERVER when MCP tools are added to src/server/tools.ts.
+  // Currently TOOLS is empty — no reason to spin up the MCP server process yet.
+  const REGISTER_MCP_SERVER = false;
+
   for (const agent of agents) {
     try {
       if (agent.type === 'claude-cli') {
-        const ok = claudeCliInstall(execFn);
-        if (ok) {
-          console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 registered via claude mcp add`);
-        } else {
-          // Fallback: write ~/.claude.json directly
-          writeMcpEntry(agent.configPath, buildStandardEntry(isWin));
-          console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath} (CLI fallback)`);
+        if (REGISTER_MCP_SERVER) {
+          const ok = claudeCliInstall(execFn);
+          if (ok) {
+            console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 registered via claude mcp add`);
+          } else {
+            // Fallback: write ~/.claude.json directly
+            writeMcpEntry(agent.configPath, buildStandardEntry(isWin));
+            console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath} (CLI fallback)`);
+          }
         }
         // Register the advisory pipeline hook (separate from MCP — different file)
         try {
@@ -430,18 +454,20 @@ export async function installAction(
         } catch (err) {
           console.log(`\u26a0 ${'Claude Code'.padEnd(12)} \u2014 hook write failed: ${(err as Error).message}`);
         }
-      } else if (agent.type === 'cline') {
-        writeMcpEntry(agent.configPath, buildClineEntry(isWin));
-        console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
-      } else if (agent.type === 'kilo') {
-        writeMcpEntry(agent.configPath, buildKiloEntry(isWin));
-        console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
-      } else if (agent.type === 'opencode') {
-        writeOpenCodeEntry(agent.configPath, buildOpenCodeEntry(isWin));
-        console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
-      } else {
-        writeMcpEntry(agent.configPath, buildStandardEntry(isWin));
-        console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
+      } else if (REGISTER_MCP_SERVER) {
+        if (agent.type === 'cline') {
+          writeMcpEntry(agent.configPath, buildClineEntry(isWin));
+          console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
+        } else if (agent.type === 'kilo') {
+          writeMcpEntry(agent.configPath, buildKiloEntry(isWin));
+          console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
+        } else if (agent.type === 'opencode') {
+          writeOpenCodeEntry(agent.configPath, buildOpenCodeEntry(isWin));
+          console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
+        } else {
+          writeMcpEntry(agent.configPath, buildStandardEntry(isWin));
+          console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
+        }
       }
     } catch (err) {
       console.log(`\u2717 ${agent.label.padEnd(12)} \u2014 failed: ${(err as Error).message}`);
