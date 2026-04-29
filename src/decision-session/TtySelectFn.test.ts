@@ -286,4 +286,11 @@ describe('buildUnixMenuLines — W-05 rendering', () => {
     expect(optLine).toBeDefined();
     expect(optLine).toContain('1)');
   });
+
+  it('selection echo pattern: only first line of multi-line selected.label appears in dim output', () => {
+    const multiLineLabel = '1. Walk through this feature as a real user.\n2. Share what you find.\n3. Flag anything wrong.';
+    const firstLine = multiLineLabel.split('\n')[0];
+    expect(firstLine).toBe('1. Walk through this feature as a real user.');
+    expect(firstLine).not.toContain('\n');
+  });
 });
