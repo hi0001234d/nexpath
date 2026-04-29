@@ -1,5 +1,10 @@
-import type { Stage } from '../classifier/types.js';
+import type { Stage, UserProfile } from '../classifier/types.js';
 import type { FlagType } from '../classifier/Stage2Trigger.js';
+import {
+  ABSENCE_CONTENT_BEGINNER,
+  TRANSITION_CONTENT_BEGINNER,
+  TASK_REVIEW_BEGINNER,
+} from './options-beginner.js';
 
 /**
  * Per-stage decision session content (from spec-driven-stages-research.md Part 3).
@@ -195,23 +200,24 @@ const TRANSITION_CONTENT: Partial<Record<Stage, DecisionContent>> = {
 export function resolveDecisionContent(
   currentStage: Stage,
   flagType:     FlagType,
+  profile?:     UserProfile | null,
 ): DecisionContent {
-  // Absence flag override
+  const isVibe = profile?.nature === 'beginner' || profile?.nature === 'cool_geek';
+  const absenceMap    = isVibe ? ABSENCE_CONTENT_BEGINNER : ABSENCE_CONTENT;
+  const transitionMap = isVibe ? TRANSITION_CONTENT_BEGINNER : TRANSITION_CONTENT;
+
   if (flagType.startsWith('absence:')) {
     const signalKey = flagType.slice('absence:'.length);
-    const override  = ABSENCE_CONTENT[signalKey];
+    const override  = absenceMap[signalKey];
     if (override) return override;
   }
 
-  // Stage transition content
-  const transitionContent = TRANSITION_CONTENT[currentStage];
+  const transitionContent = transitionMap[currentStage];
   if (transitionContent) return transitionContent;
 
-  // Within-implementation absence (e.g., 'absence:error_handling') → task review
-  if (currentStage === 'implementation') return TASK_REVIEW;
+  if (currentStage === 'implementation') return isVibe ? TASK_REVIEW_BEGINNER : TASK_REVIEW;
 
-  // Generic fallback
-  return TASK_REVIEW;
+  return isVibe ? TASK_REVIEW_BEGINNER : TASK_REVIEW;
 }
 
 // ── Option list building ───────────────────────────────────────────────────────

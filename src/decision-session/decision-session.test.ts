@@ -14,6 +14,11 @@ import {
   BEHAVIOUR_TESTING,
 } from './options.js';
 import {
+  ABSENCE_CONTENT_BEGINNER,
+  TRANSITION_CONTENT_BEGINNER,
+  TASK_REVIEW_BEGINNER,
+} from './options-beginner.js';
+import {
   buildSelectMessage,
   formatPinchLabel,
   formatQuestion,
@@ -1115,4 +1120,101 @@ describe('runDecisionSession — generatedOptions wiring', () => {
     const result = await runDecisionSession(makeInput({ generatedOptions }), undefined, mockSelect(SKIP_NOW));
     expect(result.outcome).toBe('skipped');
   });
+});
+
+// ── C-02: resolveDecisionContent — profile routing ────────────────────────────
+
+describe('resolveDecisionContent — C-02 profile routing', () => {
+  const beginnerProfile = { nature: 'beginner' as const, precisionScore: 2, playfulnessScore: 2, mood: 'casual' as const, depth: 'low' as const, depthScore: 1, computedAt: 0 };
+  const coolGeekProfile = { nature: 'cool_geek' as const, precisionScore: 3, playfulnessScore: 8, mood: 'casual' as const, depth: 'medium' as const, depthScore: 5, computedAt: 0 };
+  const hardcoreProProfile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2, mood: 'focused' as const, depth: 'high' as const, depthScore: 9, computedAt: 0 };
+
+  it('beginner profile + stage_transition to prd → IDEA_TO_PRD_BEGINNER', () => {
+    const content = resolveDecisionContent('prd', 'stage_transition', beginnerProfile);
+    expect(content).toBe(TRANSITION_CONTENT_BEGINNER.prd);
+  });
+
+  it('cool_geek profile routes to same beginner path as beginner', () => {
+    const content = resolveDecisionContent('prd', 'stage_transition', coolGeekProfile);
+    expect(content).toBe(TRANSITION_CONTENT_BEGINNER.prd);
+  });
+
+  it('hardcore_pro profile → existing pro content (IDEA_TO_PRD)', () => {
+    const content = resolveDecisionContent('prd', 'stage_transition', hardcoreProProfile);
+    expect(content).toBe(IDEA_TO_PRD);
+  });
+
+  it('null profile → pro path', () => {
+    const content = resolveDecisionContent('prd', 'stage_transition', null);
+    expect(content).toBe(IDEA_TO_PRD);
+  });
+
+  it('undefined profile → pro path (existing callers unaffected)', () => {
+    const content = resolveDecisionContent('prd', 'stage_transition');
+    expect(content).toBe(IDEA_TO_PRD);
+  });
+
+  it('beginner + absence:behaviour_testing → BEHAVIOUR_TESTING_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:behaviour_testing', beginnerProfile);
+    expect(content).toBe(ABSENCE_CONTENT_BEGINNER.behaviour_testing);
+  });
+
+  it('beginner + absence:cross_confirming → TASK_REVIEW_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:cross_confirming', beginnerProfile);
+    expect(content).toBe(TASK_REVIEW_BEGINNER);
+  });
+
+  it('beginner + absence:unknown_signal + implementation → TASK_REVIEW_BEGINNER fallback', () => {
+    const content = resolveDecisionContent('implementation', 'absence:unknown_signal', beginnerProfile);
+    expect(content).toBe(TASK_REVIEW_BEGINNER);
+  });
+
+  it('beginner + stage_transition to architecture → PRD_TO_ARCHITECTURE_BEGINNER', () => {
+    const content = resolveDecisionContent('architecture', 'stage_transition', beginnerProfile);
+    expect(content).toBe(TRANSITION_CONTENT_BEGINNER.architecture);
+  });
+
+  it('beginner + stage_transition to task_breakdown → ARCHITECTURE_TO_TASKS_BEGINNER', () => {
+    const content = resolveDecisionContent('task_breakdown', 'stage_transition', beginnerProfile);
+    expect(content).toBe(TRANSITION_CONTENT_BEGINNER.task_breakdown);
+  });
+
+  it('beginner + stage_transition to review_testing → IMPLEMENTATION_TO_REVIEW_BEGINNER', () => {
+    const content = resolveDecisionContent('review_testing', 'stage_transition', beginnerProfile);
+    expect(content).toBe(TRANSITION_CONTENT_BEGINNER.review_testing);
+  });
+
+  it('beginner + stage_transition to release → REVIEW_TO_RELEASE_BEGINNER', () => {
+    const content = resolveDecisionContent('release', 'stage_transition', beginnerProfile);
+    expect(content).toBe(TRANSITION_CONTENT_BEGINNER.release);
+  });
+});
+
+// ── C-02: options-beginner.ts per-block structure assertions ──────────────────
+
+describe('C-02: beginner content blocks structure', () => {
+  const blocks = [
+    { name: 'IDEA_TO_PRD_BEGINNER',               content: TRANSITION_CONTENT_BEGINNER.prd! },
+    { name: 'PRD_TO_ARCHITECTURE_BEGINNER',        content: TRANSITION_CONTENT_BEGINNER.architecture! },
+    { name: 'ARCHITECTURE_TO_TASKS_BEGINNER',      content: TRANSITION_CONTENT_BEGINNER.task_breakdown! },
+    { name: 'TASK_REVIEW_BEGINNER',                content: TASK_REVIEW_BEGINNER },
+    { name: 'IMPLEMENTATION_TO_REVIEW_BEGINNER',   content: TRANSITION_CONTENT_BEGINNER.review_testing! },
+    { name: 'REVIEW_TO_RELEASE_BEGINNER',          content: TRANSITION_CONTENT_BEGINNER.release! },
+    { name: 'BEHAVIOUR_TESTING_BEGINNER',          content: ABSENCE_CONTENT_BEGINNER.behaviour_testing! },
+  ];
+
+  for (const { name, content } of blocks) {
+    it(`${name}: L1.length === 2`, () => {
+      expect(content.L1).toHaveLength(2);
+    });
+    it(`${name}: L2.length === 1`, () => {
+      expect(content.L2).toHaveLength(1);
+    });
+    it(`${name}: L3.length === 1`, () => {
+      expect(content.L3).toHaveLength(1);
+    });
+    it(`${name}: L1[0] contains \\n (numbered steps)`, () => {
+      expect(content.L1[0]).toContain('\n');
+    });
+  }
 });

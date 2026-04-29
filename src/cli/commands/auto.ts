@@ -269,7 +269,11 @@ export async function runAuto(
   const userProfile = mgr.current.profile ?? undefined;
 
   // ── 9. Pinch label + option text — run concurrently ─────────────────────────
-  const decisionContent = resolveDecisionContent(mgr.current.currentStage, flagType);
+  const decisionContent = resolveDecisionContent(
+    mgr.current.currentStage,
+    flagType,
+    mgr.current.profile,
+  );
 
   const [pinchLabel, generatedOptions] = await Promise.all([
     generatePinchLabel(
