@@ -79,6 +79,22 @@ describe('buildOptionPrompt — profile adaptation', () => {
     expect(prompt).toContain('Casual technical');
   });
 
+  it('depth=low overrides cool_geek nature — plain English wins', () => {
+    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile({ nature: 'cool_geek', depth: 'low' }), undefined, []);
+    expect(prompt).toContain('Plain English');
+    expect(prompt).not.toContain('Casual technical');
+  });
+
+  it('cool_geek with depth=medium keeps casual technical style', () => {
+    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile({ nature: 'cool_geek', depth: 'medium' }), undefined, []);
+    expect(prompt).toContain('Casual technical');
+  });
+
+  it('cool_geek with depth=high keeps casual technical style — nature wins over depth=high', () => {
+    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile({ nature: 'cool_geek', depth: 'high' }), undefined, []);
+    expect(prompt).toContain('Casual technical');
+  });
+
   it('includes empathetic tone for frustrated mood', () => {
     const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile({ mood: 'frustrated' }), undefined, []);
     expect(prompt).toContain('Empathetic');

@@ -112,10 +112,10 @@ function buildGroundingLines(conf: ArtifactConfidence): string {
 
 function buildStyleLine(profile: UserProfile): string {
   const { nature, depth } = profile;
-  // Nature takes precedence over depth for vocabulary style
+  if (depth === 'low')            return 'Plain English, avoid jargon, short sentences, encouraging.';
   if (nature === 'cool_geek')    return 'Casual technical — "ship it", "wire up" style, informal but accurate.';
   if (nature === 'pro_geek_soul') return 'Technical + energy — precise but expressive, enthusiastic.';
-  if (nature === 'beginner' || depth === 'low')  return 'Plain English, avoid jargon, short sentences, encouraging.';
+  if (nature === 'beginner')      return 'Plain English, avoid jargon, short sentences, encouraging.';
   if (nature === 'hardcore_pro' || depth === 'high') return 'Precise technical terms, no hand-holding, peer-level.';
   return 'Neutral professional tone.';
 }
