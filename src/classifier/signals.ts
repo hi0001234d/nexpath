@@ -16,6 +16,11 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'verify this', 'check this', 'does this look right', 'is this correct',
       'confirm that', 'make sure this is right',
     ],
+    vibeKeywords: [
+      'wait is this right', 'does this look good', 'did you get that right',
+      'are you sure this', 'is this what we wanted', 'does that make sense to you',
+      'looks right to you', 'can you recheck',
+    ],
     absenceThreshold: 15,
   },
   {
@@ -80,6 +85,11 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'write a test', 'add test coverage', 'test this module', 'test cases for',
       'add testing', 'write specs',
     ],
+    vibeKeywords: [
+      'does it work', 'can you try', 'try running', 'see if it works',
+      'check if it works', 'make sure it works', 'test this out',
+      'does this actually work', 'can you run this', 'try it out',
+    ],
     absenceThreshold: 15,
   },
   {
@@ -90,6 +100,11 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'run all tests', 'run the test suite', 'check for regressions',
       'regression test', 'run tests', 'make sure nothing broke',
       'check existing tests', 'run the full test',
+    ],
+    vibeKeywords: [
+      'did i break', 'did this break', 'make sure everything still works',
+      'did anything break', 'still working after', 'broke anything',
+      'nothing is broken', 'everything still working', 'check nothing broke',
     ],
     absenceThreshold: 15,
   },
@@ -265,11 +280,20 @@ export function detectSignals(text: string): string[] {
   const lower = text.toLowerCase();
   const found: string[] = [];
   for (const sig of SIGNAL_DEFINITIONS) {
+    // Full-weight check — any single match = signal present
+    let fullHit = false;
     for (const kw of sig.detectionKeywords) {
-      if (lower.includes(kw)) {
-        found.push(sig.key);
-        break; // one match is enough per signal
+      if (lower.includes(kw)) { fullHit = true; break; }
+    }
+    if (fullHit) { found.push(sig.key); continue; }
+
+    // Vibe-keyword check — 2+ hits required (0.5 weight each = 1.0 credit)
+    if (sig.vibeKeywords) {
+      let vibeHits = 0;
+      for (const vk of sig.vibeKeywords) {
+        if (lower.includes(vk)) vibeHits++;
       }
+      if (vibeHits >= 2) found.push(sig.key);
     }
   }
   return found;

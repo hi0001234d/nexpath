@@ -150,7 +150,9 @@ export interface SignalDefinition {
   description: string;
   expectedStages: Stage[];
   /** Keywords that indicate this signal IS present in a prompt. */
-  detectionKeywords: string[];
+  detectionKeywords: string[];    // full weight — any single match = signal present
+  /** Informal vibe-coder phrases at 0.5 weight — 2+ matches required = signal present. */
+  vibeKeywords?: string[];
   /** Number of prompts in confirmed stage before checking absence. */
   absenceThreshold: number; // 15–20 per research
 }

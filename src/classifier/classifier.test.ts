@@ -579,6 +579,48 @@ describe('detectSignals', () => {
     const counters = initialSignalCounters();
     expect(Object.keys(counters)).toHaveLength(23);
   });
+
+  // ── vibeKeywords — 0.5-weight detection ──────────────────────────────────────
+
+  it('cross_confirming: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('wait is this right')).not.toContain('cross_confirming');
+  });
+
+  it('cross_confirming: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('wait is this right, does this look good to you')).toContain('cross_confirming');
+  });
+
+  it('cross_confirming: full keyword still detects signal (existing behavior unchanged)', () => {
+    expect(detectSignals('can you double check this for me')).toContain('cross_confirming');
+  });
+
+  it('test_creation: 2 vibe keywords detect signal ("does it work? can you try running it?")', () => {
+    expect(detectSignals('does it work? can you try running it')).toContain('test_creation');
+  });
+
+  it('test_creation: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('does it work')).not.toContain('test_creation');
+  });
+
+  it('regression_check: 2 vibe keywords detect signal ("did i break anything? nothing is broken?")', () => {
+    expect(detectSignals('did i break anything? nothing is broken right')).toContain('regression_check');
+  });
+
+  it('regression_check: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('did this break')).not.toContain('regression_check');
+  });
+
+  it('signal without vibeKeywords is unaffected — vibe path not entered', () => {
+    const before = detectSignals('implement the login flow');
+    const after  = detectSignals('implement the login flow does it work');
+    expect(after).toEqual(expect.arrayContaining(before));
+  });
+
+  it('full-weight match takes priority: prompt with full keyword + vibe keywords detected via full path', () => {
+    // 'run all tests' is a full-weight keyword for regression_check
+    const signals = detectSignals('run all tests — also did i break anything, nothing is broken?');
+    expect(signals).toContain('regression_check');
+  });
 });
 
 // ── SessionStateManager ────────────────────────────────────────────────────────
