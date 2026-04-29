@@ -933,11 +933,11 @@ describe('AbsenceDetector', () => {
     expect(detectAbsenceFlags(state)).toHaveLength(0);
   });
 
-  it('returns no flags when below signal absenceThreshold', () => {
-    // test_creation has absenceThreshold=15; promptsInCurrentStage=10 < 15
+  it('returns no flags when below Gate 3 effectiveMinPrompts (no profile → threshold=10)', () => {
+    // no profile → effectiveMinPrompts=10; promptsInCurrentStage=9 < 10 → Gate 3 blocks
     const state = makeState({
       stageConfidence:       0.85,
-      promptsInCurrentStage: 10,
+      promptsInCurrentStage: 9,
       currentStage:          'implementation',
     });
     expect(detectAbsenceFlags(state)).toHaveLength(0);
@@ -1025,15 +1025,15 @@ describe('AbsenceDetector', () => {
     expect(flags.map((f) => f.signalKey)).toContain('test_creation');
   });
 
-  it('passes gate at exactly 5 prompts in current stage', () => {
-    // 5 prompts in stage passes the minimum gate, but all signals need ≥15 — so still no flags
+  it('passes Gate 2 at exactly 5 prompts but Gate 3 blocks without profile (effectiveMinPrompts=10)', () => {
+    // Gate 2 (promptsInCurrentStage ≥ 5) passes, but Gate 3 (≥10 for no profile) still blocks
     const state2 = makeState({
       stageConfidence:       0.85,
       promptsInCurrentStage: 5,
       currentStage:          'implementation',
       signalCounters:        initialSignalCounters(),
     });
-    expect(detectAbsenceFlags(state2)).toHaveLength(0); // signal threshold not met
+    expect(detectAbsenceFlags(state2)).toHaveLength(0); // Gate 3 blocks (5 < 10)
     // Confirm signals fire when both the gate and the signal threshold are met
     const state3 = makeState({
       stageConfidence:       0.85,
@@ -1058,11 +1058,12 @@ describe('AbsenceDetector', () => {
     expect(flags.map((f) => f.signalKey)).toContain('test_creation');
   });
 
-  it('does NOT raise flags one below absenceThreshold', () => {
+  it('does NOT raise flags one below Gate 3 effectiveMinPrompts (no profile → threshold=10)', () => {
+    // no profile → effectiveMinPrompts=10; promptsInCurrentStage=9 < 10 → Gate 3 blocks
     const state = makeState({
       stageConfidence:       0.85,
-      promptsInCurrentStage: 14, // 14 < 15 = absenceThreshold
-      promptCount:           14,
+      promptsInCurrentStage: 9,
+      promptCount:           9,
       currentStage:          'implementation',
       signalCounters:        initialSignalCounters(),
     });
@@ -1133,6 +1134,71 @@ describe('AbsenceDetector', () => {
     for (const f of flags) {
       expect(f.cooldownUntil).toBe(f.raisedAtIndex + ABSENCE_COOLDOWN_PROMPTS);
     }
+  });
+
+  it('beginner profile: promptsInCurrentStage=6 fires signals (effectiveMinPrompts=5)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 6,
+      promptCount:           6,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const profile = { nature: 'beginner' as const, precisionScore: 1, playfulnessScore: 1,
+      mood: 'casual' as const, depth: 'low' as const, depthScore: 1, computedAt: 1 };
+    const flags = detectAbsenceFlags(state, profile);
+    expect(flags.length).toBeGreaterThan(0);
+  });
+
+  it('beginner profile: promptsInCurrentStage=4 fires no signals (Gate 2 blocks — 4 < 5)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 4,
+      promptCount:           4,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const profile = { nature: 'beginner' as const, precisionScore: 1, playfulnessScore: 1,
+      mood: 'casual' as const, depth: 'low' as const, depthScore: 1, computedAt: 1 };
+    expect(detectAbsenceFlags(state, profile)).toHaveLength(0);
+  });
+
+  it('hardcore_pro profile: promptsInCurrentStage=6 fires no signals (effectiveMinPrompts=10)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 6,
+      promptCount:           6,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
+      mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1 };
+    expect(detectAbsenceFlags(state, profile)).toHaveLength(0);
+  });
+
+  it('hardcore_pro profile: promptsInCurrentStage=11 fires signals (11 ≥ effectiveMinPrompts=10)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 11,
+      promptCount:           11,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
+      mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1 };
+    const flags = detectAbsenceFlags(state, profile);
+    expect(flags.length).toBeGreaterThan(0);
+  });
+
+  it('profile=null uses effectiveMinPrompts=10 — no signals at promptsInCurrentStage=9', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 9,
+      promptCount:           9,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    expect(detectAbsenceFlags(state, null)).toHaveLength(0);
   });
 });
 

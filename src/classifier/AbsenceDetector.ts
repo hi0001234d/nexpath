@@ -1,4 +1,4 @@
-import type { SessionState, AbsenceFlag } from './types.js';
+import type { SessionState, AbsenceFlag, UserProfile } from './types.js';
 import { SIGNAL_MAP } from './signals.js';
 import { STAGE_CONFIRM_THRESHOLD } from './SessionStateManager.js';
 
@@ -46,11 +46,18 @@ export const ABSENCE_COOLDOWN_PROMPTS = 30;
  *
  * Returns only NEW flags (not already active/in-cooldown).
  */
-export function detectAbsenceFlags(state: SessionState): AbsenceFlag[] {
+export function detectAbsenceFlags(
+  state:   SessionState,
+  profile?: UserProfile | null,
+): AbsenceFlag[] {
   const { currentStage, stageConfidence, promptsInCurrentStage, promptCount } = state;
 
   // Gate 1 — stage must be confirmed
   if (stageConfidence < STAGE_CONFIRM_THRESHOLD) return [];
+
+  // Profile-aware threshold for Gate 3
+  const isVibeProfile = profile?.nature === 'beginner' || profile?.nature === 'cool_geek';
+  const effectiveMinPrompts = isVibeProfile ? 5 : 10;
 
   // Gate 2 — must have been in this stage long enough before checking
   if (promptsInCurrentStage < 5) return [];
@@ -61,8 +68,8 @@ export function detectAbsenceFlags(state: SessionState): AbsenceFlag[] {
     // Gate — signal expected in this stage?
     if (!sig.expectedStages.includes(currentStage)) continue;
 
-    // Gate — enough prompts in stage for this signal's threshold?
-    if (promptsInCurrentStage < sig.absenceThreshold) continue;
+    // Gate 3 — profile-aware: enough prompts in stage for this signal?
+    if (promptsInCurrentStage < effectiveMinPrompts) continue;
 
     // Gate — signal never detected?
     const counter = state.signalCounters[sig.key];

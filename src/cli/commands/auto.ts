@@ -151,7 +151,10 @@ export async function runAuto(
   logger.debug('language', { effectiveLang: effectiveLang ?? null });
 
   // ── 4. Absence detection ─────────────────────────────────────────────────────
-  const newFlags = detectAbsenceFlags(mgr.current as import('../../classifier/types.js').SessionState);
+  const newFlags = detectAbsenceFlags(
+    mgr.current as import('../../classifier/types.js').SessionState,
+    mgr.current.profile,
+  );
   for (const flag of newFlags) {
     mgr.addAbsenceFlag(store, flag);
   }
