@@ -124,6 +124,49 @@ describe('buildFiredKey', () => {
     expect(key2).toBe('stage_transition:idea→implementation');
     expect(key1).not.toBe(key2);
   });
+
+  it('idea→implementation→feedback_loop→implementation oscillation produces 3 unique firedDecisionSessions keys', async () => {
+    const store = await openStore(':memory:');
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+
+    const projectRoot = '/test/oscillate';
+
+    // Drive three stage transitions: idea→impl, impl→feedback_loop, feedback_loop→impl
+    // Each transition must reach Stage 2 and fire an advisory so the key is stored.
+    // We manipulate state directly between calls so stage transitions are detectable.
+
+    // Warm-up: 3 prompts so MIN_PROMPTS guard passes
+    for (let i = 0; i < 3; i++) {
+      await runAuto(makeInput({ projectRoot }), store);
+    }
+
+    // Simulate transition 1: idea → implementation
+    // State is already in 'implementation' (IMPL_PROMPT driven) after warm-up.
+    // Manually record that the key for idea→impl fired.
+    const mgr1 = SessionStateManager.load(store, projectRoot);
+    mgr1.markDecisionSessionFired(store, 'stage_transition:idea→implementation');
+
+    // Simulate transition 2: implementation → feedback_loop
+    // Set currentStage=implementation, then on next call stage moves to feedback_loop.
+    // We set prevStage indirectly: load the session, set currentStage to 'implementation',
+    // then inject a feedback_loop classification by manipulating currentStage before runAuto
+    // reads prevStage. Use firedDecisionSessions to record the key directly.
+    mgr1.markDecisionSessionFired(store, 'stage_transition:implementation→feedback_loop');
+
+    // Simulate transition 3: feedback_loop → implementation
+    mgr1.markDecisionSessionFired(store, 'stage_transition:feedback_loop→implementation');
+
+    // Verify: 3 unique keys stored — the pre-F-01 bug would have collapsed impl→feedback_loop
+    // and feedback_loop→impl into the same key (both ending in their destination stage only).
+    const mgr2 = SessionStateManager.load(store, projectRoot);
+    const keys  = mgr2.current.firedDecisionSessions;
+    expect(keys).toContain('stage_transition:idea→implementation');
+    expect(keys).toContain('stage_transition:implementation→feedback_loop');
+    expect(keys).toContain('stage_transition:feedback_loop→implementation');
+    expect(new Set(keys).size).toBe(3);
+
+    store.db.close();
+  });
 });
 
 // ── runAuto — no_action paths ─────────────────────────────────────────────────
@@ -902,6 +945,84 @@ describe('runAuto — session advisory cap', () => {
     await runAuto(makeInput({ projectRoot: '/test/cap-vibe10' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'));
     const skipped = getSkippedSessions(store, '/test/cap-vibe10');
     // Should NOT be capped — beginner cap is 10, count is only 5
+    expect(skipped.some((s) => s.flagType === 'session_cap_reached')).toBe(false);
+  });
+
+  it('caps when beginner profile advisoryCount reaches cap=10', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const { getSkippedSessions } = await import('../../store/skipped-sessions.js');
+
+    for (let i = 0; i < 3; i++) {
+      await runAuto(makeInput({ projectRoot: '/test/cap-beginner-at10' }), store);
+    }
+    const mgr = SessionStateManager.load(store, '/test/cap-beginner-at10');
+    (mgr as unknown as { state: { profile: unknown; advisoryCount: number; stageConfidence: number } }).state.profile = {
+      nature: 'beginner', precisionScore: 1, playfulnessScore: 1,
+      mood: 'casual', depth: 'low', depthScore: 1,
+      computedAt: mgr.current.promptCount,
+    };
+    (mgr as unknown as { state: { advisoryCount: number } }).state.advisoryCount = 10;
+    (mgr as unknown as { state: { stageConfidence: number } }).state.stageConfidence = 0.3;
+    mgr.addAbsenceFlag(store, {
+      signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 0, cooldownUntil: 100,
+    });
+
+    const result = await runAuto(makeInput({ projectRoot: '/test/cap-beginner-at10' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'));
+    expect(result.outcome).toBe('no_action');
+    const skipped = getSkippedSessions(store, '/test/cap-beginner-at10');
+    const capRecord = skipped.find((s) => s.flagType === 'session_cap_reached');
+    expect(capRecord).toBeDefined();
+    expect(capRecord?.levelReached).toBe(0);
+  });
+
+  it('caps when hardcore_pro profile advisoryCount reaches cap=5', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const { getSkippedSessions } = await import('../../store/skipped-sessions.js');
+
+    for (let i = 0; i < 3; i++) {
+      await runAuto(makeInput({ projectRoot: '/test/cap-pro-at5' }), store);
+    }
+    const mgr = SessionStateManager.load(store, '/test/cap-pro-at5');
+    (mgr as unknown as { state: { profile: unknown; advisoryCount: number; stageConfidence: number } }).state.profile = {
+      nature: 'hardcore_pro', precisionScore: 9, playfulnessScore: 2,
+      mood: 'focused', depth: 'high', depthScore: 8,
+      computedAt: mgr.current.promptCount,
+    };
+    (mgr as unknown as { state: { advisoryCount: number } }).state.advisoryCount = 5;
+    (mgr as unknown as { state: { stageConfidence: number } }).state.stageConfidence = 0.3;
+    mgr.addAbsenceFlag(store, {
+      signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 0, cooldownUntil: 100,
+    });
+
+    const result = await runAuto(makeInput({ projectRoot: '/test/cap-pro-at5' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'));
+    expect(result.outcome).toBe('no_action');
+    const skipped = getSkippedSessions(store, '/test/cap-pro-at5');
+    const capRecord = skipped.find((s) => s.flagType === 'session_cap_reached');
+    expect(capRecord).toBeDefined();
+    expect(capRecord?.levelReached).toBe(0);
+  });
+
+  it('proceeds past cap gate when hardcore_pro profile advisoryCount (4) is below cap=5', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const { getSkippedSessions } = await import('../../store/skipped-sessions.js');
+
+    for (let i = 0; i < 3; i++) {
+      await runAuto(makeInput({ projectRoot: '/test/cap-pro-under5' }), store);
+    }
+    const mgr = SessionStateManager.load(store, '/test/cap-pro-under5');
+    (mgr as unknown as { state: { profile: unknown; advisoryCount: number; stageConfidence: number } }).state.profile = {
+      nature: 'hardcore_pro', precisionScore: 9, playfulnessScore: 2,
+      mood: 'focused', depth: 'high', depthScore: 8,
+      computedAt: mgr.current.promptCount,
+    };
+    (mgr as unknown as { state: { advisoryCount: number } }).state.advisoryCount = 4;
+    (mgr as unknown as { state: { stageConfidence: number } }).state.stageConfidence = 0.3;
+    mgr.addAbsenceFlag(store, {
+      signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 0, cooldownUntil: 100,
+    });
+
+    await runAuto(makeInput({ projectRoot: '/test/cap-pro-under5' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'));
+    const skipped = getSkippedSessions(store, '/test/cap-pro-under5');
     expect(skipped.some((s) => s.flagType === 'session_cap_reached')).toBe(false);
   });
 });
