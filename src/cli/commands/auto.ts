@@ -46,7 +46,7 @@ import { upsertPendingAdvisory } from '../../store/pending-advisories.js';
 
 const MIN_PROMPTS_BEFORE_ADVISORY = 3;
 /** Prompts to suppress after any advisory fires — prevents rapid back-to-back advisories. */
-const POST_ADVISORY_COOLDOWN = 3;
+const POST_ADVISORY_COOLDOWN = 5;
 
 function resolveProjectName(projectRoot: string): string {
   try {
