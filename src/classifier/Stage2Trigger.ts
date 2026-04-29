@@ -93,6 +93,7 @@ export function buildSignalList(stage: Stage): string {
 export function buildStage2Prompt(input: Stage2Input): string {
   const { state, detectedStage, confidence, flagType } = input;
   const stageLabel = STAGE_LABEL[detectedStage];
+  const profile = state.profile;
 
   const recentPrompts = state.promptHistory.slice(-STAGE2_CONTEXT_WINDOW);
   const promptLines = recentPrompts
@@ -100,12 +101,22 @@ export function buildStage2Prompt(input: Stage2Input): string {
     .join('\n');
   const signalList = buildSignalList(detectedStage);
 
+  const profileBlock = profile
+    ? `Developer profile context:
+- Nature: ${profile.nature}${profile.nature === 'beginner' ? ' (non-technical, uses plain language — not SWE vocabulary)' : profile.nature === 'cool_geek' ? ' (casual, informal — uses everyday language not SWE terms)' : profile.nature === 'hardcore_pro' ? ' (experienced engineer, precise vocabulary)' : ' (experienced engineer, expressive vocabulary)'}
+- Technical depth: ${profile.depth}
+- Current mood: ${profile.mood}
+Calibration: assess signal presence by intent and behavior, not by exact SWE keyword match. Low Stage 1 confidence is normal for beginner/cool_geek profiles — weight behavioral patterns over vocabulary precision.`
+    : `Developer profile: not yet computed — assess signals without profile context.`;
+
   return `You are analysing developer prompts captured from an AI coding agent session to determine the developer's current stage and whether key development practices are being followed.
 
 Current session context:
 - Stage detected by classifier: ${stageLabel}
 - Classifier confidence: ${confidence.toFixed(2)}
 - Flag raised: ${flagType}
+
+${profileBlock}
 
 Last ${recentPrompts.length} developer prompts (oldest first):
 ${promptLines}

@@ -219,6 +219,48 @@ describe('buildStage2Prompt', () => {
     const prompt = buildStage2Prompt(input);
     expect(prompt).toContain('Last 10 developer prompts');
   });
+
+  it('includes beginner calibration note when profile.nature=beginner', () => {
+    const state = makeState({ profile: {
+      nature: 'beginner', precisionScore: 1, playfulnessScore: 1,
+      mood: 'casual', depth: 'low', depthScore: 1, computedAt: 1,
+    }});
+    const prompt = buildStage2Prompt(makeStage2Input({ state }));
+    expect(prompt).toContain('non-technical');
+    expect(prompt).toContain('Calibration:');
+  });
+
+  it('includes experienced engineer note when profile.nature=hardcore_pro', () => {
+    const state = makeState({ profile: {
+      nature: 'hardcore_pro', precisionScore: 9, playfulnessScore: 2,
+      mood: 'focused', depth: 'high', depthScore: 8, computedAt: 1,
+    }});
+    const prompt = buildStage2Prompt(makeStage2Input({ state }));
+    expect(prompt).toContain('experienced engineer');
+    expect(prompt).toContain('Calibration:');
+  });
+
+  it('includes "not yet computed" fallback when profile=null', () => {
+    const state = makeState({ profile: null });
+    const prompt = buildStage2Prompt(makeStage2Input({ state }));
+    expect(prompt).toContain('not yet computed');
+  });
+
+  it('profile block appears before "Signals to check" in all cases', () => {
+    const stateWithProfile = makeState({ profile: {
+      nature: 'beginner', precisionScore: 1, playfulnessScore: 1,
+      mood: 'casual', depth: 'low', depthScore: 1, computedAt: 1,
+    }});
+    const stateNullProfile = makeState({ profile: null });
+    for (const state of [stateWithProfile, stateNullProfile]) {
+      const prompt = buildStage2Prompt(makeStage2Input({ state }));
+      const profileIdx = prompt.indexOf('Developer profile');
+      const signalsIdx = prompt.indexOf('Signals to check');
+      expect(profileIdx).toBeGreaterThan(-1);
+      expect(signalsIdx).toBeGreaterThan(-1);
+      expect(profileIdx).toBeLessThan(signalsIdx);
+    }
+  });
 });
 
 // ── shouldFireStage2 ──────────────────────────────────────────────────────────
