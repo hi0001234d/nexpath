@@ -87,35 +87,42 @@ const FIRE_NO_RESPONSE = {
 // ── buildFiredKey ─────────────────────────────────────────────────────────────
 
 describe('buildFiredKey', () => {
-  it('builds correct key for stage_transition', () => {
-    const key = buildFiredKey('stage_transition', 'implementation');
-    expect(key).toBe('stage_transition:→implementation');
+  it('builds correct key for stage_transition with prev and current stage', () => {
+    const key = buildFiredKey('stage_transition', 'idea', 'implementation');
+    expect(key).toBe('stage_transition:idea→implementation');
   });
 
   it('builds correct key for absence flag', () => {
-    const key = buildFiredKey('absence:test_creation', 'implementation');
+    const key = buildFiredKey('absence:test_creation', 'idea', 'implementation');
     expect(key).toBe('absence:test_creation@implementation');
   });
 
   it('includes the current stage in both key formats', () => {
-    expect(buildFiredKey('stage_transition', 'release')).toContain('release');
-    expect(buildFiredKey('absence:security_check', 'release')).toContain('release');
+    expect(buildFiredKey('stage_transition', 'implementation', 'release')).toContain('release');
+    expect(buildFiredKey('absence:security_check', 'implementation', 'release')).toContain('release');
   });
 
   it('builds correct key for stage_transition to prd', () => {
-    expect(buildFiredKey('stage_transition', 'prd')).toBe('stage_transition:→prd');
+    expect(buildFiredKey('stage_transition', 'idea', 'prd')).toBe('stage_transition:idea→prd');
   });
 
   it('builds correct key for absence flag on non-implementation stage', () => {
-    // Absence flags can fire on any stage — key must embed both signal and stage
-    const key = buildFiredKey('absence:security_check', 'prd');
+    const key = buildFiredKey('absence:security_check', 'idea', 'prd');
     expect(key).toBe('absence:security_check@prd');
   });
 
   it('stage_transition and absence keys are distinct for the same stage', () => {
-    const st  = buildFiredKey('stage_transition', 'review_testing');
-    const abs = buildFiredKey('absence:test_creation', 'review_testing');
+    const st  = buildFiredKey('stage_transition', 'implementation', 'review_testing');
+    const abs = buildFiredKey('absence:test_creation', 'implementation', 'review_testing');
     expect(st).not.toBe(abs);
+  });
+
+  it('different prev stages produce different keys for the same destination', () => {
+    const key1 = buildFiredKey('stage_transition', 'feedback_loop', 'implementation');
+    const key2 = buildFiredKey('stage_transition', 'idea', 'implementation');
+    expect(key1).toBe('stage_transition:feedback_loop→implementation');
+    expect(key2).toBe('stage_transition:idea→implementation');
+    expect(key1).not.toBe(key2);
   });
 });
 

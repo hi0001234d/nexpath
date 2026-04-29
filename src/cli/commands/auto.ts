@@ -65,9 +65,9 @@ function resolveProjectName(projectRoot: string): string {
  *   stage_transition → 'stage_transition:<prev>→<next>'
  *   absence          → 'absence:<signalKey>@<stage>'
  */
-export function buildFiredKey(flagType: FlagType, currentStage: Stage): string {
+export function buildFiredKey(flagType: FlagType, prevStage: Stage, currentStage: Stage): string {
   if (flagType === 'stage_transition') {
-    return `stage_transition:→${currentStage}`;
+    return `stage_transition:${prevStage}→${currentStage}`;
   }
   return `${flagType}@${currentStage}`;
 }
@@ -176,7 +176,7 @@ export async function runAuto(
   }
 
   // ── 6. Deduplication — already fired this session? ──────────────────────────
-  const firedKey     = buildFiredKey(flagType, mgr.current.currentStage);
+  const firedKey     = buildFiredKey(flagType, prevStage, mgr.current.currentStage);
   const alreadyFired = mgr.hasFiredDecisionSession(firedKey);
   logger.debug('dedup', { firedKey, alreadyFired });
   if (alreadyFired) {
