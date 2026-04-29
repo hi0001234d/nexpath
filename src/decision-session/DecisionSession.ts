@@ -46,6 +46,15 @@ const RESET        = '\x1b[0m';
 const SKIP_NOW_LABEL =
   `${BOLD}Skip for now${RESET}${DIM_GRAY}  — nexpath optimize will remind you${RESET}`;
 
+const SHOW_SIMPLER_LABEL =
+  `${DIM_GRAY}Show simpler options →${RESET}`;
+
+export function formatOptionLabel(text: string): string {
+  if (!text.includes('\n')) return text;
+  const lines = text.split('\n');
+  return lines[0] + lines.slice(1).map(l => '\n   ' + l).join('');
+}
+
 const HELP_LABEL =
   `${ITALIC_DIM}  don't need nexpath here?  press ${RESET}${ITALIC_AMBER}Ctrl+X${RESET}${ITALIC_DIM} to disable for this project` +
   `  ·  press ${RESET}${ITALIC_AMBER}Ctrl+T${RESET}${ITALIC_DIM} to adjust frequency${RESET}`;
@@ -180,7 +189,9 @@ export async function runLevel(
     }
     clackOptions.push({
       value: opt,
-      label: opt === SKIP_NOW ? SKIP_NOW_LABEL : opt,
+      label: opt === SKIP_NOW    ? SKIP_NOW_LABEL    :
+             opt === SHOW_SIMPLER ? SHOW_SIMPLER_LABEL :
+             formatOptionLabel(opt),
     });
   }
   // Help hint — 2 blank lines of breathing room then the styled hint row

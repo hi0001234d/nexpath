@@ -12,8 +12,9 @@ vi.mock('node:child_process', () => ({
 }));
 
 // Deferred import so mocks are in place before module is evaluated
-const { createTtySelectFn }  = await import('./TtySelectFn.js');
+const { createTtySelectFn, buildUnixMenuLines } = await import('./TtySelectFn.js');
 const { OPT_OUT_SENTINEL }   = await import('./DecisionSession.js');
+const { SHOW_SIMPLER, SKIP_NOW } = await import('./options.js');
 const { spawnSync }          = await import('node:child_process');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -249,5 +250,40 @@ describe('createTtySelectFn — Windows (win32)', () => {
     expect(capturedFreqScript).toContain('once_per_session');
     expect(capturedFreqScript).toContain('every_event');
     try { unlinkSync(FREQ_SCRIPT_FILE); } catch { /* ignore */ }
+  });
+});
+
+// ── W-05: buildUnixMenuLines — pure menu-building logic ──────────────────────
+
+describe('buildUnixMenuLines — W-05 rendering', () => {
+  it('3-line option text produces 3 separate │ rows (first numbered, next 2 indented)', () => {
+    const opts = [{ value: 'opt1', label: 'Line 1\nLine 2\nLine 3' }];
+    const { menuLines } = buildUnixMenuLines('Test message', opts);
+    const pipeLines = menuLines.filter((l) => l.includes('│'));
+    const indentedLines = pipeLines.filter((l) => l.includes('     '));
+    expect(indentedLines).toHaveLength(2);
+  });
+
+  it('SHOW_SIMPLER renders as dim row, not green-numbered content option', () => {
+    const opts = [{ value: SHOW_SIMPLER, label: 'Show simpler options →' }];
+    const { menuLines } = buildUnixMenuLines('Test message', opts);
+    const showSimplerLine = menuLines.find((l) => l.includes('Show simpler'));
+    expect(showSimplerLine).toBeDefined();
+    expect(showSimplerLine).not.toMatch(/\d\)/);
+  });
+
+  it('SHOW_SIMPLER still gets a numbered index entry (user can type it)', () => {
+    const opts = [{ value: SHOW_SIMPLER, label: 'Show simpler options →' }];
+    const { indexToOption } = buildUnixMenuLines('Test message', opts);
+    expect(indexToOption.size).toBe(1);
+    expect(indexToOption.get(1)?.value).toBe(SHOW_SIMPLER);
+  });
+
+  it('regular single-line option renders with green numbered prefix', () => {
+    const opts = [{ value: 'opt1', label: 'Review the code just generated' }];
+    const { menuLines } = buildUnixMenuLines('Test message', opts);
+    const optLine = menuLines.find((l) => l.includes('Review the code'));
+    expect(optLine).toBeDefined();
+    expect(optLine).toContain('1)');
   });
 });

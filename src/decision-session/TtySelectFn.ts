@@ -334,6 +334,37 @@ function runFrequencySubMenu(
   });
 }
 
+type UnixMenuOption = { value: string; label: string };
+
+export function buildUnixMenuLines(
+  message: string,
+  options: UnixMenuOption[],
+): { menuLines: string[]; indexToOption: Map<number, UnixMenuOption> } {
+  const indexToOption = new Map<number, UnixMenuOption>();
+  const menuLines: string[] = [pc.gray('│'), `${pc.cyan('◆')}  ${message}`];
+  let numIdx = 1;
+  for (const opt of options) {
+    if (opt.value.startsWith(OPTION_SEPARATOR)) {
+      if (opt.label) {
+        menuLines.push(`${pc.cyan('│')}  ${opt.label}`);
+      } else {
+        menuLines.push(pc.cyan('│'));
+      }
+    } else if (opt.value === SHOW_SIMPLER) {
+      menuLines.push(`${pc.cyan('│')}  ${pc.dim(opt.label)}`);
+      indexToOption.set(numIdx++, opt);
+    } else {
+      const optLines = opt.label.split('\n');
+      menuLines.push(`${pc.cyan('│')}  ${pc.green(`${numIdx})`)} ${optLines[0]}`);
+      for (let i = 1; i < optLines.length; i++) {
+        menuLines.push(`${pc.cyan('│')}     ${optLines[i]}`);
+      }
+      indexToOption.set(numIdx++, opt);
+    }
+  }
+  return { menuLines, indexToOption };
+}
+
 function buildUnixSelectFn(
   streams:      TtyStreams,
   store?:       Store,
@@ -353,23 +384,7 @@ function buildUnixSelectFn(
         resolve(value);
       }
 
-      // Build numbered menu — separator items with a non-empty label render their label;
-      // separator items with an empty label render as a blank visual row.
-      const indexToOption = new Map<number, (typeof options)[number]>();
-      const menuLines = [pc.gray('│'), `${pc.cyan('◆')}  ${opts.message}`];
-      let numIdx = 1;
-      for (const opt of options) {
-        if (opt.value.startsWith(OPTION_SEPARATOR)) {
-          if (opt.label) {
-            menuLines.push(`${pc.cyan('│')}  ${opt.label}`);
-          } else {
-            menuLines.push(pc.cyan('│'));
-          }
-        } else {
-          menuLines.push(`${pc.cyan('│')}  ${pc.green(`${numIdx})`)} ${opt.label}`);
-          indexToOption.set(numIdx++, opt);
-        }
-      }
+      const { menuLines, indexToOption } = buildUnixMenuLines(opts.message, options);
       menuLines.push(pc.cyan('│'));
       streams.output.write(menuLines.join('\n') + '\n');
       streams.output.write(`${pc.cyan('└')}  Select (1-${indexToOption.size}): `);
@@ -405,7 +420,7 @@ function buildUnixSelectFn(
         const selected = indexToOption.get(num);
         if (selected !== undefined) {
           streams.output.write(
-            `${pc.gray('│')}  ${pc.dim(selected.label)}\n${pc.gray('│')}\n`,
+            `${pc.gray('│')}  ${pc.dim(selected.label.split('\n')[0])}\n${pc.gray('│')}\n`,
           );
 
           // For meta-options (skip / show simpler), return immediately — no second prompt.

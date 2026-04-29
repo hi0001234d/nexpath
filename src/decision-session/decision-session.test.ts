@@ -23,6 +23,7 @@ import {
   formatPinchLabel,
   formatQuestion,
   formatSubtitle,
+  formatOptionLabel,
   runLevel,
   runDecisionSession,
   OPTION_SEPARATOR,
@@ -522,12 +523,12 @@ describe('runLevel', () => {
     expect(values).not.toContain(SHOW_SIMPLER);
   });
 
-  it('value and label are equal for every non-separator, non-SKIP_NOW option (content prompts are pre-filled)', () => {
+  it('value and label are equal for every non-separator, non-SKIP_NOW, non-SHOW_SIMPLER option (content prompts are pre-filled)', () => {
     const spy = vi.fn().mockResolvedValue(SKIP_NOW);
     return runLevel(makeInput(), 1, spy).then(() => {
       const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
       const realOpts = opts.filter(
-        (o) => !o.value.startsWith(OPTION_SEPARATOR) && o.value !== SKIP_NOW,
+        (o) => !o.value.startsWith(OPTION_SEPARATOR) && o.value !== SKIP_NOW && o.value !== SHOW_SIMPLER,
       );
       for (const opt of realOpts) {
         expect(opt.value).toBe(opt.label);
@@ -1217,4 +1218,68 @@ describe('C-02: beginner content blocks structure', () => {
       expect(content.L1[0]).toContain('\n');
     });
   }
+});
+
+// ── W-05: formatOptionLabel + clack-path label styling ────────────────────────
+
+describe('W-05: formatOptionLabel', () => {
+  it('returns unchanged string when no \\n present', () => {
+    expect(formatOptionLabel('Simple option text')).toBe('Simple option text');
+  });
+
+  it('prefixes continuation lines with \\n   when \\n present', () => {
+    const result = formatOptionLabel('Line 1\nLine 2\nLine 3');
+    expect(result).toBe('Line 1\n   Line 2\n   Line 3');
+  });
+
+  it('handles a single \\n correctly', () => {
+    const result = formatOptionLabel('First\nSecond');
+    expect(result).toBe('First\n   Second');
+  });
+});
+
+describe('W-05: clack-path label styling', () => {
+  const DIM_GRAY = '\x1b[2m';
+  const RESET    = '\x1b[0m';
+  const BOLD     = '\x1b[1m';
+
+  it('SHOW_SIMPLER item gets DIM_GRAY styled label in clackOptions', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput(), 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
+    const showSimplerOpt = opts.find((o) => o.value === SHOW_SIMPLER);
+    expect(showSimplerOpt).toBeDefined();
+    expect(showSimplerOpt!.label).toContain(DIM_GRAY);
+    expect(showSimplerOpt!.label).toContain('Show simpler options');
+  });
+
+  it('SHOW_SIMPLER label is NOT the raw string (has styling)', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput(), 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
+    const showSimplerOpt = opts.find((o) => o.value === SHOW_SIMPLER);
+    expect(showSimplerOpt!.label).not.toBe(SHOW_SIMPLER);
+  });
+
+  it('SKIP_NOW item gets BOLD+DIM_GRAY styled label in clackOptions', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    await runLevel(makeInput(), 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
+    const skipNowOpt = opts.find((o) => o.value === SKIP_NOW);
+    expect(skipNowOpt).toBeDefined();
+    expect(skipNowOpt!.label).toContain(BOLD);
+    expect(skipNowOpt!.label).toContain(DIM_GRAY);
+    expect(skipNowOpt!.label).toContain('Skip for now');
+  });
+
+  it('multi-line option text (via generatedOptions) gets label with \\n   prefix on continuation lines', async () => {
+    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
+    const multiLineL1 = ['1. Step one\n2. Step two\n3. Step three', 'Short lighter option'];
+    const input = makeInput({ generatedOptions: { l1: multiLineL1, l2: ['L2 opt'], l3: ['L3 opt'] } });
+    await runLevel(input, 1, spy as SelectFn);
+    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
+    const multiLineOpt = opts.find((o) => o.label.includes('\n   '));
+    expect(multiLineOpt).toBeDefined();
+    expect(multiLineOpt!.label).toBe('1. Step one\n   2. Step two\n   3. Step three');
+  });
 });
