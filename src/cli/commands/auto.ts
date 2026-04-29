@@ -23,6 +23,7 @@ import { extractApiError } from '../../utils/api-error.js';
 import type { LogLevel } from '../../logger.js';
 import { writeHookStats } from '../../store/hook-stats.js';
 import { upsertPendingAdvisory } from '../../store/pending-advisories.js';
+import { insertSkippedSession } from '../../store/skipped-sessions.js';
 
 /**
  * nexpath auto — orchestration command (per decision-session-ux-research.md).
@@ -207,6 +208,30 @@ export async function runAuto(
   const lastAdvisory = mgr.current.lastAdvisoryPromptIndex ?? -1;
   if (lastAdvisory >= 0 && mgr.current.promptCount - lastAdvisory < POST_ADVISORY_COOLDOWN) {
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'post_advisory_cooldown', promptsSinceLast: mgr.current.promptCount - lastAdvisory });
+    return { outcome: 'no_action' };
+  }
+
+  // ── 6.7. Session advisory cap — profile-aware ceiling ───────────────────────
+  const isVibeProfile =
+    mgr.current.profile?.nature === 'beginner' ||
+    mgr.current.profile?.nature === 'cool_geek';
+  const advisoryCap   = isVibeProfile ? 10 : 5;
+  const advisoryCount = mgr.current.advisoryCount ?? 0;
+  if (advisoryCount >= advisoryCap) {
+    insertSkippedSession(store, {
+      projectRoot:          input.projectRoot,
+      sessionId:            mgr.current.sessionId,
+      flagType:             'session_cap_reached',
+      stage:                mgr.current.currentStage,
+      levelReached:         0,
+      skippedAtPromptCount: mgr.current.promptCount,
+    });
+    logger.info('pipeline_outcome', {
+      outcome: 'no_action',
+      reason:  'session_cap_reached',
+      advisoryCount,
+      advisoryCap,
+    });
     return { outcome: 'no_action' };
   }
 

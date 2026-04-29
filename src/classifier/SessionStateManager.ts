@@ -72,6 +72,7 @@ function newSession(projectRoot: string, now: number): SessionState {
     detectedLanguage:        undefined,
     lastInjectedPrompt:      null,
     lastAdvisoryPromptIndex: -1,
+    advisoryCount:           0,
   };
 }
 
@@ -242,6 +243,7 @@ export class SessionStateManager {
    */
   markAdvisoryFired(store: Store): void {
     this.state.lastAdvisoryPromptIndex = this.state.promptCount;
+    this.state.advisoryCount = (this.state.advisoryCount ?? 0) + 1;
     saveState(store, this.state);
   }
 

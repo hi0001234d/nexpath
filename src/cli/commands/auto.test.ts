@@ -801,6 +801,111 @@ describe('runAuto — advisory_frequency gate', () => {
   });
 });
 
+// ── runAuto — session advisory cap (F-07) ────────────────────────────────────
+
+describe('runAuto — session advisory cap', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('advisoryCount initialises to 0 in new session', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/cap-init');
+    expect(mgr.current.advisoryCount ?? 0).toBe(0);
+  });
+
+  it('markAdvisoryFired increments advisoryCount', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/cap-incr');
+    expect(mgr.current.advisoryCount ?? 0).toBe(0);
+    mgr.markAdvisoryFired(store);
+    expect(mgr.current.advisoryCount).toBe(1);
+    mgr.markAdvisoryFired(store);
+    expect(mgr.current.advisoryCount).toBe(2);
+  });
+
+  it('markAdvisoryFired defaults to 0 when advisoryCount absent (old persisted state)', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/cap-compat');
+    (mgr as unknown as { state: { advisoryCount: undefined } }).state.advisoryCount = undefined;
+    mgr.markAdvisoryFired(store);
+    expect(mgr.current.advisoryCount).toBe(1);
+  });
+
+  it('caps (no_action + session_cap_reached record) when count reaches cap=5 (null profile)', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const { getSkippedSessions } = await import('../../store/skipped-sessions.js');
+
+    // Warm up past MIN_PROMPTS guard first
+    for (let i = 0; i < 3; i++) {
+      await runAuto(makeInput({ projectRoot: '/test/cap-at5' }), store);
+    }
+    // Load mgr after warm-up, set advisoryCount=5 + low stageConfidence so
+    // shouldFireStage2 condition 3 (low-conf + active flag) triggers, then
+    // persist all state changes via addAbsenceFlag → saveState
+    const mgr = SessionStateManager.load(store, '/test/cap-at5');
+    (mgr as unknown as { state: { advisoryCount: number; stageConfidence: number } }).state.advisoryCount = 5;
+    (mgr as unknown as { state: { stageConfidence: number } }).state.stageConfidence = 0.3;
+    mgr.addAbsenceFlag(store, {
+      signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 0, cooldownUntil: 100,
+    });
+
+    const result = await runAuto(makeInput({ projectRoot: '/test/cap-at5' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'));
+    expect(result.outcome).toBe('no_action');
+
+    const skipped = getSkippedSessions(store, '/test/cap-at5');
+    const capRecord = skipped.find((s) => s.flagType === 'session_cap_reached');
+    expect(capRecord).toBeDefined();
+    expect(capRecord?.levelReached).toBe(0);
+  });
+
+  it('proceeds past cap gate when count (4) is below cap=5 (null profile)', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const { getSkippedSessions } = await import('../../store/skipped-sessions.js');
+
+    for (let i = 0; i < 3; i++) {
+      await runAuto(makeInput({ projectRoot: '/test/cap-under5' }), store);
+    }
+    const mgr = SessionStateManager.load(store, '/test/cap-under5');
+    (mgr as unknown as { state: { advisoryCount: number; stageConfidence: number } }).state.advisoryCount = 4;
+    (mgr as unknown as { state: { stageConfidence: number } }).state.stageConfidence = 0.3;
+    mgr.addAbsenceFlag(store, {
+      signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 0, cooldownUntil: 100,
+    });
+
+    await runAuto(makeInput({ projectRoot: '/test/cap-under5' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'));
+    const skipped = getSkippedSessions(store, '/test/cap-under5');
+    expect(skipped.some((s) => s.flagType === 'session_cap_reached')).toBe(false);
+  });
+
+  it('beginner/cool_geek profile uses cap=10 (not capped at count=5)', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const { getSkippedSessions } = await import('../../store/skipped-sessions.js');
+
+    for (let i = 0; i < 3; i++) {
+      await runAuto(makeInput({ projectRoot: '/test/cap-vibe10' }), store);
+    }
+    const mgr = SessionStateManager.load(store, '/test/cap-vibe10');
+    // Set beginner profile and count=5 — beginner cap is 10, so this should NOT cap
+    (mgr as unknown as { state: { profile: unknown; advisoryCount: number; stageConfidence: number } }).state.profile = {
+      nature: 'beginner', precisionScore: 1, playfulnessScore: 1,
+      mood: 'casual', depth: 'low', depthScore: 1,
+      computedAt: mgr.current.promptCount, // prevents isProfileStale from overwriting on next processPrompt
+    };
+    (mgr as unknown as { state: { advisoryCount: number } }).state.advisoryCount = 5;
+    (mgr as unknown as { state: { stageConfidence: number } }).state.stageConfidence = 0.3;
+    mgr.addAbsenceFlag(store, {
+      signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 0, cooldownUntil: 100,
+    });
+
+    await runAuto(makeInput({ projectRoot: '/test/cap-vibe10' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'));
+    const skipped = getSkippedSessions(store, '/test/cap-vibe10');
+    // Should NOT be capped — beginner cap is 10, count is only 5
+    expect(skipped.some((s) => s.flagType === 'session_cap_reached')).toBe(false);
+  });
+});
+
 // ── runAuto — effectiveLang from DB ──────────────────────────────────────────
 
 describe('runAuto — effectiveLang from DB', () => {

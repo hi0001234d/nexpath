@@ -99,6 +99,12 @@ export interface SessionState {
    * -1 = no advisory has fired this session.
    */
   lastAdvisoryPromptIndex?: number;
+  /**
+   * Count of advisories that have actually fired (passed Stage 2) this session.
+   * Checked against profile-aware cap before Stage 2 runs.
+   * Optional for backward compatibility with existing persisted state — read as 0 when absent.
+   */
+  advisoryCount?: number;
 }
 
 // ── User nature / mood / depth (item 9) ───────────────────────────────────────
