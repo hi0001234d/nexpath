@@ -14,10 +14,13 @@ import { SKIP_NOW, SHOW_SIMPLER } from './options.js';
 import type { Store } from '../store/db.js';
 import { setConfig } from '../store/config.js';
 
-// ── Windows: new console window running @clack/prompts via Node.js ─────────────
+// ── New-window helpers: .mjs script builders ─────────────────────────────────
+
+/** [cmd, args] tuple for a clipboard command. */
+type ClipboardCmd = [cmd: string, args: string[]];
 
 /**
- * Build the .mjs script that runs inside the new console window.
+ * Build the .mjs script that runs inside the new terminal window.
  *
  * The script:
  *   - Imports @clack/prompts select() from the resolved clackUrl
@@ -29,10 +32,16 @@ import { setConfig } from '../store/config.js';
  * 60-second timeout via Promise.race: if user ignores the window, the script
  * exits cleanly without writing the result file → hook treats as 'skipped'.
  *
- * ANSI in message/labels is NOT stripped — @clack/prompts renders it correctly
- * in the new Windows console (Win 10/11 ANSI VT support).
+ * clipboardCmds: ordered list of clipboard commands to try. The script
+ * iterates until one succeeds (status 0). Single entry for Windows/macOS,
+ * fallback chain for Linux (xclip → wl-copy → xsel).
  */
-function buildMjsScript(clackUrl: string, optFileFwd: string, resultFileFwd: string): string {
+function buildMjsScript(
+  clackUrl: string,
+  optFileFwd: string,
+  resultFileFwd: string,
+  clipboardCmds: ClipboardCmd[],
+): string {
   return `import { select, isCancel } from '${clackUrl}';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -87,7 +96,11 @@ if (!isCancel(picked) && picked !== TIMEOUT && typeof picked === 'string'
     if (action === 'send') {
       writeFileSync('${resultFileFwd}', picked, 'utf8');
     } else {
-      spawnSync('clip', [], { input: picked, encoding: 'utf8', stdio: ['pipe', 'ignore', 'ignore'] });
+      const _clipCmds = ${JSON.stringify(clipboardCmds)};
+      for (const [_c, _a] of _clipCmds) {
+        const _r = spawnSync(_c, _a, { input: picked, encoding: 'utf8', stdio: ['pipe', 'ignore', 'ignore'] });
+        if (_r.status === 0) break;
+      }
       writeFileSync('${resultFileFwd}', '__CLIP__', 'utf8');
     }
   }
@@ -188,7 +201,7 @@ function buildWindowsNewWindowSelectFn(_store?: Store, _projectRoot?: string): S
         'utf8',
       );
 
-      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd), 'utf8');
+      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, [['clip', []]]), 'utf8');
 
       // Textual cue in Claude terminal regardless of whether window is visible
       process.stderr.write('\n[nexpath] Please select an action in the new window\n');

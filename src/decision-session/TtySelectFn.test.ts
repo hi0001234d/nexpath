@@ -231,6 +231,19 @@ describe('createTtySelectFn — Windows (win32)', () => {
     expect(capturedScript).toContain('__FREQ_MENU_PENDING__');
   });
 
+  it('.mjs script embeds clipboard commands as iterable array (not hardcoded clip)', async () => {
+    let capturedScript = '';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      if (existsSync(SCRIPT_FILE)) capturedScript = readFileSync(SCRIPT_FILE, 'utf8');
+    });
+    await createTtySelectFn()!(makeOpts());
+    // Must contain the serialised clipboard command array for platform-aware clipboard
+    expect(capturedScript).toContain('[["clip",[]]]');
+    // Must iterate the array rather than calling clip directly
+    expect(capturedScript).toContain('for (const [_c, _a] of _clipCmds)');
+    expect(capturedScript).toContain('if (_r.status === 0) break');
+  });
+
   it('freq script contains frequency sub-menu options when __FREQ_MENU_PENDING__ is returned', async () => {
     const FREQ_SCRIPT_FILE = join(tmpdir(), `nexpath-freq-sel-${UUID}.mjs`);
     let capturedFreqScript = '';
