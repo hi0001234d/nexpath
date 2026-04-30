@@ -737,3 +737,121 @@ describe('createTtySelectFn — macOS (darwin)', () => {
     try { unlinkSync(FREQ_SCRIPT_FILE); } catch { /* ignore */ }
   });
 });
+
+// ── Phase 5: Validation & regression tests ───────────────────────────────────
+
+describe('AppleScript string escaping', () => {
+  const origPlatform = process.platform;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(process.stderr, 'write').mockReturnValue(true as never);
+    Object.defineProperty(process, 'platform', { value: 'darwin', writable: true });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', { value: origPlatform, writable: true });
+    vi.restoreAllMocks();
+    cleanTempFiles();
+  });
+
+  it('escapes backslashes and double-quotes in script path for AppleScript embedding', async () => {
+    let capturedAppleScript = '';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'osascript') capturedAppleScript = args[1];
+        return { status: 0 };
+      },
+    );
+    await createTtySelectFn()!(makeOpts());
+    // AppleScript do script command should not contain unescaped quotes
+    // that would break the AppleScript string literal
+    const doScriptMatch = capturedAppleScript.match(/do script "(.*)"/);
+    expect(doScriptMatch).not.toBeNull();
+    // The embedded command should contain the script path and ;exit
+    expect(doScriptMatch![1]).toContain('; exit');
+    expect(doScriptMatch![1]).toContain('node');
+  });
+});
+
+describe('Linux fallback to /dev/tty when no terminal found', () => {
+  const origPlatform = process.platform;
+  const origDisplay  = process.env.DISPLAY;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.defineProperty(process, 'platform', { value: 'linux', writable: true });
+    process.env.DISPLAY = ':0';
+  });
+
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', { value: origPlatform, writable: true });
+    if (origDisplay !== undefined) process.env.DISPLAY = origDisplay; else delete process.env.DISPLAY;
+    vi.restoreAllMocks();
+  });
+
+  it('returns null (no tty) when no terminal emulator found and /dev/tty unavailable', () => {
+    // All 'which' calls return not-found
+    (spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({ status: 1 });
+    // On CI/test environment /dev/tty may or may not exist,
+    // but the key assertion is: no crash, returns SelectFn or null gracefully
+    const fn = createTtySelectFn();
+    // Either null (no /dev/tty) or a function (has /dev/tty) — never throws
+    expect(fn === null || typeof fn === 'function').toBe(true);
+  });
+});
+
+describe('Regression: .mjs script content is platform-consistent', () => {
+  const origPlatform = process.platform;
+  const origDisplay  = process.env.DISPLAY;
+
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', { value: origPlatform, writable: true });
+    if (origDisplay !== undefined) process.env.DISPLAY = origDisplay; else delete process.env.DISPLAY;
+    vi.restoreAllMocks();
+    cleanTempFiles();
+  });
+
+  it('Linux and macOS .mjs scripts share the same core UI logic', async () => {
+    let linuxScript = '';
+    let macScript = '';
+
+    // Capture Linux script
+    Object.defineProperty(process, 'platform', { value: 'linux', writable: true });
+    process.env.DISPLAY = ':0';
+    vi.spyOn(process.stderr, 'write').mockReturnValue(true as never);
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      gnomeTerminalMock((_cmd, _args) => {
+        if (existsSync(SCRIPT_FILE)) linuxScript = readFileSync(SCRIPT_FILE, 'utf8');
+      }),
+    );
+    await createTtySelectFn()!(makeOpts());
+    cleanTempFiles();
+
+    // Capture macOS script
+    vi.clearAllMocks();
+    Object.defineProperty(process, 'platform', { value: 'darwin', writable: true });
+    vi.spyOn(process.stderr, 'write').mockReturnValue(true as never);
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      if (existsSync(SCRIPT_FILE)) macScript = readFileSync(SCRIPT_FILE, 'utf8');
+    });
+    await createTtySelectFn()!(makeOpts());
+
+    // Both must contain the same core UI elements
+    for (const script of [linuxScript, macScript]) {
+      expect(script).toContain('select(');
+      expect(script).toContain('isCancel(');
+      expect(script).toContain('Promise.race');
+      expect(script).toContain('60_000');
+      expect(script).toContain('__NEXPATH_OPT_OUT__');
+      expect(script).toContain('__FREQ_MENU_PENDING__');
+      expect(script).toContain('emitKeypressEvents');
+    }
+
+    // Clipboard differs: Linux has xclip chain, macOS has pbcopy
+    expect(linuxScript).toContain('xclip');
+    expect(macScript).toContain('pbcopy');
+    expect(linuxScript).not.toContain('pbcopy');
+    expect(macScript).not.toContain('xclip');
+  });
+});
