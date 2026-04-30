@@ -12,7 +12,7 @@ vi.mock('node:child_process', () => ({
 }));
 
 // Deferred import so mocks are in place before module is evaluated
-const { createTtySelectFn, buildUnixMenuLines } = await import('./TtySelectFn.js');
+const { createTtySelectFn, buildUnixMenuLines, detectLinuxTerminal } = await import('./TtySelectFn.js');
 const { OPT_OUT_SENTINEL }   = await import('./DecisionSession.js');
 const { SHOW_SIMPLER, SKIP_NOW } = await import('./options.js');
 const { spawnSync }          = await import('node:child_process');
@@ -305,5 +305,211 @@ describe('buildUnixMenuLines — W-05 rendering', () => {
     const firstLine = multiLineLabel.split('\n')[0];
     expect(firstLine).toBe('1. Walk through this feature as a real user.');
     expect(firstLine).not.toContain('\n');
+  });
+});
+
+// ── Linux: detectLinuxTerminal + new-window SelectFn ─────────────────────────
+
+describe('detectLinuxTerminal', () => {
+  const origDisplay  = process.env.DISPLAY;
+  const origWayland  = process.env.WAYLAND_DISPLAY;
+
+  afterEach(() => {
+    // Restore env
+    if (origDisplay  !== undefined) process.env.DISPLAY = origDisplay;  else delete process.env.DISPLAY;
+    if (origWayland  !== undefined) process.env.WAYLAND_DISPLAY = origWayland; else delete process.env.WAYLAND_DISPLAY;
+    vi.restoreAllMocks();
+  });
+
+  it('returns null when neither $DISPLAY nor $WAYLAND_DISPLAY is set', () => {
+    delete process.env.DISPLAY;
+    delete process.env.WAYLAND_DISPLAY;
+    expect(detectLinuxTerminal()).toBeNull();
+  });
+
+  it('returns first matching terminal when $DISPLAY is set', () => {
+    process.env.DISPLAY = ':0';
+    // Mock 'which' — gnome-terminal found
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which' && args[0] === 'xdg-terminal-exec') return { status: 1 };
+        if (cmd === 'which' && args[0] === 'gnome-terminal') return { status: 0 };
+        return { status: 1 };
+      },
+    );
+    const spec = detectLinuxTerminal();
+    expect(spec).not.toBeNull();
+    expect(spec!.cmd).toBe('gnome-terminal');
+  });
+
+  it('returns xterm as last-resort fallback', () => {
+    process.env.DISPLAY = ':0';
+    // Mock 'which' — only xterm found
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which' && args[0] === 'xterm') return { status: 0 };
+        return { status: 1 };
+      },
+    );
+    const spec = detectLinuxTerminal();
+    expect(spec).not.toBeNull();
+    expect(spec!.cmd).toBe('xterm');
+  });
+
+  it('returns null when no terminal emulator is found despite $DISPLAY being set', () => {
+    process.env.DISPLAY = ':0';
+    (spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({ status: 1 });
+    expect(detectLinuxTerminal()).toBeNull();
+  });
+
+  it('detects terminal on Wayland ($WAYLAND_DISPLAY set, $DISPLAY unset)', () => {
+    delete process.env.DISPLAY;
+    process.env.WAYLAND_DISPLAY = 'wayland-0';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which' && args[0] === 'foot') return { status: 0 };
+        return { status: 1 };
+      },
+    );
+    const spec = detectLinuxTerminal();
+    expect(spec).not.toBeNull();
+    expect(spec!.cmd).toBe('foot');
+  });
+
+  it('gnome-terminal args include --wait for blocking', () => {
+    process.env.DISPLAY = ':0';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which' && args[0] === 'gnome-terminal') return { status: 0 };
+        return { status: 1 };
+      },
+    );
+    const spec = detectLinuxTerminal()!;
+    const args = spec.args('Test Title', '/tmp/test.mjs');
+    expect(args).toContain('--wait');
+    expect(args).toContain('--');
+    expect(args).toContain('node');
+    expect(args).toContain('/tmp/test.mjs');
+  });
+
+  it('xterm args include font flags for readable UI', () => {
+    process.env.DISPLAY = ':0';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which' && args[0] === 'xterm') return { status: 0 };
+        return { status: 1 };
+      },
+    );
+    const spec = detectLinuxTerminal()!;
+    const args = spec.args('Test Title', '/tmp/test.mjs');
+    expect(args).toContain('-fa');
+    expect(args).toContain('Monospace');
+    expect(args).toContain('-fs');
+    expect(args).toContain('12');
+  });
+
+  it('xfce4-terminal args include --disable-server to prevent D-Bus return', () => {
+    process.env.DISPLAY = ':0';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which' && args[0] === 'xfce4-terminal') return { status: 0 };
+        return { status: 1 };
+      },
+    );
+    const spec = detectLinuxTerminal()!;
+    const args = spec.args('Test Title', '/tmp/test.mjs');
+    expect(args).toContain('--disable-server');
+  });
+
+  it('priority order: xdg-terminal-exec > gnome-terminal when both available', () => {
+    process.env.DISPLAY = ':0';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which' && (args[0] === 'xdg-terminal-exec' || args[0] === 'gnome-terminal')) {
+          return { status: 0 };
+        }
+        return { status: 1 };
+      },
+    );
+    const spec = detectLinuxTerminal();
+    expect(spec!.cmd).toBe('xdg-terminal-exec');
+  });
+});
+
+describe('createTtySelectFn — Linux new-window path', () => {
+  const origPlatform = process.platform;
+  const origDisplay  = process.env.DISPLAY;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(process.stderr, 'write').mockReturnValue(true as never);
+    Object.defineProperty(process, 'platform', { value: 'linux', writable: true });
+    process.env.DISPLAY = ':0';
+    cleanTempFiles();
+  });
+
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', { value: origPlatform, writable: true });
+    if (origDisplay !== undefined) process.env.DISPLAY = origDisplay; else delete process.env.DISPLAY;
+    vi.restoreAllMocks();
+    cleanTempFiles();
+  });
+
+  it('.mjs script embeds Linux clipboard fallback chain', async () => {
+    let capturedScript = '';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
+        if (existsSync(SCRIPT_FILE)) capturedScript = readFileSync(SCRIPT_FILE, 'utf8');
+      },
+    );
+    const fn = createTtySelectFn();
+    expect(fn).not.toBeNull();
+    await fn!(makeOpts());
+    expect(capturedScript).toContain('xclip');
+    expect(capturedScript).toContain('wl-copy');
+    expect(capturedScript).toContain('xsel');
+  });
+
+  it('spawns detected terminal emulator (not cmd.exe)', async () => {
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
+        return { status: 0 };
+      },
+    );
+    const fn = createTtySelectFn();
+    await fn!(makeOpts());
+    const spawnCalls = (spawnSync as ReturnType<typeof vi.fn>).mock.calls as [string, string[]][];
+    const terminalCall = spawnCalls.find(
+      (c) => c[0] !== 'which',
+    );
+    expect(terminalCall).toBeDefined();
+    expect(terminalCall![0]).toBe('gnome-terminal');
+    expect(terminalCall![1]).toContain('--wait');
+  });
+
+  it('resolves with selected value via result file', async () => {
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
+        writeFileSync(RESULT_FILE, 'option-a-value', 'utf8');
+      },
+    );
+    const result = await createTtySelectFn()!(makeOpts());
+    expect(result).toBe('option-a-value');
+  });
+
+  it('cleans up temp files after resolution', async () => {
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
+        writeFileSync(RESULT_FILE, 'option-a-value', 'utf8');
+      },
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(existsSync(OPT_FILE)).toBe(false);
+    expect(existsSync(RESULT_FILE)).toBe(false);
+    expect(existsSync(SCRIPT_FILE)).toBe(false);
   });
 });

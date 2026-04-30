@@ -163,18 +163,7 @@ process.exit(0);
  * which reliably brings the new window to the foreground.
  */
 function buildWindowsNewWindowSelectFn(_store?: Store, _projectRoot?: string): SelectFn {
-  // Resolve @clack/prompts ESM entry from nexpath's module context (once per SelectFn build).
-  // createRequire().resolve('@clack/prompts') returns the CJS entry (dist/index.cjs).
-  // The .mjs script needs the ESM entry (exports['.'].import = dist/index.mjs) so that
-  // named imports { select, isCancel } work correctly from an ESM context.
-  const _require      = createRequire(import.meta.url);
-  const clackPkgPath  = _require.resolve('@clack/prompts/package.json');
-  const clackPkg      = JSON.parse(readFileSync(clackPkgPath, 'utf8')) as {
-    exports: { '.': { import: string } };
-  };
-  const clackEsmEntry = clackPkg.exports['.'].import;
-  const clackEsmPath  = join(dirname(clackPkgPath), clackEsmEntry);
-  const clackUrl      = `file:///${clackEsmPath.replace(/\\/g, '/')}`;
+  const clackUrl = resolveClackEsmUrl();
 
   return (opts) =>
     new Promise<string | symbol>((resolve) => {
@@ -240,6 +229,166 @@ function buildWindowsNewWindowSelectFn(_store?: Store, _projectRoot?: string): S
             ['/c', 'start', '/WAIT', 'Nexpath \u2014 Frequency', 'node', freqScriptFile],
             { stdio: 'ignore' },
           );
+          if (existsSync(freqResultFile)) {
+            const freqRaw = readFileSync(freqResultFile, 'utf8').trim();
+            if (freqRaw.startsWith('__FREQ__:')) result = freqRaw;
+          }
+          for (const f of [freqScriptFile, freqResultFile]) {
+            try { unlinkSync(f); } catch { /* ignore */ }
+          }
+        } else if (raw.startsWith('__FREQ__:')) {
+          result = raw;
+        } else if (raw.length > 0) {
+          result = raw;
+        }
+      }
+
+      for (const f of [optFile, resultFile, scriptFile]) {
+        try { unlinkSync(f); } catch { /* ignore */ }
+      }
+
+      resolve(result);
+    });
+}
+
+// ── Linux: new terminal window via detected emulator ─────────────────────────
+
+/** Resolve the @clack/prompts ESM entry URL from nexpath's module context. */
+function resolveClackEsmUrl(): string {
+  const _require      = createRequire(import.meta.url);
+  const clackPkgPath  = _require.resolve('@clack/prompts/package.json');
+  const clackPkg      = JSON.parse(readFileSync(clackPkgPath, 'utf8')) as {
+    exports: { '.': { import: string } };
+  };
+  const clackEsmEntry = clackPkg.exports['.'].import;
+  const clackEsmPath  = join(dirname(clackPkgPath), clackEsmEntry);
+  return `file:///${clackEsmPath.replace(/\\/g, '/')}`;
+}
+
+function commandExists(cmd: string): boolean {
+  const r = spawnSync('which', [cmd], { stdio: 'pipe', timeout: 2000 });
+  return r.status === 0;
+}
+
+interface TerminalSpec {
+  cmd:  string;
+  args: (title: string, scriptFile: string) => string[];
+}
+
+const LINUX_TERMINALS: TerminalSpec[] = [
+  {
+    cmd: 'xdg-terminal-exec',
+    args: (_t, s) => ['node', s],
+  },
+  {
+    cmd: 'gnome-terminal',
+    args: (t, s) => ['--wait', `--title=${t}`, '--', 'node', s],
+  },
+  {
+    cmd: 'konsole',
+    args: (t, s) => ['-p', `tabtitle=${t}`, '-e', 'node', s],
+  },
+  {
+    cmd: 'xfce4-terminal',
+    args: (t, s) => ['--disable-server', `--title=${t}`, '-e', `node ${s}`],
+  },
+  {
+    cmd: 'kitty',
+    args: (t, s) => ['--title', t, 'node', s],
+  },
+  {
+    cmd: 'alacritty',
+    args: (t, s) => ['--title', t, '-e', 'node', s],
+  },
+  {
+    cmd: 'wezterm',
+    args: (_t, s) => ['start', '--', 'node', s],
+  },
+  {
+    cmd: 'foot',
+    args: (t, s) => [`--title=${t}`, 'node', s],
+  },
+  {
+    cmd: 'x-terminal-emulator',
+    args: (_t, s) => ['-e', 'node', s],
+  },
+  {
+    cmd: 'xterm',
+    args: (t, s) => ['-T', t, '-fa', 'Monospace', '-fs', '12', '-e', 'node', s],
+  },
+];
+
+/**
+ * Detect an installed terminal emulator that supports blocking execution.
+ * Returns null when no GUI session is available ($DISPLAY / $WAYLAND_DISPLAY unset)
+ * or no known terminal emulator is found.
+ */
+export function detectLinuxTerminal(): TerminalSpec | null {
+  if (!process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) return null;
+  for (const spec of LINUX_TERMINALS) {
+    if (commandExists(spec.cmd)) return spec;
+  }
+  return null;
+}
+
+/** Linux clipboard fallback chain: xclip → wl-copy → xsel. */
+const LINUX_CLIPBOARD_CMDS: ClipboardCmd[] = [
+  ['xclip', ['-selection', 'clipboard']],
+  ['wl-copy', []],
+  ['xsel', ['--clipboard', '--input']],
+];
+
+const WINDOW_TITLE = 'Nexpath \u2014 Action Required';
+const FREQ_WINDOW_TITLE = 'Nexpath \u2014 Frequency';
+
+function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): SelectFn | null {
+  const terminal = detectLinuxTerminal();
+  if (!terminal) return null;
+
+  const clackUrl = resolveClackEsmUrl();
+
+  return (opts) =>
+    new Promise<string | symbol>((resolve) => {
+      const id         = randomUUID();
+      const optFile    = join(tmpdir(), `nexpath-opt-${id}.json`);
+      const resultFile = join(tmpdir(), `nexpath-res-${id}.txt`);
+      const scriptFile = join(tmpdir(), `nexpath-sel-${id}.mjs`);
+
+      const optFileFwd    = optFile.replace(/\\/g, '/');
+      const resultFileFwd = resultFile.replace(/\\/g, '/');
+
+      writeFileSync(
+        optFile,
+        JSON.stringify({
+          message:         opts.message,
+          options:         opts.options,
+          skipNow:         SKIP_NOW,
+          showSimpler:     SHOW_SIMPLER,
+          separatorPrefix: OPTION_SEPARATOR,
+        }),
+        'utf8',
+      );
+
+      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, LINUX_CLIPBOARD_CMDS), 'utf8');
+
+      process.stderr.write('\n[nexpath] Please select an action in the new window\n');
+
+      spawnSync(terminal.cmd, terminal.args(WINDOW_TITLE, scriptFile), { stdio: 'ignore' });
+
+      let result: string | symbol = Symbol('cancelled');
+      if (existsSync(resultFile)) {
+        const raw = readFileSync(resultFile, 'utf8').trim();
+        if (raw === '__CLIP__') {
+          result = CLIPBOARD_ONLY;
+        } else if (raw === '__NEXPATH_OPT_OUT__') {
+          result = OPT_OUT_SENTINEL;
+        } else if (raw === '__FREQ_MENU_PENDING__') {
+          const freqId         = randomUUID();
+          const freqResultFile = join(tmpdir(), `nexpath-freq-res-${freqId}.txt`);
+          const freqScriptFile = join(tmpdir(), `nexpath-freq-sel-${freqId}.mjs`);
+          const freqResultFwd  = freqResultFile.replace(/\\/g, '/');
+          writeFileSync(freqScriptFile, buildFreqMjsScript(clackUrl, freqResultFwd), 'utf8');
+          spawnSync(terminal.cmd, terminal.args(FREQ_WINDOW_TITLE, freqScriptFile), { stdio: 'ignore' });
           if (existsSync(freqResultFile)) {
             const freqRaw = readFileSync(freqResultFile, 'utf8').trim();
             if (freqRaw.startsWith('__FREQ__:')) result = freqRaw;
@@ -478,17 +627,22 @@ function buildUnixSelectFn(
 /**
  * Create a platform-appropriate SelectFn for hook subprocess context.
  *
- * Windows  — opens a new console window running Node.js + @clack/prompts.
- *            Full arrow-key UI, visual cursor, ANSI. 60s auto-timeout.
- *            Always returns a SelectFn (never null) — cancelled/timeout
- *            resolves as Symbol.
- * Linux/Mac — opens /dev/tty directly (requires controlling terminal).
- *            Returns null when /dev/tty is not accessible (CI, no console).
+ * Windows — new console window via cmd /c start (full @clack/prompts UI).
+ * Linux   — new terminal window via detected emulator (full @clack/prompts UI).
+ *           Falls back to /dev/tty readline if no terminal emulator is found.
+ * macOS   — /dev/tty readline for now (Phase 3 will add Terminal.app window).
+ *
+ * Returns null when no interactive method is available (CI, headless, no console).
  */
 export function createTtySelectFn(store?: Store, projectRoot?: string): SelectFn | null {
   if (platform === 'win32') {
     return buildWindowsNewWindowSelectFn(store, projectRoot);
   }
+  if (platform === 'linux') {
+    const linuxFn = buildLinuxNewWindowSelectFn(store, projectRoot);
+    if (linuxFn) return linuxFn;
+  }
+  // darwin or Linux fallback (no terminal emulator / no display)
   const streams = openUnixTtyStreams();
   if (!streams) return null;
   return buildUnixSelectFn(streams, store, projectRoot);
