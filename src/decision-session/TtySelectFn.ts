@@ -273,6 +273,8 @@ function commandExists(cmd: string): boolean {
 interface TerminalSpec {
   cmd:  string;
   args: (title: string, scriptFile: string) => string[];
+  /** Optional extra validation after commandExists passes (e.g. version check). */
+  validate?: () => boolean;
 }
 
 const LINUX_TERMINALS: TerminalSpec[] = [
@@ -283,6 +285,13 @@ const LINUX_TERMINALS: TerminalSpec[] = [
   {
     cmd: 'gnome-terminal',
     args: (t, s) => ['--wait', `--title=${t}`, '--', 'node', s],
+    // --wait is buggy before v3.36 (window close doesn't trigger exit signal)
+    validate: () => {
+      const r = spawnSync('gnome-terminal', ['--version'], { encoding: 'utf8', stdio: 'pipe', timeout: 2000 });
+      const m = r.stdout?.match(/(\d+)\.(\d+)/);
+      if (!m) return true; // can't determine version — assume OK
+      return parseInt(m[1]) > 3 || (parseInt(m[1]) === 3 && parseInt(m[2]) >= 36);
+    },
   },
   {
     cmd: 'konsole',
@@ -326,7 +335,10 @@ const LINUX_TERMINALS: TerminalSpec[] = [
 export function detectLinuxTerminal(): TerminalSpec | null {
   if (!process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) return null;
   for (const spec of LINUX_TERMINALS) {
-    if (commandExists(spec.cmd)) return spec;
+    if (commandExists(spec.cmd)) {
+      if (spec.validate && !spec.validate()) continue;
+      return spec;
+    }
   }
   return null;
 }

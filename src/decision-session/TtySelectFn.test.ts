@@ -421,6 +421,55 @@ describe('detectLinuxTerminal', () => {
     expect(args).toContain('--disable-server');
   });
 
+  it('skips gnome-terminal when version < 3.36 (--wait bug)', () => {
+    process.env.DISPLAY = ':0';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which' && args[0] === 'gnome-terminal') return { status: 0 };
+        if (cmd === 'which' && args[0] === 'xterm') return { status: 0 };
+        if (cmd === 'gnome-terminal' && args[0] === '--version') {
+          return { status: 0, stdout: 'GNOME Terminal 3.28.2' };
+        }
+        return { status: 1 };
+      },
+    );
+    const spec = detectLinuxTerminal();
+    expect(spec).not.toBeNull();
+    expect(spec!.cmd).toBe('xterm'); // gnome-terminal skipped, falls to xterm
+  });
+
+  it('accepts gnome-terminal when version >= 3.36', () => {
+    process.env.DISPLAY = ':0';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which' && args[0] === 'gnome-terminal') return { status: 0 };
+        if (cmd === 'gnome-terminal' && args[0] === '--version') {
+          return { status: 0, stdout: 'GNOME Terminal 3.44.0' };
+        }
+        return { status: 1 };
+      },
+    );
+    const spec = detectLinuxTerminal();
+    expect(spec).not.toBeNull();
+    expect(spec!.cmd).toBe('gnome-terminal');
+  });
+
+  it('accepts gnome-terminal when version cannot be determined', () => {
+    process.env.DISPLAY = ':0';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which' && args[0] === 'gnome-terminal') return { status: 0 };
+        if (cmd === 'gnome-terminal' && args[0] === '--version') {
+          return { status: 1, stdout: '' };
+        }
+        return { status: 1 };
+      },
+    );
+    const spec = detectLinuxTerminal();
+    expect(spec).not.toBeNull();
+    expect(spec!.cmd).toBe('gnome-terminal');
+  });
+
   it('priority order: xdg-terminal-exec > gnome-terminal when both available', () => {
     process.env.DISPLAY = ':0';
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
@@ -435,6 +484,16 @@ describe('detectLinuxTerminal', () => {
     expect(spec!.cmd).toBe('xdg-terminal-exec');
   });
 });
+
+/** Mock spawnSync for Linux tests: gnome-terminal found + passes version check. */
+function gnomeTerminalMock(extraHandler?: (cmd: string, args: string[]) => unknown) {
+  return (cmd: string, args: string[]) => {
+    if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
+    if (cmd === 'gnome-terminal' && args[0] === '--version') return { status: 0, stdout: 'GNOME Terminal 3.44.0' };
+    if (extraHandler) return extraHandler(cmd, args);
+    return undefined;
+  };
+}
 
 describe('createTtySelectFn — Linux new-window path', () => {
   const origPlatform = process.platform;
@@ -458,10 +517,9 @@ describe('createTtySelectFn — Linux new-window path', () => {
   it('.mjs script embeds Linux clipboard fallback chain', async () => {
     let capturedScript = '';
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
-      (cmd: string, args: string[]) => {
-        if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
+      gnomeTerminalMock((_cmd, _args) => {
         if (existsSync(SCRIPT_FILE)) capturedScript = readFileSync(SCRIPT_FILE, 'utf8');
-      },
+      }),
     );
     const fn = createTtySelectFn();
     expect(fn).not.toBeNull();
@@ -473,16 +531,13 @@ describe('createTtySelectFn — Linux new-window path', () => {
 
   it('spawns detected terminal emulator (not cmd.exe)', async () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
-      (cmd: string, args: string[]) => {
-        if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
-        return { status: 0 };
-      },
+      gnomeTerminalMock(() => ({ status: 0 })),
     );
     const fn = createTtySelectFn();
     await fn!(makeOpts());
     const spawnCalls = (spawnSync as ReturnType<typeof vi.fn>).mock.calls as [string, string[]][];
     const terminalCall = spawnCalls.find(
-      (c) => c[0] !== 'which',
+      (c) => c[0] !== 'which' && !(c[0] === 'gnome-terminal' && c[1][0] === '--version'),
     );
     expect(terminalCall).toBeDefined();
     expect(terminalCall![0]).toBe('gnome-terminal');
@@ -491,10 +546,7 @@ describe('createTtySelectFn — Linux new-window path', () => {
 
   it('resolves with selected value via result file', async () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
-      (cmd: string, args: string[]) => {
-        if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
-        writeFileSync(RESULT_FILE, 'option-a-value', 'utf8');
-      },
+      gnomeTerminalMock(() => { writeFileSync(RESULT_FILE, 'option-a-value', 'utf8'); }),
     );
     const result = await createTtySelectFn()!(makeOpts());
     expect(result).toBe('option-a-value');
@@ -502,10 +554,7 @@ describe('createTtySelectFn — Linux new-window path', () => {
 
   it('cleans up temp files after resolution', async () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
-      (cmd: string, args: string[]) => {
-        if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
-        writeFileSync(RESULT_FILE, 'option-a-value', 'utf8');
-      },
+      gnomeTerminalMock(() => { writeFileSync(RESULT_FILE, 'option-a-value', 'utf8'); }),
     );
     await createTtySelectFn()!(makeOpts());
     expect(existsSync(OPT_FILE)).toBe(false);
@@ -515,10 +564,7 @@ describe('createTtySelectFn — Linux new-window path', () => {
 
   it('resolves with Symbol when no result file (timeout/cancel)', async () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
-      (cmd: string, args: string[]) => {
-        if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
-        return { status: 0 };
-      },
+      gnomeTerminalMock(() => ({ status: 0 })),
     );
     const result = await createTtySelectFn()!(makeOpts());
     expect(typeof result).toBe('symbol');
@@ -526,10 +572,7 @@ describe('createTtySelectFn — Linux new-window path', () => {
 
   it('resolves with OPT_OUT_SENTINEL when result is __NEXPATH_OPT_OUT__', async () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
-      (cmd: string, args: string[]) => {
-        if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
-        writeFileSync(RESULT_FILE, '__NEXPATH_OPT_OUT__', 'utf8');
-      },
+      gnomeTerminalMock(() => { writeFileSync(RESULT_FILE, '__NEXPATH_OPT_OUT__', 'utf8'); }),
     );
     const result = await createTtySelectFn()!(makeOpts());
     expect(result).toBe(OPT_OUT_SENTINEL);
@@ -537,12 +580,8 @@ describe('createTtySelectFn — Linux new-window path', () => {
 
   it('writes stderr cue before spawning terminal', async () => {
     const stderrSpy = vi.spyOn(process.stderr, 'write').mockReturnValue(true as never);
-    const spawnMock = spawnSync as ReturnType<typeof vi.fn>;
-    spawnMock.mockImplementation(
-      (cmd: string, args: string[]) => {
-        if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
-        return { status: 0 };
-      },
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      gnomeTerminalMock(() => ({ status: 0 })),
     );
     await createTtySelectFn()!(makeOpts());
     const stderrCalls = stderrSpy.mock.calls.map((c) => String(c[0]));
@@ -553,13 +592,12 @@ describe('createTtySelectFn — Linux new-window path', () => {
     const FREQ_SCRIPT_FILE = join(tmpdir(), `nexpath-freq-sel-${UUID}.mjs`);
     let terminalSpawnCount = 0;
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
-      (cmd: string, args: string[]) => {
-        if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
+      gnomeTerminalMock(() => {
         terminalSpawnCount++;
         if (terminalSpawnCount === 1) {
           writeFileSync(RESULT_FILE, '__FREQ_MENU_PENDING__', 'utf8');
         }
-      },
+      }),
     );
     await createTtySelectFn()!(makeOpts());
     expect(terminalSpawnCount).toBe(2);
