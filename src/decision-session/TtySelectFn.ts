@@ -411,6 +411,107 @@ function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): Selec
     });
 }
 
+// ── macOS: new Terminal.app window via osascript ─────────────────────────────
+
+/** macOS clipboard: pbcopy. */
+const MAC_CLIPBOARD_CMDS: ClipboardCmd[] = [['pbcopy', []]];
+
+/**
+ * Build an AppleScript that opens a new Terminal.app window, runs a command,
+ * and polls until the command finishes.
+ *
+ * osascript is synchronous — spawnSync('osascript', ['-e', script]) blocks
+ * until the AppleScript completes. The polling loop inside waits for the
+ * shell's `busy` flag to clear (i.e. the Node.js child exits).
+ *
+ * ;exit after the command ensures the shell exits so busy becomes false.
+ * If the user closes the window manually, the `on error` catches the stale
+ * reference and exits the loop cleanly.
+ */
+function buildTerminalAppleScript(command: string): string {
+  // Escape backslashes and double-quotes for AppleScript string embedding
+  const escaped = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return `tell application "Terminal"
+    activate
+    set w to do script "${escaped}; exit"
+    repeat
+        delay 0.5
+        try
+            if not (busy of w) then exit repeat
+        on error
+            exit repeat
+        end try
+    end repeat
+end tell`;
+}
+
+function buildMacNewWindowSelectFn(_store?: Store, _projectRoot?: string): SelectFn {
+  const clackUrl = resolveClackEsmUrl();
+
+  return (opts) =>
+    new Promise<string | symbol>((resolve) => {
+      const id         = randomUUID();
+      const optFile    = join(tmpdir(), `nexpath-opt-${id}.json`);
+      const resultFile = join(tmpdir(), `nexpath-res-${id}.txt`);
+      const scriptFile = join(tmpdir(), `nexpath-sel-${id}.mjs`);
+
+      const optFileFwd    = optFile.replace(/\\/g, '/');
+      const resultFileFwd = resultFile.replace(/\\/g, '/');
+
+      writeFileSync(
+        optFile,
+        JSON.stringify({
+          message:         opts.message,
+          options:         opts.options,
+          skipNow:         SKIP_NOW,
+          showSimpler:     SHOW_SIMPLER,
+          separatorPrefix: OPTION_SEPARATOR,
+        }),
+        'utf8',
+      );
+
+      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, MAC_CLIPBOARD_CMDS), 'utf8');
+
+      process.stderr.write('\n[nexpath] Please select an action in the new window\n');
+
+      spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${scriptFile}`)], { stdio: 'ignore' });
+
+      let result: string | symbol = Symbol('cancelled');
+      if (existsSync(resultFile)) {
+        const raw = readFileSync(resultFile, 'utf8').trim();
+        if (raw === '__CLIP__') {
+          result = CLIPBOARD_ONLY;
+        } else if (raw === '__NEXPATH_OPT_OUT__') {
+          result = OPT_OUT_SENTINEL;
+        } else if (raw === '__FREQ_MENU_PENDING__') {
+          const freqId         = randomUUID();
+          const freqResultFile = join(tmpdir(), `nexpath-freq-res-${freqId}.txt`);
+          const freqScriptFile = join(tmpdir(), `nexpath-freq-sel-${freqId}.mjs`);
+          const freqResultFwd  = freqResultFile.replace(/\\/g, '/');
+          writeFileSync(freqScriptFile, buildFreqMjsScript(clackUrl, freqResultFwd), 'utf8');
+          spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${freqScriptFile}`)], { stdio: 'ignore' });
+          if (existsSync(freqResultFile)) {
+            const freqRaw = readFileSync(freqResultFile, 'utf8').trim();
+            if (freqRaw.startsWith('__FREQ__:')) result = freqRaw;
+          }
+          for (const f of [freqScriptFile, freqResultFile]) {
+            try { unlinkSync(f); } catch { /* ignore */ }
+          }
+        } else if (raw.startsWith('__FREQ__:')) {
+          result = raw;
+        } else if (raw.length > 0) {
+          result = raw;
+        }
+      }
+
+      for (const f of [optFile, resultFile, scriptFile]) {
+        try { unlinkSync(f); } catch { /* ignore */ }
+      }
+
+      resolve(result);
+    });
+}
+
 // ── Unix: /dev/tty readline ───────────────────────────────────────────────────
 
 interface TtyStreams {
@@ -628,21 +729,25 @@ function buildUnixSelectFn(
  * Create a platform-appropriate SelectFn for hook subprocess context.
  *
  * Windows — new console window via cmd /c start (full @clack/prompts UI).
+ * macOS   — new Terminal.app window via osascript (full @clack/prompts UI).
  * Linux   — new terminal window via detected emulator (full @clack/prompts UI).
  *           Falls back to /dev/tty readline if no terminal emulator is found.
- * macOS   — /dev/tty readline for now (Phase 3 will add Terminal.app window).
  *
  * Returns null when no interactive method is available (CI, headless, no console).
  */
 export function createTtySelectFn(store?: Store, projectRoot?: string): SelectFn | null {
-  if (platform === 'win32') {
+  const plat = process.platform;
+  if (plat === 'win32') {
     return buildWindowsNewWindowSelectFn(store, projectRoot);
   }
-  if (platform === 'linux') {
+  if (plat === 'darwin') {
+    return buildMacNewWindowSelectFn(store, projectRoot);
+  }
+  if (plat === 'linux') {
     const linuxFn = buildLinuxNewWindowSelectFn(store, projectRoot);
     if (linuxFn) return linuxFn;
   }
-  // darwin or Linux fallback (no terminal emulator / no display)
+  // Linux fallback (no terminal emulator / no display) or unknown platform
   const streams = openUnixTtyStreams();
   if (!streams) return null;
   return buildUnixSelectFn(streams, store, projectRoot);

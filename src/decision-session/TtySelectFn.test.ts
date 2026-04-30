@@ -566,3 +566,136 @@ describe('createTtySelectFn — Linux new-window path', () => {
     try { unlinkSync(FREQ_SCRIPT_FILE); } catch { /* ignore */ }
   });
 });
+
+// ── macOS: new Terminal.app window via osascript ─────────────────────────────
+
+describe('createTtySelectFn — macOS (darwin)', () => {
+  const origPlatform = process.platform;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(process.stderr, 'write').mockReturnValue(true as never);
+    Object.defineProperty(process, 'platform', { value: 'darwin', writable: true });
+    cleanTempFiles();
+  });
+
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', { value: origPlatform, writable: true });
+    vi.restoreAllMocks();
+    cleanTempFiles();
+  });
+
+  it('returns a non-null SelectFn on macOS (osascript always available)', () => {
+    const fn = createTtySelectFn();
+    expect(fn).not.toBeNull();
+    expect(typeof fn).toBe('function');
+  });
+
+  it('spawns osascript (not cmd.exe or terminal emulators)', async () => {
+    (spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({ status: 0 });
+    await createTtySelectFn()!(makeOpts());
+    const spawnCalls = (spawnSync as ReturnType<typeof vi.fn>).mock.calls as [string, string[]][];
+    const osascriptCall = spawnCalls.find((c) => c[0] === 'osascript');
+    expect(osascriptCall).toBeDefined();
+    expect(osascriptCall![1][0]).toBe('-e');
+  });
+
+  it('AppleScript contains Terminal.app activate and do script', async () => {
+    let capturedAppleScript = '';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'osascript') capturedAppleScript = args[1];
+        return { status: 0 };
+      },
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(capturedAppleScript).toContain('tell application "Terminal"');
+    expect(capturedAppleScript).toContain('activate');
+    expect(capturedAppleScript).toContain('do script');
+    expect(capturedAppleScript).toContain('; exit');
+  });
+
+  it('AppleScript polls busy flag with delay loop', async () => {
+    let capturedAppleScript = '';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'osascript') capturedAppleScript = args[1];
+        return { status: 0 };
+      },
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(capturedAppleScript).toContain('busy of w');
+    expect(capturedAppleScript).toContain('delay 0.5');
+    expect(capturedAppleScript).toContain('on error');
+    expect(capturedAppleScript).toContain('exit repeat');
+  });
+
+  it('.mjs script embeds pbcopy clipboard command', async () => {
+    let capturedScript = '';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      if (existsSync(SCRIPT_FILE)) capturedScript = readFileSync(SCRIPT_FILE, 'utf8');
+    });
+    await createTtySelectFn()!(makeOpts());
+    expect(capturedScript).toContain('pbcopy');
+    expect(capturedScript).not.toContain('"clip"');
+    expect(capturedScript).not.toContain('xclip');
+  });
+
+  it('resolves with selected value via result file', async () => {
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      writeFileSync(RESULT_FILE, 'option-a-value', 'utf8');
+    });
+    const result = await createTtySelectFn()!(makeOpts());
+    expect(result).toBe('option-a-value');
+  });
+
+  it('resolves with Symbol when no result file (timeout/cancel)', async () => {
+    (spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({ status: 0 });
+    const result = await createTtySelectFn()!(makeOpts());
+    expect(typeof result).toBe('symbol');
+  });
+
+  it('resolves with OPT_OUT_SENTINEL when result is __NEXPATH_OPT_OUT__', async () => {
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      writeFileSync(RESULT_FILE, '__NEXPATH_OPT_OUT__', 'utf8');
+    });
+    const result = await createTtySelectFn()!(makeOpts());
+    expect(result).toBe(OPT_OUT_SENTINEL);
+  });
+
+  it('cleans up temp files after resolution', async () => {
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      writeFileSync(RESULT_FILE, 'option-a-value', 'utf8');
+    });
+    await createTtySelectFn()!(makeOpts());
+    expect(existsSync(OPT_FILE)).toBe(false);
+    expect(existsSync(RESULT_FILE)).toBe(false);
+    expect(existsSync(SCRIPT_FILE)).toBe(false);
+  });
+
+  it('writes stderr cue before spawning osascript', async () => {
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockReturnValue(true as never);
+    (spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({ status: 0 });
+    await createTtySelectFn()!(makeOpts());
+    const stderrCalls = stderrSpy.mock.calls.map((c) => String(c[0]));
+    expect(stderrCalls.some((msg) => msg.includes('nexpath'))).toBe(true);
+  });
+
+  it('spawns second osascript for __FREQ_MENU_PENDING__', async () => {
+    const FREQ_SCRIPT_FILE = join(tmpdir(), `nexpath-freq-sel-${UUID}.mjs`);
+    let osascriptCount = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string) => {
+        if (cmd === 'osascript') {
+          osascriptCount++;
+          if (osascriptCount === 1) {
+            writeFileSync(RESULT_FILE, '__FREQ_MENU_PENDING__', 'utf8');
+          }
+        }
+      },
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(osascriptCount).toBe(2);
+    try { unlinkSync(FREQ_SCRIPT_FILE); } catch { /* ignore */ }
+  });
+});
