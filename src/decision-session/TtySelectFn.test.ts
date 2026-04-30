@@ -512,4 +512,57 @@ describe('createTtySelectFn — Linux new-window path', () => {
     expect(existsSync(RESULT_FILE)).toBe(false);
     expect(existsSync(SCRIPT_FILE)).toBe(false);
   });
+
+  it('resolves with Symbol when no result file (timeout/cancel)', async () => {
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
+        return { status: 0 };
+      },
+    );
+    const result = await createTtySelectFn()!(makeOpts());
+    expect(typeof result).toBe('symbol');
+  });
+
+  it('resolves with OPT_OUT_SENTINEL when result is __NEXPATH_OPT_OUT__', async () => {
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
+        writeFileSync(RESULT_FILE, '__NEXPATH_OPT_OUT__', 'utf8');
+      },
+    );
+    const result = await createTtySelectFn()!(makeOpts());
+    expect(result).toBe(OPT_OUT_SENTINEL);
+  });
+
+  it('writes stderr cue before spawning terminal', async () => {
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockReturnValue(true as never);
+    const spawnMock = spawnSync as ReturnType<typeof vi.fn>;
+    spawnMock.mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
+        return { status: 0 };
+      },
+    );
+    await createTtySelectFn()!(makeOpts());
+    const stderrCalls = stderrSpy.mock.calls.map((c) => String(c[0]));
+    expect(stderrCalls.some((msg) => msg.includes('nexpath'))).toBe(true);
+  });
+
+  it('spawns second terminal window for __FREQ_MENU_PENDING__', async () => {
+    const FREQ_SCRIPT_FILE = join(tmpdir(), `nexpath-freq-sel-${UUID}.mjs`);
+    let terminalSpawnCount = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd === 'which') return { status: args[0] === 'gnome-terminal' ? 0 : 1 };
+        terminalSpawnCount++;
+        if (terminalSpawnCount === 1) {
+          writeFileSync(RESULT_FILE, '__FREQ_MENU_PENDING__', 'utf8');
+        }
+      },
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(terminalSpawnCount).toBe(2);
+    try { unlinkSync(FREQ_SCRIPT_FILE); } catch { /* ignore */ }
+  });
 });
