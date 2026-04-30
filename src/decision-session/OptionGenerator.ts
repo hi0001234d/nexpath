@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import type { UserProfile, PromptRecord } from '../classifier/types.js';
 import type { DecisionContent } from './options.js';
+import { logger } from '../logger.js';
 
 /**
  * Dynamic option text generator.
@@ -147,9 +148,16 @@ export function buildOptionPrompt(
 
   const last3 = history.slice(-3).map((p, i) => `[${i + 1}] ${p.text}`).join('\n');
 
-  const l1 = content.L1.map((o, i) => `  ${i + 1}. ${o}`).join('\n');
-  const l2 = content.L2.map((o, i) => `  ${i + 1}. ${o}`).join('\n');
-  const l3 = content.L3.map((o, i) => `  ${i + 1}. ${o}`).join('\n');
+  // Multi-line options (steps separated by \n) are serialised as sub-arrays so the LLM
+  // never needs to preserve \n inside a string — it just keeps the array structure.
+  const toPromptItem = (s: string): string | string[] =>
+    s.includes('\n') ? s.split('\n') : s;
+
+  const inputJson = JSON.stringify({
+    l1: content.L1.map(toPromptItem),
+    l2: content.L2.map(toPromptItem),
+    l3: content.L3.map(toPromptItem),
+  });
 
   return `Context:
   A developer is using an AI coding agent. An advisory has been triggered.
@@ -163,12 +171,14 @@ export function buildOptionPrompt(
   ${grounding}${langNote}
 
 Objective:
-  Rewrite the vocabulary of each advisory option below to match this developer's profile and the grounding rules above.
-  CRITICAL RULES — do not break any of these:
+  Rewrite the vocabulary of each advisory option to match this developer's profile and the grounding rules above.
+  CRITICAL RULES:
     - Do NOT change the meaning, intent, or action of any option.
-    - Do NOT add new options. Do NOT remove options. Do NOT reorder options.
-    - Return EXACTLY the same number of options at each level (L1=${content.L1.length}, L2=${content.L2.length}, L3=${content.L3.length}).
-    - Each option must remain a complete, standalone instruction ready to send to an AI agent.
+    - Do NOT add, remove, or reorder options.
+    - Return EXACTLY the same JSON structure as the input.
+    - If an input item is a STRING → output must be a STRING.
+    - If an input item is an ARRAY → output must be an ARRAY of the SAME length. Each element is one step — rewrite its vocabulary only.
+    - Each option or step must remain a complete instruction ready to send to an AI agent.
 
 Style: ${styleLine}
 
@@ -179,19 +189,25 @@ Audience: A developer who is moving fast with an AI coding agent. Options are pr
 Last 3 developer prompts (for vocabulary calibration — do not quote them in output):
 ${last3 || '(none yet)'}
 
-Options to rewrite:
+Schema examples — each shows input → output. Follow this structure exactly:
 
-L1 (${content.L1.length} items):
-${l1}
+Example 1 — option with numbered steps (input array → output array, same length):
+Input:  {"l1":[["1. Review what was just built.","2. Share your review before marking this done.","3. Check if anything might break."],"Keep it brief — share what you find."],"l2":["Walk through each step.","Quick summary."],"l3":["One-liner only."]}
+Output: {"l1":[["1. Take a look at what was just made.","2. Let me know what you find before we say it's done.","3. Check if anything could break."],"Quick look — tell me what you see."],"l2":["Walk me through each step.","Short summary."],"l3":["One line."]}
 
-L2 (${content.L2.length} items):
-${l2}
+Example 2 — all simple text options (strings in, strings out):
+Input:  {"l1":["Run the full test suite now.","Smoke test first."],"l2":["Run the specific failing test.","Skip tests, check logs."],"l3":["Ignore tests for now."]}
+Output: {"l1":["Run all the tests now.","Quick check first."],"l2":["Run just the broken test.","Skip tests, look at logs."],"l3":["Don't worry about tests yet."]}
 
-L3 (${content.L3.length} items):
-${l3}
+Example 3 — mixed: some items are step arrays, some are plain strings:
+Input:  {"l1":[["1. Describe what changed.","2. Confirm it works as expected."],"One-line summary of what changed."],"l2":["Detail each changed part.","High-level only."],"l3":["Just the summary."]}
+Output: {"l1":[["1. Say what you changed in plain words.","2. Tell me it's working now."],"Short — what just happened?"],"l2":["Walk me through each changed part.","Just the big picture."],"l3":["Quick summary only."]}
+
+Now rewrite the following input:
+${inputJson}
 
 Response — return JSON only, no explanation, no markdown fencing:
-{"l1":["..."],"l2":["..."],"l3":["..."]}`;
+{"l1":[...],"l2":[...],"l3":[...]}`;
 }
 
 // ── Validation ─────────────────────────────────────────────────────────────────
@@ -208,20 +224,42 @@ export function validateGeneratedOptions(
   const p = parsed as Record<string, unknown>;
   if (!Array.isArray(p.l1) || !Array.isArray(p.l2) || !Array.isArray(p.l3)) return null;
 
-  const l1 = p.l1 as unknown[];
-  const l2 = p.l2 as unknown[];
-  const l3 = p.l3 as unknown[];
+  const rawL1 = p.l1 as unknown[];
+  const rawL2 = p.l2 as unknown[];
+  const rawL3 = p.l3 as unknown[];
 
   // Count must match static exactly
-  if (l1.length !== content.L1.length) return null;
-  if (l2.length !== content.L2.length) return null;
-  if (l3.length !== content.L3.length) return null;
+  if (rawL1.length !== content.L1.length) return null;
+  if (rawL2.length !== content.L2.length) return null;
+  if (rawL3.length !== content.L3.length) return null;
 
-  // All items must be non-empty strings
-  const allStrings = [...l1, ...l2, ...l3].every((x) => typeof x === 'string' && (x as string).trim().length > 0);
-  if (!allStrings) return null;
+  // Per-item type validation and reassembly:
+  //   source had \n  → generated item must be array of same step-count → join with \n
+  //   source had no \n → generated item must be a plain string
+  const reassemble = (items: unknown[], source: string[]): string[] | null => {
+    const result: string[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const srcMultiLine = source[i].includes('\n');
+      const item = items[i];
+      if (srcMultiLine) {
+        if (!Array.isArray(item)) return null;
+        if (item.length !== source[i].split('\n').length) return null;
+        if (!item.every((x) => typeof x === 'string' && (x as string).trim().length > 0)) return null;
+        result.push((item as string[]).join('\n'));
+      } else {
+        if (typeof item !== 'string' || !(item as string).trim()) return null;
+        result.push(item as string);
+      }
+    }
+    return result;
+  };
 
-  return { l1: l1 as string[], l2: l2 as string[], l3: l3 as string[] };
+  const l1 = reassemble(rawL1, content.L1);
+  const l2 = reassemble(rawL2, content.L2);
+  const l3 = reassemble(rawL3, content.L3);
+  if (!l1 || !l2 || !l3) return null;
+
+  return { l1, l2, l3 };
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
@@ -254,8 +292,13 @@ export async function generateOptionList(
     );
 
     const raw = response.choices[0]?.message?.content ?? '';
-    return validateGeneratedOptions(raw, content);
-  } catch {
+    const validated = validateGeneratedOptions(raw, content);
+    if (!validated) {
+      logger.debug('option_gen_validate_fail', { raw: raw.slice(0, 200) });
+    }
+    return validated;
+  } catch (err) {
+    logger.debug('option_gen_error', { error: String(err) });
     return null;
   }
 }

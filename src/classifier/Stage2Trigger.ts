@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import type { SessionState, Stage, AbsenceFlag } from './types.js';
+import { logger } from '../logger.js';
 import { SIGNAL_MAP } from './signals.js';
 
 /**
@@ -24,7 +25,7 @@ export const STAGE2_MODEL              = 'gpt-4o-mini';
 export const STAGE2_CONTEXT_WINDOW     = 10;   // prompts to include in LLM context
 export const STAGE2_MAX_OUTPUT_TOKENS  = 256;
 /** LLM confidence below this threshold → override fire_decision_session to false. */
-export const STAGE2_LLM_MIN_CONFIDENCE = 0.60;
+export const STAGE2_LLM_MIN_CONFIDENCE = 0.49;
 /** Stage 1 confidence below this threshold → low-confidence condition for Stage 2. */
 export const STAGE2_S1_LOW_CONFIDENCE  = 0.50;
 
@@ -257,5 +258,18 @@ export async function runStage2(
   );
 
   const raw = response.choices[0]?.message?.content ?? '';
+
+  // Log raw LLM values before the confidence-threshold override is applied
+  try {
+    const stripped = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+    const p = JSON.parse(stripped) as Record<string, unknown>;
+    logger.debug('stage2_raw', {
+      llm_fire:       p.fire_decision_session,
+      llm_confidence: p.stage_confidence,
+      threshold:      STAGE2_LLM_MIN_CONFIDENCE,
+      overridden:     p.fire_decision_session === true && (p.stage_confidence as number) < STAGE2_LLM_MIN_CONFIDENCE,
+    });
+  } catch { /* parse failure handled by parseStage2Response below */ }
+
   return parseStage2Response(raw);
 }

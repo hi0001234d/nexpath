@@ -1,5 +1,5 @@
 import { select, isCancel } from '@clack/prompts';
-import type { Stage } from '../classifier/types.js';
+import type { Stage, UserProfile } from '../classifier/types.js';
 import type { FlagType } from '../classifier/Stage2Trigger.js';
 import type { Store } from '../store/db.js';
 import { insertSkippedSession } from '../store/skipped-sessions.js';
@@ -52,7 +52,7 @@ const SHOW_SIMPLER_LABEL =
 export function formatOptionLabel(text: string): string {
   if (!text.includes('\n')) return text;
   const lines = text.split('\n');
-  return lines[0] + lines.slice(1).map(l => '\n   ' + l).join('');
+  return lines[0] + lines.slice(1).map(l => '\n\u2502    ' + l).join('');
 }
 
 const HELP_LABEL =
@@ -86,6 +86,8 @@ export interface DecisionSessionInput {
   decisionSessionCount: number;
   /** Personalised option text from OptionGenerator. When present, overrides static L1/L2/L3. */
   generatedOptions?:    GeneratedOptions;
+  /** User profile — used to route beginner/cool_geek to BEGINNER content blocks. */
+  profile?:             UserProfile | null;
 }
 
 /**
@@ -162,7 +164,7 @@ export async function runLevel(
   level:     1 | 2 | 3,
   selectFn:  SelectFn,
 ): Promise<'skip' | 'next' | 'clipboard_only' | string> {
-  const content  = resolveDecisionContent(input.stage, input.flagType);
+  const content  = resolveDecisionContent(input.stage, input.flagType, input.profile);
   const gen      = input.generatedOptions;
   const effective = gen
     ? { ...content, L1: gen.l1, L2: gen.l2, L3: gen.l3 }

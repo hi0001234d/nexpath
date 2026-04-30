@@ -122,6 +122,8 @@ export async function runStop(
       ? { l1: advisory.generatedL1, l2: advisory.generatedL2, l3: advisory.generatedL3 }
       : undefined;
 
+  const mgr = SessionStateManager.load(store, payload.cwd);
+
   const dsResult = await runDecisionSession(
     {
       stage:                advisory.stage,
@@ -132,6 +134,7 @@ export async function runStop(
       promptCount:          advisory.promptCount,
       decisionSessionCount,
       generatedOptions,
+      profile:              mgr.current.profile,
     },
     store,
     effectiveSelectFn,
@@ -140,7 +143,6 @@ export async function runStop(
   if (dsResult.outcome === 'selected') {
     // Store injected text in session — auto reads and clears this on its next invocation
     // to skip all pipeline processing for the advisory-injected prompt.
-    const mgr = SessionStateManager.load(store, payload.cwd);
     mgr.setInjectedPrompt(store, dsResult.selectedPrompt);
     logger.info('stop_blocked', { cwd: payload.cwd, reason: dsResult.selectedPrompt });
     return { outcome: 'blocked', reason: dsResult.selectedPrompt };
