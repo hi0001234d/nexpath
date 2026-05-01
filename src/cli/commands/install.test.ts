@@ -1424,11 +1424,14 @@ describe('ensureLinuxClipboard', () => {
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('No clipboard tool'));
   });
 
-  it('calls execSync with apt install when user confirms', async () => {
+  it('calls execSync with apt install when user confirms and verifies', async () => {
+    let installed = false;
     mockSpawn.mockImplementation((cmd: string, args: string[]) => {
       if (cmd === 'which' && args[0] === 'apt') return { status: 0 };
+      if (cmd === 'which' && args[0] === 'xclip') return { status: installed ? 0 : 1 };
       return { status: 1 };
     });
+    mockExec.mockImplementation(() => { installed = true; });
     const logSpy = vi.spyOn(console, 'log');
     await ensureLinuxClipboard({
       platform: 'linux',
@@ -1437,14 +1440,17 @@ describe('ensureLinuxClipboard', () => {
       confirmFn: async () => true,
     });
     expect(mockExec).toHaveBeenCalledWith('sudo apt install -y xclip', { stdio: 'inherit' });
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('xclip installed'));
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('installed successfully'));
   });
 
   it('calls execSync with dnf install when user confirms on Fedora/RHEL', async () => {
+    let installed = false;
     mockSpawn.mockImplementation((cmd: string, args: string[]) => {
       if (cmd === 'which' && args[0] === 'dnf') return { status: 0 };
+      if (cmd === 'which' && args[0] === 'xclip') return { status: installed ? 0 : 1 };
       return { status: 1 };
     });
+    mockExec.mockImplementation(() => { installed = true; });
     await ensureLinuxClipboard({
       platform: 'linux',
       spawnFn: mockSpawn as any,
@@ -1455,10 +1461,13 @@ describe('ensureLinuxClipboard', () => {
   });
 
   it('calls execSync with pacman install when user confirms on Arch/Manjaro', async () => {
+    let installed = false;
     mockSpawn.mockImplementation((cmd: string, args: string[]) => {
       if (cmd === 'which' && args[0] === 'pacman') return { status: 0 };
+      if (cmd === 'which' && args[0] === 'xclip') return { status: installed ? 0 : 1 };
       return { status: 1 };
     });
+    mockExec.mockImplementation(() => { installed = true; });
     await ensureLinuxClipboard({
       platform: 'linux',
       spawnFn: mockSpawn as any,
@@ -1498,5 +1507,79 @@ describe('ensureLinuxClipboard', () => {
       confirmFn: async () => true,
     });
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('installation failed'));
+  });
+
+  // ── Phase 3: --yes flag, post-install verify, Wayland ─────────────────────
+
+  it('autoConfirm skips prompt and installs directly', async () => {
+    let installed = false;
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'which' && args[0] === 'apt') return { status: 0 };
+      if (cmd === 'which' && args[0] === 'xclip') return { status: installed ? 0 : 1 };
+      return { status: 1 };
+    });
+    mockExec.mockImplementation(() => { installed = true; });
+    const mockConfirm = vi.fn();
+    await ensureLinuxClipboard({
+      platform: 'linux',
+      spawnFn: mockSpawn as any,
+      execFn: mockExec as any,
+      confirmFn: mockConfirm as any,
+      autoConfirm: true,
+    });
+    expect(mockConfirm).not.toHaveBeenCalled();
+    expect(mockExec).toHaveBeenCalledWith('sudo apt install -y xclip', { stdio: 'inherit' });
+  });
+
+  it('warns when post-install verification fails (tool not found after exec)', async () => {
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'which' && args[0] === 'apt') return { status: 0 };
+      // xclip still not found even after install
+      return { status: 1 };
+    });
+    const logSpy = vi.spyOn(console, 'log');
+    await ensureLinuxClipboard({
+      platform: 'linux',
+      spawnFn: mockSpawn as any,
+      execFn: mockExec as any,
+      confirmFn: async () => true,
+    });
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('not found'));
+  });
+
+  it('installs wl-clipboard instead of xclip on Wayland', async () => {
+    let installed = false;
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'which' && args[0] === 'apt') return { status: 0 };
+      if (cmd === 'which' && args[0] === 'wl-copy') return { status: installed ? 0 : 1 };
+      return { status: 1 };
+    });
+    mockExec.mockImplementation(() => { installed = true; });
+    const logSpy = vi.spyOn(console, 'log');
+    await ensureLinuxClipboard({
+      platform: 'linux',
+      spawnFn: mockSpawn as any,
+      execFn: mockExec as any,
+      confirmFn: async () => true,
+      waylandDisplay: 'wayland-0',
+    });
+    expect(mockExec).toHaveBeenCalledWith('sudo apt install -y wl-clipboard', { stdio: 'inherit' });
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('wl-clipboard installed successfully'));
+  });
+
+  it('shows wl-copy in prompt message on Wayland', async () => {
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'which' && args[0] === 'apt') return { status: 0 };
+      return { status: 1 };
+    });
+    const logSpy = vi.spyOn(console, 'log');
+    await ensureLinuxClipboard({
+      platform: 'linux',
+      spawnFn: mockSpawn as any,
+      execFn: mockExec as any,
+      confirmFn: async () => false,
+      waylandDisplay: 'wayland-0',
+    });
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('wl-copy'));
   });
 });

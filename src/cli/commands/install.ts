@@ -482,7 +482,7 @@ export async function installAction(
   console.log('Run: nexpath status  to verify connections.');
 
   if (!skipClipboardCheck) {
-    await ensureLinuxClipboard();
+    await ensureLinuxClipboard({ autoConfirm: opts.yes });
   }
 }
 
@@ -515,6 +515,8 @@ export async function ensureLinuxClipboard(
     spawnFn?: typeof spawnSync;
     execFn?: typeof execSync;
     confirmFn?: ConfirmFn;
+    autoConfirm?: boolean;
+    waylandDisplay?: string;
   } = {},
 ): Promise<void> {
   const plat  = deps.platform ?? process.platform;
@@ -527,29 +529,48 @@ export async function ensureLinuxClipboard(
     if (spawn('which', [cmd], { stdio: 'pipe' }).status === 0) return;
   }
 
-  const pm = PKG_MANAGERS.find((p) => spawn('which', [p.cmd], { stdio: 'pipe' }).status === 0);
+  // Wayland prefers wl-clipboard (provides wl-copy); X11 prefers xclip
+  const isWayland = !!(deps.waylandDisplay ?? process.env.WAYLAND_DISPLAY);
+  const pkgName   = isWayland ? 'wl-clipboard' : 'xclip';
+  const toolName  = isWayland ? 'wl-copy' : 'xclip';
+
+  // Build install commands with the right package name
+  const pkgManagers = PKG_MANAGERS.map((p) => ({
+    cmd: p.cmd,
+    install: p.install.map((arg) => (arg === 'xclip' ? pkgName : arg)),
+  }));
+
+  const pm = pkgManagers.find((p) => spawn('which', [p.cmd], { stdio: 'pipe' }).status === 0);
   if (!pm) {
-    console.log('\u26a0 No clipboard tool (xclip/wl-copy/xsel) found. Install one manually for clipboard support.');
+    console.log(`\u26a0 No clipboard tool (xclip/wl-copy/xsel) found. Install one manually for clipboard support.`);
     return;
   }
 
   console.log('');
-  console.log('Clipboard support requires xclip (not found on this system).');
-  const confirmFn = deps.confirmFn ?? (async () => {
-    const answer = await confirm({ message: `Install xclip using ${pm.cmd}?` });
-    return !isCancel(answer) && answer === true;
-  });
-  const ok = await confirmFn();
-  if (!ok) {
-    console.log('\u26a0 Skipped \u2014 "Copy to clipboard" in decision sessions will not work.');
-    return;
+  console.log(`Clipboard support requires ${toolName} (not found on this system).`);
+
+  if (!deps.autoConfirm) {
+    const confirmFn = deps.confirmFn ?? (async () => {
+      const answer = await confirm({ message: `Install ${pkgName} using ${pm.cmd}?` });
+      return !isCancel(answer) && answer === true;
+    });
+    const ok = await confirmFn();
+    if (!ok) {
+      console.log('\u26a0 Skipped \u2014 "Copy to clipboard" in decision sessions will not work.');
+      return;
+    }
   }
 
   try {
     exec(pm.install.join(' '), { stdio: 'inherit' });
-    console.log('\u2713 xclip installed');
+    // Verify installation succeeded
+    if (spawn('which', [toolName], { stdio: 'pipe' }).status === 0) {
+      console.log(`\u2713 ${pkgName} installed successfully`);
+    } else {
+      console.log(`\u26a0 ${pkgName} install command ran but ${toolName} not found \u2014 check output above`);
+    }
   } catch {
-    console.log('\u26a0 xclip installation failed \u2014 install manually: sudo apt install xclip');
+    console.log(`\u26a0 ${pkgName} installation failed \u2014 install manually: sudo ${pm.cmd} install ${pkgName}`);
   }
 }
 
