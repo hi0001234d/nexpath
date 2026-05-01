@@ -1440,6 +1440,34 @@ describe('ensureLinuxClipboard', () => {
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('xclip installed'));
   });
 
+  it('calls execSync with dnf install when user confirms on Fedora/RHEL', async () => {
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'which' && args[0] === 'dnf') return { status: 0 };
+      return { status: 1 };
+    });
+    await ensureLinuxClipboard({
+      platform: 'linux',
+      spawnFn: mockSpawn as any,
+      execFn: mockExec as any,
+      confirmFn: async () => true,
+    });
+    expect(mockExec).toHaveBeenCalledWith('sudo dnf install -y xclip', { stdio: 'inherit' });
+  });
+
+  it('calls execSync with pacman install when user confirms on Arch/Manjaro', async () => {
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'which' && args[0] === 'pacman') return { status: 0 };
+      return { status: 1 };
+    });
+    await ensureLinuxClipboard({
+      platform: 'linux',
+      spawnFn: mockSpawn as any,
+      execFn: mockExec as any,
+      confirmFn: async () => true,
+    });
+    expect(mockExec).toHaveBeenCalledWith('sudo pacman -S --noconfirm xclip', { stdio: 'inherit' });
+  });
+
   it('does not call execSync when user declines', async () => {
     mockSpawn.mockImplementation((cmd: string, args: string[]) => {
       if (cmd === 'which' && args[0] === 'apt') return { status: 0 };
