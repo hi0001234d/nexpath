@@ -49,8 +49,8 @@ describe('UserProfileClassifier — classifyUserProfile', () => {
     }));
   }
 
-  it('returns safe defaults when history is below MIN_PROFILE_PROMPTS gate', async () => {
-    const result = await classifyUserProfile(makeHistory(3), 3, null);
+  it('returns safe defaults when history is below MIN_PROFILE_PROMPTS - 1 gate', async () => {
+    const result = await classifyUserProfile(makeHistory(2), 2, null);
     expect(result.nature).toBe('beginner');
     expect(result.mood).toBe('casual');
     expect(result.depth).toBe('medium');

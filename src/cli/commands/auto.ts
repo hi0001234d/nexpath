@@ -144,7 +144,7 @@ export async function runAuto(
 
   // ── 2.5. LLM profile classification — async, before processPrompt ────────────
   if (isProfileStale(mgr.current.profile, mgr.current.promptCount) &&
-      mgr.current.promptHistory.length >= MIN_PROFILE_PROMPTS) {
+      mgr.current.promptHistory.length >= MIN_PROFILE_PROMPTS - 1) {
     const updatedProfile = await classifyUserProfileLLM(
       mgr.current.promptHistory as import('../../classifier/types.js').PromptRecord[],
       mgr.current.promptCount,

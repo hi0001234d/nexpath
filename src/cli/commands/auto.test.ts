@@ -767,8 +767,8 @@ describe('runAuto — advisory_frequency gate', () => {
     const openai = makeMockOpenAI(FIRE_YES_RESPONSE);
     const createFn = openai.chat.completions.create as ReturnType<typeof vi.fn>;
 
-    // Run 3 warm-up prompts so MIN_PROMPTS guard passes
-    for (let i = 0; i < 3; i++) {
+    // Run 2 warm-up prompts so MIN_PROMPTS guard passes (3rd call keeps history.length=2 below LLM profile gate)
+    for (let i = 0; i < 2; i++) {
       await runAuto(makeInput({ projectRoot: '/test/freq-off' }), store);
     }
     const result = await runAuto(makeInput({ projectRoot: '/test/freq-off' }), store, openai);
@@ -787,7 +787,7 @@ describe('runAuto — advisory_frequency gate', () => {
     const openai = makeMockOpenAI(FIRE_YES_RESPONSE);
     const createFn = openai.chat.completions.create as ReturnType<typeof vi.fn>;
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       await runAuto(makeInput({ projectRoot: '/test/freq-proj-off' }), store);
     }
     const result = await runAuto(makeInput({ projectRoot: '/test/freq-proj-off' }), store, openai);
@@ -805,7 +805,7 @@ describe('runAuto — advisory_frequency gate', () => {
     const openai = makeMockOpenAI(FIRE_YES_RESPONSE);
     const createFn = openai.chat.completions.create as ReturnType<typeof vi.fn>;
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       await runAuto(makeInput({ projectRoot: '/test/freq-major' }), store);
     }
     // Force shouldFireStage2 to return an absence flag by running the already-flagged state
@@ -825,7 +825,7 @@ describe('runAuto — advisory_frequency gate', () => {
     const openai = makeMockOpenAI(FIRE_YES_RESPONSE);
     const createFn = openai.chat.completions.create as ReturnType<typeof vi.fn>;
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       await runAuto(makeInput({ projectRoot: '/test/freq-once' }), store);
     }
     const result = await runAuto(makeInput({ projectRoot: '/test/freq-once' }), store, openai);
@@ -880,8 +880,8 @@ describe('runAuto — session advisory cap', () => {
     const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
     const { getSkippedSessions } = await import('../../store/skipped-sessions.js');
 
-    // Warm up past MIN_PROMPTS guard first
-    for (let i = 0; i < 3; i++) {
+    // Warm up past MIN_PROMPTS guard — 2 calls keeps history.length=2 below LLM profile gate
+    for (let i = 0; i < 2; i++) {
       await runAuto(makeInput({ projectRoot: '/test/cap-at5' }), store);
     }
     // Load mgr after warm-up, set advisoryCount=5 + low stageConfidence so
@@ -1305,9 +1305,9 @@ describe('runAuto — LLM profile classification gate', () => {
   beforeEach(async () => { store = await openStore(':memory:'); });
   afterEach(() => { store.db.close(); });
 
-  it('LLM profile call is skipped when promptHistory has fewer than MIN_PROFILE_PROMPTS prompts', async () => {
-    // Run 3 times — history has 3 entries before the 4th call, below MIN_PROFILE_PROMPTS=4
-    for (let i = 0; i < 3; i++) {
+  it('LLM profile call is skipped when promptHistory has fewer than MIN_PROFILE_PROMPTS-1 prompts', async () => {
+    // Run 2 times — history has 2 entries before the 3rd call, below the gate (MIN_PROFILE_PROMPTS-1=3)
+    for (let i = 0; i < 2; i++) {
       await runAuto(makeInput({ projectRoot: '/test/llm-gate-skip' }), store);
     }
     // A mock that throws detects any unexpected LLM call
@@ -1325,8 +1325,8 @@ describe('runAuto — LLM profile classification gate', () => {
   });
 
   it('LLM profile call fires and profile is saved when history reaches MIN_PROFILE_PROMPTS and profile is null', async () => {
-    // Run 4 times — history has 4 entries before the 5th call; profile is null (stale)
-    for (let i = 0; i < 4; i++) {
+    // Run 3 times — history has 3 entries before the 4th call; gate passes (MIN_PROFILE_PROMPTS-1=3)
+    for (let i = 0; i < 3; i++) {
       await runAuto(makeInput({ projectRoot: '/test/llm-gate-fire' }), store);
     }
     const profileJson = JSON.stringify({

@@ -386,10 +386,10 @@ describe('validateClassifierResponse', () => {
 describe('classifyUserProfileLLM', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('returns existing profile when history.length < MIN_PROFILE_PROMPTS', async () => {
+  it('returns existing profile when history.length < MIN_PROFILE_PROMPTS - 1', async () => {
     const existing = makeExistingProfile();
     const mockClient = makeMockOpenAI(makeValidRaw());
-    const result = await classifyUserProfileLLM(makeHistory(3), 3, existing, mockClient as never);
+    const result = await classifyUserProfileLLM(makeHistory(2), 2, existing, mockClient as never);
     expect(result).toBe(existing);
     expect((mockClient as ReturnType<typeof makeMockOpenAI> & { chat: { completions: { create: ReturnType<typeof vi.fn> } } }).chat.completions.create).not.toHaveBeenCalled();
   });

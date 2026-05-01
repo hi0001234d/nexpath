@@ -227,7 +227,7 @@ export async function classifyUserProfileLLM(
   existing:        UserProfile | null,
   client?:         OpenAI,
 ): Promise<UserProfile> {
-  if (history.length < MIN_PROFILE_PROMPTS) {
+  if (history.length < MIN_PROFILE_PROMPTS - 1) {
     return existing ?? buildSafeDefaults(promptCount);
   }
 
