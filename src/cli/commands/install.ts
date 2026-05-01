@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
@@ -388,12 +388,14 @@ export async function installAction(
     execFn,
     confirmFn = defaultConfirm,
     dbPath = ':memory:',
+    skipClipboardCheck = false,
   }: {
     isWin?: boolean;
     paths?: AgentPaths;
     execFn?: ExecFn;
     confirmFn?: ConfirmFn;
     dbPath?: string;
+    skipClipboardCheck?: boolean;
   } = {},
 ): Promise<void> {
   // ── First-run disclosure ───────────────────────────────────────────────────
@@ -478,6 +480,98 @@ export async function installAction(
   console.log('Restart your agents to activate nexpath-prompt-store.');
   console.log('Note: advisory pipeline (nexpath auto) auto-wired for Claude Code only.');
   console.log('Run: nexpath status  to verify connections.');
+
+  if (!skipClipboardCheck) {
+    await ensureLinuxClipboard({ autoConfirm: opts.yes });
+  }
+}
+
+// ── Linux clipboard tool auto-install ─────────────────────────────────────────
+
+interface PkgManager {
+  cmd:     string;
+  install: string[];
+}
+
+const PKG_MANAGERS: PkgManager[] = [
+  { cmd: 'apt',    install: ['sudo', 'apt', 'install', '-y', 'xclip'] },
+  { cmd: 'dnf',    install: ['sudo', 'dnf', 'install', '-y', 'xclip'] },
+  { cmd: 'pacman', install: ['sudo', 'pacman', '-S', '--noconfirm', 'xclip'] },
+  { cmd: 'zypper', install: ['sudo', 'zypper', 'install', '-y', 'xclip'] },
+  { cmd: 'apk',    install: ['sudo', 'apk', 'add', 'xclip'] },
+];
+
+/**
+ * On Linux, check if a clipboard tool (xclip/wl-copy/xsel) is available.
+ * If not, detect the system package manager and offer to install xclip.
+ *
+ * Runs only on Linux — macOS has pbcopy, Windows has clip.exe.
+ * Clipboard is optional — if install is skipped or fails, decision sessions
+ * still work but "Copy to clipboard" silently does nothing.
+ */
+export async function ensureLinuxClipboard(
+  deps: {
+    platform?: string;
+    spawnFn?: typeof spawnSync;
+    execFn?: typeof execSync;
+    confirmFn?: ConfirmFn;
+    autoConfirm?: boolean;
+    waylandDisplay?: string;
+  } = {},
+): Promise<void> {
+  const plat  = deps.platform ?? process.platform;
+  const spawn = deps.spawnFn  ?? spawnSync;
+  const exec  = deps.execFn   ?? execSync;
+
+  if (plat !== 'linux') return;
+
+  for (const cmd of ['xclip', 'wl-copy', 'xsel']) {
+    if (spawn('which', [cmd], { stdio: 'pipe' }).status === 0) return;
+  }
+
+  // Wayland prefers wl-clipboard (provides wl-copy); X11 prefers xclip
+  const isWayland = !!(deps.waylandDisplay ?? process.env.WAYLAND_DISPLAY);
+  const pkgName   = isWayland ? 'wl-clipboard' : 'xclip';
+  const toolName  = isWayland ? 'wl-copy' : 'xclip';
+
+  // Build install commands with the right package name
+  const pkgManagers = PKG_MANAGERS.map((p) => ({
+    cmd: p.cmd,
+    install: p.install.map((arg) => (arg === 'xclip' ? pkgName : arg)),
+  }));
+
+  const pm = pkgManagers.find((p) => spawn('which', [p.cmd], { stdio: 'pipe' }).status === 0);
+  if (!pm) {
+    console.log(`\u26a0 No clipboard tool (xclip/wl-copy/xsel) found. Install one manually for clipboard support.`);
+    return;
+  }
+
+  console.log('');
+  console.log(`Clipboard support requires ${toolName} (not found on this system).`);
+
+  if (!deps.autoConfirm) {
+    const confirmFn = deps.confirmFn ?? (async () => {
+      const answer = await confirm({ message: `Install ${pkgName} using ${pm.cmd}?` });
+      return !isCancel(answer) && answer === true;
+    });
+    const ok = await confirmFn();
+    if (!ok) {
+      console.log('\u26a0 Skipped \u2014 "Copy to clipboard" in decision sessions will not work.');
+      return;
+    }
+  }
+
+  try {
+    exec(pm.install.join(' '), { stdio: 'inherit' });
+    // Verify installation succeeded
+    if (spawn('which', [toolName], { stdio: 'pipe' }).status === 0) {
+      console.log(`\u2713 ${pkgName} installed successfully`);
+    } else {
+      console.log(`\u26a0 ${pkgName} install command ran but ${toolName} not found \u2014 check output above`);
+    }
+  } catch {
+    console.log(`\u26a0 ${pkgName} installation failed \u2014 install manually: sudo ${pm.cmd} install ${pkgName}`);
+  }
 }
 
 // ── uninstallAction ────────────────────────────────────────────────────────────
