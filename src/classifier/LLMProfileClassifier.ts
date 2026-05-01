@@ -74,11 +74,17 @@ NATURE — pick one (evaluate across ALL prompts — look for consistent pattern
                     informal phrasing alongside precise technical vocabulary.
                     Ex: "Let's wire up Kafka! Needs partition rebalancing handled gracefully."
 • "cool_geek"     — Comfortable with tech, gets things done, but not deeply architectural.
-                    Casual, informal, no constraint-explicit phrasing.
+                    Casual, informal, no constraint-explicit phrasing. DOES use some
+                    technical terms (component names, library names, tech stack references)
+                    even if loosely.
                     Ex: "can we add dark mode? and maybe make the buttons bigger lol"
-• "beginner"      — Vague, general, asks how-to questions, uses "simple", "basic", "quick".
-                    Needs explanations. Unlikely to name specific libraries or constraints.
+• "beginner"      — No technical vocabulary whatsoever. Uses plain English for every
+                    request, even complex ones — no library names, API terms, error
+                    handling, or implementation details ever appear. May give confident
+                    direct build requests but never names HOW to implement anything.
+                    KEY signal: absence of any technical vocabulary across all prompts.
                     Ex: "How do I make a login page? Just something simple to start."
+                    Ex: "make me a website where i can create invoices and send them to clients"
 
 MOOD — pick one (focus on the most recent 3–5 prompts):
 • "frustrated"  — Repetition, "again", "still not working", "why does X", expressions of difficulty
@@ -86,7 +92,8 @@ MOOD — pick one (focus on the most recent 3–5 prompts):
 • "excited"     — Enthusiasm, "love this", "this is great", multiple exclamation marks
 • "methodical"  — Numbered lists, step-by-step progression, organized structure
 • "focused"     — Detailed specific prompts with clear single objective, multiple constraints
-• "casual"      — Conversational, relaxed back-and-forth, low urgency, exploratory
+• "casual"      — Conversational, relaxed, low urgency, exploratory. Includes plain-English
+                  direct feature requests with no technical pressure or formality.
 
 DEPTH — pick one (focus on the most recent 5–10 prompts):
 • "high"   — System-level thinking. Multiple constraints in one prompt. Performance, scaling,
