@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
@@ -388,12 +388,14 @@ export async function installAction(
     execFn,
     confirmFn = defaultConfirm,
     dbPath = ':memory:',
+    skipClipboardCheck = false,
   }: {
     isWin?: boolean;
     paths?: AgentPaths;
     execFn?: ExecFn;
     confirmFn?: ConfirmFn;
     dbPath?: string;
+    skipClipboardCheck?: boolean;
   } = {},
 ): Promise<void> {
   // ── First-run disclosure ───────────────────────────────────────────────────
@@ -478,6 +480,77 @@ export async function installAction(
   console.log('Restart your agents to activate nexpath-prompt-store.');
   console.log('Note: advisory pipeline (nexpath auto) auto-wired for Claude Code only.');
   console.log('Run: nexpath status  to verify connections.');
+
+  if (!skipClipboardCheck) {
+    await ensureLinuxClipboard();
+  }
+}
+
+// ── Linux clipboard tool auto-install ─────────────────────────────────────────
+
+interface PkgManager {
+  cmd:     string;
+  install: string[];
+}
+
+const PKG_MANAGERS: PkgManager[] = [
+  { cmd: 'apt',    install: ['sudo', 'apt', 'install', '-y', 'xclip'] },
+  { cmd: 'dnf',    install: ['sudo', 'dnf', 'install', '-y', 'xclip'] },
+  { cmd: 'pacman', install: ['sudo', 'pacman', '-S', '--noconfirm', 'xclip'] },
+  { cmd: 'zypper', install: ['sudo', 'zypper', 'install', '-y', 'xclip'] },
+  { cmd: 'apk',    install: ['sudo', 'apk', 'add', 'xclip'] },
+];
+
+/**
+ * On Linux, check if a clipboard tool (xclip/wl-copy/xsel) is available.
+ * If not, detect the system package manager and offer to install xclip.
+ *
+ * Runs only on Linux — macOS has pbcopy, Windows has clip.exe.
+ * Clipboard is optional — if install is skipped or fails, decision sessions
+ * still work but "Copy to clipboard" silently does nothing.
+ */
+export async function ensureLinuxClipboard(
+  deps: {
+    platform?: string;
+    spawnFn?: typeof spawnSync;
+    execFn?: typeof execSync;
+    confirmFn?: ConfirmFn;
+  } = {},
+): Promise<void> {
+  const plat  = deps.platform ?? process.platform;
+  const spawn = deps.spawnFn  ?? spawnSync;
+  const exec  = deps.execFn   ?? execSync;
+
+  if (plat !== 'linux') return;
+
+  for (const cmd of ['xclip', 'wl-copy', 'xsel']) {
+    if (spawn('which', [cmd], { stdio: 'pipe' }).status === 0) return;
+  }
+
+  const pm = PKG_MANAGERS.find((p) => spawn('which', [p.cmd], { stdio: 'pipe' }).status === 0);
+  if (!pm) {
+    console.log('\u26a0 No clipboard tool (xclip/wl-copy/xsel) found. Install one manually for clipboard support.');
+    return;
+  }
+
+  console.log('');
+  console.log('Clipboard support requires xclip (not found on this system).');
+  const confirmFn = deps.confirmFn ?? (async () => {
+    const answer = await confirm({ message: `Install xclip using ${pm.cmd}?` });
+    return !isCancel(answer) && answer === true;
+  });
+  const ok = await confirmFn();
+  if (!ok) {
+    console.log('\u26a0 Skipped \u2014 "Copy to clipboard" in decision sessions will not work.');
+    return;
+  }
+
+  try {
+    exec(pm.install.join(' '), { stdio: 'inherit' });
+    console.log('\u2713 xclip installed');
+  } catch {
+    console.log('\u26a0 xclip installation failed \u2014 install manually: sudo apt install xclip');
+  }
 }
 
 // ── uninstallAction ────────────────────────────────────────────────────────────

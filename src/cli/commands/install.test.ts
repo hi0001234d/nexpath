@@ -30,6 +30,7 @@ import {
   buildHookEntry,
   writeHookEntry,
   removeHookEntry,
+  ensureLinuxClipboard,
 } from './install.js';
 
 afterEach(() => vi.restoreAllMocks());
@@ -588,6 +589,7 @@ describe('installAction', () => {
         paths,
         isWin: false,
         execFn: () => {},   // claude CLI succeeds
+        skipClipboardCheck: true,
       });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('Claude Code');
@@ -602,7 +604,7 @@ describe('installAction', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, confirmFn: confirmSpy });
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, confirmFn: confirmSpy, skipClipboardCheck: true });
       expect(confirmSpy).not.toHaveBeenCalled();
     } finally {
       cleanup();
@@ -614,7 +616,7 @@ describe('installAction', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({}, { paths, isWin: false, execFn: () => {}, confirmFn: async () => false });
+      await installAction({}, { paths, isWin: false, execFn: () => {}, confirmFn: async () => false, skipClipboardCheck: true });
       expect(spy.mock.calls.some((c) => (c[0] as string).includes('Cancelled'))).toBe(true);
     } finally {
       cleanup();
@@ -629,7 +631,7 @@ describe('installAction', () => {
     try {
       mkdirSync(join(dir, '.cursor'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {} });
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, skipClipboardCheck: true });
       expect(() => readJson(paths.cursor)).toThrow();
     } finally {
       cleanup();
@@ -642,7 +644,7 @@ describe('installAction', () => {
     try {
       mkdirSync(join(dir, '.codeium', 'windsurf'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {} });
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, skipClipboardCheck: true });
       expect(() => readJson(paths.windsurf)).toThrow();
     } finally {
       cleanup();
@@ -655,7 +657,7 @@ describe('installAction', () => {
     try {
       mkdirSync(join(dir, '.kilocode'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {} });
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, skipClipboardCheck: true });
       expect(() => readJson(paths.kiloCode)).toThrow();
     } finally {
       cleanup();
@@ -668,7 +670,7 @@ describe('installAction', () => {
     try {
       mkdirSync(join(dir, '.config', 'opencode'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {} });
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, skipClipboardCheck: true });
       expect(() => readJson(paths.openCodeGlobal)).toThrow();
     } finally {
       cleanup();
@@ -684,6 +686,7 @@ describe('installAction', () => {
         paths,
         isWin: false,
         execFn: () => { throw new Error('claude not found'); },
+        skipClipboardCheck: true,
       });
       expect(() => readJson(paths.claudeJson)).toThrow();
     } finally {
@@ -696,7 +699,7 @@ describe('installAction', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {} });
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, skipClipboardCheck: true });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('Restart your agents');
       expect(output).toContain('nexpath status');
@@ -710,7 +713,7 @@ describe('installAction', () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: true, execFn: () => {} });
+      await installAction({ yes: true }, { paths, isWin: true, execFn: () => {}, skipClipboardCheck: true });
       const data = readJson(paths.claudeSettings) as Record<string, unknown>;
       const hooks = data.hooks as Record<string, unknown>;
       const groups = hooks.UserPromptSubmit as Array<Record<string, unknown>>;
@@ -725,7 +728,7 @@ describe('installAction', () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {} });
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, skipClipboardCheck: true });
       const data  = readJson(paths.claudeSettings) as Record<string, unknown>;
       const hooks = data.hooks as Record<string, unknown>;
       const groups = hooks.UserPromptSubmit as Array<Record<string, unknown>>;
@@ -744,6 +747,7 @@ describe('installAction', () => {
         paths,
         isWin: false,
         execFn: () => { throw new Error('claude not found'); },
+        skipClipboardCheck: true,
       });
       const data  = readJson(paths.claudeSettings) as Record<string, unknown>;
       const hooks = data.hooks as Record<string, unknown>;
@@ -761,7 +765,7 @@ describe('installAction', () => {
       // Create .claude as a FILE — writeJson's mkdirSync will fail (ENOTDIR)
       writeFileSync(join(dir, '.claude'), 'not-a-directory');
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {} });
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, skipClipboardCheck: true });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('hook write failed');
       // MCP registration still happened (install did not abort)
@@ -774,7 +778,7 @@ describe('installAction', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {} });
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, skipClipboardCheck: true });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('advisory pipeline');
       expect(output).toContain('Claude Code only');
@@ -1237,7 +1241,7 @@ describe('installAction — first-run disclosure', () => {
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
       // dbPath ':memory:' = fresh DB, first_run_shown never set
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath: ':memory:' });
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath: ':memory:', skipClipboardCheck: true });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('Before installing nexpath');
     } finally {
@@ -1257,7 +1261,7 @@ describe('installAction — first-run disclosure', () => {
       closeStore(store);
 
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath });
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath, skipClipboardCheck: true });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).not.toContain('Before installing nexpath');
     } finally {
@@ -1271,7 +1275,7 @@ describe('installAction — first-run disclosure', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath: ':memory:' });
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath: ':memory:', skipClipboardCheck: true });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('OPENAI_API_KEY');
     } finally {
@@ -1285,7 +1289,7 @@ describe('installAction — first-run disclosure', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath: ':memory:' });
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath: ':memory:', skipClipboardCheck: true });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('prompt-store.db');
     } finally {
@@ -1299,7 +1303,7 @@ describe('installAction — first-run disclosure', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath: ':memory:' });
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath: ':memory:', skipClipboardCheck: true });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('Ctrl+X');
       expect(output).toContain('nexpath uninstall');
@@ -1315,7 +1319,7 @@ describe('installAction — first-run disclosure', () => {
     const dbPath = join(dir, 'test.db');
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath });
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath, skipClipboardCheck: true });
 
       // Re-open same DB and check key is set
       const store = await openStore(dbPath);
@@ -1337,6 +1341,7 @@ describe('installAction — first-run disclosure', () => {
         paths, isWin: false, execFn: () => {},
         confirmFn: async () => false,
         dbPath: ':memory:',
+        skipClipboardCheck: true,
       });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       // Disclosure appeared even though install was cancelled
@@ -1361,5 +1366,109 @@ describe('resolveAgentPaths — claudeSettings', () => {
   it('claudeSettings is different from claudeJson', () => {
     const paths = resolveAgentPaths('/home/user', '/appdata', '/cwd', 'linux');
     expect(paths.claudeSettings).not.toBe(paths.claudeJson);
+  });
+});
+
+// ── ensureLinuxClipboard ──────────────────────────────────────────────────────
+
+describe('ensureLinuxClipboard', () => {
+  const mockSpawn = vi.fn();
+  const mockExec  = vi.fn();
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('skips on macOS (pbcopy built-in)', async () => {
+    await ensureLinuxClipboard({ platform: 'darwin', spawnFn: mockSpawn as any });
+    expect(mockSpawn).not.toHaveBeenCalled();
+  });
+
+  it('skips on Windows (clip.exe built-in)', async () => {
+    await ensureLinuxClipboard({ platform: 'win32', spawnFn: mockSpawn as any });
+    expect(mockSpawn).not.toHaveBeenCalled();
+  });
+
+  it('skips on Linux when xclip is already installed', async () => {
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'which' && args[0] === 'xclip') return { status: 0 };
+      return { status: 1 };
+    });
+    const logSpy = vi.spyOn(console, 'log');
+    await ensureLinuxClipboard({ platform: 'linux', spawnFn: mockSpawn as any });
+    expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('xclip'));
+  });
+
+  it('skips on Linux when wl-copy is installed (no xclip)', async () => {
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'which' && args[0] === 'wl-copy') return { status: 0 };
+      return { status: 1 };
+    });
+    const logSpy = vi.spyOn(console, 'log');
+    await ensureLinuxClipboard({ platform: 'linux', spawnFn: mockSpawn as any });
+    expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('xclip'));
+  });
+
+  it('skips on Linux when xsel is installed (no xclip, no wl-copy)', async () => {
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'which' && args[0] === 'xsel') return { status: 0 };
+      return { status: 1 };
+    });
+    const logSpy = vi.spyOn(console, 'log');
+    await ensureLinuxClipboard({ platform: 'linux', spawnFn: mockSpawn as any });
+    expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('xclip'));
+  });
+
+  it('warns when no clipboard tool and no package manager found', async () => {
+    mockSpawn.mockReturnValue({ status: 1 });
+    const logSpy = vi.spyOn(console, 'log');
+    await ensureLinuxClipboard({ platform: 'linux', spawnFn: mockSpawn as any });
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('No clipboard tool'));
+  });
+
+  it('calls execSync with apt install when user confirms', async () => {
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'which' && args[0] === 'apt') return { status: 0 };
+      return { status: 1 };
+    });
+    const logSpy = vi.spyOn(console, 'log');
+    await ensureLinuxClipboard({
+      platform: 'linux',
+      spawnFn: mockSpawn as any,
+      execFn: mockExec as any,
+      confirmFn: async () => true,
+    });
+    expect(mockExec).toHaveBeenCalledWith('sudo apt install -y xclip', { stdio: 'inherit' });
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('xclip installed'));
+  });
+
+  it('does not call execSync when user declines', async () => {
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'which' && args[0] === 'apt') return { status: 0 };
+      return { status: 1 };
+    });
+    const logSpy = vi.spyOn(console, 'log');
+    await ensureLinuxClipboard({
+      platform: 'linux',
+      spawnFn: mockSpawn as any,
+      execFn: mockExec as any,
+      confirmFn: async () => false,
+    });
+    expect(mockExec).not.toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Skipped'));
+  });
+
+  it('warns but does not crash when install command fails', async () => {
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'which' && args[0] === 'dnf') return { status: 0 };
+      return { status: 1 };
+    });
+    mockExec.mockImplementation(() => { throw new Error('sudo failed'); });
+    const logSpy = vi.spyOn(console, 'log');
+    await ensureLinuxClipboard({
+      platform: 'linux',
+      spawnFn: mockSpawn as any,
+      execFn: mockExec as any,
+      confirmFn: async () => true,
+    });
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('installation failed'));
   });
 });
