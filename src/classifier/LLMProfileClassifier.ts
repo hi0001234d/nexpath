@@ -65,6 +65,12 @@ Return ONLY valid JSON — no explanation, no markdown.`;
   const user = `[DEVELOPER PROMPTS — last ${history.length} prompts, oldest to newest]
 ${numbered}
 
+TECHNICAL VOCABULARY defined: specific framework/library names (React, Django, Stripe SDK),
+protocol or API terms (REST, GraphQL, JWT, OAuth), infrastructure tools (PostgreSQL, Redis, S3),
+or implementation patterns (pagination, foreign keys, CRUD, rate limiting, webhooks).
+Words like "dashboard", "login", "button", "invoice", "account", "page", "form" are
+product/UI terms — any non-developer would use them. They are NOT technical vocabulary.
+
 NATURE — pick one (evaluate across ALL prompts — look for consistent pattern):
 • "hardcore_pro"  — Precise technical commands, specific constraints and technology names,
                     architecture or performance thinking, minimal small talk, no hand-holding.
@@ -74,17 +80,17 @@ NATURE — pick one (evaluate across ALL prompts — look for consistent pattern
                     informal phrasing alongside precise technical vocabulary.
                     Ex: "Let's wire up Kafka! Needs partition rebalancing handled gracefully."
 • "cool_geek"     — Comfortable with tech, gets things done, but not deeply architectural.
-                    Casual, informal, no constraint-explicit phrasing. DOES use some
-                    technical terms (component names, library names, tech stack references)
-                    even if loosely.
-                    Ex: "can we add dark mode? and maybe make the buttons bigger lol"
-• "beginner"      — No technical vocabulary whatsoever. Uses plain English for every
-                    request, even complex ones — no library names, API terms, error
-                    handling, or implementation details ever appear. May give confident
-                    direct build requests but never names HOW to implement anything.
-                    KEY signal: absence of any technical vocabulary across all prompts.
+                    Casual, informal, no constraint-explicit phrasing. Uses at least some
+                    real technical vocabulary (see definition above) — framework names,
+                    tool names, or implementation terms — even if loosely.
+                    Ex: "can we add dark mode to the React app? and make the buttons bigger"
+• "beginner"      — Zero technical vocabulary (per definition above) across ALL prompts.
+                    Describes everything in product/outcome terms. May give confident direct
+                    build requests but never names a framework, protocol, tool, or pattern.
+                    KEY test: would a non-developer say exactly this? If yes → beginner.
                     Ex: "How do I make a login page? Just something simple to start."
                     Ex: "make me a website where i can create invoices and send them to clients"
+                    Ex: "add login so i can have an account"
 
 MOOD — pick one (focus on the most recent 3–5 prompts):
 • "frustrated"  — Repetition, "again", "still not working", "why does X", expressions of difficulty
