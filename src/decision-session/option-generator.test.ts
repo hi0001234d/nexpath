@@ -127,11 +127,12 @@ describe('buildOptionPrompt — static options in prompt', () => {
     }
   });
 
-  it('includes count constraints for all levels', () => {
+  it('includes serialised options JSON and count enforcement rules in prompt', () => {
     const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, []);
-    expect(prompt).toContain(`L1=${TASK_REVIEW.L1.length}`);
-    expect(prompt).toContain(`L2=${TASK_REVIEW.L2.length}`);
-    expect(prompt).toContain(`L3=${TASK_REVIEW.L3.length}`);
+    expect(prompt).toContain('"l1"');
+    expect(prompt).toContain('"l2"');
+    expect(prompt).toContain('"l3"');
+    expect(prompt).toContain('Do NOT add, remove, or reorder options');
   });
 
   it('includes last 3 prompts from history', () => {

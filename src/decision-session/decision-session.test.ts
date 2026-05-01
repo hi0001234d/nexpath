@@ -1227,14 +1227,14 @@ describe('W-05: formatOptionLabel', () => {
     expect(formatOptionLabel('Simple option text')).toBe('Simple option text');
   });
 
-  it('prefixes continuation lines with \\n   when \\n present', () => {
+  it('prefixes continuation lines with \\n│    when \\n present', () => {
     const result = formatOptionLabel('Line 1\nLine 2\nLine 3');
-    expect(result).toBe('Line 1\n   Line 2\n   Line 3');
+    expect(result).toBe('Line 1\n│    Line 2\n│    Line 3');
   });
 
   it('handles a single \\n correctly', () => {
     const result = formatOptionLabel('First\nSecond');
-    expect(result).toBe('First\n   Second');
+    expect(result).toBe('First\n│    Second');
   });
 });
 
@@ -1272,14 +1272,14 @@ describe('W-05: clack-path label styling', () => {
     expect(skipNowOpt!.label).toContain('Skip for now');
   });
 
-  it('multi-line option text (via generatedOptions) gets label with \\n   prefix on continuation lines', async () => {
+  it('multi-line option text (via generatedOptions) gets label with \\n│    prefix on continuation lines', async () => {
     const spy = vi.fn().mockResolvedValue(SKIP_NOW);
     const multiLineL1 = ['1. Step one\n2. Step two\n3. Step three', 'Short lighter option'];
     const input = makeInput({ generatedOptions: { l1: multiLineL1, l2: ['L2 opt'], l3: ['L3 opt'] } });
     await runLevel(input, 1, spy as SelectFn);
     const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
-    const multiLineOpt = opts.find((o) => o.label.includes('\n   '));
+    const multiLineOpt = opts.find((o) => o.label.includes('\n│    '));
     expect(multiLineOpt).toBeDefined();
-    expect(multiLineOpt!.label).toBe('1. Step one\n   2. Step two\n   3. Step three');
+    expect(multiLineOpt!.label).toBe('1. Step one\n│    2. Step two\n│    3. Step three');
   });
 });

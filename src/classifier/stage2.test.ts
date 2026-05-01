@@ -93,8 +93,8 @@ describe('STAGE_LABEL and STAGE_FROM_LABEL', () => {
     expect(STAGE2_CONTEXT_WINDOW).toBe(10);
   });
 
-  it('STAGE2_LLM_MIN_CONFIDENCE is 0.60', () => {
-    expect(STAGE2_LLM_MIN_CONFIDENCE).toBe(0.60);
+  it('STAGE2_LLM_MIN_CONFIDENCE is 0.49', () => {
+    expect(STAGE2_LLM_MIN_CONFIDENCE).toBe(0.49);
   });
 });
 
@@ -435,8 +435,8 @@ describe('parseStage2Response', () => {
     expect(() => parseStage2Response(JSON.stringify(bad))).toThrow('unknown stage label');
   });
 
-  it('overrides fire_decision_session to false when stage_confidence < 0.60', () => {
-    const lowConf = { ...VALID_LLM_RESPONSE, stage_confidence: 0.55, fire_decision_session: true };
+  it('overrides fire_decision_session to false when stage_confidence < 0.49', () => {
+    const lowConf = { ...VALID_LLM_RESPONSE, stage_confidence: 0.45, fire_decision_session: true };
     const result = parseStage2Response(JSON.stringify(lowConf));
     expect(result.fire_decision_session).toBe(false);
   });
