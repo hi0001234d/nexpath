@@ -128,16 +128,23 @@ export type UserMood =
 /** Session technical depth based on vocabulary scoring over the last 10 prompts. */
 export type SessionDepth = 'low' | 'medium' | 'high';
 
-/** Computed user profile — produced by UserProfileClassifier on demand. */
+/** Ordinal scale used for precision and playfulness axes from the LLM classifier. */
+export type OrdinalAxis = 'low' | 'medium' | 'high' | 'very_high';
+
+/** Computed user profile — produced by LLMProfileClassifier on demand. */
 export interface UserProfile {
   nature: UserNature;
-  /** Technical precision score 0–10 (drives nature + option phrasing). */
+  /** Technical precision score 0–10 derived from precisionOrdinal via lookup table. */
   precisionScore: number;
-  /** Playfulness / expressiveness score 0–10 (drives nature + pinch tone). */
+  /** Playfulness / expressiveness score 0–10 derived from playfulnessOrdinal via lookup table. */
   playfulnessScore: number;
+  /** Ordinal precision axis returned directly by the LLM classifier. */
+  precisionOrdinal: OrdinalAxis;
+  /** Ordinal playfulness axis returned directly by the LLM classifier. */
+  playfulnessOrdinal: OrdinalAxis;
   mood: UserMood;
   depth: SessionDepth;
-  /** Raw avg depth score before thresholding. */
+  /** Numeric depth score derived from depth via lookup table. */
   depthScore: number;
   /** promptCount when this profile was computed (for stickiness tracking by caller). */
   computedAt: number;
