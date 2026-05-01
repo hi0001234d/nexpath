@@ -18,6 +18,8 @@ import { insertPrompt } from '../../store/prompts.js';
 import { getConfig } from '../../store/config.js';
 import { getProject, upsertProject } from '../../store/projects.js';
 import { importHistoricalPrompts } from '../../store/historical-import.js';
+import { classifyUserProfileLLM, MIN_PROFILE_PROMPTS } from '../../classifier/LLMProfileClassifier.js';
+import { isProfileStale } from '../../classifier/UserProfileClassifier.js';
 import { logger, initLogger } from '../../logger.js';
 import { extractApiError } from '../../utils/api-error.js';
 import type { LogLevel } from '../../logger.js';
@@ -139,6 +141,19 @@ export async function runAuto(
   // ── 2. Stage 1 classifier ────────────────────────────────────────────────────
   const classification = await classifyPrompt(input.promptText);
   logger.debug('stage1_result', { classified: classification.stage, confidence: classification.confidence });
+
+  // ── 2.5. LLM profile classification — async, before processPrompt ────────────
+  if (isProfileStale(mgr.current.profile, mgr.current.promptCount) &&
+      mgr.current.promptHistory.length >= MIN_PROFILE_PROMPTS) {
+    const updatedProfile = await classifyUserProfileLLM(
+      mgr.current.promptHistory as import('../../classifier/types.js').PromptRecord[],
+      mgr.current.promptCount,
+      mgr.current.profile,
+      openai,
+    );
+    mgr.setProfile(updatedProfile);
+    logger.debug('profile_classified', { nature: updatedProfile.nature, mood: updatedProfile.mood, depth: updatedProfile.depth });
+  }
 
   // ── 3. Process prompt → updates state (stage, history, counters) ─────────────
   mgr.processPrompt(store, input.promptText, classification);

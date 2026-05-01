@@ -194,8 +194,8 @@ describe('importHistoricalPrompts', () => {
     expect(project?.detectedLanguage).not.toBeNull();
   });
 
-  // 11. Bootstrap — session state is pre-seeded (profile and mood non-null)
-  it('pre-seeds session state — profile and mood are non-null after import', async () => {
+  // 11. Bootstrap — session state is pre-seeded with safe-default profile; mood is set via LLM on first run
+  it('pre-seeds session state — profile is safe defaults after import, mood is undefined until LLM runs', async () => {
     const projDir = setupProjDir(tmpDir);
     const lines = Array.from({ length: 10 }, (_, i) =>
       makeUserLine(`implement the feature module number ${i} with proper tests`),
@@ -206,7 +206,8 @@ describe('importHistoricalPrompts', () => {
 
     const mgr = SessionStateManager.load(store, PROJECT_ROOT);
     expect(mgr.current.profile).not.toBeNull();
-    expect(mgr.current.mood).not.toBeUndefined();
+    expect(mgr.current.profile?.nature).toBe('beginner'); // safe default
+    expect(mgr.current.mood).toBeUndefined(); // mood now set by LLM via auto.ts, not at bootstrap
   });
 
   // 12. Bootstrap — promptCount reflects total imported

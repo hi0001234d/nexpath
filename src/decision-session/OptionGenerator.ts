@@ -161,7 +161,7 @@ export function buildOptionPrompt(
 
   return `Context:
   A developer is using an AI coding agent. An advisory has been triggered.
-  ${profile ? `Session profile: nature=${profile.nature}, mood=${profile.mood}, depth=${profile.depth}, precision=${profile.precisionScore}/10, playfulness=${profile.playfulnessScore}/10.` : 'Session profile: not yet computed — use neutral style.'}
+  ${profile ? `Session profile: nature=${profile.nature}, mood=${profile.mood}, depth=${profile.depth}, precision=${profile.precisionOrdinal} (${profile.precisionScore}/10), playfulness=${profile.playfulnessOrdinal} (${profile.playfulnessScore}/10).` : 'Session profile: not yet computed — use neutral style.'}
   Completed artifacts detected from session history (confidence scores):
     - Spec/PRD: ${conf.spec}%
     - Unit tests: ${conf.unitTests}%

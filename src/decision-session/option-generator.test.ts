@@ -12,13 +12,15 @@ import type { UserProfile, PromptRecord } from '../classifier/types.js';
 
 function makeProfile(overrides: Partial<UserProfile> = {}): UserProfile {
   return {
-    nature:           'hardcore_pro',
-    mood:             'focused',
-    depth:            'high',
-    precisionScore:   8,
-    playfulnessScore: 3,
-    depthScore:       7,
-    computedAt:       1,
+    nature:             'hardcore_pro',
+    mood:               'focused',
+    depth:              'high',
+    precisionScore:     8,
+    playfulnessScore:   3,
+    precisionOrdinal:   'high',
+    playfulnessOrdinal: 'low',
+    depthScore:         7,
+    computedAt:         1,
     ...overrides,
   };
 }
@@ -114,6 +116,50 @@ describe('buildOptionPrompt — profile adaptation', () => {
     const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), 'en', []);
     expect(prompt).not.toContain('fr-speaking');
     expect(prompt).not.toContain('Language:');
+  });
+});
+
+// ── buildOptionPrompt — precision/playfulness ordinal labels in context line ───
+
+describe('buildOptionPrompt — ordinal labels in profile context line', () => {
+  it('includes precisionOrdinal label alongside numeric score', () => {
+    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    expect(prompt).toContain('precision=high (8/10)');
+  });
+
+  it('includes playfulnessOrdinal label alongside numeric score', () => {
+    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    expect(prompt).toContain('playfulness=low (3/10)');
+  });
+
+  it('reflects very_high ordinal label correctly', () => {
+    const prompt = buildOptionPrompt(
+      TASK_REVIEW,
+      makeProfile({ precisionOrdinal: 'very_high', precisionScore: 9 }),
+      undefined, [],
+    );
+    expect(prompt).toContain('precision=very_high (9/10)');
+  });
+
+  it('reflects medium ordinal label correctly', () => {
+    const prompt = buildOptionPrompt(
+      TASK_REVIEW,
+      makeProfile({ playfulnessOrdinal: 'medium', playfulnessScore: 5 }),
+      undefined, [],
+    );
+    expect(prompt).toContain('playfulness=medium (5/10)');
+  });
+
+  it('numeric scores are still present — not replaced by ordinal labels', () => {
+    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    expect(prompt).toContain('8/10');
+    expect(prompt).toContain('3/10');
+  });
+
+  it('ordinal labels absent when profile is undefined', () => {
+    const prompt = buildOptionPrompt(TASK_REVIEW, undefined, undefined, []);
+    expect(prompt).not.toContain('precision=');
+    expect(prompt).not.toContain('playfulness=');
   });
 });
 

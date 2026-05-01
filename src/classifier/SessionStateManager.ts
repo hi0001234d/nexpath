@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import type { Store } from '../store/db.js';
 import { saveStore } from '../store/db.js';
-import type { SessionState, Stage, PromptRecord, ClassificationResult } from './types.js';
+import type { SessionState, Stage, PromptRecord, ClassificationResult, UserProfile } from './types.js';
 import { detectSignals, initialSignalCounters } from './signals.js';
-import { classifyUserProfile, isProfileStale, classifyMoodOnly } from './UserProfileClassifier.js';
+import { buildSafeDefaults } from './LLMProfileClassifier.js';
 import { getProject } from '../store/projects.js';
 
 /** Gap in ms after which the session resets (30 minutes per research). */
@@ -194,17 +194,9 @@ export class SessionStateManager {
       }
     }
 
-    // ── Mood — every prompt, 0.0088ms/call ───────────────────────────────────
-    s.mood = classifyMoodOnly(s.promptHistory);
-
     // ── Advance counter ───────────────────────────────────────────────────────
     s.promptCount   += 1;
     s.lastPromptAt   = now;
-
-    // ── User profile — nature + depth, every NATURE_DEPTH_RECOMPUTE_INTERVAL prompts ──
-    if (isProfileStale(s.profile, s.promptCount)) {
-      s.profile = classifyUserProfile(s.promptHistory, s.promptCount);
-    }
 
     saveState(store, s);
   }
@@ -245,6 +237,14 @@ export class SessionStateManager {
     this.state.lastAdvisoryPromptIndex = this.state.promptCount;
     this.state.advisoryCount = (this.state.advisoryCount ?? 0) + 1;
     saveState(store, this.state);
+  }
+
+  /**
+   * Update the cached user profile in memory before processPrompt persists state.
+   * Called by auto.ts after the async LLM classification resolves.
+   */
+  setProfile(profile: UserProfile): void {
+    this.state.profile = profile;
   }
 
   /**
@@ -294,8 +294,7 @@ export class SessionStateManager {
     state.promptHistory = history;
     state.promptCount   = totalImported;
     state.lastPromptAt  = now;
-    state.mood          = classifyMoodOnly(history);
-    state.profile       = classifyUserProfile(history, totalImported);
+    state.profile       = buildSafeDefaults(totalImported);
     state.detectedLanguage =
       getProject(store, projectRoot)?.detectedLanguage ?? undefined;
     // Conservative: start absence detection from the first real prompt after

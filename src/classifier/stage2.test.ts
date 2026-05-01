@@ -223,6 +223,7 @@ describe('buildStage2Prompt', () => {
   it('includes beginner calibration note when profile.nature=beginner', () => {
     const state = makeState({ profile: {
       nature: 'beginner', precisionScore: 1, playfulnessScore: 1,
+      precisionOrdinal: 'low', playfulnessOrdinal: 'low',
       mood: 'casual', depth: 'low', depthScore: 1, computedAt: 1,
     }});
     const prompt = buildStage2Prompt(makeStage2Input({ state }));
@@ -233,6 +234,7 @@ describe('buildStage2Prompt', () => {
   it('includes experienced engineer note when profile.nature=hardcore_pro', () => {
     const state = makeState({ profile: {
       nature: 'hardcore_pro', precisionScore: 9, playfulnessScore: 2,
+      precisionOrdinal: 'very_high', playfulnessOrdinal: 'low',
       mood: 'focused', depth: 'high', depthScore: 8, computedAt: 1,
     }});
     const prompt = buildStage2Prompt(makeStage2Input({ state }));
@@ -249,6 +251,7 @@ describe('buildStage2Prompt', () => {
   it('profile block appears before "Signals to check" in all cases', () => {
     const stateWithProfile = makeState({ profile: {
       nature: 'beginner', precisionScore: 1, playfulnessScore: 1,
+      precisionOrdinal: 'low', playfulnessOrdinal: 'low',
       mood: 'casual', depth: 'low', depthScore: 1, computedAt: 1,
     }});
     const stateNullProfile = makeState({ profile: null });

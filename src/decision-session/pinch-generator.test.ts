@@ -297,13 +297,15 @@ import type { UserProfile } from '../classifier/types.js';
 
 function makeProfile(overrides: Partial<UserProfile> = {}): UserProfile {
   return {
-    nature:           'cool_geek',
-    precisionScore:   5,
-    playfulnessScore: 6,
-    mood:             'focused',
-    depth:            'medium',
-    depthScore:       5,
-    computedAt:       10,
+    nature:             'cool_geek',
+    precisionScore:     5,
+    playfulnessScore:   6,
+    precisionOrdinal:   'medium',
+    playfulnessOrdinal: 'medium',
+    mood:               'focused',
+    depth:              'medium',
+    depthScore:         5,
+    computedAt:         10,
     ...overrides,
   };
 }

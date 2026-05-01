@@ -4,7 +4,6 @@ import { classifyWithTFIDF, resetTFIDFModel } from './TFIDFClassifier.js';
 import { createEmbeddingClassifier } from './EmbeddingClassifier.js';
 import { classifyPrompt } from './PromptClassifier.js';
 import { SessionStateManager, SESSION_GAP_MS, STAGE_CONFIRM_THRESHOLD, MIN_STAGE_CHANGE_CONFIDENCE } from './SessionStateManager.js';
-import { NATURE_DEPTH_RECOMPUTE_INTERVAL, classifyMoodOnly } from './UserProfileClassifier.js';
 import { detectAbsenceFlags, ABSENCE_MIN_PROMPTS, ABSENCE_COOLDOWN_PROMPTS } from './AbsenceDetector.js';
 import { detectSignals, initialSignalCounters, SIGNAL_DEFINITIONS, SIGNAL_MAP } from './signals.js';
 import { openStore, closeStore } from '../store/index.js';
@@ -1187,6 +1186,7 @@ describe('AbsenceDetector', () => {
       signalCounters:        initialSignalCounters(),
     });
     const profile = { nature: 'beginner' as const, precisionScore: 1, playfulnessScore: 1,
+      precisionOrdinal: 'low' as const, playfulnessOrdinal: 'low' as const,
       mood: 'casual' as const, depth: 'low' as const, depthScore: 1, computedAt: 1 };
     const flags = detectAbsenceFlags(state, profile);
     expect(flags.length).toBeGreaterThan(0);
@@ -1201,6 +1201,7 @@ describe('AbsenceDetector', () => {
       signalCounters:        initialSignalCounters(),
     });
     const profile = { nature: 'beginner' as const, precisionScore: 1, playfulnessScore: 1,
+      precisionOrdinal: 'low' as const, playfulnessOrdinal: 'low' as const,
       mood: 'casual' as const, depth: 'low' as const, depthScore: 1, computedAt: 1 };
     expect(detectAbsenceFlags(state, profile)).toHaveLength(0);
   });
@@ -1214,6 +1215,7 @@ describe('AbsenceDetector', () => {
       signalCounters:        initialSignalCounters(),
     });
     const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
+      precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const,
       mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1 };
     expect(detectAbsenceFlags(state, profile)).toHaveLength(0);
   });
@@ -1227,6 +1229,7 @@ describe('AbsenceDetector', () => {
       signalCounters:        initialSignalCounters(),
     });
     const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
+      precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const,
       mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1 };
     const flags = detectAbsenceFlags(state, profile);
     expect(flags.length).toBeGreaterThan(0);
@@ -1254,54 +1257,68 @@ describe('SessionStateManager — user profile', () => {
     closeStore(store);
   });
 
-  it('profile is computed after the first prompt (isProfileStale(null) = true)', async () => {
+  it('processPrompt does not compute profile — profile management moved to auto.ts', async () => {
     const store = await openStore(':memory:');
     const mgr = SessionStateManager.load(store, '/project/profile-b');
     mgr.processPrompt(store, 'implement the login flow', makeResult('implementation', 0.8));
-    expect(mgr.current.profile).not.toBeNull();
-    expect(mgr.current.profile?.computedAt).toBe(1);
+    expect(mgr.current.profile).toBeNull();
     closeStore(store);
   });
 
-  it('profile survives save/load round-trip', async () => {
+  it('setProfile updates profile in memory', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/profile-set');
+    const profile: import('./types.js').UserProfile = {
+      nature: 'hardcore_pro', precisionScore: 9.0, playfulnessScore: 2.0,
+      precisionOrdinal: 'very_high', playfulnessOrdinal: 'low',
+      mood: 'focused', depth: 'high', depthScore: 3.0, computedAt: 1,
+    };
+    mgr.setProfile(profile);
+    expect(mgr.current.profile?.nature).toBe('hardcore_pro');
+    expect(mgr.current.profile?.mood).toBe('focused');
+    closeStore(store);
+  });
+
+  it('profile set via setProfile survives save/load round-trip after processPrompt persists state', async () => {
     const store = await openStore(':memory:');
     const mgr1 = SessionStateManager.load(store, '/project/profile-c');
+    const profile: import('./types.js').UserProfile = {
+      nature: 'pro_geek_soul', precisionScore: 8.5, playfulnessScore: 7.5,
+      precisionOrdinal: 'very_high', playfulnessOrdinal: 'high',
+      mood: 'excited', depth: 'high', depthScore: 3.0, computedAt: 1,
+    };
+    mgr1.setProfile(profile);
     mgr1.processPrompt(store, 'implement feature', makeResult('implementation', 0.8));
-    const savedNature = mgr1.current.profile?.nature;
 
     const mgr2 = SessionStateManager.load(store, '/project/profile-c');
-    expect(mgr2.current.profile).not.toBeNull();
-    expect(mgr2.current.profile?.nature).toBe(savedNature);
+    expect(mgr2.current.profile?.nature).toBe('pro_geek_soul');
+    expect(mgr2.current.profile?.mood).toBe('excited');
     closeStore(store);
   });
 
-  it('profile is recomputed when stale (promptCount - computedAt >= NATURE_DEPTH_RECOMPUTE_INTERVAL)', async () => {
+  it('processPrompt never updates profile regardless of call count', async () => {
     const store = await openStore(':memory:');
     const mgr = SessionStateManager.load(store, '/project/profile-d');
-    // First prompt: computedAt=1, promptCount=1
-    mgr.processPrompt(store, 'prompt 0', makeResult('implementation', 0.8));
-    const firstComputedAt = mgr.current.profile?.computedAt; // 1
-
-    // Process NATURE_DEPTH_RECOMPUTE_INTERVAL more prompts: promptCount=4, diff=3 >= 3 → stale
-    for (let i = 0; i < NATURE_DEPTH_RECOMPUTE_INTERVAL; i++) {
-      mgr.processPrompt(store, `prompt ${i + 1}`, makeResult('implementation', 0.8));
+    for (let i = 0; i < 5; i++) {
+      mgr.processPrompt(store, `prompt ${i}`, makeResult('implementation', 0.8));
     }
-    expect(mgr.current.profile?.computedAt).toBeGreaterThan(firstComputedAt!);
+    expect(mgr.current.profile).toBeNull();
     closeStore(store);
   });
 
-  it('profile is NOT recomputed between stale intervals', async () => {
+  it('profile set via setProfile is not overwritten by subsequent processPrompt calls', async () => {
     const store = await openStore(':memory:');
     const mgr = SessionStateManager.load(store, '/project/profile-e');
-    // First prompt: computedAt=1, promptCount=1
-    mgr.processPrompt(store, 'prompt 0', makeResult('implementation', 0.8));
-    const firstComputedAt = mgr.current.profile?.computedAt; // 1
-
-    // Process 2 more prompts: promptCount=3, diff=2 < 3 → not yet stale
-    for (let i = 0; i < 2; i++) {
-      mgr.processPrompt(store, `prompt ${i + 1}`, makeResult('implementation', 0.8));
+    const profile: import('./types.js').UserProfile = {
+      nature: 'cool_geek', precisionScore: 3.5, playfulnessScore: 8.0,
+      precisionOrdinal: 'low', playfulnessOrdinal: 'very_high',
+      mood: 'casual', depth: 'medium', depthScore: 1.0, computedAt: 2,
+    };
+    mgr.setProfile(profile);
+    for (let i = 0; i < 3; i++) {
+      mgr.processPrompt(store, `prompt ${i}`, makeResult('implementation', 0.8));
     }
-    expect(mgr.current.profile?.computedAt).toBe(firstComputedAt);
+    expect(mgr.current.profile?.nature).toBe('cool_geek');
     closeStore(store);
   });
 });
@@ -1309,98 +1326,73 @@ describe('SessionStateManager — user profile', () => {
 // ── SessionStateManager — per-prompt mood ─────────────────────────────────────
 
 describe('SessionStateManager — per-prompt mood', () => {
-  it('mood is set on the very first prompt', async () => {
+  it('processPrompt does not set s.mood — mood lives on profile.mood', async () => {
     const store = await openStore(':memory:');
     const mgr = SessionStateManager.load(store, '/project/mood-a');
     expect(mgr.current.mood).toBeUndefined();
     mgr.processPrompt(store, 'implement the login flow', makeResult('implementation', 0.8));
-    expect(mgr.current.mood).toBeDefined();
+    // processPrompt no longer sets s.mood; mood is part of profile.mood via setProfile
+    expect(mgr.current.mood).toBeUndefined();
     closeStore(store);
   });
 
-  it('mood updates on every prompt even before profile recomputes', async () => {
+  it('mood is accessible via profile.mood after setProfile — processPrompt does not override it', async () => {
     const store = await openStore(':memory:');
     const mgr = SessionStateManager.load(store, '/project/mood-b');
 
-    // Prompt 1: profile computed (null → computedAt=1); mood set from 1-prompt window
-    mgr.processPrompt(store, 'ok', makeResult('implementation', 0.8));
-    expect(mgr.current.profile?.computedAt).toBe(1);
-
-    // Prompt 2: promptCount=2, diff=2-1=1 < NATURE_DEPTH_RECOMPUTE_INTERVAL=3 → profile NOT recomputed
-    // Mood IS updated unconditionally — window is now ["ok", "yes"] → avgWordCount=1 < 8 → rushed
+    const profile: import('./types.js').UserProfile = {
+      nature: 'cool_geek', precisionScore: 5.0, playfulnessScore: 5.0,
+      precisionOrdinal: 'medium', playfulnessOrdinal: 'medium',
+      mood: 'rushed', depth: 'medium', depthScore: 1.0, computedAt: 1,
+    };
+    mgr.setProfile(profile);
     mgr.processPrompt(store, 'yes', makeResult('implementation', 0.8));
-    expect(mgr.current.mood).toBe('rushed');
-    expect(mgr.current.profile?.computedAt).toBe(1); // unchanged — mood moved, profile did not
+    expect(mgr.current.profile?.mood).toBe('rushed');
+    expect(mgr.current.mood).toBeUndefined(); // s.mood field is never set by processPrompt
     closeStore(store);
-  });
-});
-
-// ── classifyMoodOnly — direct unit tests ──────────────────────────────────────
-
-describe('classifyMoodOnly', () => {
-  function rec(text: string): import('./types.js').PromptRecord {
-    return { index: 0, text, capturedAt: 0, classifiedStage: 'implementation', confidence: 0.8 };
-  }
-
-  it('returns casual for empty history', () => {
-    expect(classifyMoodOnly([])).toBe('casual');
-  });
-
-  it('returns rushed for short prompts (avgWordCount < 8)', () => {
-    const history = ['ok', 'yes', 'done', 'go', 'next'].map(rec);
-    expect(classifyMoodOnly(history)).toBe('rushed');
-  });
-
-  it('returns frustrated when neg lexicon hits > 2', () => {
-    const history = ['why is this broken again ugh still not working'].map(rec);
-    expect(classifyMoodOnly(history)).toBe('frustrated');
-  });
-
-  it('returns frustrated for ALL CAPS word (3+ chars)', () => {
-    const history = ['this is BROKEN please fix it'].map(rec);
-    expect(classifyMoodOnly(history)).toBe('frustrated');
-  });
-
-  it('uses only last MOOD_WINDOW=5 records from history', () => {
-    // Fill 6 records — first is frustrated, last 5 are short/calm → rushed
-    const history = [
-      rec('why is this BROKEN again ugh still failing'),
-      rec('ok'), rec('ok'), rec('ok'), rec('ok'), rec('ok'),
-    ];
-    expect(classifyMoodOnly(history)).toBe('rushed');
   });
 });
 
 // ── SessionStateManager — mood persistence and session reset ──────────────────
 
 describe('SessionStateManager — mood persistence and session reset', () => {
-  it('mood persists through save/load round-trip', async () => {
+  it('profile.mood persists through save/load round-trip after processPrompt', async () => {
     const store = await openStore(':memory:');
     const mgr1 = SessionStateManager.load(store, '/project/mood-persist');
+    const profile: import('./types.js').UserProfile = {
+      nature: 'cool_geek', precisionScore: 5.0, playfulnessScore: 5.0,
+      precisionOrdinal: 'medium', playfulnessOrdinal: 'medium',
+      mood: 'focused', depth: 'medium', depthScore: 1.0, computedAt: 1,
+    };
+    mgr1.setProfile(profile);
     mgr1.processPrompt(store, 'ok', makeResult('implementation', 0.8));
-    const savedMood = mgr1.current.mood;
-    expect(savedMood).toBeDefined();
 
     const mgr2 = SessionStateManager.load(store, '/project/mood-persist');
-    expect(mgr2.current.mood).toBe(savedMood);
+    expect(mgr2.current.profile?.mood).toBe('focused');
     closeStore(store);
   });
 
-  it('mood resets to undefined when session gap triggers a new session on load', async () => {
+  it('profile resets to null when session gap triggers a new session on load', async () => {
     const store = await openStore(':memory:');
     const now = Date.now();
     const mgr1 = SessionStateManager.load(store, '/project/mood-gap', now);
+    const profile: import('./types.js').UserProfile = {
+      nature: 'cool_geek', precisionScore: 5.0, playfulnessScore: 5.0,
+      precisionOrdinal: 'medium', playfulnessOrdinal: 'medium',
+      mood: 'focused', depth: 'medium', depthScore: 1.0, computedAt: 1,
+    };
+    mgr1.setProfile(profile);
     mgr1.processPrompt(store, 'implement this', makeResult('implementation', 0.8), now);
-    expect(mgr1.current.mood).toBeDefined();
+    expect(mgr1.current.profile?.mood).toBe('focused');
 
-    // Load after session gap — new session created, mood resets to undefined
+    // Load after session gap — new session created, profile resets to null
     const future = now + SESSION_GAP_MS + 1;
     const mgr2 = SessionStateManager.load(store, '/project/mood-gap', future);
-    expect(mgr2.current.mood).toBeUndefined();
+    expect(mgr2.current.profile).toBeNull();
     closeStore(store);
   });
 
-  it('mood is set on the first prompt of a new session after a gap', async () => {
+  it('setProfile on a new session after a gap sets profile.mood correctly', async () => {
     const store = await openStore(':memory:');
     const now = Date.now();
     const mgr = SessionStateManager.load(store, '/project/mood-gap2', now);
@@ -1409,8 +1401,17 @@ describe('SessionStateManager — mood persistence and session reset', () => {
     // Gap resets session in-place on the next processPrompt call
     const future = now + SESSION_GAP_MS + 1;
     mgr.processPrompt(store, 'ok', makeResult('implementation', 0.8), future);
-    expect(mgr.current.mood).toBeDefined(); // set immediately after gap-reset processPrompt
-    expect(mgr.current.promptCount).toBe(1); // confirms it was a fresh session
+    expect(mgr.current.mood).toBeUndefined(); // processPrompt never sets s.mood
+    expect(mgr.current.promptCount).toBe(1);  // confirms it was a fresh session
+
+    // setProfile sets mood on the new post-gap session
+    const newProfile: import('./types.js').UserProfile = {
+      nature: 'beginner', precisionScore: 5.0, playfulnessScore: 5.0,
+      precisionOrdinal: 'medium', playfulnessOrdinal: 'medium',
+      mood: 'casual', depth: 'medium', depthScore: 1.0, computedAt: 1,
+    };
+    mgr.setProfile(newProfile);
+    expect(mgr.current.profile?.mood).toBe('casual');
     closeStore(store);
   });
 });

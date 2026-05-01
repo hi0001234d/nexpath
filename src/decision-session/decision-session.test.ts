@@ -1126,9 +1126,9 @@ describe('runDecisionSession — generatedOptions wiring', () => {
 // ── C-02: resolveDecisionContent — profile routing ────────────────────────────
 
 describe('resolveDecisionContent — C-02 profile routing', () => {
-  const beginnerProfile = { nature: 'beginner' as const, precisionScore: 2, playfulnessScore: 2, mood: 'casual' as const, depth: 'low' as const, depthScore: 1, computedAt: 0 };
-  const coolGeekProfile = { nature: 'cool_geek' as const, precisionScore: 3, playfulnessScore: 8, mood: 'casual' as const, depth: 'medium' as const, depthScore: 5, computedAt: 0 };
-  const hardcoreProProfile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2, mood: 'focused' as const, depth: 'high' as const, depthScore: 9, computedAt: 0 };
+  const beginnerProfile = { nature: 'beginner' as const, precisionScore: 2, playfulnessScore: 2, precisionOrdinal: 'low' as const, playfulnessOrdinal: 'low' as const, mood: 'casual' as const, depth: 'low' as const, depthScore: 1, computedAt: 0 };
+  const coolGeekProfile = { nature: 'cool_geek' as const, precisionScore: 3, playfulnessScore: 8, precisionOrdinal: 'low' as const, playfulnessOrdinal: 'high' as const, mood: 'casual' as const, depth: 'medium' as const, depthScore: 5, computedAt: 0 };
+  const hardcoreProProfile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2, precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const, mood: 'focused' as const, depth: 'high' as const, depthScore: 9, computedAt: 0 };
 
   it('beginner profile + stage_transition to prd → IDEA_TO_PRD_BEGINNER', () => {
     const content = resolveDecisionContent('prd', 'stage_transition', beginnerProfile);

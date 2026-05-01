@@ -1297,3 +1297,57 @@ describe('runAuto — generated options wiring', () => {
     expect(advisory?.generatedL3).toBeNull();
   });
 });
+
+// ── runAuto — LLM profile classification gate (Phase 3) ──────────────────────
+
+describe('runAuto — LLM profile classification gate', () => {
+  let store: Store;
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('LLM profile call is skipped when promptHistory has fewer than MIN_PROFILE_PROMPTS prompts', async () => {
+    // Run 3 times — history has 3 entries before the 4th call, below MIN_PROFILE_PROMPTS=4
+    for (let i = 0; i < 3; i++) {
+      await runAuto(makeInput({ projectRoot: '/test/llm-gate-skip' }), store);
+    }
+    // A mock that throws detects any unexpected LLM call
+    const detectingMock = {
+      chat: {
+        completions: {
+          create: vi.fn().mockRejectedValue(new Error('unexpected LLM profile call')),
+        },
+      },
+    } as unknown as OpenAI;
+    await expect(
+      runAuto(makeInput({ projectRoot: '/test/llm-gate-skip' }), store, detectingMock),
+    ).resolves.not.toThrow();
+    expect(detectingMock.chat.completions.create).not.toHaveBeenCalled();
+  });
+
+  it('LLM profile call fires and profile is saved when history reaches MIN_PROFILE_PROMPTS and profile is null', async () => {
+    // Run 4 times — history has 4 entries before the 5th call; profile is null (stale)
+    for (let i = 0; i < 4; i++) {
+      await runAuto(makeInput({ projectRoot: '/test/llm-gate-fire' }), store);
+    }
+    const profileJson = JSON.stringify({
+      nature: 'hardcore_pro', mood: 'focused', depth: 'high',
+      precision: 'very_high', playfulness: 'low',
+    });
+    const profileMock = {
+      chat: {
+        completions: {
+          create: vi.fn().mockResolvedValue({
+            choices: [{ message: { content: profileJson } }],
+          }),
+        },
+      },
+    } as unknown as OpenAI;
+    await runAuto(makeInput({ projectRoot: '/test/llm-gate-fire' }), store, profileMock);
+    expect(profileMock.chat.completions.create).toHaveBeenCalled();
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/llm-gate-fire');
+    expect(mgr.current.profile?.nature).toBe('hardcore_pro');
+    expect(mgr.current.profile?.mood).toBe('focused');
+    expect(mgr.current.profile?.depth).toBe('high');
+  });
+});
