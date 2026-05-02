@@ -56,9 +56,11 @@ export function formatOptionLabel(text: string): string {
   return lines[0] + lines.slice(1).map(l => '\n\u2502    ' + l).join('');
 }
 
+const MOD_KEY = process.platform === 'darwin' ? 'Cmd' : 'Ctrl';
+
 const HELP_LABEL =
-  `${ITALIC_DIM}  don't need nexpath here?  press ${RESET}${ITALIC_AMBER}Ctrl+X${RESET}${ITALIC_DIM} to disable for this project` +
-  `  ·  press ${RESET}${ITALIC_AMBER}Ctrl+T${RESET}${ITALIC_DIM} to adjust frequency${RESET}`;
+  `${ITALIC_DIM}  don't need nexpath here?  press ${RESET}${ITALIC_AMBER}${MOD_KEY}+X${RESET}${ITALIC_DIM} to disable for this project` +
+  `  ·  press ${RESET}${ITALIC_AMBER}${MOD_KEY}+T${RESET}${ITALIC_DIM} to adjust frequency${RESET}`;
 
 export function formatPinchLabel(label: string): string {
   return `${BOLD_CYAN}${label}${RESET}`;
