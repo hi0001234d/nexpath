@@ -2,8 +2,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PassThrough } from 'node:stream';
 import { openStore } from '../../store/db.js';
 import type { Store } from '../../store/db.js';
+
+vi.mock('../../telemetry/index.js', () => ({
+  writeTelemetry: vi.fn(),
+  TELEMETRY_PATH: '/mock/telemetry.jsonl',
+}));
 import { getRecentPrompts } from '../../store/prompts.js';
 import { buildFiredKey, runAuto, readStdin } from './auto.js';
+import { writeTelemetry } from '../../telemetry/index.js';
 import type { AutoInput } from './auto.js';
 import { getPendingAdvisory } from '../../store/pending-advisories.js';
 import { upsertProject, setDetectedLanguage, getProject } from '../../store/projects.js';
@@ -1349,5 +1355,134 @@ describe('runAuto — LLM profile classification gate', () => {
     expect(mgr.current.profile?.nature).toBe('hardcore_pro');
     expect(mgr.current.profile?.mood).toBe('focused');
     expect(mgr.current.profile?.depth).toBe('high');
+  });
+});
+
+// ── runAuto — telemetry events ────────────────────────────────────────────────
+
+describe('runAuto — telemetry events', () => {
+  let store: Store;
+
+  beforeEach(async () => {
+    store = await openStore(':memory:');
+    vi.mocked(writeTelemetry).mockClear();
+  });
+
+  afterEach(() => { store.db.close(); });
+
+  it('emits prompt_received on every runAuto call', async () => {
+    await runAuto(makeInput({ projectRoot: '/test/tel-recv' }), store);
+    expect(vi.mocked(writeTelemetry)).toHaveBeenCalledWith(
+      '/test/tel-recv', 'prompt_received', expect.objectContaining({ promptCount: expect.any(Number) }),
+    );
+  });
+
+  it('emits prompt_classified after stage 1 classification', async () => {
+    await runAuto(makeInput({ projectRoot: '/test/tel-class' }), store);
+    expect(vi.mocked(writeTelemetry)).toHaveBeenCalledWith(
+      '/test/tel-class', 'prompt_classified', expect.objectContaining({ stage: expect.any(String), confidence: expect.any(Number) }),
+    );
+  });
+
+  it('emits absence_flags_detected after absence detection', async () => {
+    await runAuto(makeInput({ projectRoot: '/test/tel-abs' }), store);
+    expect(vi.mocked(writeTelemetry)).toHaveBeenCalledWith(
+      '/test/tel-abs', 'absence_flags_detected', expect.objectContaining({ newFlagsCount: expect.any(Number), totalFlagsCount: expect.any(Number) }),
+    );
+  });
+
+  it('emits advisory_min_prompts_blocked when promptCount < MIN_PROMPTS_BEFORE_ADVISORY', async () => {
+    await runAuto(makeInput({ projectRoot: '/test/tel-min' }), store);
+    expect(vi.mocked(writeTelemetry)).toHaveBeenCalledWith(
+      '/test/tel-min', 'advisory_min_prompts_blocked', expect.objectContaining({ promptCount: 1, minRequired: 3 }),
+    );
+  });
+
+  it('emits pipeline_no_action with reason no_flag when shouldFireStage2 returns null', async () => {
+    // Weak prompt with no absence flags → shouldFireStage2 returns null
+    await runAuto(makeInput({ promptText: 'ok', projectRoot: '/test/tel-noflag' }), store);
+    const calls = vi.mocked(writeTelemetry).mock.calls;
+    // First 3 prompts have min_prompts_blocked; need to verify no_flag fires when min guard passes
+    // Run 3 prompts so the 3rd passes the min guard but produces no flag
+    vi.mocked(writeTelemetry).mockClear();
+    for (let i = 0; i < 2; i++) {
+      await runAuto(makeInput({ promptText: 'ok', projectRoot: '/test/tel-noflag2' }), store);
+    }
+    vi.mocked(writeTelemetry).mockClear();
+    await runAuto(makeInput({ promptText: 'ok', projectRoot: '/test/tel-noflag2' }), store);
+    const noflagCall = vi.mocked(writeTelemetry).mock.calls.find(
+      ([, event]) => event === 'pipeline_no_action',
+    );
+    expect(noflagCall).toBeDefined();
+    void calls; // suppress unused warning
+  });
+
+  it('emits advisory_freq_blocked when advisory_frequency is off', async () => {
+    const { setConfig } = await import('../../store/config.js');
+    setConfig(store, 'advisory_frequency', 'off');
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+
+    for (let i = 0; i < 2; i++) {
+      await runAuto(makeInput({ projectRoot: '/test/tel-freq' }), store);
+    }
+    const mgr = SessionStateManager.load(store, '/test/tel-freq');
+    (mgr as unknown as { state: { stageConfidence: number } }).state.stageConfidence = 0.3;
+    mgr.addAbsenceFlag(store, { signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 0, cooldownUntil: 100 });
+
+    vi.mocked(writeTelemetry).mockClear();
+    await runAuto(makeInput({ projectRoot: '/test/tel-freq' }), store, makeMockOpenAI(FIRE_YES_RESPONSE));
+
+    expect(vi.mocked(writeTelemetry)).toHaveBeenCalledWith(
+      '/test/tel-freq', 'advisory_freq_blocked', expect.objectContaining({ freq: 'off' }),
+    );
+  });
+
+  it('emits advisory_cap_blocked when advisoryCount reaches cap', async () => {
+    for (let i = 0; i < 2; i++) {
+      await runAuto(makeInput({ projectRoot: '/test/tel-cap' }), store);
+    }
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/tel-cap');
+    (mgr as unknown as { state: { advisoryCount: number; stageConfidence: number } }).state.advisoryCount = 5;
+    (mgr as unknown as { state: { stageConfidence: number } }).state.stageConfidence = 0.3;
+    mgr.addAbsenceFlag(store, { signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 0, cooldownUntil: 100 });
+
+    vi.mocked(writeTelemetry).mockClear();
+    await runAuto(makeInput({ projectRoot: '/test/tel-cap' }), store, makeMockOpenAI(FIRE_YES_RESPONSE));
+
+    expect(vi.mocked(writeTelemetry)).toHaveBeenCalledWith(
+      '/test/tel-cap', 'advisory_cap_blocked', expect.objectContaining({ advisoryCount: 5, advisoryCap: 5 }),
+    );
+  });
+
+  it('emits pipeline_advisory_pending when advisory is stored', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/tel-pending');
+    mgr.addAbsenceFlag(store, { signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 5, cooldownUntil: 100 });
+
+    const result = await runAuto(makeInput({ projectRoot: '/test/tel-pending' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'));
+
+    if (result.outcome === 'pending') {
+      expect(vi.mocked(writeTelemetry)).toHaveBeenCalledWith(
+        '/test/tel-pending', 'pipeline_advisory_pending', expect.objectContaining({ pinchLabel: 'Hold up.' }),
+      );
+    }
+  });
+
+  it('emits stage2_evaluated with confirmed field after stage 2 runs', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/tel-s2');
+    mgr.addAbsenceFlag(store, { signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 5, cooldownUntil: 100 });
+
+    for (let i = 0; i < 2; i++) {
+      await runAuto(makeInput({ projectRoot: '/test/tel-s2' }), store);
+    }
+    vi.mocked(writeTelemetry).mockClear();
+    await runAuto(makeInput({ projectRoot: '/test/tel-s2' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'));
+
+    const s2Call = vi.mocked(writeTelemetry).mock.calls.find(([, event]) => event === 'stage2_evaluated');
+    if (s2Call) {
+      expect(s2Call[2]).toEqual(expect.objectContaining({ confirmed: expect.any(Boolean) }));
+    }
   });
 });

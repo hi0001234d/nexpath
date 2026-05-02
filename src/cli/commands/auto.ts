@@ -26,6 +26,7 @@ import type { LogLevel } from '../../logger.js';
 import { writeHookStats } from '../../store/hook-stats.js';
 import { upsertPendingAdvisory } from '../../store/pending-advisories.js';
 import { insertSkippedSession } from '../../store/skipped-sessions.js';
+import { writeTelemetry } from '../../telemetry/index.js';
 
 /**
  * nexpath auto — orchestration command (per decision-session-ux-research.md).
@@ -137,10 +138,12 @@ export async function runAuto(
   const mgr = SessionStateManager.load(store, input.projectRoot);
   const prevStage: Stage = mgr.current.currentStage;
   logger.debug('session_loaded', { promptCount: mgr.current.promptCount, stage: prevStage, project: input.projectRoot });
+  writeTelemetry(input.projectRoot, 'prompt_received', { promptCount: mgr.current.promptCount });
 
   // ── 2. Stage 1 classifier ────────────────────────────────────────────────────
   const classification = await classifyPrompt(input.promptText);
   logger.debug('stage1_result', { classified: classification.stage, confidence: classification.confidence });
+  writeTelemetry(input.projectRoot, 'prompt_classified', { stage: classification.stage, confidence: classification.confidence });
 
   // ── 2.5. LLM profile classification — async, before processPrompt ────────────
   if (isProfileStale(mgr.current.profile, mgr.current.promptCount) &&
@@ -153,6 +156,14 @@ export async function runAuto(
     );
     mgr.setProfile(updatedProfile);
     logger.debug('profile_classified', { nature: updatedProfile.nature, mood: updatedProfile.mood, depth: updatedProfile.depth });
+    writeTelemetry(input.projectRoot, 'profile_computed', {
+      nature:             updatedProfile.nature,
+      mood:               updatedProfile.mood,
+      depth:              updatedProfile.depth,
+      precisionOrdinal:   updatedProfile.precisionOrdinal,
+      playfulnessOrdinal: updatedProfile.playfulnessOrdinal,
+      computedAt:         updatedProfile.computedAt,
+    });
   }
 
   // ── 3. Process prompt → updates state (stage, history, counters) ─────────────
@@ -174,9 +185,15 @@ export async function runAuto(
     mgr.addAbsenceFlag(store, flag);
   }
   logger.debug('absence_flags', { new: newFlags.length, total: mgr.current.absenceFlags.length });
+  writeTelemetry(input.projectRoot, 'absence_flags_detected', {
+    newFlagsCount:   newFlags.length,
+    totalFlagsCount: mgr.current.absenceFlags.length,
+    flagKeys:        newFlags.map((f) => f.signalKey),
+  });
 
   // ── 4.5. Minimum prompt guard ────────────────────────────────────────────────
   if (mgr.current.promptCount < MIN_PROMPTS_BEFORE_ADVISORY) {
+    writeTelemetry(input.projectRoot, 'advisory_min_prompts_blocked', { promptCount: mgr.current.promptCount, minRequired: MIN_PROMPTS_BEFORE_ADVISORY });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'min_prompts_not_reached' });
     return { outcome: 'no_action' };
   }
@@ -190,6 +207,7 @@ export async function runAuto(
   logger.debug('should_fire', { flagType: flagType ?? null });
 
   if (!flagType) {
+    writeTelemetry(input.projectRoot, 'pipeline_no_action', { reason: 'no_flag' });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'no_flag' });
     return { outcome: 'no_action' };
   }
@@ -199,6 +217,7 @@ export async function runAuto(
   const alreadyFired = mgr.hasFiredDecisionSession(firedKey);
   logger.debug('dedup', { firedKey, alreadyFired });
   if (alreadyFired) {
+    writeTelemetry(input.projectRoot, 'advisory_dedup_blocked', { firedKey });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'already_fired', firedKey });
     return { outcome: 'no_action' };
   }
@@ -210,14 +229,17 @@ export async function runAuto(
     'every_event';
 
   if (freq === 'off') {
+    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_off' });
     return { outcome: 'no_action' };
   }
   if (freq === 'major_only' && flagType !== 'stage_transition') {
+    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_major_only', flagType });
     return { outcome: 'no_action' };
   }
   if (freq === 'once_per_session' && mgr.current.firedDecisionSessions.length > 0) {
+    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_once_per_session' });
     return { outcome: 'no_action' };
   }
@@ -225,6 +247,11 @@ export async function runAuto(
   // ── 6.6. Post-advisory cooldown — suppress rapid back-to-back advisories ─────
   const lastAdvisory = mgr.current.lastAdvisoryPromptIndex ?? -1;
   if (lastAdvisory >= 0 && mgr.current.promptCount - lastAdvisory < POST_ADVISORY_COOLDOWN) {
+    writeTelemetry(input.projectRoot, 'advisory_cooldown_blocked', {
+      promptCount:       mgr.current.promptCount,
+      lastAdvisoryAt:    lastAdvisory,
+      cooldownRemaining: POST_ADVISORY_COOLDOWN - (mgr.current.promptCount - lastAdvisory),
+    });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'post_advisory_cooldown', promptsSinceLast: mgr.current.promptCount - lastAdvisory });
     return { outcome: 'no_action' };
   }
@@ -244,6 +271,7 @@ export async function runAuto(
       levelReached:         0,
       skippedAtPromptCount: mgr.current.promptCount,
     });
+    writeTelemetry(input.projectRoot, 'advisory_cap_blocked', { advisoryCount, advisoryCap });
     logger.info('pipeline_outcome', {
       outcome: 'no_action',
       reason:  'session_cap_reached',
@@ -265,6 +293,7 @@ export async function runAuto(
   try {
     stage2Output = await runStage2(stage2Input, openai);
     logger.debug('stage2_result', { fire: stage2Output.fire_decision_session, confidence: stage2Output.stage_confidence, reason: stage2Output.reason });
+    writeTelemetry(input.projectRoot, 'stage2_evaluated', { flagType, confirmed: stage2Output.fire_decision_session });
   } catch (err) {
     logger.warn('stage2_error', { ...extractApiError(err, 'openai'), stage: mgr.current.currentStage });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'stage2_error' });
@@ -273,6 +302,7 @@ export async function runAuto(
   }
 
   if (!stage2Output.fire_decision_session) {
+    writeTelemetry(input.projectRoot, 'pipeline_no_action', { reason: 'stage2_declined' });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'stage2_declined', stage2Confidence: stage2Output.stage_confidence });
     return { outcome: 'no_action' };
   }
@@ -319,6 +349,7 @@ export async function runAuto(
     generatedL2: generatedOptions?.l2,
     generatedL3: generatedOptions?.l3,
   });
+  writeTelemetry(input.projectRoot, 'pipeline_advisory_pending', { flagType, stage: mgr.current.currentStage, pinchLabel });
   mgr.markAdvisoryFired(store);
 
   logger.info('pipeline_outcome', { outcome: 'pending', pinchLabel });
