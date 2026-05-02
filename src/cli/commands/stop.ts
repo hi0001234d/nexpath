@@ -110,13 +110,19 @@ export async function runStop(
   // 4. TTY resolution — Stop hook stdin is always piped; open /dev/tty directly
   let effectiveSelectFn: SelectFn | undefined = selectFn;
   if (!effectiveSelectFn) {
-    const ttySel = createTtySelectFn(store, payload.cwd);
-    if (!ttySel) {
-      logger.info('stop_no_tty', { cwd: payload.cwd });
-      return { outcome: 'no_tty' };
+    if (process.env['NEXPATH_SIM'] === '1') {
+      // Sim mode: skip TTY entirely — runLevel intercepts NEXPATH_SIM before calling selectFn
+      effectiveSelectFn = () => Promise.resolve('');
+      logger.debug('stop_tty_resolved', { method: 'sim' });
+    } else {
+      const ttySel = createTtySelectFn(store, payload.cwd);
+      if (!ttySel) {
+        logger.info('stop_no_tty', { cwd: payload.cwd });
+        return { outcome: 'no_tty' };
+      }
+      effectiveSelectFn = ttySel;
+      logger.debug('stop_tty_resolved', { method: 'direct_tty' });
     }
-    effectiveSelectFn = ttySel;
-    logger.debug('stop_tty_resolved', { method: 'direct_tty' });
   }
 
   // 5. Render decision session UI

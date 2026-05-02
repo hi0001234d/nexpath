@@ -461,6 +461,35 @@ describe('runStop — generated options wiring', () => {
   });
 });
 
+// ── runStop — NEXPATH_SIM=1 TTY bypass ───────────────────────────────────────
+
+describe('runStop — NEXPATH_SIM=1 TTY bypass', () => {
+  let store: Store;
+
+  beforeEach(async () => {
+    store = await openStore(':memory:');
+    process.env['NEXPATH_SIM'] = '1';
+  });
+  afterEach(() => {
+    store.db.close();
+    delete process.env['NEXPATH_SIM'];
+    vi.restoreAllMocks();
+  });
+
+  it('reaches runDecisionSession without a selectFn when NEXPATH_SIM=1 and advisory is pending', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    // No selectFn passed — sim bypass must supply one internally
+    // NEXPATH_SIM=1 means runLevel auto-selects; result is 'blocked' or 'skipped'
+    const result = await runStop(makePayload(), store);
+    expect(['blocked', 'skipped']).toContain(result.outcome);
+  });
+
+  it('returns no_pending without reaching TTY resolution when no advisory queued', async () => {
+    const result = await runStop(makePayload(), store);
+    expect(result.outcome).toBe('no_pending');
+  });
+});
+
 // ── runStop — telemetry events ────────────────────────────────────────────────
 
 describe('runStop — telemetry events', () => {
