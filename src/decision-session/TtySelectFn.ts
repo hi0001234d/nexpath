@@ -445,16 +445,19 @@ function buildTerminalAppleScript(command: string): string {
   const escaped = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   return `tell application "Terminal"
     activate
-    set w to do script "${escaped}; exit"
+    set theTab to do script "${escaped}; exit"
+    delay 1
     repeat
         delay 0.5
         try
-            if not (busy of w) then exit repeat
+            if not (busy of theTab) then exit repeat
         on error
             exit repeat
         end try
     end repeat
-    close w
+    try
+        close (first window whose selected tab is theTab)
+    end try
 end tell`;
 }
 
