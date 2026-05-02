@@ -297,7 +297,7 @@ export async function runAuto(
   } catch (err) {
     logger.warn('stage2_error', { ...extractApiError(err, 'openai'), stage: mgr.current.currentStage });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'stage2_error' });
-    // Stage 2 API failure → skip silently (non-blocking)
+    writeTelemetry(input.projectRoot, 'pipeline_no_action', { reason: 'stage2_error' });
     return { outcome: 'no_action' };
   }
 
