@@ -13,6 +13,7 @@ import {
   SKIP_NOW,
 } from './options.js';
 import type { GeneratedOptions } from './OptionGenerator.js';
+import { writeTelemetry } from '../telemetry/index.js';
 
 /**
  * Decision session terminal UI (per decision-session-ux-research.md).
@@ -203,14 +204,41 @@ export async function runLevel(
     clackOptions.push({ value: `${OPTION_SEPARATOR}help`, label: HELP_LABEL });
   }
 
+  writeTelemetry(input.projectRoot, 'level_rendered', {
+    level,
+    optionCount: clackOptions.filter(o => !o.value.startsWith(OPTION_SEPARATOR)).length,
+  });
+
+  if (process.env['NEXPATH_SIM'] === '1') {
+    const first = clackOptions.find(o => !o.value.startsWith(OPTION_SEPARATOR));
+    const label = first?.label ?? '—';
+    const value = first?.value ?? SKIP_NOW;
+    process.stdout.write(`\n[SIM] Auto-selecting: ${label}\n`);
+    await new Promise<void>(r => setTimeout(r, 400));
+    writeTelemetry(input.projectRoot, 'decision_session_sim_dismissed', {
+      level, autoSelectedText: label.slice(0, 120),
+    });
+    return value as string;
+  }
+
   const result = await selectFn({ message, options: clackOptions });
 
-  if (isCancel(result) || typeof result === 'symbol') return 'skip';
-  if (typeof result === 'string' && result.startsWith(OPTION_SEPARATOR)) return 'skip';
+  if (isCancel(result) || typeof result === 'symbol') {
+    writeTelemetry(input.projectRoot, 'decision_session_dismissed', { level, reason: 'cancel' });
+    return 'skip';
+  }
+  if (typeof result === 'string' && result.startsWith(OPTION_SEPARATOR)) {
+    writeTelemetry(input.projectRoot, 'decision_session_dismissed', { level, reason: 'skip' });
+    return 'skip';
+  }
   if (result === CLIPBOARD_ONLY) return 'clipboard_only';
-  if (result === SKIP_NOW) return 'skip';
+  if (result === SKIP_NOW) {
+    writeTelemetry(input.projectRoot, 'decision_session_dismissed', { level, reason: 'skip' });
+    return 'skip';
+  }
   if (result === SHOW_SIMPLER) return 'next';
 
+  writeTelemetry(input.projectRoot, 'option_selected', { level, selectedText: (result as string).slice(0, 120) });
   return result as string;
 }
 
@@ -236,6 +264,13 @@ export async function runDecisionSession(
   if (store) {
     incrementDecisionSessionCount(store, input.projectRoot);
   }
+
+  writeTelemetry(input.projectRoot, 'decision_session_started', {
+    flagType:   input.flagType,
+    stage:      input.stage,
+    pinchLabel: input.pinchLabel,
+    sessionId:  input.sessionId,
+  });
 
   let level: 1 | 2 | 3 = 1;
 

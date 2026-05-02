@@ -1,4 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+vi.mock('../telemetry/index.js', () => ({
+  writeTelemetry: vi.fn(),
+  TELEMETRY_PATH: '/mock/telemetry.jsonl',
+}));
 import {
   resolveDecisionContent,
   buildOptionList,
@@ -35,6 +40,7 @@ import { openStore } from '../store/db.js';
 import { getSkippedSessions } from '../store/skipped-sessions.js';
 import { getProject, upsertProject } from '../store/projects.js';
 import { getConfig } from '../store/config.js';
+import { writeTelemetry } from '../telemetry/index.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -1281,5 +1287,71 @@ describe('W-05: clack-path label styling', () => {
     const multiLineOpt = opts.find((o) => o.label.includes('\n│    '));
     expect(multiLineOpt).toBeDefined();
     expect(multiLineOpt!.label).toBe('1. Step one\n│    2. Step two\n│    3. Step three');
+  });
+});
+
+// ── DecisionSession — telemetry events ────────────────────────────────────────
+
+describe('runDecisionSession — telemetry: decision_session_started', () => {
+  beforeEach(() => { vi.mocked(writeTelemetry).mockClear(); });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it('emits decision_session_started with flagType, stage, pinchLabel, sessionId', async () => {
+    await runDecisionSession(makeInput(), undefined, mockSelect(SKIP_NOW));
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_started',
+      expect.objectContaining({
+        flagType:   'stage_transition',
+        stage:      'implementation',
+        pinchLabel: 'Hold up.',
+        sessionId:  'session-test',
+      }),
+    );
+  });
+
+  it('emits decision_session_started even when no store is provided', async () => {
+    await runDecisionSession(makeInput(), undefined, mockSelect(SKIP_NOW));
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_started',
+      expect.any(Object),
+    );
+  });
+});
+
+describe('runLevel — NEXPATH_SIM=1 support', () => {
+  beforeEach(() => { vi.mocked(writeTelemetry).mockClear(); });
+  afterEach(() => {
+    delete process.env['NEXPATH_SIM'];
+    vi.restoreAllMocks();
+  });
+
+  it('auto-selects first content option without calling selectFn when NEXPATH_SIM=1', async () => {
+    process.env['NEXPATH_SIM'] = '1';
+    const selectFn = vi.fn();
+    const content = resolveDecisionContent('implementation', 'stage_transition');
+    const result = await runLevel(makeInput(), 1, selectFn as SelectFn);
+    expect(selectFn).not.toHaveBeenCalled();
+    expect(result).toBe(content.L1[0]);
+  }, 2000);
+
+  it('emits decision_session_sim_dismissed with level and autoSelectedText when NEXPATH_SIM=1', async () => {
+    process.env['NEXPATH_SIM'] = '1';
+    await runLevel(makeInput(), 1, vi.fn() as SelectFn);
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_sim_dismissed',
+      expect.objectContaining({
+        level: 1,
+        autoSelectedText: expect.any(String),
+      }),
+    );
+  }, 2000);
+
+  it('calls selectFn normally when NEXPATH_SIM is not set', async () => {
+    const selectFn = mockSelect(SKIP_NOW);
+    await runLevel(makeInput(), 1, selectFn);
+    expect(selectFn).toHaveBeenCalledTimes(1);
   });
 });
