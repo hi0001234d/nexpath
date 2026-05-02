@@ -1,4 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+vi.mock('../../telemetry/index.js', () => ({
+  writeTelemetry: vi.fn(),
+  TELEMETRY_PATH: '/mock/telemetry.jsonl',
+}));
+
 import { openStore } from '../../store/db.js';
 import type { Store } from '../../store/db.js';
 import { runStop } from './stop.js';
@@ -12,6 +18,7 @@ import * as TtySelectFnModule from '../../decision-session/TtySelectFn.js';
 import { insertPrompt } from '../../store/prompts.js';
 import { upsertProject, getProject } from '../../store/projects.js';
 import { LANG_DETECT_INTERVAL } from '../../classifier/LanguageDetector.js';
+import { writeTelemetry } from '../../telemetry/index.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -451,5 +458,66 @@ describe('runStop — generated options wiring', () => {
     const result = await runStop(makePayload(), store, mockSelect(TASK_REVIEW.L1[0]));
     // Result should be blocked (valid option selected) — no crash from partial null
     expect(['blocked', 'skipped']).toContain(result.outcome);
+  });
+});
+
+// ── runStop — telemetry events ────────────────────────────────────────────────
+
+describe('runStop — telemetry events', () => {
+  let store: Store;
+
+  beforeEach(async () => {
+    store = await openStore(':memory:');
+    vi.mocked(writeTelemetry).mockClear();
+  });
+  afterEach(() => {
+    store.db.close();
+    vi.restoreAllMocks();
+  });
+
+  it('emits stop_no_pending when no advisory is queued', async () => {
+    await runStop(makePayload(), store);
+    expect(writeTelemetry).toHaveBeenCalledWith('/test/project', 'stop_no_pending');
+  });
+
+  it('does not emit stop_no_pending when an advisory is present', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    await runStop(makePayload(), store, mockSelect(SKIP_NOW));
+    const calls = vi.mocked(writeTelemetry).mock.calls;
+    expect(calls.some(([, evt]) => evt === 'stop_no_pending')).toBe(false);
+  });
+
+  it('emits stop_advisory_shown with flagType, stage, generatedOptions before decision session', async () => {
+    upsertPendingAdvisory(store, makeAdvisory());
+    await runStop(makePayload(), store, mockSelect(SKIP_NOW));
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'stop_advisory_shown',
+      expect.objectContaining({
+        flagType:         'absence:test_creation',
+        stage:            'implementation',
+        generatedOptions: false,
+      }),
+    );
+  });
+
+  it('emits stop_advisory_shown with generatedOptions:true when all L1/L2/L3 present', async () => {
+    upsertPendingAdvisory(store, {
+      projectRoot:  '/test/project',
+      stage:        'implementation',
+      flagType:     'absence:test_creation',
+      pinchLabel:   'Hold up.',
+      sessionId:    'sess-001',
+      promptCount:  5,
+      generatedL1:  ['opt a'],
+      generatedL2:  ['opt b'],
+      generatedL3:  ['opt c'],
+    });
+    await runStop(makePayload(), store, mockSelect(SKIP_NOW));
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'stop_advisory_shown',
+      expect.objectContaining({ generatedOptions: true }),
+    );
   });
 });

@@ -13,6 +13,7 @@ import { getProject, setDetectedLanguage } from '../../store/projects.js';
 import { logger, initLogger } from '../../logger.js';
 import type { LogLevel } from '../../logger.js';
 import { writeHookStats } from '../../store/hook-stats.js';
+import { writeTelemetry } from '../../telemetry/index.js';
 import { readStdin } from './auto.js';
 
 /**
@@ -86,6 +87,7 @@ export async function runStop(
   const advisory = getPendingAdvisory(store, payload.cwd);
   if (!advisory) {
     logger.debug('stop_no_pending', { cwd: payload.cwd });
+    writeTelemetry(payload.cwd, 'stop_no_pending');
     return { outcome: 'no_pending' };
   }
 
@@ -123,6 +125,12 @@ export async function runStop(
       : undefined;
 
   const mgr = SessionStateManager.load(store, payload.cwd);
+
+  writeTelemetry(payload.cwd, 'stop_advisory_shown', {
+    flagType:         advisory.flagType,
+    stage:            advisory.stage,
+    generatedOptions: !!(advisory.generatedL1 && advisory.generatedL2 && advisory.generatedL3),
+  });
 
   const dsResult = await runDecisionSession(
     {
