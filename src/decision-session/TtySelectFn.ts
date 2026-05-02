@@ -454,7 +454,14 @@ function buildTerminalAppleScript(command: string): string {
             exit repeat
         end try
     end repeat
-    close (window of w)
+    try
+        close w
+    on error
+        try
+            close (window of w)
+        on error
+        end try
+    end try
 end tell`;
 }
 
