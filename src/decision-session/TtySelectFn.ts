@@ -14,10 +14,13 @@ import { SKIP_NOW, SHOW_SIMPLER } from './options.js';
 import type { Store } from '../store/db.js';
 import { setConfig } from '../store/config.js';
 
-// ── Windows: new console window running @clack/prompts via Node.js ─────────────
+// ── New-window helpers: .mjs script builders ─────────────────────────────────
+
+/** [cmd, args] tuple for a clipboard command. */
+type ClipboardCmd = [cmd: string, args: string[]];
 
 /**
- * Build the .mjs script that runs inside the new console window.
+ * Build the .mjs script that runs inside the new terminal window.
  *
  * The script:
  *   - Imports @clack/prompts select() from the resolved clackUrl
@@ -29,10 +32,16 @@ import { setConfig } from '../store/config.js';
  * 60-second timeout via Promise.race: if user ignores the window, the script
  * exits cleanly without writing the result file → hook treats as 'skipped'.
  *
- * ANSI in message/labels is NOT stripped — @clack/prompts renders it correctly
- * in the new Windows console (Win 10/11 ANSI VT support).
+ * clipboardCmds: ordered list of clipboard commands to try. The script
+ * iterates until one succeeds (status 0). Single entry for Windows/macOS,
+ * fallback chain for Linux (xclip → wl-copy → xsel).
  */
-function buildMjsScript(clackUrl: string, optFileFwd: string, resultFileFwd: string): string {
+function buildMjsScript(
+  clackUrl: string,
+  optFileFwd: string,
+  resultFileFwd: string,
+  clipboardCmds: ClipboardCmd[],
+): string {
   return `import { select, isCancel } from '${clackUrl}';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -87,7 +96,11 @@ if (!isCancel(picked) && picked !== TIMEOUT && typeof picked === 'string'
     if (action === 'send') {
       writeFileSync('${resultFileFwd}', picked, 'utf8');
     } else {
-      spawnSync('clip', [], { input: picked, encoding: 'utf8', stdio: ['pipe', 'ignore', 'ignore'] });
+      const _clipCmds = ${JSON.stringify(clipboardCmds)};
+      for (const [_c, _a] of _clipCmds) {
+        const _r = spawnSync(_c, _a, { input: picked, encoding: 'utf8', stdio: ['pipe', 'ignore', 'ignore'] });
+        if (_r.status === 0) break;
+      }
       writeFileSync('${resultFileFwd}', '__CLIP__', 'utf8');
     }
   }
@@ -150,18 +163,7 @@ process.exit(0);
  * which reliably brings the new window to the foreground.
  */
 function buildWindowsNewWindowSelectFn(_store?: Store, _projectRoot?: string): SelectFn {
-  // Resolve @clack/prompts ESM entry from nexpath's module context (once per SelectFn build).
-  // createRequire().resolve('@clack/prompts') returns the CJS entry (dist/index.cjs).
-  // The .mjs script needs the ESM entry (exports['.'].import = dist/index.mjs) so that
-  // named imports { select, isCancel } work correctly from an ESM context.
-  const _require      = createRequire(import.meta.url);
-  const clackPkgPath  = _require.resolve('@clack/prompts/package.json');
-  const clackPkg      = JSON.parse(readFileSync(clackPkgPath, 'utf8')) as {
-    exports: { '.': { import: string } };
-  };
-  const clackEsmEntry = clackPkg.exports['.'].import;
-  const clackEsmPath  = join(dirname(clackPkgPath), clackEsmEntry);
-  const clackUrl      = `file:///${clackEsmPath.replace(/\\/g, '/')}`;
+  const clackUrl = resolveClackEsmUrl();
 
   return (opts) =>
     new Promise<string | symbol>((resolve) => {
@@ -188,7 +190,7 @@ function buildWindowsNewWindowSelectFn(_store?: Store, _projectRoot?: string): S
         'utf8',
       );
 
-      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd), 'utf8');
+      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, [['clip', []]]), 'utf8');
 
       // Textual cue in Claude terminal regardless of whether window is visible
       process.stderr.write('\n[nexpath] Please select an action in the new window\n');
@@ -227,6 +229,279 @@ function buildWindowsNewWindowSelectFn(_store?: Store, _projectRoot?: string): S
             ['/c', 'start', '/WAIT', 'Nexpath \u2014 Frequency', 'node', freqScriptFile],
             { stdio: 'ignore' },
           );
+          if (existsSync(freqResultFile)) {
+            const freqRaw = readFileSync(freqResultFile, 'utf8').trim();
+            if (freqRaw.startsWith('__FREQ__:')) result = freqRaw;
+          }
+          for (const f of [freqScriptFile, freqResultFile]) {
+            try { unlinkSync(f); } catch { /* ignore */ }
+          }
+        } else if (raw.startsWith('__FREQ__:')) {
+          result = raw;
+        } else if (raw.length > 0) {
+          result = raw;
+        }
+      }
+
+      for (const f of [optFile, resultFile, scriptFile]) {
+        try { unlinkSync(f); } catch { /* ignore */ }
+      }
+
+      resolve(result);
+    });
+}
+
+// ── Linux: new terminal window via detected emulator ─────────────────────────
+
+/** Resolve the @clack/prompts ESM entry URL from nexpath's module context. */
+function resolveClackEsmUrl(): string {
+  const _require      = createRequire(import.meta.url);
+  const clackPkgPath  = _require.resolve('@clack/prompts/package.json');
+  const clackPkg      = JSON.parse(readFileSync(clackPkgPath, 'utf8')) as {
+    exports: { '.': { import: string } };
+  };
+  const clackEsmEntry = clackPkg.exports['.'].import;
+  const clackEsmPath  = join(dirname(clackPkgPath), clackEsmEntry);
+  return `file:///${clackEsmPath.replace(/\\/g, '/')}`;
+}
+
+function commandExists(cmd: string): boolean {
+  const r = spawnSync('which', [cmd], { stdio: 'pipe', timeout: 2000 });
+  return r.status === 0;
+}
+
+interface TerminalSpec {
+  cmd:  string;
+  args: (title: string, scriptFile: string) => string[];
+  /** Optional extra validation after commandExists passes (e.g. version check). */
+  validate?: () => boolean;
+}
+
+const LINUX_TERMINALS: TerminalSpec[] = [
+  {
+    cmd: 'xdg-terminal-exec',
+    args: (_t, s) => ['node', s],
+  },
+  {
+    cmd: 'gnome-terminal',
+    args: (t, s) => ['--wait', `--title=${t}`, '--', 'node', s],
+    // --wait is buggy before v3.36 (window close doesn't trigger exit signal)
+    validate: () => {
+      const r = spawnSync('gnome-terminal', ['--version'], { encoding: 'utf8', stdio: 'pipe', timeout: 2000 });
+      const m = r.stdout?.match(/(\d+)\.(\d+)/);
+      if (!m) return true; // can't determine version — assume OK
+      return parseInt(m[1]) > 3 || (parseInt(m[1]) === 3 && parseInt(m[2]) >= 36);
+    },
+  },
+  {
+    cmd: 'konsole',
+    args: (t, s) => ['-p', `tabtitle=${t}`, '-e', 'node', s],
+  },
+  {
+    cmd: 'xfce4-terminal',
+    args: (t, s) => ['--disable-server', `--title=${t}`, '-e', `node ${s}`],
+  },
+  {
+    cmd: 'kitty',
+    args: (t, s) => ['--title', t, 'node', s],
+  },
+  {
+    cmd: 'alacritty',
+    args: (t, s) => ['--title', t, '-e', 'node', s],
+  },
+  {
+    cmd: 'wezterm',
+    args: (_t, s) => ['start', '--', 'node', s],
+  },
+  {
+    cmd: 'foot',
+    args: (t, s) => [`--title=${t}`, 'node', s],
+  },
+  {
+    cmd: 'x-terminal-emulator',
+    args: (_t, s) => ['-e', 'node', s],
+  },
+  {
+    cmd: 'xterm',
+    args: (t, s) => ['-T', t, '-fa', 'Monospace', '-fs', '12', '-e', 'node', s],
+  },
+];
+
+/**
+ * Detect an installed terminal emulator that supports blocking execution.
+ * Returns null when no GUI session is available ($DISPLAY / $WAYLAND_DISPLAY unset)
+ * or no known terminal emulator is found.
+ */
+export function detectLinuxTerminal(): TerminalSpec | null {
+  if (!process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) return null;
+  for (const spec of LINUX_TERMINALS) {
+    if (commandExists(spec.cmd)) {
+      if (spec.validate && !spec.validate()) continue;
+      return spec;
+    }
+  }
+  return null;
+}
+
+/** Linux clipboard fallback chain: xclip → wl-copy → xsel. */
+const LINUX_CLIPBOARD_CMDS: ClipboardCmd[] = [
+  ['xclip', ['-selection', 'clipboard']],
+  ['wl-copy', []],
+  ['xsel', ['--clipboard', '--input']],
+];
+
+const WINDOW_TITLE = 'Nexpath \u2014 Action Required';
+const FREQ_WINDOW_TITLE = 'Nexpath \u2014 Frequency';
+
+function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): SelectFn | null {
+  const terminal = detectLinuxTerminal();
+  if (!terminal) return null;
+
+  const clackUrl = resolveClackEsmUrl();
+
+  return (opts) =>
+    new Promise<string | symbol>((resolve) => {
+      const id         = randomUUID();
+      const optFile    = join(tmpdir(), `nexpath-opt-${id}.json`);
+      const resultFile = join(tmpdir(), `nexpath-res-${id}.txt`);
+      const scriptFile = join(tmpdir(), `nexpath-sel-${id}.mjs`);
+
+      const optFileFwd    = optFile.replace(/\\/g, '/');
+      const resultFileFwd = resultFile.replace(/\\/g, '/');
+
+      writeFileSync(
+        optFile,
+        JSON.stringify({
+          message:         opts.message,
+          options:         opts.options,
+          skipNow:         SKIP_NOW,
+          showSimpler:     SHOW_SIMPLER,
+          separatorPrefix: OPTION_SEPARATOR,
+        }),
+        'utf8',
+      );
+
+      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, LINUX_CLIPBOARD_CMDS), 'utf8');
+
+      process.stderr.write('\n[nexpath] Please select an action in the new window\n');
+
+      spawnSync(terminal.cmd, terminal.args(WINDOW_TITLE, scriptFile), { stdio: 'ignore' });
+
+      let result: string | symbol = Symbol('cancelled');
+      if (existsSync(resultFile)) {
+        const raw = readFileSync(resultFile, 'utf8').trim();
+        if (raw === '__CLIP__') {
+          result = CLIPBOARD_ONLY;
+        } else if (raw === '__NEXPATH_OPT_OUT__') {
+          result = OPT_OUT_SENTINEL;
+        } else if (raw === '__FREQ_MENU_PENDING__') {
+          const freqId         = randomUUID();
+          const freqResultFile = join(tmpdir(), `nexpath-freq-res-${freqId}.txt`);
+          const freqScriptFile = join(tmpdir(), `nexpath-freq-sel-${freqId}.mjs`);
+          const freqResultFwd  = freqResultFile.replace(/\\/g, '/');
+          writeFileSync(freqScriptFile, buildFreqMjsScript(clackUrl, freqResultFwd), 'utf8');
+          spawnSync(terminal.cmd, terminal.args(FREQ_WINDOW_TITLE, freqScriptFile), { stdio: 'ignore' });
+          if (existsSync(freqResultFile)) {
+            const freqRaw = readFileSync(freqResultFile, 'utf8').trim();
+            if (freqRaw.startsWith('__FREQ__:')) result = freqRaw;
+          }
+          for (const f of [freqScriptFile, freqResultFile]) {
+            try { unlinkSync(f); } catch { /* ignore */ }
+          }
+        } else if (raw.startsWith('__FREQ__:')) {
+          result = raw;
+        } else if (raw.length > 0) {
+          result = raw;
+        }
+      }
+
+      for (const f of [optFile, resultFile, scriptFile]) {
+        try { unlinkSync(f); } catch { /* ignore */ }
+      }
+
+      resolve(result);
+    });
+}
+
+// ── macOS: new Terminal.app window via osascript ─────────────────────────────
+
+/** macOS clipboard: pbcopy. */
+const MAC_CLIPBOARD_CMDS: ClipboardCmd[] = [['pbcopy', []]];
+
+/**
+ * Build an AppleScript that opens a new Terminal.app window, runs a command,
+ * and polls until the command finishes.
+ *
+ * osascript is synchronous — spawnSync('osascript', ['-e', script]) blocks
+ * until the AppleScript completes. The polling loop inside waits for the
+ * shell's `busy` flag to clear (i.e. the Node.js child exits).
+ *
+ * ;exit after the command ensures the shell exits so busy becomes false.
+ * If the user closes the window manually, the `on error` catches the stale
+ * reference and exits the loop cleanly.
+ */
+function buildTerminalAppleScript(command: string): string {
+  // Escape backslashes and double-quotes for AppleScript string embedding
+  const escaped = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return `tell application "Terminal"
+    activate
+    set w to do script "${escaped}; exit"
+    repeat
+        delay 0.5
+        try
+            if not (busy of w) then exit repeat
+        on error
+            exit repeat
+        end try
+    end repeat
+end tell`;
+}
+
+function buildMacNewWindowSelectFn(_store?: Store, _projectRoot?: string): SelectFn {
+  const clackUrl = resolveClackEsmUrl();
+
+  return (opts) =>
+    new Promise<string | symbol>((resolve) => {
+      const id         = randomUUID();
+      const optFile    = join(tmpdir(), `nexpath-opt-${id}.json`);
+      const resultFile = join(tmpdir(), `nexpath-res-${id}.txt`);
+      const scriptFile = join(tmpdir(), `nexpath-sel-${id}.mjs`);
+
+      const optFileFwd    = optFile.replace(/\\/g, '/');
+      const resultFileFwd = resultFile.replace(/\\/g, '/');
+
+      writeFileSync(
+        optFile,
+        JSON.stringify({
+          message:         opts.message,
+          options:         opts.options,
+          skipNow:         SKIP_NOW,
+          showSimpler:     SHOW_SIMPLER,
+          separatorPrefix: OPTION_SEPARATOR,
+        }),
+        'utf8',
+      );
+
+      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, MAC_CLIPBOARD_CMDS), 'utf8');
+
+      process.stderr.write('\n[nexpath] Please select an action in the new window\n');
+
+      spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${scriptFile}`)], { stdio: 'ignore' });
+
+      let result: string | symbol = Symbol('cancelled');
+      if (existsSync(resultFile)) {
+        const raw = readFileSync(resultFile, 'utf8').trim();
+        if (raw === '__CLIP__') {
+          result = CLIPBOARD_ONLY;
+        } else if (raw === '__NEXPATH_OPT_OUT__') {
+          result = OPT_OUT_SENTINEL;
+        } else if (raw === '__FREQ_MENU_PENDING__') {
+          const freqId         = randomUUID();
+          const freqResultFile = join(tmpdir(), `nexpath-freq-res-${freqId}.txt`);
+          const freqScriptFile = join(tmpdir(), `nexpath-freq-sel-${freqId}.mjs`);
+          const freqResultFwd  = freqResultFile.replace(/\\/g, '/');
+          writeFileSync(freqScriptFile, buildFreqMjsScript(clackUrl, freqResultFwd), 'utf8');
+          spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${freqScriptFile}`)], { stdio: 'ignore' });
           if (existsSync(freqResultFile)) {
             const freqRaw = readFileSync(freqResultFile, 'utf8').trim();
             if (freqRaw.startsWith('__FREQ__:')) result = freqRaw;
@@ -465,17 +740,26 @@ function buildUnixSelectFn(
 /**
  * Create a platform-appropriate SelectFn for hook subprocess context.
  *
- * Windows  — opens a new console window running Node.js + @clack/prompts.
- *            Full arrow-key UI, visual cursor, ANSI. 60s auto-timeout.
- *            Always returns a SelectFn (never null) — cancelled/timeout
- *            resolves as Symbol.
- * Linux/Mac — opens /dev/tty directly (requires controlling terminal).
- *            Returns null when /dev/tty is not accessible (CI, no console).
+ * Windows — new console window via cmd /c start (full @clack/prompts UI).
+ * macOS   — new Terminal.app window via osascript (full @clack/prompts UI).
+ * Linux   — new terminal window via detected emulator (full @clack/prompts UI).
+ *           Falls back to /dev/tty readline if no terminal emulator is found.
+ *
+ * Returns null when no interactive method is available (CI, headless, no console).
  */
 export function createTtySelectFn(store?: Store, projectRoot?: string): SelectFn | null {
-  if (platform === 'win32') {
+  const plat = process.platform;
+  if (plat === 'win32') {
     return buildWindowsNewWindowSelectFn(store, projectRoot);
   }
+  if (plat === 'darwin') {
+    return buildMacNewWindowSelectFn(store, projectRoot);
+  }
+  if (plat === 'linux') {
+    const linuxFn = buildLinuxNewWindowSelectFn(store, projectRoot);
+    if (linuxFn) return linuxFn;
+  }
+  // Linux fallback (no terminal emulator / no display) or unknown platform
   const streams = openUnixTtyStreams();
   if (!streams) return null;
   return buildUnixSelectFn(streams, store, projectRoot);
