@@ -13,6 +13,7 @@ import { getProject, setDetectedLanguage } from '../../store/projects.js';
 import { logger, initLogger } from '../../logger.js';
 import type { LogLevel } from '../../logger.js';
 import { writeHookStats } from '../../store/hook-stats.js';
+import { writeTelemetry } from '../../telemetry/index.js';
 import { readStdin } from './auto.js';
 
 /**
@@ -77,6 +78,7 @@ export async function runStop(
     const detected = detectLanguage(recentPrompts.map((p) => p.text), currentDetected);
     setDetectedLanguage(store, payload.cwd, detected);
     logger.debug('stop_lang_detected', { cwd: payload.cwd, detected: detected ?? null });
+    writeTelemetry(payload.cwd, 'language_detected', { detectedLanguage: detected ?? null });
   }
 
   // 1.7. Read decision_session_count for help-line gating in the decision session UI
@@ -86,6 +88,7 @@ export async function runStop(
   const advisory = getPendingAdvisory(store, payload.cwd);
   if (!advisory) {
     logger.debug('stop_no_pending', { cwd: payload.cwd });
+    writeTelemetry(payload.cwd, 'stop_no_pending');
     return { outcome: 'no_pending' };
   }
 
@@ -107,13 +110,19 @@ export async function runStop(
   // 4. TTY resolution — Stop hook stdin is always piped; open /dev/tty directly
   let effectiveSelectFn: SelectFn | undefined = selectFn;
   if (!effectiveSelectFn) {
-    const ttySel = createTtySelectFn(store, payload.cwd);
-    if (!ttySel) {
-      logger.info('stop_no_tty', { cwd: payload.cwd });
-      return { outcome: 'no_tty' };
+    if (process.env['NEXPATH_SIM'] === '1') {
+      // Sim mode: skip TTY entirely — runLevel intercepts NEXPATH_SIM before calling selectFn
+      effectiveSelectFn = () => Promise.resolve('');
+      logger.debug('stop_tty_resolved', { method: 'sim' });
+    } else {
+      const ttySel = createTtySelectFn(store, payload.cwd);
+      if (!ttySel) {
+        logger.info('stop_no_tty', { cwd: payload.cwd });
+        return { outcome: 'no_tty' };
+      }
+      effectiveSelectFn = ttySel;
+      logger.debug('stop_tty_resolved', { method: 'direct_tty' });
     }
-    effectiveSelectFn = ttySel;
-    logger.debug('stop_tty_resolved', { method: 'direct_tty' });
   }
 
   // 5. Render decision session UI
@@ -123,6 +132,12 @@ export async function runStop(
       : undefined;
 
   const mgr = SessionStateManager.load(store, payload.cwd);
+
+  writeTelemetry(payload.cwd, 'stop_advisory_shown', {
+    flagType:         advisory.flagType,
+    stage:            advisory.stage,
+    generatedOptions: !!(advisory.generatedL1 && advisory.generatedL2 && advisory.generatedL3),
+  });
 
   const dsResult = await runDecisionSession(
     {
