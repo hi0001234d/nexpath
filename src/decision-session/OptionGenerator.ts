@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import type { UserProfile, PromptRecord } from '../classifier/types.js';
 import type { DecisionContent } from './options.js';
 import { logger } from '../logger.js';
+import { GroundingConfig } from '../config/GroundingConfig.js';
 
 /**
  * Dynamic option text generator.
@@ -17,7 +18,7 @@ import { logger } from '../logger.js';
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 export const OPTION_GEN_MODEL      = 'gpt-4o-mini';
-export const OPTION_GEN_MAX_TOKENS = 600;
+export const OPTION_GEN_MAX_TOKENS = 750;
 export const OPTION_GEN_TEMP       = 0;
 
 // ── Types ──────────────────────────────────────────────────────────────────────
