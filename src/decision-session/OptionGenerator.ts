@@ -131,6 +131,38 @@ function buildToneLine(profile: UserProfile): string {
   return 'Direct and structured — no emotional content.';
 }
 
+// ── Feature word grounding helper ──────────────────────────────────────────────
+
+/**
+ * Builds the feature word grounding section of the option generation prompt.
+ *
+ * Passes the last `promptWindow` session prompts to the LLM and instructs it
+ * to extract 1–maxWords specific feature nouns and embed them naturally into
+ * each generated option. If fewer prompts exist than the window, all are used.
+ */
+function buildFeatureGroundingSection(
+  history:      PromptRecord[],
+  promptWindow: number,
+  maxWords:     number,
+): string {
+  const recent = history.slice(-promptWindow);
+  if (recent.length === 0) return '';
+
+  const promptLines = recent
+    .map((p, i) => `[${i + 1}] ${p.text}`)
+    .join('\n');
+
+  return `
+Feature word grounding — embed at most ${maxWords} word(s) naturally per option:
+Most recent session prompts (current feature context — do not quote verbatim):
+${promptLines}
+From the above, identify the 1–2 most specific feature nouns or short phrases that
+reflect what the user is currently building or debugging (e.g. "recurring invoices",
+"login page", "PDF export", "Stripe payment"). Weave them into each option text
+where the phrasing stays natural. If no clear feature term is identifiable, leave
+the option unchanged. Do not force grounding words — only embed when it reads naturally.`;
+}
+
 // ── CO-STAR prompt ─────────────────────────────────────────────────────────────
 
 export function buildOptionPrompt(
@@ -147,7 +179,13 @@ export function buildOptionPrompt(
     ? `\nLanguage: Rewrite in vocabulary appropriate for a ${language}-speaking developer. Use plain, jargon-free phrasing — the developer may not be a native English speaker.`
     : '';
 
+  // Vocab calibration — always use last 3 (same as before)
   const last3 = history.slice(-3).map((p, i) => `[${i + 1}] ${p.text}`).join('\n');
+
+  // Feature word grounding — recent window for current-feature context
+  const groundingLines = GroundingConfig.enabled
+    ? buildFeatureGroundingSection(history, GroundingConfig.promptWindow, GroundingConfig.maxWords)
+    : '';
 
   // Multi-line options (steps separated by \n) are serialised as sub-arrays so the LLM
   // never needs to preserve \n inside a string — it just keeps the array structure.
@@ -189,6 +227,7 @@ Audience: A developer who is moving fast with an AI coding agent. Options are pr
 
 Last 3 developer prompts (for vocabulary calibration — do not quote them in output):
 ${last3 || '(none yet)'}
+${groundingLines}
 
 Schema examples — each shows input → output. Follow this structure exactly:
 
