@@ -21,7 +21,9 @@ export type TelemetryEventName =
   | 'level_rendered'
   | 'option_selected'
   | 'decision_session_dismissed'
-  | 'decision_session_sim_dismissed';
+  | 'decision_session_sim_dismissed'
+  // Language detection
+  | 'language_detected';
 
 export interface TelemetryEvent {
   ts:          string;

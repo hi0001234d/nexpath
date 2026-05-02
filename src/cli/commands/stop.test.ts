@@ -520,4 +520,28 @@ describe('runStop — telemetry events', () => {
       expect.objectContaining({ generatedOptions: true }),
     );
   });
+
+  it('emits language_detected when >= LANG_DETECT_INTERVAL prompts exist', async () => {
+    upsertProject(store, { projectRoot: '/test/project', name: 'Test' });
+    const englishPrompt = 'I want to add a login page so users can reset their password and access settings';
+    for (let i = 0; i < LANG_DETECT_INTERVAL; i++) {
+      insertPrompt(store, { projectRoot: '/test/project', promptText: englishPrompt });
+    }
+    await runStop(makePayload(), store);
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'language_detected',
+      expect.objectContaining({ detectedLanguage: expect.anything() }),
+    );
+  });
+
+  it('does not emit language_detected when below LANG_DETECT_INTERVAL prompts', async () => {
+    upsertProject(store, { projectRoot: '/test/project', name: 'Test' });
+    for (let i = 0; i < LANG_DETECT_INTERVAL - 1; i++) {
+      insertPrompt(store, { projectRoot: '/test/project', promptText: 'Add a feature' });
+    }
+    await runStop(makePayload(), store);
+    const calls = vi.mocked(writeTelemetry).mock.calls;
+    expect(calls.some(([, evt]) => evt === 'language_detected')).toBe(false);
+  });
 });

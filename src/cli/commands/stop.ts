@@ -78,6 +78,7 @@ export async function runStop(
     const detected = detectLanguage(recentPrompts.map((p) => p.text), currentDetected);
     setDetectedLanguage(store, payload.cwd, detected);
     logger.debug('stop_lang_detected', { cwd: payload.cwd, detected: detected ?? null });
+    writeTelemetry(payload.cwd, 'language_detected', { detectedLanguage: detected ?? null });
   }
 
   // 1.7. Read decision_session_count for help-line gating in the decision session UI
