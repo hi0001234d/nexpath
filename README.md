@@ -291,3 +291,4 @@ are tracked in this repo. The ReviewDuel integration is maintained separately.
 - **Model Context Protocol** — For enabling cross-agent prompt capture
 
 Built with insights from the vibe coding community and developers building real projects with AI coding agents.
+
