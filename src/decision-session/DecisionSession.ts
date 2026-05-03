@@ -217,10 +217,10 @@ export async function runLevel(
     const value = first?.value ?? SKIP_NOW;
     const optionKind = input.generatedOptions ? 'LLM-generated' : 'static';
     const allOptions = clackOptions
-      .filter(o => !o.value.startsWith(OPTION_SEPARATOR))
+      .filter(o => !o.value.startsWith(OPTION_SEPARATOR) || o.label !== '')
       .map(o => `  ${o.label}`)
       .join('\n');
-    process.stdout.write(`\n[SIM] level:${level} options:${optionKind}\n${allOptions}\n[SIM] Auto-selecting: ${label}\n`);
+    process.stdout.write(`\n[SIM] level:${level} options:${optionKind}\n${message}\n${allOptions}\n[SIM] Auto-selecting: ${label}\n`);
     await new Promise<void>(r => setTimeout(r, 400));
     writeTelemetry(input.projectRoot, 'decision_session_sim_dismissed', {
       level, autoSelectedText: label.slice(0, 120),
