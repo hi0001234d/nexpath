@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
-import type { UserProfile, PromptRecord } from '../classifier/types.js';
+import type { UserProfile, PromptRecord, Stage } from '../classifier/types.js';
+import type { FlagType } from '../classifier/Stage2Trigger.js';
 import type { DecisionContent } from './options.js';
 import { logger } from '../logger.js';
 import { GroundingConfig } from '../config/GroundingConfig.js';
@@ -27,6 +28,13 @@ export interface GeneratedOptions {
   l1: string[];
   l2: string[];
   l3: string[];
+}
+
+export interface OptionGenContext {
+  flagType:              FlagType;
+  currentStage:          Stage;
+  prevStage?:            Stage;
+  promptsInCurrentStage: number;
 }
 
 // ── Project grounding — completed artifact detection ──────────────────────────
@@ -139,26 +147,66 @@ function buildToneLine(profile: UserProfile): string {
  * Passes the last `promptWindow` session prompts to the LLM and instructs it
  * to extract 1–maxWords specific feature nouns and embed them naturally into
  * each generated option. If fewer prompts exist than the window, all are used.
+ *
+ * When `context` is provided, the trigger prompt (the one that caused the
+ * advisory to fire) is labeled [TRIGGER] and separated from preceding history.
+ * For stage_transition advisories, grounding uses the preceding prompts
+ * (completed work) rather than the trigger (new, unbuilt request).
  */
 function buildFeatureGroundingSection(
   history:      PromptRecord[],
   promptWindow: number,
   maxWords:     number,
+  context?:     OptionGenContext,
 ): string {
   const recent = history.slice(-promptWindow);
   if (recent.length === 0) return '';
 
-  const promptLines = recent
-    .map((p, i) => `[${i + 1}] ${p.text}`)
-    .join('\n');
+  const isTransition = context?.flagType === 'stage_transition';
+  const preceding    = recent.slice(0, -1);
+  const trigger      = recent[recent.length - 1];
+
+  // Build prompt lines
+  let promptLines: string;
+  if (context) {
+    const precLines = preceding.map((p, i) => `[${i + 1}] ${p.text}`).join('\n');
+    promptLines = precLines
+      ? `${precLines}\n[TRIGGER] ${trigger.text}`
+      : `[TRIGGER] ${trigger.text}`;
+  } else {
+    promptLines = recent.map((p, i) => `[${i + 1}] ${p.text}`).join('\n');
+  }
+
+  // Advisory context block (only when context is provided)
+  let advisoryBlock = '';
+  if (context) {
+    if (isTransition) {
+      advisoryBlock = `Advisory context: stage_transition advisory — developer moved from "${context.prevStage ?? 'unknown'}" → "${context.currentStage}".
+  The [TRIGGER] prompt caused this stage change and is a NEW request, not yet built.
+  Grounding target: use the PRECEDING prompts [1]–[N] to identify what was just completed.
+  Fall back to the [TRIGGER] prompt only if preceding prompts show no clear feature.\n`;
+    } else {
+      const absenceFlag = context.flagType.replace('absence:', '');
+      advisoryBlock = `Advisory context: absence advisory (${absenceFlag} not yet seen) — developer is ${context.promptsInCurrentStage} prompt(s) into "${context.currentStage}" stage.
+  The [TRIGGER] prompt is the most recent developer request.
+  Grounding target: identify the current feature from all recent prompts including the trigger.\n`;
+    }
+  }
+
+  // Identification guidance
+  const identifyGuidance = isTransition
+    ? `From the PRECEDING prompts [1]–[N] (not the trigger), identify the 1–2 most specific feature nouns
+or short phrases that reflect what the user just completed (e.g. "login page", "PDF export", "fleet tracking system").
+If no clear completed feature is identifiable from preceding prompts, use the trigger prompt as fallback.`
+    : `From the above, identify the 1–2 most specific feature nouns or short phrases that
+reflect what the user is currently building or debugging (e.g. "recurring invoices",
+"login page", "PDF export", "fleet tracking system").`;
 
   return `
 Feature word grounding — embed at most ${maxWords} word(s) naturally per option:
-Most recent session prompts (current feature context — do not quote verbatim):
+${advisoryBlock}Most recent session prompts (current feature context — do not quote verbatim):
 ${promptLines}
-From the above, identify the 1–2 most specific feature nouns or short phrases that
-reflect what the user is currently building or debugging (e.g. "recurring invoices",
-"login page", "PDF export", "fleet tracking system").
+${identifyGuidance}
 When a clear feature term is identifiable, embed it into each option by replacing
 the most fitting generic noun phrase. Valid replacement targets:
   "what was just built", "what was just made", "what was just created",
@@ -174,6 +222,7 @@ export function buildOptionPrompt(
   profile:  UserProfile | undefined,
   language: string | undefined,
   history:  PromptRecord[],
+  context?: OptionGenContext,
 ): string {
   const conf         = scoreArtifacts(history);
   const grounding    = buildGroundingLines(conf);
@@ -188,7 +237,7 @@ export function buildOptionPrompt(
 
   // Feature word grounding — recent window for current-feature context
   const groundingLines = GroundingConfig.enabled
-    ? buildFeatureGroundingSection(history, GroundingConfig.promptWindow, GroundingConfig.maxWords)
+    ? buildFeatureGroundingSection(history, GroundingConfig.promptWindow, GroundingConfig.maxWords, context)
     : '';
 
   // Multi-line options (steps separated by \n) are serialised as sub-arrays so the LLM
@@ -327,11 +376,12 @@ export async function generateOptionList(
   profile:  UserProfile | undefined,
   language: string | undefined,
   history:  PromptRecord[],
+  context?: OptionGenContext,
   client?:  OpenAI,
 ): Promise<GeneratedOptions | null> {
   try {
     const openai  = client ?? new OpenAI();
-    const prompt  = buildOptionPrompt(content, profile, language, history);
+    const prompt  = buildOptionPrompt(content, profile, language, history, context);
 
     const response = await openai.chat.completions.create(
       {

@@ -4,6 +4,7 @@ import {
   validateGeneratedOptions,
   generateOptionList,
   type GeneratedOptions,
+  type OptionGenContext,
 } from './OptionGenerator.js';
 import { TASK_REVIEW, IMPLEMENTATION_TO_REVIEW } from './options.js';
 import type { UserProfile, PromptRecord } from '../classifier/types.js';
@@ -343,7 +344,7 @@ describe('validateGeneratedOptions', () => {
 describe('generateOptionList', () => {
   it('returns GeneratedOptions on success', async () => {
     const client = makeClient(validResponse());
-    const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], client);
+    const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
     expect(result).not.toBeNull();
     expect(result?.l1).toHaveLength(TASK_REVIEW.L1.length);
   });
@@ -352,32 +353,32 @@ describe('generateOptionList', () => {
     const client = {
       chat: { completions: { create: vi.fn().mockRejectedValue(new Error('API error')) } },
     } as unknown as import('openai').default;
-    const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], client);
+    const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
     expect(result).toBeNull();
   });
 
   it('returns null when response fails validation (count mismatch)', async () => {
     const bad = JSON.stringify({ l1: ['only one'], l2: ['x', 'y'], l3: ['z'] });
     const client = makeClient(bad);
-    const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], client);
+    const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
     expect(result).toBeNull();
   });
 
   it('returns null when response is not valid JSON', async () => {
     const client = makeClient('not json at all');
-    const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], client);
+    const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
     expect(result).toBeNull();
   });
 
   it('passes profile=undefined without throwing', async () => {
     const client = makeClient(validResponse());
-    const result = await generateOptionList(TASK_REVIEW, undefined, undefined, [], client);
+    const result = await generateOptionList(TASK_REVIEW, undefined, undefined, [], undefined, client);
     expect(result).not.toBeNull();
   });
 
   it('calls the API with the generated prompt', async () => {
     const client = makeClient(validResponse());
-    await generateOptionList(TASK_REVIEW, makeProfile(), 'en', [makePrompt('test prompt')], client);
+    await generateOptionList(TASK_REVIEW, makeProfile(), 'en', [makePrompt('test prompt')], undefined, client);
     expect((client.chat.completions.create as ReturnType<typeof vi.fn>)).toHaveBeenCalledOnce();
     const callArg = (client.chat.completions.create as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(callArg.model).toBe('gpt-4o-mini');
@@ -436,5 +437,49 @@ describe('buildOptionPrompt — feature word grounding', () => {
     for (let i = 0; i < 5; i++) {
       expect(groundingBlock).not.toContain(`feat-${i}`);
     }
+  });
+
+  it('stage_transition context adds advisory block and [TRIGGER] label', () => {
+    const ctx: OptionGenContext = {
+      flagType:              'stage_transition',
+      currentStage:          'review_testing',
+      prevStage:             'implementation',
+      promptsInCurrentStage: 1,
+    };
+    const history = [
+      makePrompt('build the login page', 0),
+      makePrompt('add the logout button', 1),
+      makePrompt('add e2e tests for the login page', 2),
+    ];
+    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history, ctx);
+    const groundingBlock = prompt.slice(prompt.indexOf('Feature word grounding'));
+    expect(groundingBlock).toContain('stage_transition advisory');
+    expect(groundingBlock).toContain('[TRIGGER]');
+    expect(groundingBlock).toContain('PRECEDING prompts');
+    expect(groundingBlock).toContain('not yet built');
+  });
+
+  it('absence context adds advisory block with absence flag name', () => {
+    const ctx: OptionGenContext = {
+      flagType:              'absence:no_spec',
+      currentStage:          'implementation',
+      promptsInCurrentStage: 8,
+    };
+    const history = [makePrompt('build the dashboard', 0)];
+    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history, ctx);
+    const groundingBlock = prompt.slice(prompt.indexOf('Feature word grounding'));
+    expect(groundingBlock).toContain('absence advisory');
+    expect(groundingBlock).toContain('no_spec');
+    expect(groundingBlock).toContain('[TRIGGER]');
+    expect(groundingBlock).toContain('8 prompt');
+  });
+
+  it('no context — all recent prompts appear as numbered items without [TRIGGER]', () => {
+    const history = [makePrompt('step-A', 0), makePrompt('step-B', 1)];
+    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
+    const groundingBlock = prompt.slice(prompt.indexOf('Feature word grounding'));
+    expect(groundingBlock).toContain('[1] step-A');
+    expect(groundingBlock).toContain('[2] step-B');
+    expect(groundingBlock).not.toContain('[TRIGGER]');
   });
 });

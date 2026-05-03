@@ -333,6 +333,12 @@ export async function runAuto(
       userProfile,
       effectiveLang,
       mgr.current.promptHistory as import('../../classifier/types.js').PromptRecord[],
+      {
+        flagType,
+        currentStage:          mgr.current.currentStage,
+        prevStage,
+        promptsInCurrentStage: mgr.current.promptsInCurrentStage,
+      },
       openai,
     ),
   ]);
