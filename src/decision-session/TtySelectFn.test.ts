@@ -662,7 +662,7 @@ describe('createTtySelectFn — macOS (darwin)', () => {
       },
     );
     await createTtySelectFn()!(makeOpts());
-    expect(capturedAppleScript).toContain('busy of w');
+    expect(capturedAppleScript).toContain('busy of theTab');
     expect(capturedAppleScript).toContain('delay 0.5');
     expect(capturedAppleScript).toContain('on error');
     expect(capturedAppleScript).toContain('exit repeat');
