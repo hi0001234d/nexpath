@@ -415,6 +415,16 @@ describe('buildOptionPrompt — feature word grounding', () => {
     }
   });
 
+  it('grounding instruction lists broad replacement targets beyond just "what was just built"', () => {
+    const history = [makePrompt('build the login page', 0)];
+    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
+    const groundingBlock = prompt.slice(prompt.indexOf('Feature word grounding'));
+    expect(groundingBlock).toContain('this project');
+    expect(groundingBlock).toContain('this feature');
+    expect(groundingBlock).toContain('this task');
+    expect(groundingBlock).toContain('this implementation');
+  });
+
   it('grounding section contains exactly promptWindow entries, not all history', () => {
     const history = Array.from({ length: 10 }, (_, i) => makePrompt(`feat-${i}`, i));
     const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);

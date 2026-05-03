@@ -158,11 +158,13 @@ Most recent session prompts (current feature context — do not quote verbatim):
 ${promptLines}
 From the above, identify the 1–2 most specific feature nouns or short phrases that
 reflect what the user is currently building or debugging (e.g. "recurring invoices",
-"login page", "PDF export", "Stripe payment"). When a clear feature term is
-identifiable, you MUST embed it by replacing generic placeholders such as
-"what was just made", "what was just built", or "this feature" with the specific
-feature noun. Only leave options unchanged when no specific feature noun can be
-identified from the prompts above.`;
+"login page", "PDF export", "fleet tracking system").
+When a clear feature term is identifiable, embed it into each option by replacing
+the most fitting generic noun phrase. Valid replacement targets (in priority order):
+  "this project", "this feature", "this task", "this implementation",
+  "what was just built", "what was just made", "what was just created".
+Replace the first natural occurrence per option only. If none of these phrases
+appears in an option, leave that option unchanged. Do not force grounding.`;
 }
 
 // ── CO-STAR prompt ─────────────────────────────────────────────────────────────
@@ -221,9 +223,9 @@ Objective:
     - If an input item is an ARRAY → output must be an ARRAY of the SAME length. Each element is one step — rewrite its vocabulary only.
     - Each option or step must remain a complete instruction ready to send to an AI agent.
     - Feature grounding (apply when the section below identifies a feature term): replace
-      "what was just built" or "what was just made" with the specific feature noun in every
-      option where that phrase appears. Pattern: "what was just built" → "the [feature] feature".
-      See Example 4 below for a concrete demonstration.
+      the first generic noun phrase in each option ("this project", "this feature", "this task",
+      "this implementation", "what was just built", "what was just made") with the specific
+      feature noun. Replace one occurrence per option only. See Example 4 below.
 
 Style: ${styleLine}
 
@@ -249,9 +251,9 @@ Example 3 — mixed: some items are step arrays, some are plain strings:
 Input:  {"l1":[["1. Describe what changed.","2. Confirm it works as expected."],"One-line summary of what changed."],"l2":["Detail each changed part.","High-level only."],"l3":["Just the summary."]}
 Output: {"l1":[["1. Say what you changed in plain words.","2. Tell me it's working now."],"Short — what just happened?"],"l2":["Walk me through each changed part.","Just the big picture."],"l3":["Quick summary only."]}
 
-Example 4 — feature word grounding ("recurring invoices" substituted for "what was just built"):
-Input:  {"l1":["Take a look at what was just built — does it do what we wanted?","Check if what was just built matches what the task asked for."],"l2":["Quick check on what was just built.","Any obvious issues?"],"l3":["Looks good?"]}
-Output: {"l1":["Take a look at the recurring invoice feature — does it do what we wanted?","Check if the recurring invoice feature matches what the task asked for."],"l2":["Quick check on the recurring invoice feature.","Any obvious issues?"],"l3":["Looks good?"]}
+Example 4 — feature word grounding ("recurring invoice feature" replaces "this project" in a planning option):
+Input:  {"l1":["Write a PRD for this project: define the problem, target user, core features with acceptance criteria, and what is out of scope.","Define the problem and success criteria first: who is this project for and what problem does it solve?"],"l2":["Write a one-paragraph scope statement for this project."],"l3":["List the 3 most important acceptance criteria for this project."]}
+Output: {"l1":["Write a PRD for the recurring invoice feature: define the problem, target user, core features with acceptance criteria, and what is out of scope.","Define the problem and success criteria first: who is the recurring invoice feature for and what problem does it solve?"],"l2":["Write a one-paragraph scope statement for the recurring invoice feature."],"l3":["List the 3 most important acceptance criteria for the recurring invoice feature."]}
 
 Now rewrite the following input:
 ${inputJson}
