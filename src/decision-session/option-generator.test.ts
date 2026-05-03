@@ -3,6 +3,7 @@ import {
   buildOptionPrompt,
   validateGeneratedOptions,
   generateOptionList,
+  OPTION_GEN_MAX_RETRIES,
   type GeneratedOptions,
   type OptionGenContext,
 } from './OptionGenerator.js';
@@ -488,5 +489,70 @@ describe('buildOptionPrompt — feature word grounding', () => {
     expect(groundingBlock).toContain('[2] step-B');
     expect(groundingBlock).not.toContain('[TRIGGER]');
     expect(groundingBlock).not.toContain('Advisory context');
+  });
+});
+
+// ── generateOptionList — retry mechanism ─────────────────────────────────────
+
+function makeRetryClient(
+  responses: string[],
+): import('openai').default {
+  const create = vi.fn();
+  for (const r of responses) {
+    create.mockResolvedValueOnce({ choices: [{ message: { content: r } }] });
+  }
+  return { chat: { completions: { create } } } as unknown as import('openai').default;
+}
+
+describe('generateOptionList — retry on validation failure', () => {
+  it('succeeds on second attempt when first response fails validation', async () => {
+    const bad  = JSON.stringify({ l1: ['only one'], l2: ['x'], l3: ['z'] });
+    const good = validResponse();
+    const client = makeRetryClient([bad, good]);
+    const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
+    expect(result).not.toBeNull();
+    expect((client.chat.completions.create as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(2);
+  });
+
+  it('retry message contains the specific rejection error and failed response', async () => {
+    const bad  = JSON.stringify({ l1: ['only one'], l2: TASK_REVIEW.L2.map(o => o), l3: TASK_REVIEW.L3.map(o => o) });
+    const good = validResponse();
+    const client = makeRetryClient([bad, good]);
+    await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
+    const create   = client.chat.completions.create as ReturnType<typeof vi.fn>;
+    const retryArg = create.mock.calls[1][0] as { messages: Array<{ role: string; content: string }> };
+    expect(retryArg.messages).toHaveLength(3);
+    expect(retryArg.messages[1].role).toBe('assistant');
+    expect(retryArg.messages[1].content).toBe(bad);
+    expect(retryArg.messages[2].role).toBe('user');
+    expect(retryArg.messages[2].content).toContain('rejected');
+    expect(retryArg.messages[2].content).toContain('l1');
+  });
+
+  it('returns null and exhausts exactly OPTION_GEN_MAX_RETRIES+1 attempts', async () => {
+    const bad    = JSON.stringify({ l1: ['only one'], l2: ['x'], l3: ['z'] });
+    const client = makeRetryClient(Array(OPTION_GEN_MAX_RETRIES + 1).fill(bad));
+    const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
+    expect(result).toBeNull();
+    expect((client.chat.completions.create as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(OPTION_GEN_MAX_RETRIES + 1);
+  });
+
+  it('uses json_object response format on every attempt', async () => {
+    const bad    = JSON.stringify({ l1: ['only one'], l2: ['x'], l3: ['z'] });
+    const good   = validResponse();
+    const client = makeRetryClient([bad, good]);
+    await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
+    const create = client.chat.completions.create as ReturnType<typeof vi.fn>;
+    for (const call of create.mock.calls) {
+      expect((call[0] as { response_format: unknown }).response_format).toEqual({ type: 'json_object' });
+    }
+  });
+
+  it('returns null immediately on API error without retrying', async () => {
+    const create = vi.fn().mockRejectedValue(new Error('network error'));
+    const client = { chat: { completions: { create } } } as unknown as import('openai').default;
+    const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
+    expect(result).toBeNull();
+    expect(create).toHaveBeenCalledTimes(1);
   });
 });

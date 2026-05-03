@@ -18,9 +18,10 @@ import { GroundingConfig } from '../config/GroundingConfig.js';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-export const OPTION_GEN_MODEL      = 'gpt-4o-mini';
-export const OPTION_GEN_MAX_TOKENS = 750;
-export const OPTION_GEN_TEMP       = 0;
+export const OPTION_GEN_MODEL       = 'gpt-4o-mini';
+export const OPTION_GEN_MAX_TOKENS  = 750;
+export const OPTION_GEN_TEMP        = 0;
+export const OPTION_GEN_MAX_RETRIES = 2;
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -288,54 +289,73 @@ Response — return JSON only, no explanation, no markdown fencing:
 
 // ── Validation ─────────────────────────────────────────────────────────────────
 
-export function validateGeneratedOptions(
-  raw:     string,
-  content: DecisionContent,
-): GeneratedOptions | null {
+type ValidationResult = { options: GeneratedOptions } | { error: string };
+
+function validateWithError(raw: string, content: DecisionContent): ValidationResult {
   const stripped = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
 
   let parsed: unknown;
-  try { parsed = JSON.parse(stripped); } catch { return null; }
+  try { parsed = JSON.parse(stripped); } catch {
+    return { error: 'Response is not valid JSON.' };
+  }
 
   const p = parsed as Record<string, unknown>;
-  if (!Array.isArray(p.l1) || !Array.isArray(p.l2) || !Array.isArray(p.l3)) return null;
+  if (!Array.isArray(p.l1) || !Array.isArray(p.l2) || !Array.isArray(p.l3))
+    return { error: 'Response is missing required arrays l1, l2, or l3.' };
 
   const rawL1 = p.l1 as unknown[];
   const rawL2 = p.l2 as unknown[];
   const rawL3 = p.l3 as unknown[];
 
-  // Count must match static exactly
-  if (rawL1.length !== content.L1.length) return null;
-  if (rawL2.length !== content.L2.length) return null;
-  if (rawL3.length !== content.L3.length) return null;
+  if (rawL1.length !== content.L1.length)
+    return { error: `l1 has ${rawL1.length} item(s) but must have exactly ${content.L1.length}.` };
+  if (rawL2.length !== content.L2.length)
+    return { error: `l2 has ${rawL2.length} item(s) but must have exactly ${content.L2.length}.` };
+  if (rawL3.length !== content.L3.length)
+    return { error: `l3 has ${rawL3.length} item(s) but must have exactly ${content.L3.length}.` };
 
   // Per-item type validation and reassembly:
   //   source had \n  → generated item must be array of same step-count → join with \n
   //   source had no \n → generated item must be a plain string
-  const reassemble = (items: unknown[], source: string[]): string[] | null => {
+  const reassemble = (items: unknown[], source: string[], key: string): string[] | string => {
     const result: string[] = [];
     for (let i = 0; i < items.length; i++) {
+      const srcSteps     = source[i].split('\n').length;
       const srcMultiLine = source[i].includes('\n');
       const item = items[i];
       if (srcMultiLine) {
-        if (!Array.isArray(item)) return null;
-        if (item.length !== source[i].split('\n').length) return null;
-        if (!item.every((x) => typeof x === 'string' && (x as string).trim().length > 0)) return null;
+        if (!Array.isArray(item))
+          return `${key}[${i}] must be an array of ${srcSteps} step(s) (input was multi-line), got string.`;
+        if ((item as unknown[]).length !== srcSteps)
+          return `${key}[${i}] is an array of ${(item as unknown[]).length} step(s) but must have exactly ${srcSteps}.`;
+        if (!(item as unknown[]).every((x) => typeof x === 'string' && (x as string).trim().length > 0))
+          return `${key}[${i}] contains an empty or non-string step.`;
         result.push((item as string[]).join('\n'));
       } else {
-        if (typeof item !== 'string' || !(item as string).trim()) return null;
+        if (typeof item !== 'string' || !(item as string).trim())
+          return `${key}[${i}] must be a non-empty string (input was single-line), got ${Array.isArray(item) ? 'array' : typeof item}.`;
         result.push(item as string);
       }
     }
     return result;
   };
 
-  const l1 = reassemble(rawL1, content.L1);
-  const l2 = reassemble(rawL2, content.L2);
-  const l3 = reassemble(rawL3, content.L3);
-  if (!l1 || !l2 || !l3) return null;
+  const r1 = reassemble(rawL1, content.L1, 'l1');
+  if (typeof r1 === 'string') return { error: r1 };
+  const r2 = reassemble(rawL2, content.L2, 'l2');
+  if (typeof r2 === 'string') return { error: r2 };
+  const r3 = reassemble(rawL3, content.L3, 'l3');
+  if (typeof r3 === 'string') return { error: r3 };
 
-  return { l1, l2, l3 };
+  return { options: { l1: r1, l2: r2, l3: r3 } };
+}
+
+export function validateGeneratedOptions(
+  raw:     string,
+  content: DecisionContent,
+): GeneratedOptions | null {
+  const result = validateWithError(raw, content);
+  return 'options' in result ? result.options : null;
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
@@ -343,7 +363,9 @@ export function validateGeneratedOptions(
 /**
  * Generate personalised option text for the decision session.
  *
- * Returns null on any failure — caller uses static buildOptionList() as fallback.
+ * On validation failure, retries up to OPTION_GEN_MAX_RETRIES times — each retry
+ * appends the specific rejection error to the conversation so the LLM can self-correct.
+ * Returns null only after all attempts are exhausted; caller falls back to static options.
  * Never throws.
  */
 export async function generateOptionList(
@@ -358,22 +380,45 @@ export async function generateOptionList(
     const openai  = client ?? new OpenAI();
     const prompt  = buildOptionPrompt(content, profile, language, history, context);
 
-    const response = await openai.chat.completions.create(
-      {
-        model:       OPTION_GEN_MODEL,
-        messages:    [{ role: 'user', content: prompt }],
-        temperature: OPTION_GEN_TEMP,
-        max_tokens:  OPTION_GEN_MAX_TOKENS,
-      },
-      { timeout: 5_000 },
-    );
+    const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
+      { role: 'user', content: prompt },
+    ];
 
-    const raw = response.choices[0]?.message?.content ?? '';
-    const validated = validateGeneratedOptions(raw, content);
-    if (!validated) {
-      logger.debug('option_gen_validate_fail', { raw: raw.slice(0, 200) });
+    let lastRaw   = '';
+    let lastError = '';
+
+    for (let attempt = 0; attempt <= OPTION_GEN_MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        messages.push({ role: 'assistant', content: lastRaw });
+        messages.push({
+          role:    'user',
+          content: `Your response was rejected. Error: ${lastError} Fix only this issue and re-generate the complete JSON.`,
+        });
+      }
+
+      const response = await openai.chat.completions.create(
+        {
+          model:           OPTION_GEN_MODEL,
+          messages,
+          temperature:     OPTION_GEN_TEMP,
+          max_tokens:      OPTION_GEN_MAX_TOKENS,
+          response_format: { type: 'json_object' },
+        },
+        { timeout: 5_000 },
+      );
+
+      const raw    = response.choices[0]?.message?.content ?? '';
+      const result = validateWithError(raw, content);
+
+      if ('options' in result) return result.options;
+
+      lastRaw   = raw;
+      lastError = result.error;
+      logger.debug('option_gen_validate_fail', { attempt, error: result.error, raw: raw.slice(0, 200) });
     }
-    return validated;
+
+    logger.debug('option_gen_all_retries_failed', { lastError });
+    return null;
   } catch (err) {
     logger.debug('option_gen_error', { error: String(err) });
     return null;
