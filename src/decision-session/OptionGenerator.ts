@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import type { UserProfile, PromptRecord } from '../classifier/types.js';
 import type { DecisionContent } from './options.js';
 import { logger } from '../logger.js';
+import { GroundingConfig } from '../config/GroundingConfig.js';
 
 /**
  * Dynamic option text generator.
@@ -17,7 +18,7 @@ import { logger } from '../logger.js';
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 export const OPTION_GEN_MODEL      = 'gpt-4o-mini';
-export const OPTION_GEN_MAX_TOKENS = 600;
+export const OPTION_GEN_MAX_TOKENS = 750;
 export const OPTION_GEN_TEMP       = 0;
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -130,6 +131,40 @@ function buildToneLine(profile: UserProfile): string {
   return 'Direct and structured — no emotional content.';
 }
 
+// ── Feature word grounding helper ──────────────────────────────────────────────
+
+/**
+ * Builds the feature word grounding section of the option generation prompt.
+ *
+ * Passes the last `promptWindow` session prompts to the LLM and instructs it
+ * to extract 1–maxWords specific feature nouns and embed them naturally into
+ * each generated option. If fewer prompts exist than the window, all are used.
+ */
+function buildFeatureGroundingSection(
+  history:      PromptRecord[],
+  promptWindow: number,
+  maxWords:     number,
+): string {
+  const recent = history.slice(-promptWindow);
+  if (recent.length === 0) return '';
+
+  const promptLines = recent
+    .map((p, i) => `[${i + 1}] ${p.text}`)
+    .join('\n');
+
+  return `
+Feature word grounding — embed at most ${maxWords} word(s) naturally per option:
+Most recent session prompts (current feature context — do not quote verbatim):
+${promptLines}
+From the above, identify the 1–2 most specific feature nouns or short phrases that
+reflect what the user is currently building or debugging (e.g. "recurring invoices",
+"login page", "PDF export", "Stripe payment"). When a clear feature term is
+identifiable, you MUST embed it by replacing generic placeholders such as
+"what was just made", "what was just built", or "this feature" with the specific
+feature noun. Only leave options unchanged when no specific feature noun can be
+identified from the prompts above.`;
+}
+
 // ── CO-STAR prompt ─────────────────────────────────────────────────────────────
 
 export function buildOptionPrompt(
@@ -146,7 +181,13 @@ export function buildOptionPrompt(
     ? `\nLanguage: Rewrite in vocabulary appropriate for a ${language}-speaking developer. Use plain, jargon-free phrasing — the developer may not be a native English speaker.`
     : '';
 
+  // Vocab calibration — always use last 3 (same as before)
   const last3 = history.slice(-3).map((p, i) => `[${i + 1}] ${p.text}`).join('\n');
+
+  // Feature word grounding — recent window for current-feature context
+  const groundingLines = GroundingConfig.enabled
+    ? buildFeatureGroundingSection(history, GroundingConfig.promptWindow, GroundingConfig.maxWords)
+    : '';
 
   // Multi-line options (steps separated by \n) are serialised as sub-arrays so the LLM
   // never needs to preserve \n inside a string — it just keeps the array structure.
@@ -179,6 +220,10 @@ Objective:
     - If an input item is a STRING → output must be a STRING.
     - If an input item is an ARRAY → output must be an ARRAY of the SAME length. Each element is one step — rewrite its vocabulary only.
     - Each option or step must remain a complete instruction ready to send to an AI agent.
+    - Feature grounding (apply when the section below identifies a feature term): replace
+      "what was just built" or "what was just made" with the specific feature noun in every
+      option where that phrase appears. Pattern: "what was just built" → "the [feature] feature".
+      See Example 4 below for a concrete demonstration.
 
 Style: ${styleLine}
 
@@ -188,6 +233,7 @@ Audience: A developer who is moving fast with an AI coding agent. Options are pr
 
 Last 3 developer prompts (for vocabulary calibration — do not quote them in output):
 ${last3 || '(none yet)'}
+${groundingLines}
 
 Schema examples — each shows input → output. Follow this structure exactly:
 
@@ -202,6 +248,10 @@ Output: {"l1":["Run all the tests now.","Quick check first."],"l2":["Run just th
 Example 3 — mixed: some items are step arrays, some are plain strings:
 Input:  {"l1":[["1. Describe what changed.","2. Confirm it works as expected."],"One-line summary of what changed."],"l2":["Detail each changed part.","High-level only."],"l3":["Just the summary."]}
 Output: {"l1":[["1. Say what you changed in plain words.","2. Tell me it's working now."],"Short — what just happened?"],"l2":["Walk me through each changed part.","Just the big picture."],"l3":["Quick summary only."]}
+
+Example 4 — feature word grounding ("recurring invoices" substituted for "what was just built"):
+Input:  {"l1":["Take a look at what was just built — does it do what we wanted?","Check if what was just built matches what the task asked for."],"l2":["Quick check on what was just built.","Any obvious issues?"],"l3":["Looks good?"]}
+Output: {"l1":["Take a look at the recurring invoice feature — does it do what we wanted?","Check if the recurring invoice feature matches what the task asked for."],"l2":["Quick check on the recurring invoice feature.","Any obvious issues?"],"l3":["Looks good?"]}
 
 Now rewrite the following input:
 ${inputJson}
