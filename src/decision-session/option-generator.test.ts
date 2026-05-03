@@ -421,8 +421,7 @@ describe('buildOptionPrompt — feature word grounding', () => {
     const groundingBlock = prompt.slice(prompt.indexOf('Feature word grounding'));
     expect(groundingBlock).toContain('this project');
     expect(groundingBlock).toContain('this feature');
-    expect(groundingBlock).toContain('this task');
-    expect(groundingBlock).toContain('this implementation');
+    expect(groundingBlock).toContain('what was just built');
   });
 
   it('grounding section contains exactly promptWindow entries, not all history', () => {

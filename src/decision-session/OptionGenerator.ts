@@ -160,9 +160,9 @@ From the above, identify the 1–2 most specific feature nouns or short phrases 
 reflect what the user is currently building or debugging (e.g. "recurring invoices",
 "login page", "PDF export", "fleet tracking system").
 When a clear feature term is identifiable, embed it into each option by replacing
-the most fitting generic noun phrase. Valid replacement targets (in priority order):
-  "this project", "this feature", "this task", "this implementation",
-  "what was just built", "what was just made", "what was just created".
+the most fitting generic noun phrase. Valid replacement targets:
+  "what was just built", "what was just made", "what was just created",
+  "this project", "this feature".
 Replace the first natural occurrence per option only. If none of these phrases
 appears in an option, leave that option unchanged. Do not force grounding.`;
 }
@@ -223,9 +223,9 @@ Objective:
     - If an input item is an ARRAY → output must be an ARRAY of the SAME length. Each element is one step — rewrite its vocabulary only.
     - Each option or step must remain a complete instruction ready to send to an AI agent.
     - Feature grounding (apply when the section below identifies a feature term): replace
-      the first generic noun phrase in each option ("this project", "this feature", "this task",
-      "this implementation", "what was just built", "what was just made") with the specific
-      feature noun. Replace one occurrence per option only. See Example 4 below.
+      the first matching phrase in each option ("what was just built", "what was just made",
+      "what was just created", "this project", "this feature") with the specific feature noun.
+      Replace one occurrence per option only. See Example 4 below.
 
 Style: ${styleLine}
 
