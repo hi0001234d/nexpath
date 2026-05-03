@@ -439,7 +439,7 @@ describe('buildOptionPrompt — feature word grounding', () => {
     }
   });
 
-  it('stage_transition context adds advisory block and [TRIGGER] label', () => {
+  it('stage_transition context adds informational advisory block with stage names', () => {
     const ctx: OptionGenContext = {
       flagType:              'stage_transition',
       currentStage:          'review_testing',
@@ -453,13 +453,17 @@ describe('buildOptionPrompt — feature word grounding', () => {
     ];
     const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history, ctx);
     const groundingBlock = prompt.slice(prompt.indexOf('Feature word grounding'));
-    expect(groundingBlock).toContain('stage_transition advisory');
-    expect(groundingBlock).toContain('[TRIGGER]');
-    expect(groundingBlock).toContain('PRECEDING prompts');
-    expect(groundingBlock).toContain('not yet built');
+    expect(groundingBlock).toContain('stage_transition');
+    expect(groundingBlock).toContain('implementation');
+    expect(groundingBlock).toContain('review_testing');
+    expect(groundingBlock).toContain('review what was completed before moving on');
+    expect(groundingBlock).not.toContain('[TRIGGER]');
+    // All prompts still numbered [1]–[N], identification guidance unchanged
+    expect(groundingBlock).toContain('[1] build the login page');
+    expect(groundingBlock).toContain('currently building or debugging');
   });
 
-  it('absence context adds advisory block with absence flag name', () => {
+  it('absence context adds informational advisory block with flag name and action sentence', () => {
     const ctx: OptionGenContext = {
       flagType:              'absence:no_spec',
       currentStage:          'implementation',
@@ -470,16 +474,19 @@ describe('buildOptionPrompt — feature word grounding', () => {
     const groundingBlock = prompt.slice(prompt.indexOf('Feature word grounding'));
     expect(groundingBlock).toContain('absence advisory');
     expect(groundingBlock).toContain('no_spec');
-    expect(groundingBlock).toContain('[TRIGGER]');
     expect(groundingBlock).toContain('8 prompt');
+    expect(groundingBlock).toContain('address this quality gap before moving forward');
+    expect(groundingBlock).not.toContain('[TRIGGER]');
+    expect(groundingBlock).toContain('currently building or debugging');
   });
 
-  it('no context — all recent prompts appear as numbered items without [TRIGGER]', () => {
+  it('no context — all recent prompts appear as numbered items, no advisory block', () => {
     const history = [makePrompt('step-A', 0), makePrompt('step-B', 1)];
     const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
     const groundingBlock = prompt.slice(prompt.indexOf('Feature word grounding'));
     expect(groundingBlock).toContain('[1] step-A');
     expect(groundingBlock).toContain('[2] step-B');
     expect(groundingBlock).not.toContain('[TRIGGER]');
+    expect(groundingBlock).not.toContain('Advisory context');
   });
 });

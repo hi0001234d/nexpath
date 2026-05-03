@@ -148,10 +148,9 @@ function buildToneLine(profile: UserProfile): string {
  * to extract 1–maxWords specific feature nouns and embed them naturally into
  * each generated option. If fewer prompts exist than the window, all are used.
  *
- * When `context` is provided, the trigger prompt (the one that caused the
- * advisory to fire) is labeled [TRIGGER] and separated from preceding history.
- * For stage_transition advisories, grounding uses the preceding prompts
- * (completed work) rather than the trigger (new, unbuilt request).
+ * When `context` is provided, an informational advisory block is prepended that
+ * explains why this advisory fired. This helps the LLM calibrate grounding
+ * without overriding the identification logic.
  */
 function buildFeatureGroundingSection(
   history:      PromptRecord[],
@@ -162,51 +161,27 @@ function buildFeatureGroundingSection(
   const recent = history.slice(-promptWindow);
   if (recent.length === 0) return '';
 
-  const isTransition = context?.flagType === 'stage_transition';
-  const preceding    = recent.slice(0, -1);
-  const trigger      = recent[recent.length - 1];
+  const promptLines = recent.map((p, i) => `[${i + 1}] ${p.text}`).join('\n');
 
-  // Build prompt lines
-  let promptLines: string;
-  if (context) {
-    const precLines = preceding.map((p, i) => `[${i + 1}] ${p.text}`).join('\n');
-    promptLines = precLines
-      ? `${precLines}\n[TRIGGER] ${trigger.text}`
-      : `[TRIGGER] ${trigger.text}`;
-  } else {
-    promptLines = recent.map((p, i) => `[${i + 1}] ${p.text}`).join('\n');
-  }
-
-  // Advisory context block (only when context is provided)
+  // Advisory context block — informational only; explains WHY the advisory fired.
+  // Does not prescribe which prompts to use for grounding.
   let advisoryBlock = '';
   if (context) {
-    if (isTransition) {
-      advisoryBlock = `Advisory context: stage_transition advisory — developer moved from "${context.prevStage ?? 'unknown'}" → "${context.currentStage}".
-  The [TRIGGER] prompt caused this stage change and is a NEW request, not yet built.
-  Grounding target: use the PRECEDING prompts [1]–[N] to identify what was just completed.
-  Fall back to the [TRIGGER] prompt only if preceding prompts show no clear feature.\n`;
+    if (context.flagType === 'stage_transition') {
+      advisoryBlock = `Advisory context: stage_transition — developer moved from "${context.prevStage ?? 'unknown'}" → "${context.currentStage}" stage. This advisory asks them to review what was completed before moving on.\n`;
     } else {
       const absenceFlag = context.flagType.replace('absence:', '');
-      advisoryBlock = `Advisory context: absence advisory (${absenceFlag} not yet seen) — developer is ${context.promptsInCurrentStage} prompt(s) into "${context.currentStage}" stage.
-  The [TRIGGER] prompt is the most recent developer request.
-  Grounding target: identify the current feature from all recent prompts including the trigger.\n`;
+      advisoryBlock = `Advisory context: absence advisory — "${absenceFlag}" pattern not yet seen across ${context.promptsInCurrentStage} prompt(s) in "${context.currentStage}" stage. This advisory asks them to address this quality gap before moving forward.\n`;
     }
   }
-
-  // Identification guidance
-  const identifyGuidance = isTransition
-    ? `From the PRECEDING prompts [1]–[N] (not the trigger), identify the 1–2 most specific feature nouns
-or short phrases that reflect what the user just completed (e.g. "login page", "PDF export", "fleet tracking system").
-If no clear completed feature is identifiable from preceding prompts, use the trigger prompt as fallback.`
-    : `From the above, identify the 1–2 most specific feature nouns or short phrases that
-reflect what the user is currently building or debugging (e.g. "recurring invoices",
-"login page", "PDF export", "fleet tracking system").`;
 
   return `
 Feature word grounding — embed at most ${maxWords} word(s) naturally per option:
 ${advisoryBlock}Most recent session prompts (current feature context — do not quote verbatim):
 ${promptLines}
-${identifyGuidance}
+From the above, identify the 1–2 most specific feature nouns or short phrases that
+reflect what the user is currently building or debugging (e.g. "recurring invoices",
+"login page", "PDF export", "fleet tracking system").
 When a clear feature term is identifiable, embed it into each option by replacing
 the most fitting generic noun phrase. Valid replacement targets:
   "what was just built", "what was just made", "what was just created",
