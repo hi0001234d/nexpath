@@ -70,6 +70,25 @@ process.stdout.write = function(chunk, ...a) {
   return _ow(chunk, ...a);
 };
 
+const _rows = process.stdout.rows;
+const _cols = process.stdout.columns;
+const _msgLineCount = opts.message.split('\\n').length;
+const _fixedLines = 1 + _msgLineCount + 2;
+const _avail = _rows - _fixedLines - 2;
+function _lineCount(label) {
+  const v = (label || '').replace(/\\x1b\\[[0-9;]*m/g, '').length;
+  return Math.max(Math.ceil((v + 5) / _cols), 1);
+}
+let _budget = 0, _maxItems = 0;
+for (const opt of opts.options) {
+  const lc = _lineCount(opt.label);
+  if (_budget + lc > _avail) break;
+  _budget += lc;
+  _maxItems++;
+}
+_maxItems = Math.max(_maxItems, 5);
+_log('maxItems=' + _maxItems + ' budget=' + _budget + ' avail=' + _avail);
+
 // Capture Ctrl+X (opt-out) and Ctrl+T (frequency) pressed during the select UI.
 // @clack/prompts sets raw mode; our listener receives events it doesn't consume.
 if (process.stdin.isTTY) {
@@ -91,7 +110,7 @@ process.stdin.on('keypress', (ch, key) => {
 let picked;
 do {
   picked = await Promise.race([
-    select({ message: opts.message, options: opts.options }),
+    select({ message: opts.message, options: opts.options, maxItems: _maxItems }),
     new Promise((r) => setTimeout(() => r(TIMEOUT), 60_000)),
   ]);
 } while (typeof picked === 'string' && picked.startsWith(opts.separatorPrefix));
