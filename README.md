@@ -112,7 +112,7 @@ Nexpath is built for prompt capture across AI coding agents.
 
 | Agent | Status in v0.1.1 |
 |-------|-----------------|
-| **Claude Code** | Fully supported — advisory hook, registration, end-to-end tested |
+| **Claude Code** | Fully supported — advisory hook registration, end-to-end tested |
 | **Cursor** | Config detection implemented; end-to-end testing planned for v0.1.3 |
 | **Windsurf** | Config detection implemented; end-to-end testing planned for v0.1.3 |
 | **Cline** | Config detection implemented; end-to-end testing planned for v0.1.3 |
