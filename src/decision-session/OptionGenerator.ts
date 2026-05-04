@@ -180,15 +180,15 @@ function buildFeatureGroundingSection(
 Feature word grounding — embed at most ${maxWords} word(s) naturally per option:
 ${advisoryBlock}Most recent session prompts (current feature context — do not quote verbatim):
 ${promptLines}
-From the above, identify the 1–2 most specific feature nouns or short phrases that
-reflect what the user is currently building or debugging (e.g. "recurring invoices",
-"login page", "PDF export", "fleet tracking system").
-When a clear feature term is identifiable, embed it into each option by replacing
-the most fitting generic noun phrase. Valid replacement targets:
+Extract the feature term from the last prompt listed only (the highest-numbered one).
+If it describes a meta-operation (fixing a bug, making something look nicer, deploying,
+restyling) with no specific feature noun, write 'this feature' as the replacement — it
+reads neutrally. Embed the term into each option by replacing the most fitting generic
+noun phrase. Valid replacement targets:
   "what was just built", "what was just made", "what was just created",
   "this project", "this feature".
 Replace the first natural occurrence per option only. If none of these phrases
-appears in an option, leave that option unchanged. Do not force grounding.`;
+appears in an option, leave that option unchanged.`;
 }
 
 // ── CO-STAR prompt ─────────────────────────────────────────────────────────────

@@ -18,7 +18,7 @@ export const GroundingConfig = {
    * 2–3 is the sweet spot — enough to feel contextual, not enough to be awkward.
    * Set to 1 for very conservative grounding; 5 for richer (higher hallucination risk).
    */
-  maxWords:     3,
+  maxWords:     5,
 
   /**
    * How many of the most recent session prompts to pass as grounding context.

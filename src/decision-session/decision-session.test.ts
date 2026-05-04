@@ -14,6 +14,7 @@ import {
   PRD_TO_ARCHITECTURE,
   ARCHITECTURE_TO_TASKS,
   TASK_REVIEW,
+  TASK_REVIEW_CASUAL,
   IMPLEMENTATION_TO_REVIEW,
   REVIEW_TO_RELEASE,
   BEHAVIOUR_TESTING,
@@ -23,6 +24,7 @@ import {
   TRANSITION_CONTENT_BEGINNER,
   TASK_REVIEW_BEGINNER,
 } from './options-beginner.js';
+import type { UserProfile } from '../classifier/types.js';
 import {
   buildSelectMessage,
   formatPinchLabel,
@@ -223,21 +225,21 @@ describe('resolveDecisionContent', () => {
     expect(content).toBe(REVIEW_TO_RELEASE);
   });
 
-  it('stage_transition to implementation → TASK_REVIEW (within-implementation fallback)', () => {
-    // implementation is not in TRANSITION_CONTENT; special case branch returns TASK_REVIEW
+  it('stage_transition to implementation → TASK_REVIEW_CASUAL (no profile → casual default)', () => {
+    // implementation is not in TRANSITION_CONTENT; falls to selectNonBeginnerVariant(undefined) = TASK_REVIEW_CASUAL
     const content = resolveDecisionContent('implementation', 'stage_transition');
-    expect(content).toBe(TASK_REVIEW);
+    expect(content).toBe(TASK_REVIEW_CASUAL);
   });
 
-  it('stage_transition to idea → TASK_REVIEW (generic fallback for unmapped stage)', () => {
-    // idea is not in TRANSITION_CONTENT and not the implementation special case
+  it('stage_transition to idea → TASK_REVIEW_CASUAL (generic fallback, no profile)', () => {
+    // idea is not in TRANSITION_CONTENT; falls to selectNonBeginnerVariant(undefined) = TASK_REVIEW_CASUAL
     const content = resolveDecisionContent('idea', 'stage_transition');
-    expect(content).toBe(TASK_REVIEW);
+    expect(content).toBe(TASK_REVIEW_CASUAL);
   });
 
-  it('stage_transition to feedback_loop → TASK_REVIEW (generic fallback for terminal stage)', () => {
+  it('stage_transition to feedback_loop → TASK_REVIEW_CASUAL (generic fallback, no profile)', () => {
     const content = resolveDecisionContent('feedback_loop', 'stage_transition');
-    expect(content).toBe(TASK_REVIEW);
+    expect(content).toBe(TASK_REVIEW_CASUAL);
   });
 
   it('absence:test_creation → TASK_REVIEW content (specific override)', () => {
@@ -260,20 +262,20 @@ describe('resolveDecisionContent', () => {
     expect(content).toBe(TASK_REVIEW);
   });
 
-  it('absence:unknown_signal in implementation → falls back to TASK_REVIEW', () => {
+  it('absence:unknown_signal in implementation → falls back to TASK_REVIEW_CASUAL (no profile)', () => {
     const content = resolveDecisionContent('implementation', 'absence:some_unknown_signal');
-    expect(content).toBe(TASK_REVIEW);
+    expect(content).toBe(TASK_REVIEW_CASUAL);
   });
 
-  it('absence:unknown_signal in idea stage → falls back to TASK_REVIEW', () => {
-    // No specific override, 'idea' not in TRANSITION_CONTENT → TASK_REVIEW fallback
+  it('absence:unknown_signal in idea stage → falls back to TASK_REVIEW_CASUAL (no profile)', () => {
+    // No specific override, 'idea' not in TRANSITION_CONTENT → selectNonBeginnerVariant(undefined) = TASK_REVIEW_CASUAL
     const content = resolveDecisionContent('idea', 'absence:some_signal');
-    expect(content).toBe(TASK_REVIEW);
+    expect(content).toBe(TASK_REVIEW_CASUAL);
   });
 
-  it('absence:unknown_signal in feedback_loop stage → falls back to TASK_REVIEW', () => {
+  it('absence:unknown_signal in feedback_loop stage → falls back to TASK_REVIEW_CASUAL (no profile)', () => {
     const content = resolveDecisionContent('feedback_loop', 'absence:some_signal');
-    expect(content).toBe(TASK_REVIEW);
+    expect(content).toBe(TASK_REVIEW_CASUAL);
   });
 
   // Priority contract: absence override wins over TRANSITION_CONTENT
@@ -301,6 +303,60 @@ describe('resolveDecisionContent', () => {
   });
 });
 
+// ── resolveDecisionContent — heuristic variant routing ───────────────────────
+
+describe('resolveDecisionContent — heuristic variant routing', () => {
+  const makeProfile = (nature: 'beginner' | 'cool_geek' | 'pro_geek_soul' | 'hardcore_pro') =>
+    ({ nature } as UserProfile);
+
+  it('hardcore_pro → TASK_REVIEW (formal variant)', () => {
+    const content = resolveDecisionContent('implementation', 'stage_transition', makeProfile('hardcore_pro'));
+    expect(content).toBe(TASK_REVIEW);
+  });
+
+  it('cool_geek → TASK_REVIEW_CASUAL (casual variant)', () => {
+    const content = resolveDecisionContent('implementation', 'stage_transition', makeProfile('cool_geek'));
+    expect(content).toBe(TASK_REVIEW_CASUAL);
+  });
+
+  it('pro_geek_soul → TASK_REVIEW_CASUAL (casual variant)', () => {
+    const content = resolveDecisionContent('implementation', 'stage_transition', makeProfile('pro_geek_soul'));
+    expect(content).toBe(TASK_REVIEW_CASUAL);
+  });
+
+  it('beginner → TASK_REVIEW_BEGINNER (beginner variant, unchanged)', () => {
+    const content = resolveDecisionContent('implementation', 'stage_transition', makeProfile('beginner'));
+    expect(content).toBe(TASK_REVIEW_BEGINNER);
+  });
+
+  it('null profile → TASK_REVIEW_CASUAL (safe casual default)', () => {
+    const content = resolveDecisionContent('implementation', 'stage_transition', null);
+    expect(content).toBe(TASK_REVIEW_CASUAL);
+  });
+
+  it('undefined profile → TASK_REVIEW_CASUAL (safe casual default)', () => {
+    const content = resolveDecisionContent('implementation', 'stage_transition', undefined);
+    expect(content).toBe(TASK_REVIEW_CASUAL);
+  });
+
+  it('hardcore_pro generic fallback (non-implementation stage) → TASK_REVIEW', () => {
+    const content = resolveDecisionContent('idea', 'stage_transition', makeProfile('hardcore_pro'));
+    expect(content).toBe(TASK_REVIEW);
+  });
+
+  it('cool_geek still uses beginner absence map — absence:test_creation → TASK_REVIEW_BEGINNER', () => {
+    // isVibe=true for cool_geek → absenceMap = ABSENCE_CONTENT_BEGINNER → test_creation → TASK_REVIEW_BEGINNER
+    const content = resolveDecisionContent('implementation', 'absence:test_creation', makeProfile('cool_geek'));
+    expect(content).toBe(TASK_REVIEW_BEGINNER);
+  });
+
+  it('pro_geek_soul uses non-beginner absence map — absence:test_creation → TASK_REVIEW', () => {
+    // isVibe=false for pro_geek_soul → absenceMap = ABSENCE_CONTENT → test_creation → TASK_REVIEW
+    const content = resolveDecisionContent('implementation', 'absence:test_creation', makeProfile('pro_geek_soul'));
+    expect(content).toBe(TASK_REVIEW);
+  });
+});
+
 // ── Content structure validation ──────────────────────────────────────────────
 
 describe('DecisionContent structure', () => {
@@ -309,6 +365,7 @@ describe('DecisionContent structure', () => {
     PRD_TO_ARCHITECTURE,
     ARCHITECTURE_TO_TASKS,
     TASK_REVIEW,
+    TASK_REVIEW_CASUAL,
     IMPLEMENTATION_TO_REVIEW,
     REVIEW_TO_RELEASE,
     BEHAVIOUR_TESTING,  // v0.3.0 — must be included in structural invariant checks
@@ -375,6 +432,24 @@ describe('DecisionContent structure', () => {
     expect(TASK_REVIEW.L1).toHaveLength(3);
     expect(TASK_REVIEW.L2).toHaveLength(2);
     expect(TASK_REVIEW.L3).toHaveLength(1);
+  });
+
+  it('TASK_REVIEW_CASUAL has exactly 3 L1, 2 L2, 1 L3 options (same structure as TASK_REVIEW)', () => {
+    expect(TASK_REVIEW_CASUAL.L1).toHaveLength(3);
+    expect(TASK_REVIEW_CASUAL.L2).toHaveLength(2);
+    expect(TASK_REVIEW_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('TASK_REVIEW_CASUAL — every option contains "what was just built" (grounding target in all 6)', () => {
+    const allOptions = [
+      ...TASK_REVIEW_CASUAL.L1,
+      ...TASK_REVIEW_CASUAL.L2,
+      ...TASK_REVIEW_CASUAL.L3,
+    ];
+    expect(allOptions).toHaveLength(6);
+    for (const opt of allOptions) {
+      expect(opt).toContain('what was just built');
+    }
   });
 
   it('IMPLEMENTATION_TO_REVIEW has exactly 5 L1, 2 L2, 1 L3 options', () => {

@@ -459,9 +459,9 @@ describe('buildOptionPrompt — feature word grounding', () => {
     expect(groundingBlock).toContain('review_testing');
     expect(groundingBlock).toContain('review what was completed before moving on');
     expect(groundingBlock).not.toContain('[TRIGGER]');
-    // All prompts still numbered [1]–[N], identification guidance unchanged
+    // All prompts still numbered [1]–[N]; extraction pinned to last prompt only
     expect(groundingBlock).toContain('[1] build the login page');
-    expect(groundingBlock).toContain('currently building or debugging');
+    expect(groundingBlock).toContain('last prompt listed only');
   });
 
   it('absence context adds informational advisory block with flag name and action sentence', () => {
@@ -478,7 +478,7 @@ describe('buildOptionPrompt — feature word grounding', () => {
     expect(groundingBlock).toContain('8 prompt');
     expect(groundingBlock).toContain('address this quality gap before moving forward');
     expect(groundingBlock).not.toContain('[TRIGGER]');
-    expect(groundingBlock).toContain('currently building or debugging');
+    expect(groundingBlock).toContain('last prompt listed only');
   });
 
   it('no context — all recent prompts appear as numbered items, no advisory block', () => {

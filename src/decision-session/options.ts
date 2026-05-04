@@ -85,13 +85,13 @@ const ARCHITECTURE_TO_TASKS: DecisionContent = {
   ],
 };
 
-/** Transition 4: Task N → Task N+1 (per-task review) — also used for absence:test_creation */
+/** Transition 4: task_breakdown → implementation (per-task review before coding starts) */
 const TASK_REVIEW: DecisionContent = {
   question:      'Task done — reviewed and tested?',
   pinchFallback: 'Quick check.',
   L1: [
-    'Review the code just generated for this task: does the implementation match the spec and acceptance criteria? List any discrepancies, missing logic, hallucinated code, or potential issues before I mark this done.',
-    'Run the tests for this module and report: which tests pass, which fail, and what needs to be fixed before moving to the next task.',
+    'Review what was just built for this task: does the implementation match the spec and acceptance criteria? List any discrepancies, missing logic, hallucinated code, or potential issues before I mark this done.',
+    'Run the tests for what was just built and report: which tests pass, which fail, and what needs to be fixed before moving to the next task.',
     'Cross-confirm this implementation against the spec: does what was just built fully satisfy the requirements for this task? What is missing or different from what the spec required?',
   ],
   L2: [
@@ -100,6 +100,24 @@ const TASK_REVIEW: DecisionContent = {
   ],
   L3: [
     'Is there anything in the code just generated that looks wrong or incomplete before I move on?',
+  ],
+};
+
+/** TASK_REVIEW_CASUAL — casual-register variant for cool_geek and pro_geek_soul profiles */
+const TASK_REVIEW_CASUAL: DecisionContent = {
+  question:      'Task done — quick check before moving on?',
+  pinchFallback: 'Quick check.',
+  L1: [
+    'Quick look at what was just built — does it do what the task asked for? Anything off, anything missing, any weird generated code before I say it\'s done?',
+    'Run the tests for what was just built and report: which pass, which fail, and what needs fixing before moving on.',
+    'Does what was just built actually do what was asked? What\'s off or missing compared to what was planned?',
+  ],
+  L2: [
+    'Quick look at what was just built: does it do what the task asked for? Any obvious problems?',
+    'Does what was just built match what the task asked for — definition of done covered?',
+  ],
+  L3: [
+    'Anything in what was just built that looks off or incomplete before moving on?',
   ],
 };
 
@@ -188,21 +206,27 @@ const TRANSITION_CONTENT: Partial<Record<Stage, DecisionContent>> = {
   release:        REVIEW_TO_RELEASE,
 };
 
+function selectNonBeginnerVariant(nature: UserProfile['nature'] | null | undefined): DecisionContent {
+  if (nature === 'hardcore_pro') return TASK_REVIEW;
+  return TASK_REVIEW_CASUAL;
+}
+
 /**
  * Resolve the decision content to display.
  *
  * Priority:
  *   1. Absence flag with a specific override → use it
  *   2. Stage transition → use destination-stage content
- *   3. Implementation stage (within-stage absence) → TASK_REVIEW
- *   4. Ultimate fallback → TASK_REVIEW generic
+ *   3. Implementation stage (within-stage absence) → heuristic variant by profile.nature
+ *   4. Ultimate fallback → heuristic variant by profile.nature
  */
 export function resolveDecisionContent(
   currentStage: Stage,
   flagType:     FlagType,
   profile?:     UserProfile | null,
 ): DecisionContent {
-  const isVibe = profile?.nature === 'beginner' || profile?.nature === 'cool_geek';
+  const isBeginner = profile?.nature === 'beginner';
+  const isVibe     = isBeginner || profile?.nature === 'cool_geek';
   const absenceMap    = isVibe ? ABSENCE_CONTENT_BEGINNER : ABSENCE_CONTENT;
   const transitionMap = isVibe ? TRANSITION_CONTENT_BEGINNER : TRANSITION_CONTENT;
 
@@ -215,9 +239,9 @@ export function resolveDecisionContent(
   const transitionContent = transitionMap[currentStage];
   if (transitionContent) return transitionContent;
 
-  if (currentStage === 'implementation') return isVibe ? TASK_REVIEW_BEGINNER : TASK_REVIEW;
+  if (currentStage === 'implementation') return isBeginner ? TASK_REVIEW_BEGINNER : selectNonBeginnerVariant(profile?.nature);
 
-  return isVibe ? TASK_REVIEW_BEGINNER : TASK_REVIEW;
+  return isBeginner ? TASK_REVIEW_BEGINNER : selectNonBeginnerVariant(profile?.nature);
 }
 
 // ── Option list building ───────────────────────────────────────────────────────
@@ -278,6 +302,7 @@ export {
   PRD_TO_ARCHITECTURE,
   ARCHITECTURE_TO_TASKS,
   TASK_REVIEW,
+  TASK_REVIEW_CASUAL,
   IMPLEMENTATION_TO_REVIEW,
   REVIEW_TO_RELEASE,
   BEHAVIOUR_TESTING,
