@@ -43,12 +43,32 @@ function buildMjsScript(
   clipboardCmds: ClipboardCmd[],
 ): string {
   return `import { select, isCancel } from '${clackUrl}';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { emitKeypressEvents } from 'node:readline';
+import { tmpdir } from 'node:os';
 
 const opts    = JSON.parse(readFileSync('${optFileFwd}', 'utf8'));
 const TIMEOUT = Symbol('timeout');
+
+const _dbg = tmpdir() + '/nexpath-render-debug.txt';
+const _log = (m) => appendFileSync(_dbg, m + '\\n', 'utf8');
+_log('=== ' + new Date().toISOString() + ' ===');
+_log('columns=' + process.stdout.columns + '  rows=' + process.stdout.rows);
+const _ml = opts.message.split('\\n');
+_log('msgLines=' + _ml.length + '  opts=' + opts.options.length);
+_ml.forEach((l, i) => _log('  msg[' + i + '] visLen=' + l.replace(/\\x1b\\[[0-9;]*m/g, '').length));
+let _wc = 0, _nlTotal = 0;
+const _ow = process.stdout.write.bind(process.stdout);
+process.stdout.write = function(chunk, ...a) {
+  _wc++;
+  if (typeof chunk === 'string') {
+    const nl = (chunk.match(/\\n/g) || []).length;
+    _nlTotal += nl;
+    if (_wc <= 4) _log('w' + _wc + ' nl=' + nl + ' len=' + chunk.length);
+  }
+  return _ow(chunk, ...a);
+};
 
 // Capture Ctrl+X (opt-out) and Ctrl+T (frequency) pressed during the select UI.
 // @clack/prompts sets raw mode; our listener receives events it doesn't consume.
@@ -75,6 +95,9 @@ do {
     new Promise((r) => setTimeout(() => r(TIMEOUT), 60_000)),
   ]);
 } while (typeof picked === 'string' && picked.startsWith(opts.separatorPrefix));
+
+process.stdout.write = _ow;
+_log('done: writes=' + _wc + ' nlTotal=' + _nlTotal);
 
 if (!isCancel(picked) && picked !== TIMEOUT && typeof picked === 'string'
     && picked !== opts.skipNow && picked !== opts.showSimpler) {
