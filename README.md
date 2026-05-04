@@ -136,7 +136,7 @@ npm link
 nexpath install --yes
 nexpath status
 ```
-> **Note:** Nexpath is currently fully supported on **Claude Code CLI** — other agents are planned for v0.1.3.  
+> **NOTE:** Nexpath is currently fully supported on **Claude Code CLI** — other agents are planned for v0.1.3.  
 
 ### Environment Variables
 
