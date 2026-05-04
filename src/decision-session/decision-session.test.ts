@@ -963,13 +963,13 @@ describe('runLevel — SKIP_NOW label split', () => {
     expect(skipItem).toBeDefined();
   });
 
-  it('SKIP_NOW option label differs from its value (styled bold)', async () => {
+  it('SKIP_NOW option label is plain text and differs from its value', async () => {
     const spy = vi.fn().mockResolvedValue(SKIP_NOW);
     await runLevel(makeInput({ decisionSessionCount: 5 }), 1, spy as SelectFn);
     const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
     const skipItem = opts.find((o) => o.value === SKIP_NOW);
     expect(skipItem?.label).not.toBe(SKIP_NOW);
-    expect(skipItem?.label).toContain('\x1b[1m'); // bold ANSI escape
+    expect(skipItem?.label).toContain('Skip for now');
   });
 
   it('SKIP_NOW still resolves as "skip" outcome despite label change', async () => {
@@ -1320,37 +1320,24 @@ describe('W-05: formatOptionLabel', () => {
 });
 
 describe('W-05: clack-path label styling', () => {
-  const DIM_GRAY = '\x1b[2m';
-  const RESET    = '\x1b[0m';
-  const BOLD     = '\x1b[1m';
-
-  it('SHOW_SIMPLER item gets DIM_GRAY styled label in clackOptions', async () => {
+  it('SHOW_SIMPLER item label is plain text', async () => {
     const spy = vi.fn().mockResolvedValue(SKIP_NOW);
     await runLevel(makeInput(), 1, spy as SelectFn);
     const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
     const showSimplerOpt = opts.find((o) => o.value === SHOW_SIMPLER);
     expect(showSimplerOpt).toBeDefined();
-    expect(showSimplerOpt!.label).toContain(DIM_GRAY);
     expect(showSimplerOpt!.label).toContain('Show simpler options');
+    expect(showSimplerOpt!.label).not.toContain('\x1b[');
   });
 
-  it('SHOW_SIMPLER label is NOT the raw string (has styling)', async () => {
-    const spy = vi.fn().mockResolvedValue(SKIP_NOW);
-    await runLevel(makeInput(), 1, spy as SelectFn);
-    const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
-    const showSimplerOpt = opts.find((o) => o.value === SHOW_SIMPLER);
-    expect(showSimplerOpt!.label).not.toBe(SHOW_SIMPLER);
-  });
-
-  it('SKIP_NOW item gets BOLD+DIM_GRAY styled label in clackOptions', async () => {
+  it('SKIP_NOW item label is plain text and contains human-readable text', async () => {
     const spy = vi.fn().mockResolvedValue(SKIP_NOW);
     await runLevel(makeInput(), 1, spy as SelectFn);
     const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
     const skipNowOpt = opts.find((o) => o.value === SKIP_NOW);
     expect(skipNowOpt).toBeDefined();
-    expect(skipNowOpt!.label).toContain(BOLD);
-    expect(skipNowOpt!.label).toContain(DIM_GRAY);
     expect(skipNowOpt!.label).toContain('Skip for now');
+    expect(skipNowOpt!.label).not.toContain('\x1b[');
   });
 
   it('multi-line option text (via generatedOptions) gets label with \\n│    prefix on continuation lines', async () => {
