@@ -8,23 +8,19 @@ Nexpath gives developers meaningful direction while they work with AI coding age
 
 ## What Is Nexpath?
 
-Nexpath is a behaviour guidance system for developers using AI coding agents. It monitors your
-development sessions, understands where you are in your project lifecycle, and surfaces
-**"the decision session"** — a lightweight, non-intrusive interactive prompt that gives you
-meaningful input and direction without ever forcing your hand.
+Nexpath is a behaviour guidance system for developers using AI coding 
+agents. It monitors your development sessions, understands where you are in your 
+project lifecycle, and surfaces **"the decision session"** — a 
+lightweight prompt that gives you meaningful direction without ever 
+forcing your hand.
 
-When Nexpath detects a meaningful moment in your workflow — like transitioning from planning
-to architecture, or finishing a coding task without running tests — it presents a set of
-**pre-filled agent prompts** you can select with one keypress. These aren't tips. They're
-ready-to-send prompts that tell your AI agent exactly what to do next.
+When Nexpath detects a meaningful moment in your workflow — like 
+moving from planning to architecture, or finishing a task without 
+running tests — it presents pre-filled agent prompts you can select 
+with one keypress. These aren't tips. They're ready-to-send prompts 
+that tell your AI agent exactly what to do next.
 
-If the suggested actions don't fit your current situation, Nexpath offers progressively
-simpler alternatives — the decision session cascades through three levels, from full-depth
-to minimum viable step. If none fit at all, skip it — `nexpath optimize` lets you revisit
-skipped items later in one focused session.
-
-**Fully supported on Claude Code as of v0.1.1.** Support for additional coding agents is
-planned for v0.1.3.
+If none fit at all, skip it and revisit skipped items later in one focused session
 
 ---
 
@@ -33,22 +29,18 @@ planned for v0.1.3.
 ```mermaid
 flowchart TB
     Agent["<b>AI Coding Agent</b><br/>Claude Code — fully supported"]
-
-    subgraph MCP["nexpath-serve (MCP stdio server)"]
-        Capture["capture_prompt<br/>tool handler"]
+    subgraph NS["nexpath-serve"]
+        Capture["capture_prompt handler"]
     end
-
     DB[("prompt-store.db<br/>SQLite · ~/.nexpath/")]
-
     subgraph Pipeline["Advisory Pipeline — fires automatically after agent responds"]
         S1["<b>Stage 1: Prompt Classifier</b><br/>Tier 1: Keyword Match (&lt;1ms)<br/>Tier 2: TF-IDF Scoring (&lt;5ms)"]
         SM["<b>Session State Manager</b><br/>stage tracking · signal counters<br/>absence detection · user profile"]
         S2["<b>Stage 2: LLM Cross-Confirmation</b><br/>gpt-4o-mini / Gemini"]
         DS["<b>Decision Session UI</b><br/>pinch label → question → L1 / L2 / L3<br/>selected prompt → back to agent"]
     end
-
-    Agent --> MCP
-    Capture --> DB
+    Agent --> NS
+    NS --> DB
     Agent --> Pipeline
     S1 --> SM --> S2 --> DS
     DS -->|"selected prompt"| Agent
@@ -58,42 +50,17 @@ flowchart TB
 
 ## Why Nexpath Exists
 
-Vibe coding has changed how software gets built. AI coding agents can generate entire features
-from a single sentence — but the speed of generation often outpaces the discipline of process.
-Developers skip reviews. They forget regression checks. They ship without acceptance tests.
-Not out of laziness — out of momentum.
+AI coding agents can generate entire features from a single sentence — 
+but the speed of generation often outpaces the discipline of process. 
+Developers skip reviews, forget regression checks, ship without 
+acceptance tests. Not out of laziness — out of momentum.
 
-We saw this firsthand in our own team's workflows: careless approvals, skipped cross-confirmation,
-over-reliance on AI output. These problems get worse in vibe-coded projects where the entire
-codebase may have been generated without rigorous verification at any stage.
+Nexpath closes the gap between what AI agents can generate and what 
+disciplined development actually requires. It appears at the right 
+moments with the right questions: _"You just finished a feature. 
+Want to cross-confirm before moving on?"_
 
-Nexpath was built during AI Hackfest 2026 by MLH, informed by prior deep research on MCP and
-coding agent workflows. It addresses the gap between what AI agents can generate and what
-disciplined development actually requires — giving developers helpful direction, interesting
-input, and meaningful suggestions right inside their coding sessions.
-
-Nexpath does not slow you down. It complements your momentum by appearing at the right moments
-with the right questions: _"You just finished a feature. Want to cross-confirm before
-moving on?"_
-
----
-
-## Relationship to ReviewDuel
-
-Nexpath is an independent project developed alongside **ReviewDuel**, an open-source peer-review
-layer for coding-agent workflows.
-
-ReviewDuel focuses on **what you build** — reviewing artifacts, flagging risks, guiding code
-quality. Nexpath focuses on **how you build** — guiding your development behaviour across
-sessions so that important steps like testing, reviews, and architecture decisions don't get
-skipped under vibe-coding momentum.
-
-Nexpath was extracted as an independent, standalone project so it can:
-- Be adopted by developers who do not use ReviewDuel
-- Be submitted to hackathons and evaluated on its own merits
-- Evolve on its own release cycle
-
-When ReviewDuel becomes public, Nexpath will also ship as an integrated component within it.
+Built during AI Hackfest 2026 by MLH.
 
 ---
 
@@ -111,16 +78,10 @@ The decision session cascades through three levels:
 - **Level 3** — Minimum viable step — one small action that still moves you forward
 
 Select "Show simpler options →" to move down a level. Select "Skip for now" to record the item
-and revisit it later with `nexpath optimize`.
+and revisit it later with `nexpath optimize`. (Not yet implemented in v0.1.1 — coming in v0.1.4.)
 
 Decision sessions fire at key moments: moving from idea to planning, planning to architecture,
 architecture to task breakdown, completing a task, finishing a phase, and pre-release checks.
-
-### `nexpath optimize`
-
-Run all previously skipped guidance items in one focused session. Nexpath replays each skipped
-decision session from oldest to newest, using the same 3-level cascade. Items you address are
-removed from the queue; items you skip again stay for next time.
 
 ### Vocabulary and Tone Calibration
 
@@ -147,17 +108,17 @@ regression checks, it raises an absence flag and offers relevant suggestions.
 
 ### Agent Support
 
-Nexpath is built on the Model Context Protocol (MCP) for prompt capture across AI coding agents.
+Nexpath is built for prompt capture across AI coding agents.
 
 | Agent | Status in v0.1.1 |
 |-------|-----------------|
-| **Claude Code** | Fully supported — MCP registration, advisory hook, end-to-end tested |
-| **Cursor** | Config detection and MCP registration implemented; end-to-end testing planned for v0.1.3 |
-| **Windsurf** | Config detection and MCP registration implemented; end-to-end testing planned for v0.1.3 |
-| **Cline** | Config detection and MCP registration implemented; end-to-end testing planned for v0.1.3 |
-| **Roo Code** | Config detection and MCP registration implemented; end-to-end testing planned for v0.1.3 |
-| **KiloCode** | Config detection and MCP registration implemented; end-to-end testing planned for v0.1.3 |
-| **OpenCode** | Config detection and MCP registration implemented; end-to-end testing planned for v0.1.3 |
+| **Claude Code** | Fully supported — advisory hook registration, end-to-end tested |
+| **Cursor** | Config detection implemented; end-to-end testing planned for v0.1.3 |
+| **Windsurf** | Config detection implemented; end-to-end testing planned for v0.1.3 |
+| **Cline** | Config detection implemented; end-to-end testing planned for v0.1.3 |
+| **Roo Code** | Config detection implemented; end-to-end testing planned for v0.1.3 |
+| **KiloCode** | Config detection implemented; end-to-end testing planned for v0.1.3 |
+| **OpenCode** | Config detection implemented; end-to-end testing planned for v0.1.3 |
 
 ---
 
@@ -178,10 +139,15 @@ nexpath status
 
 ### Environment Variables
 
+set it per project using a `.env` file:
+
 ```bash
-# Required for LLM features (cross-confirmation + pinch labels)
-export OPENAI_API_KEY=your-key-here
+cd /path/to/your-project
+echo 'OPENAI_API_KEY=sk-your-key-here' > .env
+claude
 ```
+
+> This will directly start Claude Code using your project environment.
 
 Without an API key, Nexpath still functions — it falls back to static pinch labels and skips
 LLM cross-confirmation. The local classifier and decision session UI work fully offline.
@@ -194,21 +160,9 @@ nexpath uninstall
 
 ---
 
-## Usage
-
-```bash
-# Set up a new project (interactive questionnaire)
-nexpath init
-
-# Revisit previously skipped decision session items
-nexpath optimize
-```
-
----
-
 ## The Decision Session — How It Works
 
-1. **Detection** — As you work with your coding agent, Nexpath captures each prompt via MCP
+1. **Detection** — As you work with your coding agent, Nexpath captures each prompt
    and classifies your development stage in <5ms using keyword matching and TF-IDF scoring.
 
 2. **Trigger** — When a stage transition is detected (e.g., you've moved from planning to
@@ -224,7 +178,7 @@ nexpath optimize
    "Show simpler options" to see lighter alternatives. Select "Skip for now" to record the
    item and move on.
 
-5. **Replay** — Run `nexpath optimize` anytime to revisit all skipped items in one session.
+5. **Replay** — Revisit all skipped items anytime in one focused session.
 
 ---
 
@@ -261,8 +215,8 @@ nexpath store delete -y
 
 | Version | Status | Description |
 |---------|--------|-------------|
-| **v0.1.1** | Completed | Core behaviour guidance system — decision sessions, 3-level options, `nexpath optimize`, prompt classification, developer profiling. Full Claude Code support. |
-| **v0.1.2** | Planned | Fix decision session UI timing — currently the interactive UI fires during prompt processing instead of after the agent has responded. Stabilise MCP server and advisory pipeline for production reliability. |
+| **v0.1.1** | Completed | Core behaviour guidance system — decision sessions, 3-level options, prompt classification, developer profiling. Full Claude Code support. |
+| **v0.1.2** | Planned | Fix decision session UI timing — currently the interactive UI fires during prompt processing instead of after the agent has responded. Stabilise the advisory pipeline for production reliability. |
 | **v0.1.3** | Planned | Expand end-to-end support to additional coding agents: Cursor, Windsurf, Cline, Roo Code, KiloCode, and OpenCode. |
 
 ---
@@ -291,4 +245,3 @@ are tracked in this repo. The ReviewDuel integration is maintained separately.
 - **Model Context Protocol** — For enabling cross-agent prompt capture
 
 Built with insights from the vibe coding community and developers building real projects with AI coding agents.
-
