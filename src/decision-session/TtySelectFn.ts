@@ -86,8 +86,13 @@ for (const opt of opts.options) {
   _budget += lc;
   _maxItems++;
 }
+const _skipNowIdx = opts.options.findIndex(o => o.value === opts.skipNow);
+if (_skipNowIdx >= 0 && _maxItems <= _skipNowIdx) _maxItems = _skipNowIdx + 1;
 _maxItems = Math.max(_maxItems, 5);
-_log('maxItems=' + _maxItems + ' budget=' + _budget + ' avail=' + _avail);
+const _selOptions = (_skipNowIdx >= 0 && _maxItems < opts.options.length)
+  ? opts.options.slice(0, _skipNowIdx + 1)
+  : opts.options;
+_log('maxItems=' + _maxItems + ' budget=' + _budget + ' avail=' + _avail + ' selOpts=' + _selOptions.length);
 
 // Capture Ctrl+X (opt-out) and Ctrl+T (frequency) pressed during the select UI.
 // @clack/prompts sets raw mode; our listener receives events it doesn't consume.
@@ -110,7 +115,7 @@ process.stdin.on('keypress', (ch, key) => {
 let picked;
 do {
   picked = await Promise.race([
-    select({ message: opts.message, options: opts.options, maxItems: _maxItems }),
+    select({ message: opts.message, options: _selOptions }),
     new Promise((r) => setTimeout(() => r(TIMEOUT), 60_000)),
   ]);
 } while (typeof picked === 'string' && picked.startsWith(opts.separatorPrefix));
