@@ -29,22 +29,18 @@ If none fit at all, skip it and revisit skipped items later in one focused sessi
 ```mermaid
 flowchart TB
     Agent["<b>AI Coding Agent</b><br/>Claude Code — fully supported"]
-
     subgraph NS["nexpath-serve"]
         Capture["capture_prompt handler"]
     end
-
     DB[("prompt-store.db<br/>SQLite · ~/.nexpath/")]
-
     subgraph Pipeline["Advisory Pipeline — fires automatically after agent responds"]
         S1["<b>Stage 1: Prompt Classifier</b><br/>Tier 1: Keyword Match (&lt;1ms)<br/>Tier 2: TF-IDF Scoring (&lt;5ms)"]
         SM["<b>Session State Manager</b><br/>stage tracking · signal counters<br/>absence detection · user profile"]
         S2["<b>Stage 2: LLM Cross-Confirmation</b><br/>gpt-4o-mini / Gemini"]
         DS["<b>Decision Session UI</b><br/>pinch label → question → L1 / L2 / L3<br/>selected prompt → back to agent"]
     end
-
-    Agent --> Capture
-    Capture --> DB
+    Agent --> NS
+    NS --> DB
     Agent --> Pipeline
     S1 --> SM --> S2 --> DS
     DS -->|"selected prompt"| Agent
