@@ -360,6 +360,11 @@ const TRANSITION_CONTENT: Partial<Record<Stage, DecisionContent>> = {
   release:        REVIEW_TO_RELEASE,
 };
 
+function selectAbsenceMap(nature: UserProfile['nature'] | null | undefined): Partial<Record<string, DecisionContent>> {
+  if (nature === 'hardcore_pro') return ABSENCE_CONTENT;
+  return ABSENCE_CONTENT_CASUAL;
+}
+
 function selectNonBeginnerVariant(nature: UserProfile['nature'] | null | undefined): DecisionContent {
   if (nature === 'hardcore_pro') return TASK_REVIEW;
   return TASK_REVIEW_CASUAL;
@@ -381,7 +386,7 @@ export function resolveDecisionContent(
 ): DecisionContent {
   const isBeginner = profile?.nature === 'beginner';
   const isVibe     = isBeginner || profile?.nature === 'cool_geek';
-  const absenceMap    = isVibe ? ABSENCE_CONTENT_BEGINNER : ABSENCE_CONTENT;
+  const absenceMap    = isVibe ? ABSENCE_CONTENT_BEGINNER : selectAbsenceMap(profile?.nature);
   const transitionMap = isVibe ? TRANSITION_CONTENT_BEGINNER : TRANSITION_CONTENT;
 
   if (flagType.startsWith('absence:')) {

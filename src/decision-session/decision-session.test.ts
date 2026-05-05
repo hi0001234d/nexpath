@@ -252,24 +252,24 @@ describe('resolveDecisionContent', () => {
     expect(content).toBe(TASK_REVIEW_CASUAL);
   });
 
-  it('absence:test_creation → ABSENCE_TEST_CREATION content (specific override)', () => {
+  it('absence:test_creation → ABSENCE_TEST_CREATION_CASUAL content (no profile, casual default)', () => {
     const content = resolveDecisionContent('implementation', 'absence:test_creation');
-    expect(content).toBe(ABSENCE_TEST_CREATION);
+    expect(content).toBe(ABSENCE_TEST_CREATION_CASUAL);
   });
 
-  it('absence:regression_check → ABSENCE_REGRESSION_CHECK content', () => {
+  it('absence:regression_check → ABSENCE_REGRESSION_CHECK_CASUAL content (no profile, casual default)', () => {
     const content = resolveDecisionContent('implementation', 'absence:regression_check');
-    expect(content).toBe(ABSENCE_REGRESSION_CHECK);
+    expect(content).toBe(ABSENCE_REGRESSION_CHECK_CASUAL);
   });
 
-  it('absence:cross_confirming → ABSENCE_CROSS_CONFIRMING content', () => {
+  it('absence:cross_confirming → ABSENCE_CROSS_CONFIRMING_CASUAL content (no profile, casual default)', () => {
     const content = resolveDecisionContent('implementation', 'absence:cross_confirming');
-    expect(content).toBe(ABSENCE_CROSS_CONFIRMING);
+    expect(content).toBe(ABSENCE_CROSS_CONFIRMING_CASUAL);
   });
 
-  it('absence:spec_acceptance_check → ABSENCE_SPEC_ACCEPTANCE content', () => {
+  it('absence:spec_acceptance_check → ABSENCE_SPEC_ACCEPTANCE_CASUAL content (no profile, casual default)', () => {
     const content = resolveDecisionContent('review_testing', 'absence:spec_acceptance_check');
-    expect(content).toBe(ABSENCE_SPEC_ACCEPTANCE);
+    expect(content).toBe(ABSENCE_SPEC_ACCEPTANCE_CASUAL);
   });
 
   it('absence:unknown_signal in implementation → falls back to TASK_REVIEW_CASUAL (no profile)', () => {
@@ -289,16 +289,16 @@ describe('resolveDecisionContent', () => {
   });
 
   // Priority contract: absence override wins over TRANSITION_CONTENT
-  it('absence:test_creation on prd stage → ABSENCE_TEST_CREATION (override wins over IDEA_TO_PRD transition)', () => {
+  it('absence:test_creation on prd stage → ABSENCE_TEST_CREATION_CASUAL (override wins over IDEA_TO_PRD transition)', () => {
     // Priority 1 (absence override) takes precedence over priority 2 (stage-based transition).
-    // 'prd' is in TRANSITION_CONTENT → IDEA_TO_PRD, but absence:test_creation override → ABSENCE_TEST_CREATION.
+    // 'prd' is in TRANSITION_CONTENT → IDEA_TO_PRD, but absence:test_creation override → ABSENCE_TEST_CREATION_CASUAL (no profile → casual default).
     const content = resolveDecisionContent('prd', 'absence:test_creation');
-    expect(content).toBe(ABSENCE_TEST_CREATION);
+    expect(content).toBe(ABSENCE_TEST_CREATION_CASUAL);
   });
 
-  it('absence:regression_check on architecture stage → ABSENCE_REGRESSION_CHECK (override wins over PRD_TO_ARCHITECTURE)', () => {
+  it('absence:regression_check on architecture stage → ABSENCE_REGRESSION_CHECK_CASUAL (override wins over PRD_TO_ARCHITECTURE)', () => {
     const content = resolveDecisionContent('architecture', 'absence:regression_check');
-    expect(content).toBe(ABSENCE_REGRESSION_CHECK);
+    expect(content).toBe(ABSENCE_REGRESSION_CHECK_CASUAL);
   });
 
   it('unmapped absence on prd stage → IDEA_TO_PRD (falls through to TRANSITION_CONTENT)', () => {
