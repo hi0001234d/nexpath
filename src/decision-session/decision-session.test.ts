@@ -32,6 +32,8 @@ import {
   TRANSITION_CONTENT_BEGINNER,
   TASK_REVIEW_BEGINNER,
   ABSENCE_TEST_CREATION_BEGINNER,
+  ABSENCE_REGRESSION_CHECK_BEGINNER,
+  ABSENCE_SPEC_ACCEPTANCE_BEGINNER,
   ABSENCE_CROSS_CONFIRMING_BEGINNER,
 } from './options-beginner.js';
 import type { UserProfile } from '../classifier/types.js';
@@ -389,6 +391,21 @@ describe('resolveDecisionContent — heuristic variant routing', () => {
     const content = resolveDecisionContent('implementation', 'absence:test_creation', makeProfile('hardcore_pro'));
     expect(content).toBe(ABSENCE_TEST_CREATION);
   });
+
+  it('hardcore_pro + absence:regression_check → ABSENCE_REGRESSION_CHECK (formal, not casual)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:regression_check', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_REGRESSION_CHECK);
+  });
+
+  it('hardcore_pro + absence:spec_acceptance_check → ABSENCE_SPEC_ACCEPTANCE (formal, not casual)', () => {
+    const content = resolveDecisionContent('review_testing', 'absence:spec_acceptance_check', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_SPEC_ACCEPTANCE);
+  });
+
+  it('hardcore_pro + absence:cross_confirming → ABSENCE_CROSS_CONFIRMING (formal, not casual)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:cross_confirming', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_CROSS_CONFIRMING);
+  });
 });
 
 // ── Content structure validation ──────────────────────────────────────────────
@@ -402,7 +419,15 @@ describe('DecisionContent structure', () => {
     TASK_REVIEW_CASUAL,
     IMPLEMENTATION_TO_REVIEW,
     REVIEW_TO_RELEASE,
-    BEHAVIOUR_TESTING,  // v0.3.0 — must be included in structural invariant checks
+    BEHAVIOUR_TESTING,
+    ABSENCE_TEST_CREATION,
+    ABSENCE_TEST_CREATION_CASUAL,
+    ABSENCE_REGRESSION_CHECK,
+    ABSENCE_REGRESSION_CHECK_CASUAL,
+    ABSENCE_SPEC_ACCEPTANCE,
+    ABSENCE_SPEC_ACCEPTANCE_CASUAL,
+    ABSENCE_CROSS_CONFIRMING,
+    ABSENCE_CROSS_CONFIRMING_CASUAL,
   ];
 
   it('every content entry has a non-empty question', () => {
@@ -496,6 +521,54 @@ describe('DecisionContent structure', () => {
     expect(REVIEW_TO_RELEASE.L1).toHaveLength(4);
     expect(REVIEW_TO_RELEASE.L2).toHaveLength(2);
     expect(REVIEW_TO_RELEASE.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_TEST_CREATION has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TEST_CREATION.L1).toHaveLength(3);
+    expect(ABSENCE_TEST_CREATION.L2).toHaveLength(2);
+    expect(ABSENCE_TEST_CREATION.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_TEST_CREATION_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TEST_CREATION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_TEST_CREATION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_TEST_CREATION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_REGRESSION_CHECK has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_REGRESSION_CHECK.L1).toHaveLength(3);
+    expect(ABSENCE_REGRESSION_CHECK.L2).toHaveLength(2);
+    expect(ABSENCE_REGRESSION_CHECK.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_REGRESSION_CHECK_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_REGRESSION_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_REGRESSION_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_REGRESSION_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_SPEC_ACCEPTANCE has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SPEC_ACCEPTANCE.L1).toHaveLength(3);
+    expect(ABSENCE_SPEC_ACCEPTANCE.L2).toHaveLength(2);
+    expect(ABSENCE_SPEC_ACCEPTANCE.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_SPEC_ACCEPTANCE_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SPEC_ACCEPTANCE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SPEC_ACCEPTANCE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SPEC_ACCEPTANCE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CROSS_CONFIRMING has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CROSS_CONFIRMING.L1).toHaveLength(3);
+    expect(ABSENCE_CROSS_CONFIRMING.L2).toHaveLength(2);
+    expect(ABSENCE_CROSS_CONFIRMING.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CROSS_CONFIRMING_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CROSS_CONFIRMING_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_CROSS_CONFIRMING_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_CROSS_CONFIRMING_CASUAL.L3).toHaveLength(1);
   });
 });
 
@@ -1317,6 +1390,10 @@ describe('C-02: beginner content blocks structure', () => {
     { name: 'IMPLEMENTATION_TO_REVIEW_BEGINNER',   content: TRANSITION_CONTENT_BEGINNER.review_testing! },
     { name: 'REVIEW_TO_RELEASE_BEGINNER',          content: TRANSITION_CONTENT_BEGINNER.release! },
     { name: 'BEHAVIOUR_TESTING_BEGINNER',          content: ABSENCE_CONTENT_BEGINNER.behaviour_testing! },
+    { name: 'ABSENCE_TEST_CREATION_BEGINNER',      content: ABSENCE_TEST_CREATION_BEGINNER },
+    { name: 'ABSENCE_REGRESSION_CHECK_BEGINNER',   content: ABSENCE_REGRESSION_CHECK_BEGINNER },
+    { name: 'ABSENCE_SPEC_ACCEPTANCE_BEGINNER',    content: ABSENCE_SPEC_ACCEPTANCE_BEGINNER },
+    { name: 'ABSENCE_CROSS_CONFIRMING_BEGINNER',   content: ABSENCE_CROSS_CONFIRMING_BEGINNER },
   ];
 
   for (const { name, content } of blocks) {
