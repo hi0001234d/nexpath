@@ -333,10 +333,10 @@ const ABSENCE_CROSS_CONFIRMING_CASUAL: DecisionContent = {
  * Signals not listed here fall back to the stage-based transition content.
  */
 const ABSENCE_CONTENT: Partial<Record<string, DecisionContent>> = {
-  test_creation:         TASK_REVIEW,
-  regression_check:      TASK_REVIEW,
-  spec_acceptance_check: TASK_REVIEW,
-  cross_confirming:      TASK_REVIEW,
+  test_creation:         ABSENCE_TEST_CREATION,
+  regression_check:      ABSENCE_REGRESSION_CHECK,
+  spec_acceptance_check: ABSENCE_SPEC_ACCEPTANCE,
+  cross_confirming:      ABSENCE_CROSS_CONFIRMING,
   behaviour_testing:     BEHAVIOUR_TESTING,
 };
 
