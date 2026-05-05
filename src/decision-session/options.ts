@@ -181,6 +181,7 @@ const BEHAVIOUR_TESTING: DecisionContent = {
 
 // ── Absence signal content sets ───────────────────────────────────────────────
 
+/** Absence: test_creation — fires when implementation proceeds without writing tests */
 const ABSENCE_TEST_CREATION: DecisionContent = {
   question:      'Code added — where are the tests?',
   pinchFallback: 'Tests missing.',
@@ -198,6 +199,7 @@ const ABSENCE_TEST_CREATION: DecisionContent = {
   ],
 };
 
+/** Absence: regression_check — fires when changes are made without regression testing */
 const ABSENCE_REGRESSION_CHECK: DecisionContent = {
   question:      'Changes made — regression verified?',
   pinchFallback: 'Regression check.',
@@ -215,6 +217,7 @@ const ABSENCE_REGRESSION_CHECK: DecisionContent = {
   ],
 };
 
+/** Absence: spec_acceptance_check — fires when implementation proceeds without checking against spec */
 const ABSENCE_SPEC_ACCEPTANCE: DecisionContent = {
   question:      'Implementation done — spec checked?',
   pinchFallback: 'Check the spec.',
@@ -232,6 +235,7 @@ const ABSENCE_SPEC_ACCEPTANCE: DecisionContent = {
   ],
 };
 
+/** Absence: cross_confirming — fires when implementation proceeds without cross-confirmation prompts */
 const ABSENCE_CROSS_CONFIRMING: DecisionContent = {
   question:      'AI generated it — have you verified it?',
   pinchFallback: 'Verify the output.',
