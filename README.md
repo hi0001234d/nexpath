@@ -64,7 +64,7 @@ Built during AI Hackfest 2026 by MLH.
 
 ---
 
-## Features
+## Features 
 
 ### The Decision Session
 
