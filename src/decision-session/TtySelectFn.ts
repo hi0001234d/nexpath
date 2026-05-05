@@ -493,6 +493,7 @@ function buildTerminalAppleScript(command: string): string {
   return `tell application "Terminal"
     activate
     set theTab to do script "${escaped}; exit"
+    set number of rows of (first window whose selected tab is theTab) to 50
     delay 1
     repeat
         delay 0.5
