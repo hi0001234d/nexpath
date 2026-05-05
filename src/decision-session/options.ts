@@ -253,6 +253,78 @@ const ABSENCE_CROSS_CONFIRMING: DecisionContent = {
   ],
 };
 
+/** ABSENCE_TEST_CREATION_CASUAL — casual-register variant for pro_geek_soul and null profiles */
+const ABSENCE_TEST_CREATION_CASUAL: DecisionContent = {
+  question:      'Built something — any tests written yet?',
+  pinchFallback: 'Tests missing.',
+  L1: [
+    'Write tests for what was just built — unit tests for anything new or changed, and one test that runs the main flow. What\'s the most likely thing that could break?',
+    'What\'s the riskiest part of what was just built that has no test? Write one test for that first, then keep going.',
+    'Is what was just built easy to test as-is, or does it need a small refactor to make testing feasible? Share what you find.',
+  ],
+  L2: [
+    'Write at least one test for what was just built — something that would catch it breaking silently.',
+    'What\'s the most likely thing to break silently in what was just built? Write a test for that.',
+  ],
+  L3: [
+    'Write one test for the most important behaviour in what was just built before moving on.',
+  ],
+};
+
+/** ABSENCE_REGRESSION_CHECK_CASUAL — casual-register variant for pro_geek_soul and null profiles */
+const ABSENCE_REGRESSION_CHECK_CASUAL: DecisionContent = {
+  question:      'Changed something — did anything break?',
+  pinchFallback: 'Regression check.',
+  L1: [
+    'Run the tests for this project and check — did what was just built break anything that was working before? Report what\'s failing and why.',
+    'What existing code is most likely affected by what was just built? Run those tests and tell me if anything broke.',
+    'Look at what was just built — what could it accidentally break in what was already working? Verify those paths still work.',
+  ],
+  L2: [
+    'Run the test suite and flag anything that\'s now failing that wasn\'t before — especially anything near what was just built.',
+    'What existing functionality is most likely affected by what was just built? Give it a quick check.',
+  ],
+  L3: [
+    'Run the tests and tell me if anything broke after what was just built was added.',
+  ],
+};
+
+/** ABSENCE_SPEC_ACCEPTANCE_CASUAL — casual-register variant for pro_geek_soul and null profiles */
+const ABSENCE_SPEC_ACCEPTANCE_CASUAL: DecisionContent = {
+  question:      'Built something — does it match what was planned?',
+  pinchFallback: 'Check the spec.',
+  L1: [
+    'Check what was just built against the original plan — does it actually do what it was supposed to? List anything that\'s off, missing, or different from what was asked for.',
+    'Compare what was just built to what was specified — any gaps, extra bits that weren\'t asked for, or things that work differently than planned?',
+    'Does what was just built handle the edge cases from the spec, or just the happy path? Flag anything that would fail on a non-standard input.',
+  ],
+  L2: [
+    'Does what was just built match what was planned? Flag anything that\'s different or missing.',
+    'What\'s the biggest gap between what was just built and what the spec asked for?',
+  ],
+  L3: [
+    'Is there anything in what was just built that doesn\'t match what was originally planned or specified?',
+  ],
+};
+
+/** ABSENCE_CROSS_CONFIRMING_CASUAL — casual-register variant for pro_geek_soul and null profiles */
+const ABSENCE_CROSS_CONFIRMING_CASUAL: DecisionContent = {
+  question:      'AI wrote it — have you actually checked it?',
+  pinchFallback: 'Verify the output.',
+  L1: [
+    'Take a real look at what was just built — not just \'does it look right\', but does it actually work correctly? Check for made-up functions, wrong assumptions, or logic that sounds good but doesn\'t hold up.',
+    'Walk through what was just built and check each part — is there anything that looks right but is subtly off, handles the wrong case, or references something that doesn\'t exist?',
+    'Check what was just built for the classic AI mistakes — hallucinated APIs, edge cases silently skipped, or missing error handling. Flag anything you haven\'t manually verified.',
+  ],
+  L2: [
+    'Is there anything in what was just built that you accepted without actually checking if it works correctly?',
+    'Walk through the main logic in what was just built — does it actually do what you expect, or just look like it does?',
+  ],
+  L3: [
+    'Is there anything in what was just built that was generated but you haven\'t checked for correctness yet?',
+  ],
+};
+
 // ── Content resolution ─────────────────────────────────────────────────────────
 
 /**
