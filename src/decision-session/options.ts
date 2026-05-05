@@ -340,6 +340,14 @@ const ABSENCE_CONTENT: Partial<Record<string, DecisionContent>> = {
   behaviour_testing:     BEHAVIOUR_TESTING,
 };
 
+const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
+  test_creation:         ABSENCE_TEST_CREATION_CASUAL,
+  regression_check:      ABSENCE_REGRESSION_CHECK_CASUAL,
+  spec_acceptance_check: ABSENCE_SPEC_ACCEPTANCE_CASUAL,
+  cross_confirming:      ABSENCE_CROSS_CONFIRMING_CASUAL,
+  behaviour_testing:     BEHAVIOUR_TESTING,  // BEHAVIOUR_TESTING_CASUAL is out of sub-2 scope
+};
+
 /**
  * Stage transition content lookup.
  * Keyed by the DESTINATION stage (currentStage after transition).
