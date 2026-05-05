@@ -27,9 +27,9 @@ import { writeTelemetry } from '../telemetry/index.js';
  *   Pinch label    : bold + bright cyan (\x1b[1;96m)
  *   Question line  : bold white          (\x1b[1;97m)
  *   Level subtitle : dim yellow          (\x1b[2;33m)
- * Option labels (SKIP_NOW, SHOW_SIMPLER, HELP) are plain text — @clack/prompts
- * applies its own styling; embedding ANSI inside labels causes nested sequences
- * that can confuse @clack/core's line-count calculation in restoreCursor().
+ * Option labels (SKIP_NOW, SHOW_SIMPLER, HELP) carry their own ANSI styling —
+ * G() in @clack/core uses ansi-regex to strip sequences before measuring width,
+ * so nested ANSI does not affect restoreCursor() line-count calculation.
  *
  * Back-navigation is NOT supported (per research decision).
  * Ctrl+C / Escape at any level → treated as "Skip for now".
@@ -41,9 +41,15 @@ const BOLD_CYAN    = '\x1b[1;96m';
 const BOLD_WHITE   = '\x1b[1;97m';
 const DIM_YELLOW   = '\x1b[2;33m';
 const RESET        = '\x1b[0m';
+const DIM_GRAY     = '\x1b[2m';
+const ITALIC_DIM   = '\x1b[3;2m';
+const ITALIC_AMBER = '\x1b[3;33m';
+const BOLD         = '\x1b[1m';
 
-const SKIP_NOW_LABEL    = 'Skip for now  — nexpath optimize will remind you';
-const SHOW_SIMPLER_LABEL = 'Show simpler options →';
+const SKIP_NOW_LABEL =
+  `${BOLD}Skip for now${RESET}${DIM_GRAY}  — nexpath optimize will remind you${RESET}`;
+const SHOW_SIMPLER_LABEL =
+  `${DIM_GRAY}Show simpler options →${RESET}`;
 
 export function formatOptionLabel(text: string): string {
   if (!text.includes('\n')) return text;
@@ -54,8 +60,8 @@ export function formatOptionLabel(text: string): string {
 const MOD_KEY = process.platform === 'darwin' ? 'Cmd' : 'Ctrl';
 
 const HELP_LABEL =
-  `  don't need nexpath here?  press ${MOD_KEY}+X to disable for this project` +
-  `  ·  press ${MOD_KEY}+T to adjust frequency`;
+  `${ITALIC_DIM}  don't need nexpath here?  press ${RESET}${ITALIC_AMBER}${MOD_KEY}+X${RESET}${ITALIC_DIM} to disable for this project` +
+  `  ·  press ${RESET}${ITALIC_AMBER}${MOD_KEY}+T${RESET}${ITALIC_DIM} to adjust frequency${RESET}`;
 
 export function formatPinchLabel(label: string): string {
   return `${BOLD_CYAN}${label}${RESET}`;
