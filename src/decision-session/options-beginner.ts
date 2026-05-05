@@ -171,10 +171,10 @@ export const ABSENCE_CROSS_CONFIRMING_BEGINNER: DecisionContent = {
 };
 
 export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> = {
-  test_creation:         TASK_REVIEW_BEGINNER,
-  regression_check:      TASK_REVIEW_BEGINNER,
-  spec_acceptance_check: TASK_REVIEW_BEGINNER,
-  cross_confirming:      TASK_REVIEW_BEGINNER,
+  test_creation:         ABSENCE_TEST_CREATION_BEGINNER,
+  regression_check:      ABSENCE_REGRESSION_CHECK_BEGINNER,
+  spec_acceptance_check: ABSENCE_SPEC_ACCEPTANCE_BEGINNER,
+  cross_confirming:      ABSENCE_CROSS_CONFIRMING_BEGINNER,
   behaviour_testing:     BEHAVIOUR_TESTING_BEGINNER,
 };
 
