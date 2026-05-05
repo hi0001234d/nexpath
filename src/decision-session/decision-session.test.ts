@@ -18,11 +18,21 @@ import {
   IMPLEMENTATION_TO_REVIEW,
   REVIEW_TO_RELEASE,
   BEHAVIOUR_TESTING,
+  ABSENCE_TEST_CREATION,
+  ABSENCE_TEST_CREATION_CASUAL,
+  ABSENCE_REGRESSION_CHECK,
+  ABSENCE_REGRESSION_CHECK_CASUAL,
+  ABSENCE_SPEC_ACCEPTANCE,
+  ABSENCE_SPEC_ACCEPTANCE_CASUAL,
+  ABSENCE_CROSS_CONFIRMING,
+  ABSENCE_CROSS_CONFIRMING_CASUAL,
 } from './options.js';
 import {
   ABSENCE_CONTENT_BEGINNER,
   TRANSITION_CONTENT_BEGINNER,
   TASK_REVIEW_BEGINNER,
+  ABSENCE_TEST_CREATION_BEGINNER,
+  ABSENCE_CROSS_CONFIRMING_BEGINNER,
 } from './options-beginner.js';
 import type { UserProfile } from '../classifier/types.js';
 import {
@@ -242,24 +252,24 @@ describe('resolveDecisionContent', () => {
     expect(content).toBe(TASK_REVIEW_CASUAL);
   });
 
-  it('absence:test_creation → TASK_REVIEW content (specific override)', () => {
+  it('absence:test_creation → ABSENCE_TEST_CREATION content (specific override)', () => {
     const content = resolveDecisionContent('implementation', 'absence:test_creation');
-    expect(content).toBe(TASK_REVIEW);
+    expect(content).toBe(ABSENCE_TEST_CREATION);
   });
 
-  it('absence:regression_check → TASK_REVIEW content', () => {
+  it('absence:regression_check → ABSENCE_REGRESSION_CHECK content', () => {
     const content = resolveDecisionContent('implementation', 'absence:regression_check');
-    expect(content).toBe(TASK_REVIEW);
+    expect(content).toBe(ABSENCE_REGRESSION_CHECK);
   });
 
-  it('absence:cross_confirming → TASK_REVIEW content', () => {
+  it('absence:cross_confirming → ABSENCE_CROSS_CONFIRMING content', () => {
     const content = resolveDecisionContent('implementation', 'absence:cross_confirming');
-    expect(content).toBe(TASK_REVIEW);
+    expect(content).toBe(ABSENCE_CROSS_CONFIRMING);
   });
 
-  it('absence:spec_acceptance_check → TASK_REVIEW content', () => {
+  it('absence:spec_acceptance_check → ABSENCE_SPEC_ACCEPTANCE content', () => {
     const content = resolveDecisionContent('review_testing', 'absence:spec_acceptance_check');
-    expect(content).toBe(TASK_REVIEW);
+    expect(content).toBe(ABSENCE_SPEC_ACCEPTANCE);
   });
 
   it('absence:unknown_signal in implementation → falls back to TASK_REVIEW_CASUAL (no profile)', () => {
@@ -279,16 +289,16 @@ describe('resolveDecisionContent', () => {
   });
 
   // Priority contract: absence override wins over TRANSITION_CONTENT
-  it('absence:test_creation on prd stage → TASK_REVIEW (override wins over IDEA_TO_PRD transition)', () => {
+  it('absence:test_creation on prd stage → ABSENCE_TEST_CREATION (override wins over IDEA_TO_PRD transition)', () => {
     // Priority 1 (absence override) takes precedence over priority 2 (stage-based transition).
-    // 'prd' is in TRANSITION_CONTENT → IDEA_TO_PRD, but absence:test_creation override → TASK_REVIEW.
+    // 'prd' is in TRANSITION_CONTENT → IDEA_TO_PRD, but absence:test_creation override → ABSENCE_TEST_CREATION.
     const content = resolveDecisionContent('prd', 'absence:test_creation');
-    expect(content).toBe(TASK_REVIEW);
+    expect(content).toBe(ABSENCE_TEST_CREATION);
   });
 
-  it('absence:regression_check on architecture stage → TASK_REVIEW (override wins over PRD_TO_ARCHITECTURE)', () => {
+  it('absence:regression_check on architecture stage → ABSENCE_REGRESSION_CHECK (override wins over PRD_TO_ARCHITECTURE)', () => {
     const content = resolveDecisionContent('architecture', 'absence:regression_check');
-    expect(content).toBe(TASK_REVIEW);
+    expect(content).toBe(ABSENCE_REGRESSION_CHECK);
   });
 
   it('unmapped absence on prd stage → IDEA_TO_PRD (falls through to TRANSITION_CONTENT)', () => {
@@ -344,16 +354,40 @@ describe('resolveDecisionContent — heuristic variant routing', () => {
     expect(content).toBe(TASK_REVIEW);
   });
 
-  it('cool_geek still uses beginner absence map — absence:test_creation → TASK_REVIEW_BEGINNER', () => {
-    // isVibe=true for cool_geek → absenceMap = ABSENCE_CONTENT_BEGINNER → test_creation → TASK_REVIEW_BEGINNER
+  it('cool_geek still uses beginner absence map — absence:test_creation → ABSENCE_TEST_CREATION_BEGINNER', () => {
+    // isVibe=true for cool_geek → absenceMap = ABSENCE_CONTENT_BEGINNER → test_creation → ABSENCE_TEST_CREATION_BEGINNER
     const content = resolveDecisionContent('implementation', 'absence:test_creation', makeProfile('cool_geek'));
-    expect(content).toBe(TASK_REVIEW_BEGINNER);
+    expect(content).toBe(ABSENCE_TEST_CREATION_BEGINNER);
   });
 
-  it('pro_geek_soul uses non-beginner absence map — absence:test_creation → TASK_REVIEW', () => {
-    // isVibe=false for pro_geek_soul → absenceMap = ABSENCE_CONTENT → test_creation → TASK_REVIEW
+  it('pro_geek_soul + absence:test_creation → ABSENCE_TEST_CREATION_CASUAL', () => {
     const content = resolveDecisionContent('implementation', 'absence:test_creation', makeProfile('pro_geek_soul'));
-    expect(content).toBe(TASK_REVIEW);
+    expect(content).toBe(ABSENCE_TEST_CREATION_CASUAL);
+  });
+
+  it('pro_geek_soul + absence:regression_check → ABSENCE_REGRESSION_CHECK_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:regression_check', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_REGRESSION_CHECK_CASUAL);
+  });
+
+  it('pro_geek_soul + absence:spec_acceptance_check → ABSENCE_SPEC_ACCEPTANCE_CASUAL', () => {
+    const content = resolveDecisionContent('review_testing', 'absence:spec_acceptance_check', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_SPEC_ACCEPTANCE_CASUAL);
+  });
+
+  it('pro_geek_soul + absence:cross_confirming → ABSENCE_CROSS_CONFIRMING_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:cross_confirming', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_CROSS_CONFIRMING_CASUAL);
+  });
+
+  it('null profile + absence:test_creation → ABSENCE_TEST_CREATION_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:test_creation', null);
+    expect(content).toBe(ABSENCE_TEST_CREATION_CASUAL);
+  });
+
+  it('hardcore_pro + absence:test_creation → ABSENCE_TEST_CREATION (formal, not casual)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:test_creation', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_TEST_CREATION);
   });
 });
 
@@ -1241,9 +1275,9 @@ describe('resolveDecisionContent — C-02 profile routing', () => {
     expect(content).toBe(ABSENCE_CONTENT_BEGINNER.behaviour_testing);
   });
 
-  it('beginner + absence:cross_confirming → TASK_REVIEW_BEGINNER', () => {
+  it('beginner + absence:cross_confirming → ABSENCE_CROSS_CONFIRMING_BEGINNER', () => {
     const content = resolveDecisionContent('implementation', 'absence:cross_confirming', beginnerProfile);
-    expect(content).toBe(TASK_REVIEW_BEGINNER);
+    expect(content).toBe(ABSENCE_CROSS_CONFIRMING_BEGINNER);
   });
 
   it('beginner + absence:unknown_signal + implementation → TASK_REVIEW_BEGINNER fallback', () => {
