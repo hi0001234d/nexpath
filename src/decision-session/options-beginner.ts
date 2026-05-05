@@ -106,6 +106,70 @@ const BEHAVIOUR_TESTING_BEGINNER: DecisionContent = {
   ],
 };
 
+/** ABSENCE_TEST_CREATION_BEGINNER — beginner-register variant (L1×2 / L2×1 / L3×1) */
+export const ABSENCE_TEST_CREATION_BEGINNER: DecisionContent = {
+  question:      'Built something — any tests written yet?',
+  pinchFallback: 'Tests missing.',
+  L1: [
+    '1. Write a test for what was just built — start with the main thing it\'s supposed to do.\n2. Share the test with me so I can check it covers the right thing.\n3. Then tell me: is there anything else in what was just built that could break without a test catching it?',
+    'Walk me through what was just built and tell me: what\'s the most important thing it does? Then write a test that checks that works correctly, and share it with me.',
+  ],
+  L2: [
+    'Write one test for what was just built and share it with me — I want to see what you\'re checking and make sure it covers the right thing.',
+  ],
+  L3: [
+    'Is there anything in what was just built that should have a test before we move on?',
+  ],
+};
+
+/** ABSENCE_REGRESSION_CHECK_BEGINNER — beginner-register variant (L1×2 / L2×1 / L3×1) */
+export const ABSENCE_REGRESSION_CHECK_BEGINNER: DecisionContent = {
+  question:      'Changed something — did anything break?',
+  pinchFallback: 'Regression check.',
+  L1: [
+    '1. Run the existing tests for this project now that what was just built has been added.\n2. Share the results with me — which ones pass, which ones fail.\n3. Then tell me: is there anything that used to work that might not work anymore?',
+    'Look at what was just built and tell me — what other parts of this project does it touch or depend on? Then check if those parts still work correctly and share what you find.',
+  ],
+  L2: [
+    'Run the tests for this project and share the results with me — I want to know if anything broke after what was just built was added.',
+  ],
+  L3: [
+    'Is there anything that was working before that might have stopped working after what was just built was added?',
+  ],
+};
+
+/** ABSENCE_SPEC_ACCEPTANCE_BEGINNER — beginner-register variant (L1×2 / L2×1 / L3×1) */
+export const ABSENCE_SPEC_ACCEPTANCE_BEGINNER: DecisionContent = {
+  question:      'Built something — does it match what was planned?',
+  pinchFallback: 'Check the spec.',
+  L1: [
+    '1. Look at what was just built and compare it to what we planned to build.\n2. Share with me: does it do everything it was supposed to, or is something missing or different?\n3. Then check: are there any situations it should handle that it doesn\'t?',
+    'Walk through what was just built step by step and tell me — does each part match what we planned? Share anything that looks different from what we agreed on.',
+  ],
+  L2: [
+    'Does what was just built do what we planned it to do? Share any differences with me before we move on.',
+  ],
+  L3: [
+    'Is there anything in what was just built that doesn\'t match what we originally planned to build?',
+  ],
+};
+
+/** ABSENCE_CROSS_CONFIRMING_BEGINNER — beginner-register variant (L1×2 / L2×1 / L3×1) */
+export const ABSENCE_CROSS_CONFIRMING_BEGINNER: DecisionContent = {
+  question:      'AI wrote it — have you actually checked it?',
+  pinchFallback: 'Verify the output.',
+  L1: [
+    '1. Read through what was just built carefully — not just to check if it looks right, but to understand what it actually does.\n2. Share with me: is there anything that seems off, confusing, or that you\'re not sure about?\n3. Then tell me: is there anything in what was just built you haven\'t manually checked yet?',
+    'Walk through what was just built step by step and tell me — do you understand what each part does? Share anything that looks unclear or that you just accepted without checking.',
+  ],
+  L2: [
+    'Is there anything in what was just built that you accepted because it looked right, but haven\'t actually checked? Share it with me.',
+  ],
+  L3: [
+    'Is there anything in what was just built that you\'re not 100% sure is correct — something you haven\'t manually verified yet?',
+  ],
+};
+
 export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> = {
   test_creation:         TASK_REVIEW_BEGINNER,
   regression_check:      TASK_REVIEW_BEGINNER,
