@@ -28,7 +28,7 @@ If none fit at all, skip it and revisit skipped items later in one focused sessi
 
 ```mermaid
 flowchart TB
-    Agent["<b>AI Coding Agent</b><br/>Claude Code — fully supported"]
+    Agent["<b>AI Coding Agent</b><br/>Claude Code CLI — fully supported"]
     subgraph NS["nexpath-serve"]
         Capture["capture_prompt handler"]
     end
@@ -64,7 +64,7 @@ Built during AI Hackfest 2026 by MLH.
 
 ---
 
-## Features
+## Features 
 
 ### The Decision Session
 
@@ -136,6 +136,7 @@ npm link
 nexpath install --yes
 nexpath status
 ```
+**NOTE:** Nexpath is currently fully supported on **Claude Code CLI** — other agents are planned for v0.1.3.  
 
 ### Environment Variables
 
@@ -239,7 +240,7 @@ are tracked in this repo. The ReviewDuel integration is maintained separately.
 ## Acknowledgements
 
 - **Major League Hacking (MLH)** — For organizing AI Hackfest 2026
-- **Anthropic** — For Claude Code, our primary development environment
+- **Anthropic** — For Claude Code CLI, our primary development environment
 - **OpenAI** — For gpt-4o-mini, used for cross-confirmation and pinch label generation
 - **Google** — For Gemini AI, planned as an alternative LLM provider alongside OpenAI
 - **Model Context Protocol** — For enabling cross-agent prompt capture
