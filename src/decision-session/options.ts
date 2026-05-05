@@ -179,6 +179,76 @@ const BEHAVIOUR_TESTING: DecisionContent = {
   ],
 };
 
+// ── Absence signal content sets ───────────────────────────────────────────────
+
+const ABSENCE_TEST_CREATION: DecisionContent = {
+  question:      'Code added — where are the tests?',
+  pinchFallback: 'Tests missing.',
+  L1: [
+    'Write tests for what was just built: unit tests for each function added or modified, and at least one integration test that covers the main path through this feature.',
+    'Identify what was just built that has no test coverage and write tests for the top 3 riskiest parts — the logic most likely to break silently if changed.',
+    'Review what was just built for testability: is it structured so tests can be written without extensive mocking? Flag any parts that would be hard to test as-is.',
+  ],
+  L2: [
+    'Write at least one test for what was just built — the most critical path through this feature.',
+    'What would break silently in what was just built if a future change introduced a bug? Write a test that catches that.',
+  ],
+  L3: [
+    'Write one test for the most important behaviour in what was just built before moving on.',
+  ],
+};
+
+const ABSENCE_REGRESSION_CHECK: DecisionContent = {
+  question:      'Changes made — regression verified?',
+  pinchFallback: 'Regression check.',
+  L1: [
+    'Run the regression test suite for this project and report: which tests pass, which fail, and what changed in this session that could have caused any failures.',
+    'Check what was just built against the existing test suite: identify which existing tests cover the code paths that were modified, run them, and report any failures.',
+    'Review what was just built for regression risk: what existing functionality could be affected by these changes, and how would you verify it still works correctly?',
+  ],
+  L2: [
+    'Run the tests for this project and report which ones fail — specifically any that touch code changed in this session.',
+    'What existing functionality is most likely to be affected by what was just built? Verify it still works.',
+  ],
+  L3: [
+    'Run the existing tests for this project and report whether anything is now failing that wasn\'t before.',
+  ],
+};
+
+const ABSENCE_SPEC_ACCEPTANCE: DecisionContent = {
+  question:      'Implementation done — spec checked?',
+  pinchFallback: 'Check the spec.',
+  L1: [
+    'Review what was just built against the spec and acceptance criteria: go through each requirement and confirm whether it is fully implemented, partially implemented, or missing from what was just built.',
+    'Cross-confirm what was just built against the original requirements: does the implementation match what was specified? List any deviations, missing behaviour, or scope creep introduced.',
+    'Audit what was just built for spec compliance: check input validation, edge cases, and error handling against the acceptance criteria — flag anything that passes the happy path but fails under edge conditions.',
+  ],
+  L2: [
+    'Check what was just built against the spec: does it fully satisfy the acceptance criteria, or are there gaps?',
+    'Does what was just built match what was specified? List any differences between the implementation and the original requirements.',
+  ],
+  L3: [
+    'Is there anything in what was just built that doesn\'t match the spec or acceptance criteria?',
+  ],
+};
+
+const ABSENCE_CROSS_CONFIRMING: DecisionContent = {
+  question:      'AI generated it — have you verified it?',
+  pinchFallback: 'Verify the output.',
+  L1: [
+    'Review what was just built critically: identify any hallucinated functions or APIs, logic that looks plausible but is incorrect, edge cases not handled, and any code that was generated but not verified against the actual system it will run in.',
+    'Cross-confirm what was just built: does the generated code actually do what you expect, or does it contain plausible-sounding logic that is subtly wrong? Trace the main path through the code and verify each step.',
+    'Audit what was just built for AI generation artifacts: check for made-up function names, incorrect assumptions about the codebase, missing error handling that a human would have caught, and any logic that looks correct but hasn\'t been manually verified.',
+  ],
+  L2: [
+    'Review what was just built for correctness: is there anything that looks right at a glance but would fail when actually run or tested?',
+    'Does what was just built actually do what you think it does? Trace the main execution path and verify the logic is sound.',
+  ],
+  L3: [
+    'Is there anything in what was just built that was generated but not verified — anything you haven\'t manually checked for correctness?',
+  ],
+};
+
 // ── Content resolution ─────────────────────────────────────────────────────────
 
 /**
