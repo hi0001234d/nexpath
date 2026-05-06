@@ -525,6 +525,40 @@ const ABSENCE_PHASE_TRANSITION: DecisionContent = {
   ],
 };
 
+const ABSENCE_SPEC_CROSS_CONFIRM: DecisionContent = {
+  question:      'Spec written — cross-confirmed against requirements?',
+  pinchFallback: 'Spec not confirmed.',
+  L1: [
+    'Cross-confirm this project\'s spec against its source requirements: for each requirement in the spec, verify it traces back to a stated user need or stakeholder decision, covers the acceptance criteria completely, and does not contain assumptions that were not explicitly agreed upon.',
+    'Audit this project\'s spec for internal consistency and completeness: identify any requirements that contradict each other, any acceptance criteria that are ambiguous or untestable, and any scope decisions that were made without explicit stakeholder sign-off.',
+    'Review this project\'s spec against what is actually feasible given the current technical constraints: flag any requirements that have no clear implementation path, any acceptance criteria that would require capabilities not available in the current stack, and any decisions that have been implicitly made but not documented.',
+  ],
+  L2: [
+    'Go through this project\'s spec and identify any requirement that cannot be directly traced to a stated user need or a documented stakeholder decision — those are assumptions that need to be confirmed before implementation begins.',
+    'Is there anything in this project\'s spec that is ambiguous enough that two developers could implement it differently and both be technically correct? Resolve those ambiguities before building.',
+  ],
+  L3: [
+    'Is there anything in this project\'s spec that has not been verified against the original requirements — any assumption, scope decision, or acceptance criterion that was added without explicit confirmation?',
+  ],
+};
+
+const ABSENCE_SPEC_REVISION: DecisionContent = {
+  question:      'Spec drafted — revised since initial version?',
+  pinchFallback: 'Spec unrevised.',
+  L1: [
+    'Revise this project\'s spec to reflect what has been learned since the initial draft: update any requirements that turned out to be more or less complex than anticipated, add acceptance criteria for edge cases discovered during implementation, and remove or defer any scope that has been implicitly dropped.',
+    'Audit this project\'s spec for drift: compare the current implementation against the spec and identify where the two have diverged — either the spec is outdated and the implementation is correct, or the implementation has deviated from the spec and needs to be corrected. Resolve each divergence explicitly.',
+    'Review this project\'s spec against the current state of the project: what decisions have been made during implementation that are not reflected in the spec, what requirements have been reinterpreted or changed in practice, and what new constraints or dependencies have emerged that the spec does not document?',
+  ],
+  L2: [
+    'Compare the current implementation against this project\'s spec and flag every place they diverge — then decide for each divergence whether the spec needs to be updated or the implementation needs to change.',
+    'Is there anything in this project\'s spec that was written before implementation started and no longer reflects the current technical decisions or scope? Update it now so the spec is a true record of what is being built.',
+  ],
+  L3: [
+    'Does this project\'s spec still accurately reflect what is being built, or has the implementation diverged from the original spec without the spec being updated?',
+  ],
+};
+
 /** ABSENCE_TEST_CREATION_CASUAL — casual-register variant for pro_geek_soul and null profiles */
 const ABSENCE_TEST_CREATION_CASUAL: DecisionContent = {
   question:      'Built something — any tests written yet?',
@@ -869,6 +903,40 @@ const ABSENCE_PHASE_TRANSITION_CASUAL: DecisionContent = {
   ],
 };
 
+const ABSENCE_SPEC_CROSS_CONFIRM_CASUAL: DecisionContent = {
+  question:      'Spec exists — has it been checked against the plan?',
+  pinchFallback: 'Spec not confirmed.',
+  L1: [
+    'Go through this project\'s spec and check it against the original plan — does every requirement actually come from something that was agreed on, or did some assumptions sneak in that no one has explicitly signed off on?',
+    'Look at this project\'s spec for anything that\'s vague enough to be interpreted two different ways — anything that could lead to building the wrong thing and still technically meeting the spec. Fix those before coding starts.',
+    'Check this project\'s spec against what you can actually build with the current stack — is there anything in there that\'s going to hit a wall when someone tries to implement it? Flag those now.',
+  ],
+  L2: [
+    'Is there any part of this project\'s spec that came from an assumption rather than something explicitly agreed on? Track those down and confirm them.',
+    'Is there anything in this project\'s spec vague enough that two people could implement it differently? Clarify it now before it causes a disagreement mid-build.',
+  ],
+  L3: [
+    'Is there anything in this project\'s spec that hasn\'t been verified against what was actually agreed on — any assumptions that are being treated as confirmed requirements?',
+  ],
+};
+
+const ABSENCE_SPEC_REVISION_CASUAL: DecisionContent = {
+  question:      'Spec written — has it been updated since the first draft?',
+  pinchFallback: 'Spec unrevised.',
+  L1: [
+    'Update this project\'s spec to match what you know now — any requirements that turned out harder or simpler than expected, any edge cases that came up during building, and any things that got quietly dropped or changed in scope.',
+    'Check whether this project\'s spec still matches what\'s actually being built — where have things changed since the first draft, what decisions got made during implementation that aren\'t written down, and what would a new developer get wrong by reading the original spec?',
+    'Look at where this project\'s spec and the actual implementation have drifted apart — for each gap, is it that the spec needs updating, or that the implementation went in the wrong direction?',
+  ],
+  L2: [
+    'Is this project\'s spec still accurate, or has the implementation moved on from what was originally written? Update the parts that no longer match.',
+    'What\'s changed in this project since the spec was first written that isn\'t reflected in the spec yet? Update it now while the context is still fresh.',
+  ],
+  L3: [
+    'Does this project\'s spec still reflect what\'s actually being built, or has the implementation moved on without the spec being updated?',
+  ],
+};
+
 // ── Content resolution ─────────────────────────────────────────────────────────
 
 /**
@@ -1081,4 +1149,8 @@ export {
   ABSENCE_DEPENDENCY_MGMT_CASUAL,
   ABSENCE_PHASE_TRANSITION,
   ABSENCE_PHASE_TRANSITION_CASUAL,
+  ABSENCE_SPEC_CROSS_CONFIRM,
+  ABSENCE_SPEC_CROSS_CONFIRM_CASUAL,
+  ABSENCE_SPEC_REVISION,
+  ABSENCE_SPEC_REVISION_CASUAL,
 };

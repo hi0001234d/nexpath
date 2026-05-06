@@ -410,6 +410,36 @@ export const ABSENCE_PHASE_TRANSITION_BEGINNER: DecisionContent = {
   ],
 };
 
+export const ABSENCE_SPEC_CROSS_CONFIRM_BEGINNER: DecisionContent = {
+  question:      'Spec exists — has it been checked against the plan?',
+  pinchFallback: 'Spec not confirmed.',
+  L1: [
+    '1. Read through this project\'s spec and check: does everything in it come from something that was actually decided or agreed on?\n2. Share with me: is there anything in the spec that looks like an assumption rather than a confirmed requirement?\n3. Then tell me: is there anything that could be misunderstood or built in the wrong way because it\'s not specific enough?',
+    'Walk me through this project\'s spec and tell me — is there anything in it that you\'re not sure was actually agreed on, or anything that\'s vague enough to be confusing? Share what you find with me.',
+  ],
+  L2: [
+    'Is there anything in this project\'s spec that might be an assumption rather than something that was actually confirmed? Share what you find with me.',
+  ],
+  L3: [
+    'Is there anything in this project\'s spec that hasn\'t been checked against what was actually agreed on?',
+  ],
+};
+
+export const ABSENCE_SPEC_REVISION_BEGINNER: DecisionContent = {
+  question:      'Spec written — has it been updated since the first draft?',
+  pinchFallback: 'Spec unrevised.',
+  L1: [
+    '1. Look at this project\'s spec and then look at what has actually been built so far.\n2. Share with me: are they still in sync, or have things changed since the spec was first written?\n3. Then tell me: what would need to be updated in the spec to make it match what\'s actually happening?',
+    'Walk me through this project\'s spec and tell me — is it still accurate, or have things changed since it was first written that aren\'t in there yet? Share what\'s out of date with me.',
+  ],
+  L2: [
+    'Is this project\'s spec still accurate, or has something changed since it was written that isn\'t reflected in it yet? Share what you find with me.',
+  ],
+  L3: [
+    'Does this project\'s spec still match what\'s actually being built, or is it out of date?',
+  ],
+};
+
 export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> = {
   test_creation:         ABSENCE_TEST_CREATION_BEGINNER,
   regression_check:      ABSENCE_REGRESSION_CHECK_BEGINNER,
