@@ -457,6 +457,74 @@ const ABSENCE_PROMPT_CONTEXT: DecisionContent = {
   ],
 };
 
+const ABSENCE_ROLLBACK_PLANNING: DecisionContent = {
+  question:      'Release pending — rollback plan defined?',
+  pinchFallback: 'No rollback plan.',
+  L1: [
+    'Define the rollback procedure for this feature before shipping: identify the steps to revert if the deployment fails, confirm the rollback can be completed within your acceptable downtime window, and verify that database migrations or data changes are reversible.',
+    'Audit the rollback readiness of this feature: what happens to data, sessions, and dependent services if this deploy is reverted? Document the rollback steps, assign ownership, and confirm the plan can be executed without live debugging during an incident.',
+    'Cross-confirm rollback viability for what was just built: if you rolled back this feature in production right now, what would break, what state would be left in an inconsistent state, and what would need to be cleaned up manually? Address any gaps before shipping.',
+  ],
+  L2: [
+    'What is the rollback procedure if the deployment of this feature fails? Document it before shipping — it should be executable under pressure without needing to invent steps on the fly.',
+    'Are there any parts of this feature — database migrations, external API integrations, data format changes — that cannot be cleanly rolled back? Address those before shipping or accept them as known risks.',
+  ],
+  L3: [
+    'Is there a documented rollback plan for this feature that could be executed in production under pressure, or would reverting require improvisation?',
+  ],
+};
+
+const ABSENCE_DEPLOYMENT_PLANNING: DecisionContent = {
+  question:      'Release pending — deployment plan confirmed?',
+  pinchFallback: 'No deploy plan.',
+  L1: [
+    'Define the deployment plan for this feature before shipping: confirm the target environment configuration, document any environment variables or secrets that need to be provisioned, and verify that the deployment process has been tested outside of production.',
+    'Audit the deployment readiness of this feature: are there environment-specific configuration differences between staging and production that could cause a failure, any new environment variables required, or any infrastructure changes needed before this can deploy cleanly?',
+    'Cross-confirm deployment readiness for this feature: what does the production environment need to have in place before this deploys successfully — configuration, secrets, database state, external service integrations — and is each of those confirmed and ready?',
+  ],
+  L2: [
+    'What environment configuration does this feature require in production that is not yet confirmed — secrets, environment variables, infrastructure dependencies? Resolve each before shipping.',
+    'Has this feature been deployed to a staging environment that mirrors production? If not, what deployment risks are you accepting by shipping without a staging verification?',
+  ],
+  L3: [
+    'Is there a confirmed deployment plan for this feature, or is the deployment process still undefined and untested outside of development?',
+  ],
+};
+
+const ABSENCE_DEPENDENCY_MGMT: DecisionContent = {
+  question:      'Dependencies added — conflicts and risks reviewed?',
+  pinchFallback: 'Dependency risk.',
+  L1: [
+    'Review the new dependencies introduced in what was just built: check for version conflicts with existing packages, known security vulnerabilities in the chosen version, and whether a more stable or widely-adopted alternative exists for the same purpose.',
+    'Audit the packages added in what was just built for dependency health: are the chosen versions the latest stable releases, do any have known CVEs in the installed version, and are the licences compatible with this project\'s licence requirements?',
+    'Cross-confirm the dependency decisions made in what was just built: for each new package, verify it is actively maintained, has adequate documentation, does not introduce transitive dependencies that conflict with the existing dependency tree, and is not a single-maintainer package with no succession plan.',
+  ],
+  L2: [
+    'Check the new packages added in what was just built for version conflicts and known vulnerabilities — run a dependency audit and confirm there are no high-severity issues before shipping.',
+    'Is there any package added in what was just built that is unmaintained, has an incompatible licence, or pulls in a transitive dependency that conflicts with what is already installed?',
+  ],
+  L3: [
+    'Have the new packages added in what was just built been checked for version conflicts, known security vulnerabilities, and licence compatibility?',
+  ],
+};
+
+const ABSENCE_PHASE_TRANSITION: DecisionContent = {
+  question:      'Extended phase — transition readiness assessed?',
+  pinchFallback: 'Phase check.',
+  L1: [
+    'Assess transition readiness for this project: define what must be complete before moving to the next phase, confirm which of those criteria are currently met, and identify what is blocking the transition. If no criteria are defined, define them now.',
+    'Review the current phase of this project against its original definition: have the objectives for this phase been met, what work is still in progress, and is there a clear handoff point that marks the end of this phase and the beginning of the next?',
+    'Cross-confirm phase completion for this project: what artifacts, decisions, or quality gates were supposed to be produced in this phase, which are complete, which are missing, and what would need to be done to be confident that proceeding to the next phase is the right call?',
+  ],
+  L2: [
+    'What are the exit criteria for the current phase of this project? Assess which are met and which are not before committing to the next phase.',
+    'Is there any unfinished work from the current phase of this project that should be resolved before transitioning — decisions deferred, quality gates not cleared, or artifacts not produced?',
+  ],
+  L3: [
+    'What needs to be true for this project to be ready to move to the next phase, and is any of that currently incomplete or unresolved?',
+  ],
+};
+
 /** ABSENCE_TEST_CREATION_CASUAL — casual-register variant for pro_geek_soul and null profiles */
 const ABSENCE_TEST_CREATION_CASUAL: DecisionContent = {
   question:      'Built something — any tests written yet?',
@@ -733,6 +801,74 @@ const ABSENCE_PROMPT_CONTEXT_CASUAL: DecisionContent = {
   ],
 };
 
+const ABSENCE_ROLLBACK_PLANNING_CASUAL: DecisionContent = {
+  question:      'Shipping soon — what\'s the rollback plan?',
+  pinchFallback: 'No rollback plan.',
+  L1: [
+    'Before you ship this feature, work out what you\'d do if the deployment goes wrong — what\'s the rollback plan, how long would it take, and is there anything in this feature that can\'t be undone cleanly?',
+    'Walk through what would happen if you had to roll back this feature in production tonight — what steps would you follow, what could go wrong during the rollback, and is there anything left in an inconsistent state if you do?',
+    'Check the rollback risk in this feature — any database migrations, external integrations, or data changes that would be a pain to undo? Flag those before shipping and decide if you\'re okay with them.',
+  ],
+  L2: [
+    'What\'s the rollback plan for this feature if the deployment goes sideways? Write it down — it should be something you could follow in a panic without thinking.',
+    'Is there anything in this feature that can\'t be rolled back cleanly? Know that before you ship.',
+  ],
+  L3: [
+    'Do you have a plan for rolling back this feature if the deployment fails, or would you be making it up as you go?',
+  ],
+};
+
+const ABSENCE_DEPLOYMENT_PLANNING_CASUAL: DecisionContent = {
+  question:      'Shipping soon — is the deployment actually planned?',
+  pinchFallback: 'No deploy plan.',
+  L1: [
+    'Before shipping this feature, check: do you actually have a deployment plan? What environment config does it need, what secrets need to be in place, and has anything been tested outside your local setup?',
+    'Walk through how this feature is actually going to get deployed — what\'s the process, what needs to be configured in the production environment, and is there anything that only exists in your local config that hasn\'t been provisioned yet?',
+    'Check the gap between where this feature runs now and what production actually needs — are there environment variables, secrets, or infrastructure pieces that aren\'t set up yet? Sort those out before shipping.',
+  ],
+  L2: [
+    'What does the production environment need to have in place before this feature can deploy cleanly? Confirm each of those is actually ready.',
+    'Has this feature been tested anywhere other than your local machine? If it goes straight to production, what are you not sure about?',
+  ],
+  L3: [
+    'Is there a deployment plan for this feature, or are you planning to figure it out when you push?',
+  ],
+};
+
+const ABSENCE_DEPENDENCY_MGMT_CASUAL: DecisionContent = {
+  question:      'Added packages — any issues checked?',
+  pinchFallback: 'Dependency risk.',
+  L1: [
+    'Check the packages added in what was just built — do they conflict with anything already installed, is there a security issue with the version you picked, and is there a better or more popular alternative you didn\'t consider?',
+    'Look at the new dependencies in what was just built: are they actively maintained, is the version you\'re using the latest stable one, and do they pull in anything that clashes with what\'s already in the project?',
+    'Run a quick audit on the packages added in what was just built — any known CVEs in the version you\'re using, licence issues that could cause problems, or extra packages they pull in that don\'t play nice with what\'s already there?',
+  ],
+  L2: [
+    'Have the packages added in what was just built been checked for conflicts and vulnerabilities? Run a dependency audit and flag anything suspicious.',
+    'Is there any package added in what was just built that looks risky — old version, no maintenance, licence mismatch, or something that clashes with existing dependencies?',
+  ],
+  L3: [
+    'Have the new packages added in what was just built been checked for conflicts, vulnerabilities, or licence issues?',
+  ],
+};
+
+const ABSENCE_PHASE_TRANSITION_CASUAL: DecisionContent = {
+  question:      'Been in this phase a while — what comes next?',
+  pinchFallback: 'Phase check.',
+  L1: [
+    'Step back from this project and think about where you are in the overall flow — have you actually finished this phase, or have you just been in it for a while? What needs to be done before it makes sense to move on?',
+    'Look at what you set out to accomplish in this phase of this project — is it done, partially done, or have you moved past it without properly closing it off? Figure out where you actually are before starting something new.',
+    'Check what you set out to finish before moving on from this phase of this project — what\'s actually done, what\'s been skipped or deferred? Make a call on whether you\'re ready to transition.',
+  ],
+  L2: [
+    'Is there anything left unfinished in the current phase of this project that should be sorted before you move on to the next one?',
+    'What\'s the next phase for this project, and what needs to be in place before you can properly start it? Are those things ready?',
+  ],
+  L3: [
+    'Is this project actually ready to move to the next phase, or has it just been in the current phase for a long time without a clear exit point?',
+  ],
+};
+
 // ── Content resolution ─────────────────────────────────────────────────────────
 
 /**
@@ -929,4 +1065,12 @@ export {
   ABSENCE_ARCH_CONFLICT_CASUAL,
   ABSENCE_PROMPT_CONTEXT,
   ABSENCE_PROMPT_CONTEXT_CASUAL,
+  ABSENCE_ROLLBACK_PLANNING,
+  ABSENCE_ROLLBACK_PLANNING_CASUAL,
+  ABSENCE_DEPLOYMENT_PLANNING,
+  ABSENCE_DEPLOYMENT_PLANNING_CASUAL,
+  ABSENCE_DEPENDENCY_MGMT,
+  ABSENCE_DEPENDENCY_MGMT_CASUAL,
+  ABSENCE_PHASE_TRANSITION,
+  ABSENCE_PHASE_TRANSITION_CASUAL,
 };

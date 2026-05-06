@@ -350,6 +350,66 @@ export const ABSENCE_PROMPT_CONTEXT_BEGINNER: DecisionContent = {
   ],
 };
 
+export const ABSENCE_ROLLBACK_PLANNING_BEGINNER: DecisionContent = {
+  question:      'Shipping soon — what\'s the rollback plan?',
+  pinchFallback: 'No rollback plan.',
+  L1: [
+    '1. Think about what would happen if this feature caused a problem when it went live.\n2. Share with me: what would you do to undo the deployment if something went wrong?\n3. Then check: is there anything in this feature that would be hard to reverse once it\'s live?',
+    'Walk me through what you\'d do if this feature broke in production right after shipping — would you know how to roll it back, or would you need to figure it out under pressure? Share your plan with me.',
+  ],
+  L2: [
+    'Is there a plan for what to do if this feature causes a problem after it\'s deployed? Share it with me before we ship.',
+  ],
+  L3: [
+    'Do you know what you\'d do to roll back this feature if something went wrong after shipping?',
+  ],
+};
+
+export const ABSENCE_DEPLOYMENT_PLANNING_BEGINNER: DecisionContent = {
+  question:      'Shipping soon — is the deployment actually planned?',
+  pinchFallback: 'No deploy plan.',
+  L1: [
+    '1. Think about how this feature is going to get from your computer to where users will use it.\n2. Share with me: is there a plan for that, or is it still not figured out?\n3. Then check: is there anything the live environment needs that isn\'t set up yet — like settings or secret keys?',
+    'Walk me through how this feature would actually get deployed — what are the steps, and is there anything that needs to be set up in the live environment before it\'ll work? Share what you find with me.',
+  ],
+  L2: [
+    'Is there a plan for how this feature gets deployed to where real users will use it? Share it with me so we can check if anything\'s missing.',
+  ],
+  L3: [
+    'Do you know how this feature is going to be deployed, or is the deployment still not planned out?',
+  ],
+};
+
+export const ABSENCE_DEPENDENCY_MGMT_BEGINNER: DecisionContent = {
+  question:      'Added packages — any issues checked?',
+  pinchFallback: 'Dependency risk.',
+  L1: [
+    '1. Look at the new packages that were added while building this feature.\n2. Share with me: do any of them have known problems, or did you just install them because they looked like what you needed?\n3. Then check: do they work alongside everything else that\'s already installed, or could they cause a conflict?',
+    'Walk me through the packages added in what was just built — are they the right ones for the job, and have you checked if there are any known problems with the versions you installed? Share what you find with me.',
+  ],
+  L2: [
+    'Is there anything about the packages added in what was just built that could cause a problem — like a conflict with existing packages or a known security issue? Share what you find with me.',
+  ],
+  L3: [
+    'Have the new packages added in what was just built been checked to make sure they don\'t cause any conflicts or known issues?',
+  ],
+};
+
+export const ABSENCE_PHASE_TRANSITION_BEGINNER: DecisionContent = {
+  question:      'Been in this phase a while — what comes next?',
+  pinchFallback: 'Phase check.',
+  L1: [
+    '1. Think about what phase of development this project is currently in.\n2. Share with me: have you finished what you set out to do in this phase, or are you still in the middle of it?\n3. Then tell me: what needs to be done before it makes sense to move on to the next phase?',
+    'Walk me through where this project stands right now — are you still in the middle of the current phase, or have you finished it without realising it? Share what still needs to be done before moving on.',
+  ],
+  L2: [
+    'Is there anything in this project that needs to be finished or decided before moving to the next phase? Share what you think is still missing with me.',
+  ],
+  L3: [
+    'Is this project ready to move to the next phase, or are there things that should be finished first?',
+  ],
+};
+
 export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> = {
   test_creation:         ABSENCE_TEST_CREATION_BEGINNER,
   regression_check:      ABSENCE_REGRESSION_CHECK_BEGINNER,
