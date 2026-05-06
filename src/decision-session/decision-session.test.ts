@@ -764,6 +764,23 @@ describe('DecisionContent structure', () => {
     expect(ABSENCE_REFACTORING_CASUAL.L2).toHaveLength(2);
     expect(ABSENCE_REFACTORING_CASUAL.L3).toHaveLength(1);
   });
+
+  it('every Group A formal/casual entry has non-empty L1[0], L1[1], L2[0], L3[0]', () => {
+    const groupAFormalCasual = [
+      ABSENCE_SECURITY_CHECK,     ABSENCE_SECURITY_CHECK_CASUAL,
+      ABSENCE_ERROR_HANDLING,     ABSENCE_ERROR_HANDLING_CASUAL,
+      ABSENCE_DOCUMENTATION,      ABSENCE_DOCUMENTATION_CASUAL,
+      ABSENCE_OBSERVABILITY,      ABSENCE_OBSERVABILITY_CASUAL,
+      ABSENCE_COMPREHENSION,      ABSENCE_COMPREHENSION_CASUAL,
+      ABSENCE_REFACTORING,        ABSENCE_REFACTORING_CASUAL,
+    ];
+    for (const c of groupAFormalCasual) {
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L1[1].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
+  });
 });
 
 // ── DecisionContent structure — Group A beginner variants ────────────────────
@@ -832,6 +849,15 @@ describe('DecisionContent structure — Group A beginner variants', () => {
     expect(ABSENCE_REFACTORING_BEGINNER.L1).toHaveLength(2);
     expect(ABSENCE_REFACTORING_BEGINNER.L2).toHaveLength(1);
     expect(ABSENCE_REFACTORING_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('every Group A beginner entry has non-empty L1[0], L1[1], L2[0], L3[0]', () => {
+    for (const c of groupABeginner) {
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L1[1].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
   });
 });
 
