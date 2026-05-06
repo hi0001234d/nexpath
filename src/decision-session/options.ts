@@ -253,6 +253,108 @@ const ABSENCE_CROSS_CONFIRMING: DecisionContent = {
   ],
 };
 
+const ABSENCE_SECURITY_CHECK: DecisionContent = {
+  question:      'Feature built — security reviewed?',
+  pinchFallback: 'Security gap.',
+  L1: [
+    'Review what was just built for security vulnerabilities: check authentication and authorization logic, input validation for injection risks (SQL, XSS, command), and any API endpoints for missing rate limiting, improper error responses, or exposed sensitive data.',
+    'Audit what was just built against OWASP Top 10 exposure: does this feature handle untrusted input safely, authenticate and authorize correctly, and avoid leaking sensitive information in error messages or logs?',
+    'Cross-confirm what was just built against your threat model: what assets are being protected, what attack surface has this feature introduced, and what is the highest-severity vulnerability an attacker could exploit right now?',
+  ],
+  L2: [
+    'Check what was just built for the most critical security gaps: input validation, proper authentication and authorization checks, and sensitive data exposure in responses or logs.',
+    'What is the biggest security risk introduced by what was just built, and what would be needed to mitigate it before this ships?',
+  ],
+  L3: [
+    'Is there anything in what was just built that could be exploited — untrusted input not validated, missing auth checks, or sensitive data exposed to callers?',
+  ],
+};
+
+const ABSENCE_ERROR_HANDLING: DecisionContent = {
+  question:      'Feature built — error paths handled?',
+  pinchFallback: 'Error handling.',
+  L1: [
+    'Review what was just built for error handling gaps: identify all failure modes (network errors, invalid input, missing dependencies, unexpected state), confirm each is handled explicitly, and flag any that are silently swallowed or produce unhelpful error messages.',
+    'Audit the failure paths in what was just built: what happens when each external dependency fails, each input is invalid, or each assumption is violated? Is the failure propagated, logged, or recovered from correctly in each case?',
+    'Cross-confirm what was just built against its error contract: are errors typed and documented, are retries or fallbacks implemented where appropriate, and are error messages safe to expose to callers without leaking internal state?',
+  ],
+  L2: [
+    'What failure modes in what was just built are currently unhandled or silently swallowed? Identify and fix the most critical ones.',
+    'What happens in what was just built when the most likely thing goes wrong — network failure, invalid input, or missing dependency? Verify that case is handled correctly.',
+  ],
+  L3: [
+    'Is there anything in what was just built that could fail silently or produce an unhelpful error when something unexpected happens?',
+  ],
+};
+
+const ABSENCE_DOCUMENTATION: DecisionContent = {
+  question:      'Code written — any documentation added?',
+  pinchFallback: 'Docs missing.',
+  L1: [
+    'Review what was just built for documentation coverage: identify functions, classes, and modules with non-obvious behaviour that lack docstrings or inline comments, and add documentation that explains the why — the constraint, the invariant, the tradeoff — not just the what.',
+    'Audit what was just built for undocumented assumptions: what design decisions, invariants, or external constraints are embedded in this code that a future maintainer could not infer from reading it? Document those specifically.',
+    'Check whether what was just built needs README updates, API reference additions, or architecture notes — not just inline comments. What context would someone need to understand this feature without asking the original author?',
+  ],
+  L2: [
+    'What parts of what was just built would be hardest for another developer to understand without documentation? Add documentation for those first.',
+    'Identify the non-obvious decisions in what was just built — the ones a future maintainer might change by mistake — and document the reasoning behind each.',
+  ],
+  L3: [
+    'Is there anything in what was just built that has non-obvious behaviour or hidden assumptions that are not documented?',
+  ],
+};
+
+const ABSENCE_OBSERVABILITY: DecisionContent = {
+  question:      'Feature built — how will you know it\'s working?',
+  pinchFallback: 'No observability.',
+  L1: [
+    'Review what was just built for observability gaps: identify what this feature does in production that is currently invisible — requests, failures, latency, state changes — and add structured logging for the events that would allow you to diagnose a production incident without SSH access.',
+    'Audit what was just built for monitoring coverage: what SLI would you define for this feature, what metrics would you emit, and what alert condition would page someone if this feature degraded silently in production?',
+    'Check what was just built for error tracking integration: are failures captured in your error tracking system with enough context — request ID, user ID, stack trace — to diagnose the issue without reproducing it locally?',
+  ],
+  L2: [
+    'What events in what was just built are currently invisible in production? Add structured logging for the ones that would be essential to diagnose a failure.',
+    'If this feature broke silently in production tonight, what would you see in your logs and monitoring to detect it? If the answer is "nothing", what needs to be added?',
+  ],
+  L3: [
+    'Is there anything in what was just built that could fail silently in production with no log entry or alert to detect it?',
+  ],
+};
+
+const ABSENCE_COMPREHENSION: DecisionContent = {
+  question:      'AI generated it — do you understand it?',
+  pinchFallback: 'Comprehension check.',
+  L1: [
+    'Review what was just built for comprehension: trace through the main execution path and explain what each significant function, class, and data structure does — independently, without relying on comments generated alongside the code.',
+    'Audit your understanding of what was just built: identify any part of the code you could not explain to a colleague without reading it again. For each such part, either gain that understanding now or flag it as a comprehension debt before moving on.',
+    'Check whether what was just built contains any abstractions, design patterns, or external library usage you accepted without fully understanding — verify what each one does and why it was chosen for this specific context.',
+  ],
+  L2: [
+    'Is there any part of what was just built you could not confidently explain to another developer right now? Address that before moving on.',
+    'Walk through what was just built and identify any code you accepted because it looked correct without actually verifying the logic yourself.',
+  ],
+  L3: [
+    'Is there anything in what was just built that you haven\'t manually traced through and fully understood?',
+  ],
+};
+
+const ABSENCE_REFACTORING: DecisionContent = {
+  question:      'Extended implementation — code health reviewed?',
+  pinchFallback: 'Refactor check.',
+  L1: [
+    'Review what was just built for refactoring opportunities: identify code duplication, functions that do more than one thing, abstractions that have grown inconsistent with their usage, and naming that no longer reflects current behaviour — prioritize by maintenance risk.',
+    'Audit what was just built for code health: are there patterns that have emerged across this implementation that should be abstracted, any dead code that can be removed, or any modules that have grown beyond their original responsibility?',
+    'Check what was just built against existing codebase conventions: does it introduce inconsistent patterns, style deviations, or compounding technical debt that would make the next feature harder to add if not addressed now?',
+  ],
+  L2: [
+    'What is the most significant refactoring opportunity in what was just built — the thing that if left will make the next feature harder to add?',
+    'Review what was just built for duplication or inconsistency that should be cleaned up before moving on to the next task.',
+  ],
+  L3: [
+    'Is there anything in what was just built that should be refactored or cleaned up before moving on?',
+  ],
+};
+
 /** ABSENCE_TEST_CREATION_CASUAL — casual-register variant for pro_geek_soul and null profiles */
 const ABSENCE_TEST_CREATION_CASUAL: DecisionContent = {
   question:      'Built something — any tests written yet?',
@@ -325,6 +427,108 @@ const ABSENCE_CROSS_CONFIRMING_CASUAL: DecisionContent = {
   ],
 };
 
+const ABSENCE_SECURITY_CHECK_CASUAL: DecisionContent = {
+  question:      'Built something — any security checks done?',
+  pinchFallback: 'Security gap.',
+  L1: [
+    'Look at what was just built — is there anything that handles user input or touches auth that hasn\'t been checked for obvious security problems? What could an attacker do with this as it stands?',
+    'Check what was just built for the easy wins an attacker would go for first — bad input handling, missing permission checks, or anything that leaks data it shouldn\'t.',
+    'Walk through what was just built as if you\'re trying to break it — what\'s the first thing you\'d try? Flag anything that looks like it could be abused.',
+  ],
+  L2: [
+    'What\'s the biggest security risk in what was just built? Flag it and explain what needs to change.',
+    'Is there anything in what was just built that handles user input or auth that hasn\'t been properly validated or checked?',
+  ],
+  L3: [
+    'Is there anything in what was just built that could be exploited — untrusted input, missing auth, or data that shouldn\'t be exposed?',
+  ],
+};
+
+const ABSENCE_ERROR_HANDLING_CASUAL: DecisionContent = {
+  question:      'Feature built — what happens when it breaks?',
+  pinchFallback: 'Error handling.',
+  L1: [
+    'Look at what was just built — what happens when something goes wrong? Check for unhandled errors, anything that fails silently, and cases where the error message would tell an attacker more than the user needs to know.',
+    'Walk through the unhappy paths in what was just built — what happens when a network call fails, the input is weird, or a dependency isn\'t available? Are those cases handled, or does it just crash?',
+    'Think about what was just built from the angle of things going wrong — what\'s the most likely failure, and what does the user or caller see when it happens? Is that the right behaviour?',
+  ],
+  L2: [
+    'What\'s the most likely thing to fail in what was just built, and what happens when it does? Fix it if it\'s not handled.',
+    'Is there anything in what was just built that could fail without producing a useful error message or recovering gracefully?',
+  ],
+  L3: [
+    'Is there anything in what was just built that fails silently or doesn\'t handle the obvious error cases?',
+  ],
+};
+
+const ABSENCE_DOCUMENTATION_CASUAL: DecisionContent = {
+  question:      'Code written — is anything documented?',
+  pinchFallback: 'Docs missing.',
+  L1: [
+    'Look at what was just built — what parts would confuse someone reading it for the first time? Add short comments explaining the why, not just the what, for anything that isn\'t obvious from the code itself.',
+    'Check what was just built for undocumented decisions — things that would make a future developer go "why did they do it this way?" Write a quick note for each before the context is forgotten.',
+    'Does anything in what was just built need a README update or a note in the docs? What would someone need to know to use or maintain this feature without asking you directly?',
+  ],
+  L2: [
+    'What\'s the most confusing part of what was just built for someone who didn\'t write it? Add a comment or doc for that.',
+    'Are there any decisions in what was just built that future-you would wonder about in six months? Document them now.',
+  ],
+  L3: [
+    'Is there anything in what was just built that needs a comment or note to explain why it works the way it does?',
+  ],
+};
+
+const ABSENCE_OBSERVABILITY_CASUAL: DecisionContent = {
+  question:      'Feature built — will you know when it breaks?',
+  pinchFallback: 'No observability.',
+  L1: [
+    'Look at what was just built — if it breaks in production tonight, what would you see in your logs? If the answer is "not much", add logging for the key events: requests coming in, failures happening, anything that changed state.',
+    'Check what was just built for blind spots in production — what does it do that you currently can\'t see? Add logging or metrics for the things you\'d want to know about when something goes wrong.',
+    'What\'s the first thing you\'d check if what was just built stopped working in production? Is that thing actually observable right now, or would you be flying blind?',
+  ],
+  L2: [
+    'What would you see in your logs if what was just built failed in production right now? If not much, add logging for the key failure points.',
+    'Is there anything in what was just built that could break silently in production without triggering an alert or showing up in logs?',
+  ],
+  L3: [
+    'If what was just built broke in production, would you be able to detect it from logs or monitoring? What\'s missing?',
+  ],
+};
+
+const ABSENCE_COMPREHENSION_CASUAL: DecisionContent = {
+  question:      'AI wrote it — do you actually get it?',
+  pinchFallback: 'Comprehension check.',
+  L1: [
+    'Look at what was just built — is there any part you couldn\'t explain to someone else right now? Find the bit you\'re least confident about and trace through it until you actually understand what it does.',
+    'Walk through what was just built and spot the parts you accepted because they looked right, not because you verified them. Pick the riskiest one and make sure you understand it properly.',
+    'Is there anything in what was just built that uses a library or approach you haven\'t used before? Make sure you understand what it does — not just that it works — before moving on.',
+  ],
+  L2: [
+    'What\'s the part of what was just built you\'re least confident you understand? Trace through it and make sure you get it.',
+    'Is there anything in what was just built you accepted without really checking the logic? Flag it and go back through it.',
+  ],
+  L3: [
+    'Is there anything in what was just built that you haven\'t fully understood and verified yourself?',
+  ],
+};
+
+const ABSENCE_REFACTORING_CASUAL: DecisionContent = {
+  question:      'Long build run — anything to clean up?',
+  pinchFallback: 'Refactor check.',
+  L1: [
+    'Look at what was just built as a whole — is there anything that\'s gotten messy, duplicated, or harder to read than it needs to be? Flag the bits that would slow down the next person who touches this.',
+    'Walk through what was just built and find the thing you\'d be embarrassed to show in a code review — the copy-pasted section, the function that does too much, the name that doesn\'t mean what it says anymore. Flag it and address it.',
+    'Check if what was just built fits cleanly with the rest of the codebase or if it\'s starting to diverge in style or structure. Flag anything that would make future changes harder than they need to be.',
+  ],
+  L2: [
+    'What\'s the messiest part of what was just built? Is it worth cleaning up now before it compounds?',
+    'Is there anything in what was just built that\'s duplicated, overly complex, or inconsistent with the rest of the codebase?',
+  ],
+  L3: [
+    'Is there anything in what was just built that should be cleaned up or simplified before moving on?',
+  ],
+};
+
 // ── Content resolution ─────────────────────────────────────────────────────────
 
 /**
@@ -338,6 +542,12 @@ const ABSENCE_CONTENT: Partial<Record<string, DecisionContent>> = {
   spec_acceptance_check: ABSENCE_SPEC_ACCEPTANCE,
   cross_confirming:      ABSENCE_CROSS_CONFIRMING,
   behaviour_testing:     BEHAVIOUR_TESTING,
+  security_check:        ABSENCE_SECURITY_CHECK,
+  error_handling:        ABSENCE_ERROR_HANDLING,
+  documentation:         ABSENCE_DOCUMENTATION,
+  observability:         ABSENCE_OBSERVABILITY,
+  comprehension:         ABSENCE_COMPREHENSION,
+  refactoring:           ABSENCE_REFACTORING,
 };
 
 const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
@@ -346,6 +556,12 @@ const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
   spec_acceptance_check: ABSENCE_SPEC_ACCEPTANCE_CASUAL,
   cross_confirming:      ABSENCE_CROSS_CONFIRMING_CASUAL,
   behaviour_testing:     BEHAVIOUR_TESTING,  // BEHAVIOUR_TESTING_CASUAL is out of sub-2 scope
+  security_check:        ABSENCE_SECURITY_CHECK_CASUAL,
+  error_handling:        ABSENCE_ERROR_HANDLING_CASUAL,
+  documentation:         ABSENCE_DOCUMENTATION_CASUAL,
+  observability:         ABSENCE_OBSERVABILITY_CASUAL,
+  comprehension:         ABSENCE_COMPREHENSION_CASUAL,
+  refactoring:           ABSENCE_REFACTORING_CASUAL,
 };
 
 /**
@@ -473,4 +689,16 @@ export {
   ABSENCE_SPEC_ACCEPTANCE_CASUAL,
   ABSENCE_CROSS_CONFIRMING,
   ABSENCE_CROSS_CONFIRMING_CASUAL,
+  ABSENCE_SECURITY_CHECK,
+  ABSENCE_SECURITY_CHECK_CASUAL,
+  ABSENCE_ERROR_HANDLING,
+  ABSENCE_ERROR_HANDLING_CASUAL,
+  ABSENCE_DOCUMENTATION,
+  ABSENCE_DOCUMENTATION_CASUAL,
+  ABSENCE_OBSERVABILITY,
+  ABSENCE_OBSERVABILITY_CASUAL,
+  ABSENCE_COMPREHENSION,
+  ABSENCE_COMPREHENSION_CASUAL,
+  ABSENCE_REFACTORING,
+  ABSENCE_REFACTORING_CASUAL,
 };

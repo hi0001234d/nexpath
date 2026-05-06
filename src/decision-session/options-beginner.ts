@@ -170,12 +170,108 @@ export const ABSENCE_CROSS_CONFIRMING_BEGINNER: DecisionContent = {
   ],
 };
 
+export const ABSENCE_SECURITY_CHECK_BEGINNER: DecisionContent = {
+  question:      'Built something — any security checks done?',
+  pinchFallback: 'Security gap.',
+  L1: [
+    '1. Look at what was just built and check if it handles anything a user types in or sends to the app.\n2. Share with me: could someone type something unexpected and cause a problem?\n3. Then check: does anything in what was just built need a login or permission to use, and is that actually enforced?',
+    'Walk me through what was just built and tell me — what could go wrong if someone tried to misuse it on purpose? Share what you find with me before we move on.',
+  ],
+  L2: [
+    'Is there anything in what was just built that takes input from a user or checks if someone is logged in? Share how that\'s handled with me.',
+  ],
+  L3: [
+    'Is there anything in what was just built that a user could misuse or that isn\'t properly protected?',
+  ],
+};
+
+export const ABSENCE_ERROR_HANDLING_BEGINNER: DecisionContent = {
+  question:      'Feature built — what happens when it breaks?',
+  pinchFallback: 'Error handling.',
+  L1: [
+    '1. Look at what was just built and think: what happens if it doesn\'t work the way it\'s supposed to?\n2. Share with me: is there anything that could break without showing a useful message?\n3. Then check: what happens if a user does something unexpected — does the app handle it or crash?',
+    'Walk me through what was just built and tell me — what\'s the first thing that could go wrong, and what does the user see when that happens? Share what you find with me.',
+  ],
+  L2: [
+    'Is there anything in what was just built that could fail without telling the user what went wrong? Share what you find with me.',
+  ],
+  L3: [
+    'Is there anything in what was just built that could crash or fail silently when something unexpected happens?',
+  ],
+};
+
+export const ABSENCE_DOCUMENTATION_BEGINNER: DecisionContent = {
+  question:      'Code written — is anything documented?',
+  pinchFallback: 'Docs missing.',
+  L1: [
+    '1. Look at what was just built and find one part that would be hard to understand for someone who didn\'t write it.\n2. Add a short explanation of why it works that way and share it with me.\n3. Then check: is there anything else in what was just built that needs explaining before we move on?',
+    'Walk me through what was just built and point out the part that would confuse someone reading it for the first time — then write a short explanation for that part and share it with me.',
+  ],
+  L2: [
+    'Is there anything in what was just built that you\'d have to explain to someone else? Write that explanation as a comment and share it with me.',
+  ],
+  L3: [
+    'Is there anything in what was just built that isn\'t obvious — something that would confuse someone who didn\'t write it?',
+  ],
+};
+
+export const ABSENCE_OBSERVABILITY_BEGINNER: DecisionContent = {
+  question:      'Feature built — will you know when it breaks?',
+  pinchFallback: 'No observability.',
+  L1: [
+    '1. Think about what was just built running in the real world — if it stopped working, how would you find out?\n2. Share with me: is there anything that records what it\'s doing, or would it just fail without warning?\n3. Then tell me: what\'s the most important thing to log so you\'d know it\'s working?',
+    'Walk me through what was just built and tell me — if something went wrong when real users were using it, would you get any warning, or would you find out when users complained? Share what you find with me.',
+  ],
+  L2: [
+    'Is there anything in what was just built that could stop working without you noticing? Share with me what would help you detect that.',
+  ],
+  L3: [
+    'Is there anything in what was just built that could fail silently in production without triggering a log entry or alert?',
+  ],
+};
+
+export const ABSENCE_COMPREHENSION_BEGINNER: DecisionContent = {
+  question:      'AI wrote it — do you actually get it?',
+  pinchFallback: 'Comprehension check.',
+  L1: [
+    '1. Read through what was just built slowly — not to check if it looks right, but to understand what each part actually does.\n2. Share with me: is there anything you\'re not sure about or that doesn\'t make sense to you?\n3. Then tell me: is there any part you just accepted because it looked okay without actually understanding it?',
+    'Walk me through what was just built in your own words — explain what it does step by step. Share anything you\'re not able to explain clearly with me and we\'ll go through it together.',
+  ],
+  L2: [
+    'Is there any part of what was just built you couldn\'t explain to someone else right now? Share that part with me and we\'ll make sure you understand it.',
+  ],
+  L3: [
+    'Is there anything in what was just built that you\'re not sure you fully understand?',
+  ],
+};
+
+export const ABSENCE_REFACTORING_BEGINNER: DecisionContent = {
+  question:      'Long build run — anything to clean up?',
+  pinchFallback: 'Refactor check.',
+  L1: [
+    '1. Read through what was just built from start to finish — does it still feel organised and easy to follow?\n2. Share with me: is there anything that feels messy, repeated, or harder to understand than it needs to be?\n3. Then tell me: is there anything that should be tidied up before we add more features on top?',
+    'Walk me through what was just built and tell me — is there any part that would be confusing or messy to someone who didn\'t write it? Share what you find with me so we can decide whether to clean it up now.',
+  ],
+  L2: [
+    'Is there anything in what was just built that feels messy or repeated? Share it with me and let\'s decide whether to clean it up before moving on.',
+  ],
+  L3: [
+    'Is there anything in what was just built that should be cleaned up or simplified before we continue?',
+  ],
+};
+
 export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> = {
   test_creation:         ABSENCE_TEST_CREATION_BEGINNER,
   regression_check:      ABSENCE_REGRESSION_CHECK_BEGINNER,
   spec_acceptance_check: ABSENCE_SPEC_ACCEPTANCE_BEGINNER,
   cross_confirming:      ABSENCE_CROSS_CONFIRMING_BEGINNER,
   behaviour_testing:     BEHAVIOUR_TESTING_BEGINNER,
+  security_check:        ABSENCE_SECURITY_CHECK_BEGINNER,
+  error_handling:        ABSENCE_ERROR_HANDLING_BEGINNER,
+  documentation:         ABSENCE_DOCUMENTATION_BEGINNER,
+  observability:         ABSENCE_OBSERVABILITY_BEGINNER,
+  comprehension:         ABSENCE_COMPREHENSION_BEGINNER,
+  refactoring:           ABSENCE_REFACTORING_BEGINNER,
 };
 
 export const TRANSITION_CONTENT_BEGINNER: Partial<Record<Stage, DecisionContent>> = {
