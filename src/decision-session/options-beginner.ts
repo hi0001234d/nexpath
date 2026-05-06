@@ -260,6 +260,96 @@ export const ABSENCE_REFACTORING_BEGINNER: DecisionContent = {
   ],
 };
 
+export const ABSENCE_NO_PUSHBACK_BEGINNER: DecisionContent = {
+  question:      'AI keeps suggesting — are you actually evaluating?',
+  pinchFallback: 'No pushback.',
+  L1: [
+    '1. Look at the last few things the AI suggested while building this feature.\n2. Share with me: is there anything you accepted just because it sounded right, without checking if it was really the best option?\n3. Then pick one and tell me: why did you go with that suggestion over other ways of doing it?',
+    'Walk me through the last AI suggestion used in what was just built — do you actually agree with it, or did you just go with it because the AI seemed confident? Share your thoughts with me.',
+  ],
+  L2: [
+    'Is there anything the AI suggested for what was just built that you said yes to without really thinking about whether it was the right choice? Share that with me.',
+  ],
+  L3: [
+    'Is there any AI suggestion used in what was just built that you accepted without questioning whether it was actually the best approach?',
+  ],
+};
+
+export const ABSENCE_CORRECTION_SEEKING_BEGINNER: DecisionContent = {
+  question:      'Has the AI checked its own work?',
+  pinchFallback: 'No verification.',
+  L1: [
+    '1. Ask the AI to look at what was just built again — but this time, ask it to find what might be wrong with it.\n2. Share with me what it says.\n3. Then tell me: does its answer make sense to you, or does something still seem off?',
+    'Ask the AI: "what\'s the part of what was just built you\'re least sure about?" — then share what it says with me so we can check together.',
+  ],
+  L2: [
+    'Ask the AI to point out any part of what was just built that might not be right — then share what it says with me.',
+  ],
+  L3: [
+    'Ask the AI to find one thing in what was just built that might be wrong or could be done better.',
+  ],
+};
+
+export const ABSENCE_PROBLEM_CORRECTION_BEGINNER: DecisionContent = {
+  question:      'Spotted a bug — did it actually get fixed?',
+  pinchFallback: 'Bug unresolved.',
+  L1: [
+    '1. Think back through this session — was there anything that didn\'t work or looked wrong earlier on?\n2. Share with me: is that thing actually fixed now, or did we move on without dealing with it?\n3. Then check: are there any other problems in what was just built that haven\'t been properly sorted out?',
+    'Walk me through what was just built and tell me — is there anything we said was a problem earlier that still hasn\'t been fixed? Share what you find with me.',
+  ],
+  L2: [
+    'Is there anything in what was just built that was flagged as broken or wrong earlier in this session but hasn\'t been fixed yet? Share it with me.',
+  ],
+  L3: [
+    'Is there any bug in what was just built that was noticed earlier but not actually fixed?',
+  ],
+};
+
+export const ABSENCE_ALTERNATIVES_BEGINNER: DecisionContent = {
+  question:      'Decision made — any alternatives looked at?',
+  pinchFallback: 'No alternatives.',
+  L1: [
+    '1. Think about the biggest decision that was made while building this feature.\n2. Share with me: what other ways could it have been done, and why did we go with this one?\n3. Then tell me: is this still the best approach now that you think about it, or would something else have been simpler?',
+    'Walk me through the most important choice made in what was just built — what were the other options we could have picked, and why did we choose this one? Share your thinking with me.',
+  ],
+  L2: [
+    'Is there any choice made in what was just built where we just went with the first idea without thinking about other ways to do it? Share that with me.',
+  ],
+  L3: [
+    'Is there any decision in what was just built that was made without thinking about other options first?',
+  ],
+};
+
+export const ABSENCE_ARCH_CONFLICT_BEGINNER: DecisionContent = {
+  question:      'Feature added — does it fit the codebase?',
+  pinchFallback: 'Arch conflict.',
+  L1: [
+    '1. Look at what was just built and compare it to how other parts of the project are written.\n2. Share with me: does it feel like it belongs, or does it do things in a different way than everything else?\n3. Then tell me: is there anything that could cause problems when we try to connect it with the rest of the project?',
+    'Walk me through what was just built and tell me — does it fit with the way the rest of the project is structured, or does it work differently from everything else? Share what you notice with me.',
+  ],
+  L2: [
+    'Is there anything in what was just built that looks different from how the rest of the project does things? Share it with me and let\'s check if that\'s a problem.',
+  ],
+  L3: [
+    'Is there anything in what was just built that doesn\'t fit with the rest of the project\'s structure or patterns?',
+  ],
+};
+
+export const ABSENCE_PROMPT_CONTEXT_BEGINNER: DecisionContent = {
+  question:      'Sending prompts — have you shared the spec?',
+  pinchFallback: 'Missing context.',
+  L1: [
+    '1. Think about what you\'ve been asking the AI to build in this session.\n2. Share with me: has it seen the original plan for what we\'re building, or has it just been following each instruction without knowing the bigger picture?\n3. Then paste the plan or the task description into the conversation and ask it to check that what was just built matches what was planned.',
+    'Walk me through what the AI has been working from in this session — has it seen the full plan, or just individual instructions? Share the original plan with it now and ask it to check if what was just built matches up, then share what it says with me.',
+  ],
+  L2: [
+    'Has the AI seen the plan or the description of what this feature is supposed to do? If not, share it now and ask it to check that what was just built matches — then share what it says with me.',
+  ],
+  L3: [
+    'Does the AI know what the full plan says for this feature, or has it been building without seeing it?',
+  ],
+};
+
 export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> = {
   test_creation:         ABSENCE_TEST_CREATION_BEGINNER,
   regression_check:      ABSENCE_REGRESSION_CHECK_BEGINNER,

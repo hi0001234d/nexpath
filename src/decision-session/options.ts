@@ -355,6 +355,108 @@ const ABSENCE_REFACTORING: DecisionContent = {
   ],
 };
 
+const ABSENCE_NO_PUSHBACK: DecisionContent = {
+  question:      'AI suggesting — are you evaluating critically?',
+  pinchFallback: 'No pushback.',
+  L1: [
+    'Review the AI-generated outputs used in what was just built: identify any decisions, implementations, or suggestions you accepted without explicitly verifying the reasoning, checking for alternatives, or questioning the assumptions embedded in the response.',
+    'Audit your acceptance pattern while building this feature: for each significant AI output, ask whether you evaluated it independently or accepted it because it was confident and plausible. Flag any output where you would struggle to justify the implementation choice to a peer reviewer.',
+    'Cross-confirm the most recent AI suggestion used in what was just built: what assumptions did the AI make that were not in your prompt, what alternatives did it not consider, and is the approach it chose actually the best fit for this project?',
+  ],
+  L2: [
+    'Take the last significant AI output used in what was just built and evaluate it critically: do you agree with the approach, and if so, can you explain why it is better than the alternatives?',
+    'Is there any AI output used in what was just built that you accepted because it sounded right rather than because you verified it was right?',
+  ],
+  L3: [
+    'Is there any AI suggestion used in what was just built that you accepted without questioning the reasoning or checking for better alternatives?',
+  ],
+};
+
+const ABSENCE_CORRECTION_SEEKING: DecisionContent = {
+  question:      'AI output — self-verification requested?',
+  pinchFallback: 'No verification.',
+  L1: [
+    'Instruct the AI to self-review what was just built: ask it to identify any assumptions that may be incorrect, logic that could fail under edge cases, and any parts of the implementation it is not confident about.',
+    'Request a critical re-evaluation of what was just built: ask the AI to argue against its own implementation — what would a skeptical senior engineer flag, what alternative approaches were not considered, and what are the weakest parts of this solution?',
+    'Ask the AI to produce a failure analysis of what was just built: what are the most likely ways this implementation fails in production, what inputs would cause incorrect behaviour, and what would it change if asked to rebuild this from scratch?',
+  ],
+  L2: [
+    'Ask the AI to review what was just built critically — what would it change or flag if it were reviewing this as a senior engineer rather than as the author?',
+    'Request a self-critique of what was just built: what are the weakest parts, and what was the AI least confident about when generating this?',
+  ],
+  L3: [
+    'Ask the AI to identify the part of what was just built it is least confident is correct.',
+  ],
+};
+
+const ABSENCE_PROBLEM_CORRECTION: DecisionContent = {
+  question:      'Bug noticed — explicitly corrected?',
+  pinchFallback: 'Bug unresolved.',
+  L1: [
+    'Review the outstanding bugs and issues identified in this session: for each one, confirm whether it has been explicitly fixed, explicitly deferred with a tracking note, or left unaddressed. Address any that are unresolved and blocking correctness of what was just built.',
+    'Audit what was just built for bugs that were noticed but not fixed: identify any error, failure, or incorrect behaviour that was mentioned in this session and is still present in the current implementation.',
+    'Cross-confirm the current state of what was just built: run the tests, check the known failure cases, and verify that any issue identified earlier in this session has been resolved or explicitly acknowledged as a known limitation.',
+  ],
+  L2: [
+    'Is there any bug or issue in what was just built that was noticed earlier in this session but not explicitly fixed? Address it before moving on.',
+    'Run the tests for what was just built and confirm that any failure identified earlier in this session is now resolved.',
+  ],
+  L3: [
+    'Is there any bug in what was just built that was noticed but not explicitly corrected before moving on?',
+  ],
+};
+
+const ABSENCE_ALTERNATIVES: DecisionContent = {
+  question:      'Decision made — alternatives considered?',
+  pinchFallback: 'No alternatives.',
+  L1: [
+    'Review the key decisions made in what was just built: name the alternatives that were not chosen, explain the tradeoffs between each approach, and confirm that the chosen solution is the best fit for the constraints of this project — not just the first viable option.',
+    'Audit the key technical choices made while building this feature: for each significant decision (architecture, library, algorithm, data structure), identify at least one alternative that was not explored and evaluate whether the chosen approach is still the right one given the project\'s constraints.',
+    'Cross-confirm the approach taken in what was just built: what would a different engineering team have done differently, what are the known weaknesses of the chosen approach, and is there a simpler solution that would meet the requirements with fewer dependencies or moving parts?',
+  ],
+  L2: [
+    'What was the most significant technical decision made in what was just built? Name the alternatives that were not explored and confirm the chosen approach is the right tradeoff.',
+    'Is there any part of what was just built where a different approach would have been simpler, more maintainable, or better suited to the project\'s constraints?',
+  ],
+  L3: [
+    'Is there any decision in what was just built that was made without considering alternatives — where the first approach was taken without evaluating other options?',
+  ],
+};
+
+const ABSENCE_ARCH_CONFLICT: DecisionContent = {
+  question:      'Feature added — architecture consistency checked?',
+  pinchFallback: 'Arch conflict.',
+  L1: [
+    'Review what was just built for architectural consistency: does this feature follow the same patterns, abstractions, and conventions established in the existing codebase, or does it introduce a parallel approach that will diverge over time and increase maintenance cost?',
+    'Audit what was just built for architecture conflicts: identify any module boundaries crossed without justification, any shared state accessed in ways inconsistent with the existing data flow, and any new dependencies introduced that conflict with the project\'s existing dependency strategy.',
+    'Cross-confirm what was just built against the architectural decisions documented for this project: does this feature respect the layering, separation of concerns, and interface contracts that were established? Flag any violations and determine whether they require a refactor or an architecture decision update.',
+  ],
+  L2: [
+    'Does what was just built follow the same patterns and conventions as the rest of the codebase, or does it introduce a new approach that conflicts with the existing architecture?',
+    'Is there anything in what was just built that violates a design decision or architectural convention established earlier in this project?',
+  ],
+  L3: [
+    'Is there anything in what was just built that doesn\'t fit the patterns or structure of the existing codebase?',
+  ],
+};
+
+const ABSENCE_PROMPT_CONTEXT: DecisionContent = {
+  question:      'Prompts sent — spec and arch referenced?',
+  pinchFallback: 'Missing context.',
+  L1: [
+    'Review the prompts used to build this feature: are they grounded in the project\'s spec, architecture decisions, and task breakdown, or are they ad hoc instructions that the AI is implementing without access to the full planning context? If context is missing, inject it now before the next prompt.',
+    'Audit the context richness of the prompts used to build this feature: does the AI have access to the current spec, the established architecture, and the specific acceptance criteria for what was just built, or is it making assumptions that a context-rich prompt would have resolved?',
+    'Cross-confirm that what was just built is aligned with the project\'s planning artifacts: paste the relevant spec section, architecture diagram, or task definition into the conversation and ask the AI to verify that its implementation matches what was planned.',
+  ],
+  L2: [
+    'Does the AI have the spec and architecture context it needs to build this feature correctly, or has it been working from ad hoc instructions? Inject the relevant planning context before continuing.',
+    'Paste the spec or acceptance criteria for this feature into the conversation and ask the AI to check whether what was just built matches what was planned.',
+  ],
+  L3: [
+    'Does the AI have enough context about the spec and architecture to be building this feature correctly, or is it working without the full picture?',
+  ],
+};
+
 /** ABSENCE_TEST_CREATION_CASUAL — casual-register variant for pro_geek_soul and null profiles */
 const ABSENCE_TEST_CREATION_CASUAL: DecisionContent = {
   question:      'Built something — any tests written yet?',
@@ -526,6 +628,108 @@ const ABSENCE_REFACTORING_CASUAL: DecisionContent = {
   ],
   L3: [
     'Is there anything in what was just built that should be cleaned up or simplified before moving on?',
+  ],
+};
+
+const ABSENCE_NO_PUSHBACK_CASUAL: DecisionContent = {
+  question:      'AI keeps suggesting — are you actually evaluating?',
+  pinchFallback: 'No pushback.',
+  L1: [
+    'Look at the AI responses that produced what was just built — is there anything you accepted without really thinking about whether it was the right call? Pick the one you\'re least sure about and push back on it now.',
+    'Check how you\'ve been accepting AI suggestions for this feature — have you been approving them because they look reasonable, or because you\'ve actually thought through the alternatives? Flag the ones where you\'re not sure.',
+    'Take the most recent AI suggestion used in what was just built and challenge it: what assumptions did it make, what did it not consider, and is this actually the best way to do it for this project?',
+  ],
+  L2: [
+    'What\'s the last AI output used in what was just built that you accepted without questioning it? Push back on it now and see if it holds up.',
+    'Is there anything in what was just built where you accepted what the AI said because it sounded confident, not because you verified it yourself?',
+  ],
+  L3: [
+    'Is there any AI suggestion used in what was just built that you accepted without actually evaluating whether it was the right approach?',
+  ],
+};
+
+const ABSENCE_CORRECTION_SEEKING_CASUAL: DecisionContent = {
+  question:      'Has the AI checked its own work?',
+  pinchFallback: 'No verification.',
+  L1: [
+    'Ask the AI to take a second look at what was just built — not to explain it, but to actually critique it. What would it do differently, what assumptions did it make that might be wrong, and what are the riskiest parts?',
+    'Get the AI to argue against its own output for what was just built: what\'s the case against this approach, what did it not consider, and what\'s the part it\'s least confident about?',
+    'Ask the AI: if you had to find a bug or a flaw in what was just built, what would it be? Don\'t let it off the hook with "it looks fine."',
+  ],
+  L2: [
+    'Ask the AI to review what was just built as if it hadn\'t written it — what would it flag or change?',
+    'Get the AI to identify the weakest part of what was just built and explain what it\'s not sure about.',
+  ],
+  L3: [
+    'Ask the AI to identify the part of what was just built it\'s least confident is correct.',
+  ],
+};
+
+const ABSENCE_PROBLEM_CORRECTION_CASUAL: DecisionContent = {
+  question:      'Spotted a bug — did it actually get fixed?',
+  pinchFallback: 'Bug unresolved.',
+  L1: [
+    'Go through what was just built and check: is there anything that was flagged as broken or wrong earlier in this session that hasn\'t actually been fixed yet? Don\'t let it get buried under new code.',
+    'Look at the known issues in what was just built — anything that came up as a bug or a problem in this session. Is each one fixed, or just acknowledged and skipped over?',
+    'Run the tests for what was just built and check if any of the failures match issues that were mentioned earlier in this session. If yes, fix them before adding anything new.',
+  ],
+  L2: [
+    'Is there anything in what was just built that was identified as broken or wrong earlier in this session but hasn\'t been fixed yet?',
+    'Run the tests for what was just built and check — are any of the failures from issues that were already noticed earlier and not resolved?',
+  ],
+  L3: [
+    'Is there any bug in what was just built that was noticed earlier in this session but not explicitly fixed?',
+  ],
+};
+
+const ABSENCE_ALTERNATIVES_CASUAL: DecisionContent = {
+  question:      'Decision made — any alternatives looked at?',
+  pinchFallback: 'No alternatives.',
+  L1: [
+    'Look at the biggest decision made in what was just built — is it the right call, or just the first thing that came to mind? Name one or two other ways it could have been done and explain why this approach beats them.',
+    'Check the key choices made while building this feature: is there anything where you went with the first option without stopping to think if there was a better or simpler way? Flag those and evaluate them now.',
+    'Think about what was just built from the angle of a different developer on a different stack — what would they have done differently, and is the current approach actually the best fit for this project?',
+  ],
+  L2: [
+    'What\'s the most important technical choice in what was just built? Name the alternatives you didn\'t go with and confirm this is still the right call.',
+    'Is there anything in what was just built where a simpler or different approach would have worked just as well — or better?',
+  ],
+  L3: [
+    'Is there any decision in what was just built that was made without really looking at other options first?',
+  ],
+};
+
+const ABSENCE_ARCH_CONFLICT_CASUAL: DecisionContent = {
+  question:      'Feature added — does it fit the codebase?',
+  pinchFallback: 'Arch conflict.',
+  L1: [
+    'Look at what was just built and check if it fits with the rest of the codebase — does it follow the same patterns, or does it do things in a new way that the rest of the project doesn\'t? Flag anything that would make a future developer say "why is this one different?"',
+    'Check what was just built for places where it crosses boundaries it probably shouldn\'t, pulls in data in a way the rest of the codebase doesn\'t, or introduces a new pattern without a clear reason. Is it consistent, or is it starting to diverge?',
+    'Compare what was just built to how the same kind of thing is done elsewhere in the project — same approach, or something different? If different, is there a good reason for it, or did it just happen that way?',
+  ],
+  L2: [
+    'Does what was just built follow the same patterns as the rest of the codebase, or does it introduce something new that might conflict with what\'s already there?',
+    'Is there anything in what was just built that doesn\'t fit with the way the rest of the project is structured?',
+  ],
+  L3: [
+    'Is there anything in what was just built that doesn\'t match the patterns or structure of the existing codebase?',
+  ],
+};
+
+const ABSENCE_PROMPT_CONTEXT_CASUAL: DecisionContent = {
+  question:      'Sending prompts — have you shared the spec?',
+  pinchFallback: 'Missing context.',
+  L1: [
+    'Check the prompts used to build this feature — does the AI actually know what the spec says, what the architecture looks like, and what the task is supposed to achieve? If it\'s just getting ad hoc instructions, paste the relevant context in now so it\'s building the right thing.',
+    'Has the AI been working with the full picture, or just the last thing you asked it to do? If there\'s a spec, an architecture doc, or a task breakdown it hasn\'t seen yet, share it and ask it to check that what was just built matches up.',
+    'Paste the relevant spec or task definition into the conversation and ask the AI to confirm that what was just built actually does what it\'s supposed to. If there\'s a mismatch, now is a better time to find it than after shipping.',
+  ],
+  L2: [
+    'Does the AI have enough context to build this feature correctly — has it seen the spec, the architecture, or the task breakdown? If not, share the relevant bits now.',
+    'Paste the spec or the definition of done for this feature into the conversation and check whether what was just built actually matches it.',
+  ],
+  L3: [
+    'Does the AI know what the spec says for this feature, or has it been building without seeing it?',
   ],
 };
 
@@ -701,4 +905,16 @@ export {
   ABSENCE_COMPREHENSION_CASUAL,
   ABSENCE_REFACTORING,
   ABSENCE_REFACTORING_CASUAL,
+  ABSENCE_NO_PUSHBACK,
+  ABSENCE_NO_PUSHBACK_CASUAL,
+  ABSENCE_CORRECTION_SEEKING,
+  ABSENCE_CORRECTION_SEEKING_CASUAL,
+  ABSENCE_PROBLEM_CORRECTION,
+  ABSENCE_PROBLEM_CORRECTION_CASUAL,
+  ABSENCE_ALTERNATIVES,
+  ABSENCE_ALTERNATIVES_CASUAL,
+  ABSENCE_ARCH_CONFLICT,
+  ABSENCE_ARCH_CONFLICT_CASUAL,
+  ABSENCE_PROMPT_CONTEXT,
+  ABSENCE_PROMPT_CONTEXT_CASUAL,
 };
