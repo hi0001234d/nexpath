@@ -955,7 +955,7 @@ const ABSENCE_CONTENT: Partial<Record<string, DecisionContent>> = {
   documentation:         ABSENCE_DOCUMENTATION,
   observability:         ABSENCE_OBSERVABILITY,
   comprehension:         ABSENCE_COMPREHENSION,
-  refactoring:           ABSENCE_REFACTORING,
+  refactoring_review:      ABSENCE_REFACTORING,
   no_agent_pushback:       ABSENCE_NO_PUSHBACK,
   correction_seeking:      ABSENCE_CORRECTION_SEEKING,
   problem_correction:      ABSENCE_PROBLEM_CORRECTION,
@@ -966,6 +966,8 @@ const ABSENCE_CONTENT: Partial<Record<string, DecisionContent>> = {
   deployment_planning:     ABSENCE_DEPLOYMENT_PLANNING,
   dependency_management:   ABSENCE_DEPENDENCY_MGMT,
   phase_transition:        ABSENCE_PHASE_TRANSITION,
+  spec_cross_confirm:      ABSENCE_SPEC_CROSS_CONFIRM,
+  spec_revision:           ABSENCE_SPEC_REVISION,
 };
 
 const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
@@ -979,7 +981,7 @@ const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
   documentation:         ABSENCE_DOCUMENTATION_CASUAL,
   observability:         ABSENCE_OBSERVABILITY_CASUAL,
   comprehension:         ABSENCE_COMPREHENSION_CASUAL,
-  refactoring:           ABSENCE_REFACTORING_CASUAL,
+  refactoring_review:      ABSENCE_REFACTORING_CASUAL,
   no_agent_pushback:       ABSENCE_NO_PUSHBACK_CASUAL,
   correction_seeking:      ABSENCE_CORRECTION_SEEKING_CASUAL,
   problem_correction:      ABSENCE_PROBLEM_CORRECTION_CASUAL,
@@ -990,6 +992,8 @@ const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
   deployment_planning:     ABSENCE_DEPLOYMENT_PLANNING_CASUAL,
   dependency_management:   ABSENCE_DEPENDENCY_MGMT_CASUAL,
   phase_transition:        ABSENCE_PHASE_TRANSITION_CASUAL,
+  spec_cross_confirm:      ABSENCE_SPEC_CROSS_CONFIRM_CASUAL,
+  spec_revision:           ABSENCE_SPEC_REVISION_CASUAL,
 };
 
 /**

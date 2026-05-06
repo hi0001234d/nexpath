@@ -451,7 +451,7 @@ export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> 
   documentation:         ABSENCE_DOCUMENTATION_BEGINNER,
   observability:         ABSENCE_OBSERVABILITY_BEGINNER,
   comprehension:         ABSENCE_COMPREHENSION_BEGINNER,
-  refactoring:           ABSENCE_REFACTORING_BEGINNER,
+  refactoring_review:      ABSENCE_REFACTORING_BEGINNER,
   no_agent_pushback:       ABSENCE_NO_PUSHBACK_BEGINNER,
   correction_seeking:      ABSENCE_CORRECTION_SEEKING_BEGINNER,
   problem_correction:      ABSENCE_PROBLEM_CORRECTION_BEGINNER,
@@ -462,6 +462,8 @@ export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> 
   deployment_planning:     ABSENCE_DEPLOYMENT_PLANNING_BEGINNER,
   dependency_management:   ABSENCE_DEPENDENCY_MGMT_BEGINNER,
   phase_transition:        ABSENCE_PHASE_TRANSITION_BEGINNER,
+  spec_cross_confirm:      ABSENCE_SPEC_CROSS_CONFIRM_BEGINNER,
+  spec_revision:           ABSENCE_SPEC_REVISION_BEGINNER,
 };
 
 export const TRANSITION_CONTENT_BEGINNER: Partial<Record<Stage, DecisionContent>> = {

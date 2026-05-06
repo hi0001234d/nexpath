@@ -538,18 +538,18 @@ describe('resolveDecisionContent — heuristic variant routing', () => {
     expect(content).toBe(ABSENCE_COMPREHENSION_BEGINNER);
   });
 
-  it('hardcore_pro + absence:refactoring → ABSENCE_REFACTORING (formal)', () => {
-    const content = resolveDecisionContent('implementation', 'absence:refactoring', makeProfile('hardcore_pro'));
+  it('hardcore_pro + absence:refactoring_review → ABSENCE_REFACTORING (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:refactoring_review', makeProfile('hardcore_pro'));
     expect(content).toBe(ABSENCE_REFACTORING);
   });
 
-  it('pro_geek_soul + absence:refactoring → ABSENCE_REFACTORING_CASUAL', () => {
-    const content = resolveDecisionContent('implementation', 'absence:refactoring', makeProfile('pro_geek_soul'));
+  it('pro_geek_soul + absence:refactoring_review → ABSENCE_REFACTORING_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:refactoring_review', makeProfile('pro_geek_soul'));
     expect(content).toBe(ABSENCE_REFACTORING_CASUAL);
   });
 
-  it('beginner + absence:refactoring → ABSENCE_REFACTORING_BEGINNER', () => {
-    const content = resolveDecisionContent('implementation', 'absence:refactoring', makeProfile('beginner'));
+  it('beginner + absence:refactoring_review → ABSENCE_REFACTORING_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:refactoring_review', makeProfile('beginner'));
     expect(content).toBe(ABSENCE_REFACTORING_BEGINNER);
   });
 
