@@ -8,6 +8,7 @@ import {
   type OptionGenContext,
 } from './OptionGenerator.js';
 import { TASK_REVIEW, IMPLEMENTATION_TO_REVIEW } from './options.js';
+import { TASK_REVIEW_BEGINNER } from './options-beginner.js';
 import type { UserProfile, PromptRecord } from '../classifier/types.js';
 import { GroundingConfig } from '../config/GroundingConfig.js';
 
@@ -554,5 +555,37 @@ describe('generateOptionList — retry on validation failure', () => {
     const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
     expect(result).toBeNull();
     expect(create).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── buildOptionPrompt — type contract ─────────────────────────────────────────
+
+describe('buildOptionPrompt — type contract', () => {
+  it('includes type contract section in prompt', () => {
+    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    expect(prompt).toContain('Item type contract (absolute');
+  });
+
+  it('all-string content → all STRING labels', () => {
+    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    // TASK_REVIEW: L1×3 plain strings, L2×2 plain strings, L3×1 plain string
+    expect(prompt).toContain('l1: [STRING, STRING, STRING]');
+    expect(prompt).toContain('l2: [STRING, STRING]');
+    expect(prompt).toContain('l3: [STRING]');
+  });
+
+  it('mixed content (ARRAY + STRING in L1) → correct per-position labels', () => {
+    const prompt = buildOptionPrompt(TASK_REVIEW_BEGINNER, makeProfile(), undefined, []);
+    // TASK_REVIEW_BEGINNER.L1[0] has \n (3 steps), L1[1] is a plain string
+    expect(prompt).toContain('l1: [ARRAY(3), STRING]');
+  });
+
+  it('type contract appears immediately before the input JSON block', () => {
+    const prompt = buildOptionPrompt(TASK_REVIEW_BEGINNER, makeProfile(), undefined, []);
+    const contractIdx = prompt.indexOf('Item type contract');
+    const inputIdx    = prompt.indexOf('Now rewrite the following input');
+    expect(contractIdx).toBeGreaterThan(-1);
+    expect(inputIdx).toBeGreaterThan(-1);
+    expect(contractIdx).toBeLessThan(inputIdx);
   });
 });
