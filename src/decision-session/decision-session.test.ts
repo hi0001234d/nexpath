@@ -534,6 +534,98 @@ describe('resolveDecisionContent — heuristic variant routing', () => {
     const content = resolveDecisionContent('implementation', 'absence:refactoring', makeProfile('beginner'));
     expect(content).toBe(ABSENCE_REFACTORING_BEGINNER);
   });
+
+  // ── Group B signal routing ────────────────────────────────────────────────────
+
+  it('hardcore_pro + absence:no_agent_pushback → ABSENCE_NO_PUSHBACK (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:no_agent_pushback', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_NO_PUSHBACK);
+  });
+
+  it('pro_geek_soul + absence:no_agent_pushback → ABSENCE_NO_PUSHBACK_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:no_agent_pushback', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_NO_PUSHBACK_CASUAL);
+  });
+
+  it('beginner + absence:no_agent_pushback → ABSENCE_NO_PUSHBACK_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:no_agent_pushback', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_NO_PUSHBACK_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:correction_seeking → ABSENCE_CORRECTION_SEEKING (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:correction_seeking', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_CORRECTION_SEEKING);
+  });
+
+  it('pro_geek_soul + absence:correction_seeking → ABSENCE_CORRECTION_SEEKING_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:correction_seeking', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_CORRECTION_SEEKING_CASUAL);
+  });
+
+  it('beginner + absence:correction_seeking → ABSENCE_CORRECTION_SEEKING_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:correction_seeking', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_CORRECTION_SEEKING_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:problem_correction → ABSENCE_PROBLEM_CORRECTION (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:problem_correction', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_PROBLEM_CORRECTION);
+  });
+
+  it('pro_geek_soul + absence:problem_correction → ABSENCE_PROBLEM_CORRECTION_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:problem_correction', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_PROBLEM_CORRECTION_CASUAL);
+  });
+
+  it('beginner + absence:problem_correction → ABSENCE_PROBLEM_CORRECTION_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:problem_correction', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_PROBLEM_CORRECTION_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:alternatives_seeking → ABSENCE_ALTERNATIVES (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:alternatives_seeking', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_ALTERNATIVES);
+  });
+
+  it('pro_geek_soul + absence:alternatives_seeking → ABSENCE_ALTERNATIVES_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:alternatives_seeking', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_ALTERNATIVES_CASUAL);
+  });
+
+  it('beginner + absence:alternatives_seeking → ABSENCE_ALTERNATIVES_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:alternatives_seeking', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_ALTERNATIVES_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:architecture_conflict → ABSENCE_ARCH_CONFLICT (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:architecture_conflict', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_ARCH_CONFLICT);
+  });
+
+  it('pro_geek_soul + absence:architecture_conflict → ABSENCE_ARCH_CONFLICT_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:architecture_conflict', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_ARCH_CONFLICT_CASUAL);
+  });
+
+  it('beginner + absence:architecture_conflict → ABSENCE_ARCH_CONFLICT_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:architecture_conflict', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_ARCH_CONFLICT_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:prompt_context_richness → ABSENCE_PROMPT_CONTEXT (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:prompt_context_richness', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_PROMPT_CONTEXT);
+  });
+
+  it('pro_geek_soul + absence:prompt_context_richness → ABSENCE_PROMPT_CONTEXT_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:prompt_context_richness', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_PROMPT_CONTEXT_CASUAL);
+  });
+
+  it('beginner + absence:prompt_context_richness → ABSENCE_PROMPT_CONTEXT_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:prompt_context_richness', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_PROMPT_CONTEXT_BEGINNER);
+  });
 });
 
 // ── Content structure validation ──────────────────────────────────────────────

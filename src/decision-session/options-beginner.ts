@@ -362,6 +362,12 @@ export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> 
   observability:         ABSENCE_OBSERVABILITY_BEGINNER,
   comprehension:         ABSENCE_COMPREHENSION_BEGINNER,
   refactoring:           ABSENCE_REFACTORING_BEGINNER,
+  no_agent_pushback:       ABSENCE_NO_PUSHBACK_BEGINNER,
+  correction_seeking:      ABSENCE_CORRECTION_SEEKING_BEGINNER,
+  problem_correction:      ABSENCE_PROBLEM_CORRECTION_BEGINNER,
+  alternatives_seeking:    ABSENCE_ALTERNATIVES_BEGINNER,
+  architecture_conflict:   ABSENCE_ARCH_CONFLICT_BEGINNER,
+  prompt_context_richness: ABSENCE_PROMPT_CONTEXT_BEGINNER,
 };
 
 export const TRANSITION_CONTENT_BEGINNER: Partial<Record<Stage, DecisionContent>> = {

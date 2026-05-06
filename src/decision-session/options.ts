@@ -752,6 +752,12 @@ const ABSENCE_CONTENT: Partial<Record<string, DecisionContent>> = {
   observability:         ABSENCE_OBSERVABILITY,
   comprehension:         ABSENCE_COMPREHENSION,
   refactoring:           ABSENCE_REFACTORING,
+  no_agent_pushback:       ABSENCE_NO_PUSHBACK,
+  correction_seeking:      ABSENCE_CORRECTION_SEEKING,
+  problem_correction:      ABSENCE_PROBLEM_CORRECTION,
+  alternatives_seeking:    ABSENCE_ALTERNATIVES,
+  architecture_conflict:   ABSENCE_ARCH_CONFLICT,
+  prompt_context_richness: ABSENCE_PROMPT_CONTEXT,
 };
 
 const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
@@ -766,6 +772,12 @@ const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
   observability:         ABSENCE_OBSERVABILITY_CASUAL,
   comprehension:         ABSENCE_COMPREHENSION_CASUAL,
   refactoring:           ABSENCE_REFACTORING_CASUAL,
+  no_agent_pushback:       ABSENCE_NO_PUSHBACK_CASUAL,
+  correction_seeking:      ABSENCE_CORRECTION_SEEKING_CASUAL,
+  problem_correction:      ABSENCE_PROBLEM_CORRECTION_CASUAL,
+  alternatives_seeking:    ABSENCE_ALTERNATIVES_CASUAL,
+  architecture_conflict:   ABSENCE_ARCH_CONFLICT_CASUAL,
+  prompt_context_richness: ABSENCE_PROMPT_CONTEXT_CASUAL,
 };
 
 /**
