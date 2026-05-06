@@ -50,6 +50,14 @@ import {
   ABSENCE_ARCH_CONFLICT_CASUAL,
   ABSENCE_PROMPT_CONTEXT,
   ABSENCE_PROMPT_CONTEXT_CASUAL,
+  ABSENCE_ROLLBACK_PLANNING,
+  ABSENCE_ROLLBACK_PLANNING_CASUAL,
+  ABSENCE_DEPLOYMENT_PLANNING,
+  ABSENCE_DEPLOYMENT_PLANNING_CASUAL,
+  ABSENCE_DEPENDENCY_MGMT,
+  ABSENCE_DEPENDENCY_MGMT_CASUAL,
+  ABSENCE_PHASE_TRANSITION,
+  ABSENCE_PHASE_TRANSITION_CASUAL,
 } from './options.js';
 import {
   ABSENCE_CONTENT_BEGINNER,
@@ -71,6 +79,10 @@ import {
   ABSENCE_ALTERNATIVES_BEGINNER,
   ABSENCE_ARCH_CONFLICT_BEGINNER,
   ABSENCE_PROMPT_CONTEXT_BEGINNER,
+  ABSENCE_ROLLBACK_PLANNING_BEGINNER,
+  ABSENCE_DEPLOYMENT_PLANNING_BEGINNER,
+  ABSENCE_DEPENDENCY_MGMT_BEGINNER,
+  ABSENCE_PHASE_TRANSITION_BEGINNER,
 } from './options-beginner.js';
 import type { UserProfile } from '../classifier/types.js';
 import {
@@ -672,6 +684,14 @@ describe('DecisionContent structure', () => {
     ABSENCE_ARCH_CONFLICT_CASUAL,
     ABSENCE_PROMPT_CONTEXT,
     ABSENCE_PROMPT_CONTEXT_CASUAL,
+    ABSENCE_ROLLBACK_PLANNING,
+    ABSENCE_ROLLBACK_PLANNING_CASUAL,
+    ABSENCE_DEPLOYMENT_PLANNING,
+    ABSENCE_DEPLOYMENT_PLANNING_CASUAL,
+    ABSENCE_DEPENDENCY_MGMT,
+    ABSENCE_DEPENDENCY_MGMT_CASUAL,
+    ABSENCE_PHASE_TRANSITION,
+    ABSENCE_PHASE_TRANSITION_CASUAL,
   ];
 
   it('every content entry has a non-empty question', () => {
@@ -992,6 +1012,69 @@ describe('DecisionContent structure', () => {
       expect(c.L3[0].length).toBeGreaterThan(0);
     }
   });
+
+  it('ABSENCE_ROLLBACK_PLANNING has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ROLLBACK_PLANNING.L1).toHaveLength(3);
+    expect(ABSENCE_ROLLBACK_PLANNING.L2).toHaveLength(2);
+    expect(ABSENCE_ROLLBACK_PLANNING.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ROLLBACK_PLANNING_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ROLLBACK_PLANNING_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_ROLLBACK_PLANNING_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_ROLLBACK_PLANNING_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_DEPLOYMENT_PLANNING has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEPLOYMENT_PLANNING.L1).toHaveLength(3);
+    expect(ABSENCE_DEPLOYMENT_PLANNING.L2).toHaveLength(2);
+    expect(ABSENCE_DEPLOYMENT_PLANNING.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_DEPLOYMENT_PLANNING_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEPLOYMENT_PLANNING_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_DEPLOYMENT_PLANNING_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_DEPLOYMENT_PLANNING_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_DEPENDENCY_MGMT has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEPENDENCY_MGMT.L1).toHaveLength(3);
+    expect(ABSENCE_DEPENDENCY_MGMT.L2).toHaveLength(2);
+    expect(ABSENCE_DEPENDENCY_MGMT.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_DEPENDENCY_MGMT_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEPENDENCY_MGMT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_DEPENDENCY_MGMT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_DEPENDENCY_MGMT_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_PHASE_TRANSITION has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_PHASE_TRANSITION.L1).toHaveLength(3);
+    expect(ABSENCE_PHASE_TRANSITION.L2).toHaveLength(2);
+    expect(ABSENCE_PHASE_TRANSITION.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_PHASE_TRANSITION_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_PHASE_TRANSITION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_PHASE_TRANSITION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_PHASE_TRANSITION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('every Group C formal/casual entry has non-empty L1[0], L1[1], L2[0], L3[0]', () => {
+    const groupCFormalCasual = [
+      ABSENCE_ROLLBACK_PLANNING,    ABSENCE_ROLLBACK_PLANNING_CASUAL,
+      ABSENCE_DEPLOYMENT_PLANNING,  ABSENCE_DEPLOYMENT_PLANNING_CASUAL,
+      ABSENCE_DEPENDENCY_MGMT,      ABSENCE_DEPENDENCY_MGMT_CASUAL,
+      ABSENCE_PHASE_TRANSITION,     ABSENCE_PHASE_TRANSITION_CASUAL,
+    ];
+    for (const c of groupCFormalCasual) {
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L1[1].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
+  });
 });
 
 // ── DecisionContent structure — Group A beginner variants ────────────────────
@@ -1142,6 +1225,70 @@ describe('DecisionContent structure — Group B beginner variants', () => {
 
   it('every Group B beginner entry has non-empty L1[0], L1[1], L2[0], L3[0]', () => {
     for (const c of groupBBeginner) {
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L1[1].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ── DecisionContent structure — Group C beginner variants ────────────────────
+
+describe('DecisionContent structure — Group C beginner variants', () => {
+  const groupCBeginner = [
+    ABSENCE_ROLLBACK_PLANNING_BEGINNER,
+    ABSENCE_DEPLOYMENT_PLANNING_BEGINNER,
+    ABSENCE_DEPENDENCY_MGMT_BEGINNER,
+    ABSENCE_PHASE_TRANSITION_BEGINNER,
+  ];
+
+  it('every Group C beginner entry has a non-empty question', () => {
+    for (const c of groupCBeginner) {
+      expect(c.question.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('every Group C beginner entry has a non-empty pinchFallback', () => {
+    for (const c of groupCBeginner) {
+      expect(c.pinchFallback.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('every Group C beginner entry has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    for (const c of groupCBeginner) {
+      expect(c.L1).toHaveLength(2);
+      expect(c.L2).toHaveLength(1);
+      expect(c.L3).toHaveLength(1);
+    }
+  });
+
+  it('ABSENCE_ROLLBACK_PLANNING_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_ROLLBACK_PLANNING_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_ROLLBACK_PLANNING_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_ROLLBACK_PLANNING_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_DEPLOYMENT_PLANNING_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEPLOYMENT_PLANNING_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_DEPLOYMENT_PLANNING_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_DEPLOYMENT_PLANNING_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_DEPENDENCY_MGMT_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEPENDENCY_MGMT_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_DEPENDENCY_MGMT_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_DEPENDENCY_MGMT_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_PHASE_TRANSITION_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_PHASE_TRANSITION_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_PHASE_TRANSITION_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_PHASE_TRANSITION_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('every Group C beginner entry has non-empty L1[0], L1[1], L2[0], L3[0]', () => {
+    for (const c of groupCBeginner) {
       expect(c.L1[0].length).toBeGreaterThan(0);
       expect(c.L1[1].length).toBeGreaterThan(0);
       expect(c.L2[0].length).toBeGreaterThan(0);
