@@ -706,6 +706,38 @@ describe('resolveDecisionContent — heuristic variant routing', () => {
     const content = resolveDecisionContent('implementation', 'absence:phase_transition', makeProfile('beginner'));
     expect(content).toBe(ABSENCE_PHASE_TRANSITION_BEGINNER);
   });
+
+  // ── Group D signal routing ────────────────────────────────────────────────────
+
+  it('hardcore_pro + absence:spec_cross_confirm → ABSENCE_SPEC_CROSS_CONFIRM (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:spec_cross_confirm', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_SPEC_CROSS_CONFIRM);
+  });
+
+  it('pro_geek_soul + absence:spec_cross_confirm → ABSENCE_SPEC_CROSS_CONFIRM_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:spec_cross_confirm', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_SPEC_CROSS_CONFIRM_CASUAL);
+  });
+
+  it('beginner + absence:spec_cross_confirm → ABSENCE_SPEC_CROSS_CONFIRM_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:spec_cross_confirm', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_SPEC_CROSS_CONFIRM_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:spec_revision → ABSENCE_SPEC_REVISION (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:spec_revision', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_SPEC_REVISION);
+  });
+
+  it('pro_geek_soul + absence:spec_revision → ABSENCE_SPEC_REVISION_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:spec_revision', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_SPEC_REVISION_CASUAL);
+  });
+
+  it('beginner + absence:spec_revision → ABSENCE_SPEC_REVISION_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:spec_revision', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_SPEC_REVISION_BEGINNER);
+  });
 });
 
 // ── Content structure validation ──────────────────────────────────────────────
