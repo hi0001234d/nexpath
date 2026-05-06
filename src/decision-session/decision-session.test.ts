@@ -38,6 +38,18 @@ import {
   ABSENCE_COMPREHENSION_CASUAL,
   ABSENCE_REFACTORING,
   ABSENCE_REFACTORING_CASUAL,
+  ABSENCE_NO_PUSHBACK,
+  ABSENCE_NO_PUSHBACK_CASUAL,
+  ABSENCE_CORRECTION_SEEKING,
+  ABSENCE_CORRECTION_SEEKING_CASUAL,
+  ABSENCE_PROBLEM_CORRECTION,
+  ABSENCE_PROBLEM_CORRECTION_CASUAL,
+  ABSENCE_ALTERNATIVES,
+  ABSENCE_ALTERNATIVES_CASUAL,
+  ABSENCE_ARCH_CONFLICT,
+  ABSENCE_ARCH_CONFLICT_CASUAL,
+  ABSENCE_PROMPT_CONTEXT,
+  ABSENCE_PROMPT_CONTEXT_CASUAL,
 } from './options.js';
 import {
   ABSENCE_CONTENT_BEGINNER,
@@ -53,6 +65,12 @@ import {
   ABSENCE_OBSERVABILITY_BEGINNER,
   ABSENCE_COMPREHENSION_BEGINNER,
   ABSENCE_REFACTORING_BEGINNER,
+  ABSENCE_NO_PUSHBACK_BEGINNER,
+  ABSENCE_CORRECTION_SEEKING_BEGINNER,
+  ABSENCE_PROBLEM_CORRECTION_BEGINNER,
+  ABSENCE_ALTERNATIVES_BEGINNER,
+  ABSENCE_ARCH_CONFLICT_BEGINNER,
+  ABSENCE_PROMPT_CONTEXT_BEGINNER,
 } from './options-beginner.js';
 import type { UserProfile } from '../classifier/types.js';
 import {
@@ -550,6 +568,18 @@ describe('DecisionContent structure', () => {
     ABSENCE_COMPREHENSION_CASUAL,
     ABSENCE_REFACTORING,
     ABSENCE_REFACTORING_CASUAL,
+    ABSENCE_NO_PUSHBACK,
+    ABSENCE_NO_PUSHBACK_CASUAL,
+    ABSENCE_CORRECTION_SEEKING,
+    ABSENCE_CORRECTION_SEEKING_CASUAL,
+    ABSENCE_PROBLEM_CORRECTION,
+    ABSENCE_PROBLEM_CORRECTION_CASUAL,
+    ABSENCE_ALTERNATIVES,
+    ABSENCE_ALTERNATIVES_CASUAL,
+    ABSENCE_ARCH_CONFLICT,
+    ABSENCE_ARCH_CONFLICT_CASUAL,
+    ABSENCE_PROMPT_CONTEXT,
+    ABSENCE_PROMPT_CONTEXT_CASUAL,
   ];
 
   it('every content entry has a non-empty question', () => {
@@ -781,6 +811,95 @@ describe('DecisionContent structure', () => {
       expect(c.L3[0].length).toBeGreaterThan(0);
     }
   });
+
+  it('ABSENCE_NO_PUSHBACK has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_NO_PUSHBACK.L1).toHaveLength(3);
+    expect(ABSENCE_NO_PUSHBACK.L2).toHaveLength(2);
+    expect(ABSENCE_NO_PUSHBACK.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_NO_PUSHBACK_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_NO_PUSHBACK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_NO_PUSHBACK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_NO_PUSHBACK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CORRECTION_SEEKING has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CORRECTION_SEEKING.L1).toHaveLength(3);
+    expect(ABSENCE_CORRECTION_SEEKING.L2).toHaveLength(2);
+    expect(ABSENCE_CORRECTION_SEEKING.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CORRECTION_SEEKING_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_PROBLEM_CORRECTION has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_PROBLEM_CORRECTION.L1).toHaveLength(3);
+    expect(ABSENCE_PROBLEM_CORRECTION.L2).toHaveLength(2);
+    expect(ABSENCE_PROBLEM_CORRECTION.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_PROBLEM_CORRECTION_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_PROBLEM_CORRECTION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_PROBLEM_CORRECTION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_PROBLEM_CORRECTION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ALTERNATIVES has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ALTERNATIVES.L1).toHaveLength(3);
+    expect(ABSENCE_ALTERNATIVES.L2).toHaveLength(2);
+    expect(ABSENCE_ALTERNATIVES.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ALTERNATIVES_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ALTERNATIVES_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_ALTERNATIVES_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_ALTERNATIVES_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ARCH_CONFLICT has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ARCH_CONFLICT.L1).toHaveLength(3);
+    expect(ABSENCE_ARCH_CONFLICT.L2).toHaveLength(2);
+    expect(ABSENCE_ARCH_CONFLICT.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ARCH_CONFLICT_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ARCH_CONFLICT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_ARCH_CONFLICT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_ARCH_CONFLICT_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_PROMPT_CONTEXT has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_PROMPT_CONTEXT.L1).toHaveLength(3);
+    expect(ABSENCE_PROMPT_CONTEXT.L2).toHaveLength(2);
+    expect(ABSENCE_PROMPT_CONTEXT.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_PROMPT_CONTEXT_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('every Group B formal/casual entry has non-empty L1[0], L1[1], L2[0], L3[0]', () => {
+    const groupBFormalCasual = [
+      ABSENCE_NO_PUSHBACK,        ABSENCE_NO_PUSHBACK_CASUAL,
+      ABSENCE_CORRECTION_SEEKING, ABSENCE_CORRECTION_SEEKING_CASUAL,
+      ABSENCE_PROBLEM_CORRECTION, ABSENCE_PROBLEM_CORRECTION_CASUAL,
+      ABSENCE_ALTERNATIVES,       ABSENCE_ALTERNATIVES_CASUAL,
+      ABSENCE_ARCH_CONFLICT,      ABSENCE_ARCH_CONFLICT_CASUAL,
+      ABSENCE_PROMPT_CONTEXT,     ABSENCE_PROMPT_CONTEXT_CASUAL,
+    ];
+    for (const c of groupBFormalCasual) {
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L1[1].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
+  });
 });
 
 // ── DecisionContent structure — Group A beginner variants ────────────────────
@@ -853,6 +972,84 @@ describe('DecisionContent structure — Group A beginner variants', () => {
 
   it('every Group A beginner entry has non-empty L1[0], L1[1], L2[0], L3[0]', () => {
     for (const c of groupABeginner) {
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L1[1].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ── DecisionContent structure — Group B beginner variants ────────────────────
+
+describe('DecisionContent structure — Group B beginner variants', () => {
+  const groupBBeginner = [
+    ABSENCE_NO_PUSHBACK_BEGINNER,
+    ABSENCE_CORRECTION_SEEKING_BEGINNER,
+    ABSENCE_PROBLEM_CORRECTION_BEGINNER,
+    ABSENCE_ALTERNATIVES_BEGINNER,
+    ABSENCE_ARCH_CONFLICT_BEGINNER,
+    ABSENCE_PROMPT_CONTEXT_BEGINNER,
+  ];
+
+  it('every Group B beginner entry has a non-empty question', () => {
+    for (const c of groupBBeginner) {
+      expect(c.question.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('every Group B beginner entry has a non-empty pinchFallback', () => {
+    for (const c of groupBBeginner) {
+      expect(c.pinchFallback.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('every Group B beginner entry has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    for (const c of groupBBeginner) {
+      expect(c.L1).toHaveLength(2);
+      expect(c.L2).toHaveLength(1);
+      expect(c.L3).toHaveLength(1);
+    }
+  });
+
+  it('ABSENCE_NO_PUSHBACK_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_NO_PUSHBACK_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_NO_PUSHBACK_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_NO_PUSHBACK_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CORRECTION_SEEKING_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_CORRECTION_SEEKING_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_CORRECTION_SEEKING_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_CORRECTION_SEEKING_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_PROBLEM_CORRECTION_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_PROBLEM_CORRECTION_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_PROBLEM_CORRECTION_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_PROBLEM_CORRECTION_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ALTERNATIVES_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_ALTERNATIVES_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_ALTERNATIVES_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_ALTERNATIVES_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ARCH_CONFLICT_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_ARCH_CONFLICT_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_ARCH_CONFLICT_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_ARCH_CONFLICT_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_PROMPT_CONTEXT_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_PROMPT_CONTEXT_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_PROMPT_CONTEXT_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_PROMPT_CONTEXT_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('every Group B beginner entry has non-empty L1[0], L1[1], L2[0], L3[0]', () => {
+    for (const c of groupBBeginner) {
       expect(c.L1[0].length).toBeGreaterThan(0);
       expect(c.L1[1].length).toBeGreaterThan(0);
       expect(c.L2[0].length).toBeGreaterThan(0);
