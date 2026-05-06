@@ -638,6 +638,68 @@ describe('resolveDecisionContent — heuristic variant routing', () => {
     const content = resolveDecisionContent('implementation', 'absence:prompt_context_richness', makeProfile('beginner'));
     expect(content).toBe(ABSENCE_PROMPT_CONTEXT_BEGINNER);
   });
+
+  // ── Group C signal routing ────────────────────────────────────────────────────
+
+  it('hardcore_pro + absence:rollback_planning → ABSENCE_ROLLBACK_PLANNING (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:rollback_planning', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_ROLLBACK_PLANNING);
+  });
+
+  it('pro_geek_soul + absence:rollback_planning → ABSENCE_ROLLBACK_PLANNING_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:rollback_planning', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_ROLLBACK_PLANNING_CASUAL);
+  });
+
+  it('beginner + absence:rollback_planning → ABSENCE_ROLLBACK_PLANNING_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:rollback_planning', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_ROLLBACK_PLANNING_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:deployment_planning → ABSENCE_DEPLOYMENT_PLANNING (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:deployment_planning', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_DEPLOYMENT_PLANNING);
+  });
+
+  it('pro_geek_soul + absence:deployment_planning → ABSENCE_DEPLOYMENT_PLANNING_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:deployment_planning', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_DEPLOYMENT_PLANNING_CASUAL);
+  });
+
+  it('beginner + absence:deployment_planning → ABSENCE_DEPLOYMENT_PLANNING_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:deployment_planning', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_DEPLOYMENT_PLANNING_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:dependency_management → ABSENCE_DEPENDENCY_MGMT (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:dependency_management', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_DEPENDENCY_MGMT);
+  });
+
+  it('pro_geek_soul + absence:dependency_management → ABSENCE_DEPENDENCY_MGMT_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:dependency_management', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_DEPENDENCY_MGMT_CASUAL);
+  });
+
+  it('beginner + absence:dependency_management → ABSENCE_DEPENDENCY_MGMT_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:dependency_management', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_DEPENDENCY_MGMT_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:phase_transition → ABSENCE_PHASE_TRANSITION (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:phase_transition', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_PHASE_TRANSITION);
+  });
+
+  it('pro_geek_soul + absence:phase_transition → ABSENCE_PHASE_TRANSITION_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:phase_transition', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_PHASE_TRANSITION_CASUAL);
+  });
+
+  it('beginner + absence:phase_transition → ABSENCE_PHASE_TRANSITION_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:phase_transition', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_PHASE_TRANSITION_BEGINNER);
+  });
 });
 
 // ── Content structure validation ──────────────────────────────────────────────

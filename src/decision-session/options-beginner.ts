@@ -428,6 +428,10 @@ export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> 
   alternatives_seeking:    ABSENCE_ALTERNATIVES_BEGINNER,
   architecture_conflict:   ABSENCE_ARCH_CONFLICT_BEGINNER,
   prompt_context_richness: ABSENCE_PROMPT_CONTEXT_BEGINNER,
+  rollback_planning:       ABSENCE_ROLLBACK_PLANNING_BEGINNER,
+  deployment_planning:     ABSENCE_DEPLOYMENT_PLANNING_BEGINNER,
+  dependency_management:   ABSENCE_DEPENDENCY_MGMT_BEGINNER,
+  phase_transition:        ABSENCE_PHASE_TRANSITION_BEGINNER,
 };
 
 export const TRANSITION_CONTENT_BEGINNER: Partial<Record<Stage, DecisionContent>> = {

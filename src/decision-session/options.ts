@@ -894,6 +894,10 @@ const ABSENCE_CONTENT: Partial<Record<string, DecisionContent>> = {
   alternatives_seeking:    ABSENCE_ALTERNATIVES,
   architecture_conflict:   ABSENCE_ARCH_CONFLICT,
   prompt_context_richness: ABSENCE_PROMPT_CONTEXT,
+  rollback_planning:       ABSENCE_ROLLBACK_PLANNING,
+  deployment_planning:     ABSENCE_DEPLOYMENT_PLANNING,
+  dependency_management:   ABSENCE_DEPENDENCY_MGMT,
+  phase_transition:        ABSENCE_PHASE_TRANSITION,
 };
 
 const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
@@ -914,6 +918,10 @@ const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
   alternatives_seeking:    ABSENCE_ALTERNATIVES_CASUAL,
   architecture_conflict:   ABSENCE_ARCH_CONFLICT_CASUAL,
   prompt_context_richness: ABSENCE_PROMPT_CONTEXT_CASUAL,
+  rollback_planning:       ABSENCE_ROLLBACK_PLANNING_CASUAL,
+  deployment_planning:     ABSENCE_DEPLOYMENT_PLANNING_CASUAL,
+  dependency_management:   ABSENCE_DEPENDENCY_MGMT_CASUAL,
+  phase_transition:        ABSENCE_PHASE_TRANSITION_CASUAL,
 };
 
 /**
