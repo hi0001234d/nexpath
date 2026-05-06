@@ -76,8 +76,14 @@ const _msgLineCount = opts.message.split('\\n').length;
 const _fixedLines = 1 + _msgLineCount + 2;
 const _avail = _rows - _fixedLines - 2;
 function _lineCount(label) {
-  const v = (label || '').replace(/\\x1b\\[[0-9;]*m/g, '').length;
-  return Math.max(Math.ceil((v + 5) / _cols), 1);
+  if (!label) return 1;
+  const segs = label.replace(/\\x1b\\[[0-9;]*m/g, '').split('\\n');
+  let total = 0;
+  for (let i = 0; i < segs.length; i++) {
+    const w = segs[i].length + (i === 0 ? 5 : 0);
+    total += Math.max(Math.ceil(w / _cols), 1);
+  }
+  return total;
 }
 let _budget = 0, _maxItems = 0;
 for (const opt of opts.options) {
@@ -92,6 +98,23 @@ _maxItems = Math.max(_maxItems, 5);
 const _selOptions = (_skipNowIdx >= 0 && _maxItems < opts.options.length)
   ? opts.options.slice(0, _skipNowIdx + 1)
   : opts.options;
+if (_maxItems >= _selOptions.length) {
+  let _totalVL = 0;
+  for (const opt of _selOptions) _totalVL += _lineCount(opt.label);
+  if (_totalVL > _selOptions.length) {
+    let _wb = 0, _wm = 0;
+    for (const opt of _selOptions) {
+      const lc = _lineCount(opt.label);
+      if (_wb + lc > _selOptions.length) break;
+      _wb += lc;
+      _wm++;
+    }
+    if (_wm < _selOptions.length) {
+      _maxItems = Math.max(_wm, 5);
+      if (_skipNowIdx >= 0 && _maxItems <= _skipNowIdx) _maxItems = _skipNowIdx + 1;
+    }
+  }
+}
 _log('maxItems=' + _maxItems + ' budget=' + _budget + ' avail=' + _avail + ' selOpts=' + _selOptions.length);
 
 // Capture Ctrl+X (opt-out) and Ctrl+T (frequency) pressed during the select UI.
@@ -115,7 +138,7 @@ process.stdin.on('keypress', (ch, key) => {
 let picked;
 do {
   picked = await Promise.race([
-    select({ message: opts.message, options: _selOptions }),
+    select({ message: opts.message, options: _selOptions, maxItems: _maxItems }),
     new Promise((r) => setTimeout(() => r(TIMEOUT), 60_000)),
   ]);
 } while (typeof picked === 'string' && picked.startsWith(opts.separatorPrefix));
