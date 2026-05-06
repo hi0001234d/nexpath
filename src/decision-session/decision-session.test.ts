@@ -58,6 +58,10 @@ import {
   ABSENCE_DEPENDENCY_MGMT_CASUAL,
   ABSENCE_PHASE_TRANSITION,
   ABSENCE_PHASE_TRANSITION_CASUAL,
+  ABSENCE_SPEC_CROSS_CONFIRM,
+  ABSENCE_SPEC_CROSS_CONFIRM_CASUAL,
+  ABSENCE_SPEC_REVISION,
+  ABSENCE_SPEC_REVISION_CASUAL,
 } from './options.js';
 import {
   ABSENCE_CONTENT_BEGINNER,
@@ -83,6 +87,8 @@ import {
   ABSENCE_DEPLOYMENT_PLANNING_BEGINNER,
   ABSENCE_DEPENDENCY_MGMT_BEGINNER,
   ABSENCE_PHASE_TRANSITION_BEGINNER,
+  ABSENCE_SPEC_CROSS_CONFIRM_BEGINNER,
+  ABSENCE_SPEC_REVISION_BEGINNER,
 } from './options-beginner.js';
 import type { UserProfile } from '../classifier/types.js';
 import {
@@ -754,6 +760,10 @@ describe('DecisionContent structure', () => {
     ABSENCE_DEPENDENCY_MGMT_CASUAL,
     ABSENCE_PHASE_TRANSITION,
     ABSENCE_PHASE_TRANSITION_CASUAL,
+    ABSENCE_SPEC_CROSS_CONFIRM,
+    ABSENCE_SPEC_CROSS_CONFIRM_CASUAL,
+    ABSENCE_SPEC_REVISION,
+    ABSENCE_SPEC_REVISION_CASUAL,
   ];
 
   it('every content entry has a non-empty question', () => {
@@ -1137,6 +1147,43 @@ describe('DecisionContent structure', () => {
       expect(c.L3[0].length).toBeGreaterThan(0);
     }
   });
+
+  it('ABSENCE_SPEC_CROSS_CONFIRM has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SPEC_CROSS_CONFIRM.L1).toHaveLength(3);
+    expect(ABSENCE_SPEC_CROSS_CONFIRM.L2).toHaveLength(2);
+    expect(ABSENCE_SPEC_CROSS_CONFIRM.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_SPEC_CROSS_CONFIRM_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SPEC_CROSS_CONFIRM_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SPEC_CROSS_CONFIRM_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SPEC_CROSS_CONFIRM_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_SPEC_REVISION has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SPEC_REVISION.L1).toHaveLength(3);
+    expect(ABSENCE_SPEC_REVISION.L2).toHaveLength(2);
+    expect(ABSENCE_SPEC_REVISION.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_SPEC_REVISION_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SPEC_REVISION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SPEC_REVISION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SPEC_REVISION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('every Group D formal/casual entry has non-empty L1[0], L1[1], L2[0], L3[0]', () => {
+    const groupDFormalCasual = [
+      ABSENCE_SPEC_CROSS_CONFIRM,  ABSENCE_SPEC_CROSS_CONFIRM_CASUAL,
+      ABSENCE_SPEC_REVISION,       ABSENCE_SPEC_REVISION_CASUAL,
+    ];
+    for (const c of groupDFormalCasual) {
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L1[1].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
+  });
 });
 
 // ── DecisionContent structure — Group A beginner variants ────────────────────
@@ -1351,6 +1398,56 @@ describe('DecisionContent structure — Group C beginner variants', () => {
 
   it('every Group C beginner entry has non-empty L1[0], L1[1], L2[0], L3[0]', () => {
     for (const c of groupCBeginner) {
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L1[1].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ── DecisionContent structure — Group D beginner variants ────────────────────
+
+describe('DecisionContent structure — Group D beginner variants', () => {
+  const groupDBeginner = [
+    ABSENCE_SPEC_CROSS_CONFIRM_BEGINNER,
+    ABSENCE_SPEC_REVISION_BEGINNER,
+  ];
+
+  it('every Group D beginner entry has a non-empty question', () => {
+    for (const c of groupDBeginner) {
+      expect(c.question.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('every Group D beginner entry has a non-empty pinchFallback', () => {
+    for (const c of groupDBeginner) {
+      expect(c.pinchFallback.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('every Group D beginner entry has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    for (const c of groupDBeginner) {
+      expect(c.L1).toHaveLength(2);
+      expect(c.L2).toHaveLength(1);
+      expect(c.L3).toHaveLength(1);
+    }
+  });
+
+  it('ABSENCE_SPEC_CROSS_CONFIRM_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_SPEC_CROSS_CONFIRM_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_SPEC_CROSS_CONFIRM_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_SPEC_CROSS_CONFIRM_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_SPEC_REVISION_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_SPEC_REVISION_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_SPEC_REVISION_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_SPEC_REVISION_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('every Group D beginner entry has non-empty L1[0], L1[1], L2[0], L3[0]', () => {
+    for (const c of groupDBeginner) {
       expect(c.L1[0].length).toBeGreaterThan(0);
       expect(c.L1[1].length).toBeGreaterThan(0);
       expect(c.L2[0].length).toBeGreaterThan(0);
