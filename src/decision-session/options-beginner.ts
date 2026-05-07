@@ -536,6 +536,38 @@ export const ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER: DecisionContent = {
   ],
 };
 
+// Group C — feedback_loop signals (beginner)
+
+export const ABSENCE_USER_FEEDBACK_REVIEW_BEGINNER: DecisionContent = {
+  question:      'Feedback in — have we actually gone through it?',
+  pinchFallback: 'Feedback not reviewed.',
+  L1: [
+    '1. Look at the feedback users have given about this project.\n2. Share with me: what are the most common things people are saying? What keeps coming up?\n3. Then tell me: what\'s the one piece of feedback that feels most important to address?',
+    'Go through the feedback for this project and share what you find — what are users saying? Pick the most important thing they mentioned and tell me what it is.',
+  ],
+  L2: [
+    'What is the most important piece of feedback about this project? Share it with me and tell me why it matters.',
+  ],
+  L3: [
+    'Have you gone through the feedback for this project yet, or is that still to do?',
+  ],
+};
+
+export const ABSENCE_ITERATION_PLANNING_BEGINNER: DecisionContent = {
+  question:      'Feedback reviewed — what are we building next?',
+  pinchFallback: 'Next iteration unplanned.',
+  L1: [
+    '1. Look at the feedback for this project.\n2. Share with me: what\'s the most important thing users want fixed or added?\n3. Then tell me: what would you work on first in the next version, and why?',
+    'Based on what users said about this project, what do you want to fix or build next? Share your top pick with me before we start planning.',
+  ],
+  L2: [
+    'What is the first thing to fix or build in the next version of this project based on the feedback? Share your answer with me.',
+  ],
+  L3: [
+    'Is it clear what to work on next for this project based on what users said?',
+  ],
+};
+
 export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> = {
   test_creation:         ABSENCE_TEST_CREATION_BEGINNER,
   regression_check:      ABSENCE_REGRESSION_CHECK_BEGINNER,
@@ -560,6 +592,14 @@ export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> 
   phase_transition:        ABSENCE_PHASE_TRANSITION_BEGINNER,
   spec_cross_confirm:      ABSENCE_SPEC_CROSS_CONFIRM_BEGINNER,
   spec_revision:           ABSENCE_SPEC_REVISION_BEGINNER,
+  idea_scoping:            ABSENCE_IDEA_SCOPING_BEGINNER,
+  idea_constraint_check:   ABSENCE_IDEA_CONSTRAINT_CHECK_BEGINNER,
+  idea_user_definition:    ABSENCE_IDEA_USER_DEFINITION_BEGINNER,
+  task_ordering:           ABSENCE_TASK_ORDERING_BEGINNER,
+  task_sizing:             ABSENCE_TASK_SIZING_BEGINNER,
+  task_definition_of_done: ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER,
+  user_feedback_review:    ABSENCE_USER_FEEDBACK_REVIEW_BEGINNER,
+  iteration_planning:      ABSENCE_ITERATION_PLANNING_BEGINNER,
 };
 
 export const TRANSITION_CONTENT_BEGINNER: Partial<Record<Stage, DecisionContent>> = {

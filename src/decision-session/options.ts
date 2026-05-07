@@ -1147,6 +1147,76 @@ const ABSENCE_TASK_DEFINITION_OF_DONE_CASUAL: DecisionContent = {
   ],
 };
 
+// Group C — feedback_loop signals
+
+const ABSENCE_USER_FEEDBACK_REVIEW: DecisionContent = {
+  question:      'Feedback received — has it been reviewed systematically?',
+  pinchFallback: 'Feedback not reviewed.',
+  L1: [
+    'Review the feedback received for this project systematically: collect all available feedback, categorize it by theme or feature area, and identify the recurring complaints, requests, and points of confusion that appear across multiple users.',
+    'Analyze the feedback for this project for patterns: what issues surface most frequently, which complaints indicate users cannot complete their primary goal, and where does actual behavior diverge most from what was expected?',
+    'Prioritize the feedback for this project by impact: distinguish critical feedback (blocking users from their goal) from high-friction feedback (users struggle but succeed) from low-signal noise, and establish which issues demand immediate action.',
+  ],
+  L2: [
+    'What is the most critical piece of feedback for this project — the one issue that, if left unaddressed, blocks users from achieving their primary goal?',
+    'What are the top two or three recurring themes across all feedback for this project?',
+  ],
+  L3: [
+    'What are users saying about this project, and what is the most critical issue in the feedback?',
+  ],
+};
+
+const ABSENCE_USER_FEEDBACK_REVIEW_CASUAL: DecisionContent = {
+  question:      'Feedback in — have we actually gone through it?',
+  pinchFallback: 'Feedback not reviewed.',
+  L1: [
+    'Go through the feedback for this project — collect what users have said, group it by theme, and tell me what comes up over and over. What are the most common complaints or requests?',
+    'What patterns are you seeing in the feedback for this project? Walk me through what users are saying — what are the recurring issues, and where are people getting stuck?',
+    'Look at the feedback for this project and rank it — what\'s critical (users can\'t do what they need to do), what\'s high friction (they get there but it\'s painful), and what\'s just noise? Tell me what needs to be fixed first.',
+  ],
+  L2: [
+    'What\'s the most critical piece of feedback for this project — the one thing that, if we don\'t fix it, blocks users from doing what they came here to do?',
+    'What are the top two or three things users keep saying about this project?',
+  ],
+  L3: [
+    'What are users saying about this project?',
+  ],
+};
+
+const ABSENCE_ITERATION_PLANNING: DecisionContent = {
+  question:      'Feedback reviewed — has the next iteration been planned?',
+  pinchFallback: 'Next iteration unplanned.',
+  L1: [
+    'Define the priorities for the next iteration of this project based on the feedback: rank the issues identified, determine what must be addressed in this iteration versus what can be deferred, and establish the scope of the next version.',
+    'Identify the trade-offs for the next iteration of this project: which feedback-driven changes deliver the highest impact for the lowest effort, which require significant rework, and what should be deferred to preserve shipping velocity?',
+    'Write the success criteria for the next iteration of this project: given the feedback received, what specific, measurable outcomes would confirm the next iteration resolved the most critical user issues?',
+  ],
+  L2: [
+    'What are the top three changes to make in the next iteration of this project, ordered by priority? Identify them from the feedback.',
+    'What is the single most important thing to build or fix in the next iteration of this project, and why does it take priority over everything else?',
+  ],
+  L3: [
+    'What is the first change to make in the next iteration of this project based on what users said?',
+  ],
+};
+
+const ABSENCE_ITERATION_PLANNING_CASUAL: DecisionContent = {
+  question:      'Feedback reviewed — what are we building next?',
+  pinchFallback: 'Next iteration unplanned.',
+  L1: [
+    'Figure out what to build next for this project based on the feedback — what needs to be fixed or added in the next round, what can wait, and what\'s the scope of the next version?',
+    'Look at the feedback for this project and tell me what the trade-offs are for the next round — what\'s high impact and quick to do, what\'s a big change that needs more thought, and what should we hold off on?',
+    'What does success look like for the next version of this project? Given what users said, what specific things would tell us the next iteration actually fixed the problems?',
+  ],
+  L2: [
+    'What are the top three things to work on next for this project based on the feedback? Put them in priority order.',
+    'What\'s the single most important thing to fix or build next for this project, and why does it come first?',
+  ],
+  L3: [
+    'What\'s the first thing to build or fix in the next version of this project?',
+  ],
+};
+
 // ── Content resolution ─────────────────────────────────────────────────────────
 
 /**
@@ -1178,6 +1248,14 @@ const ABSENCE_CONTENT: Partial<Record<string, DecisionContent>> = {
   phase_transition:        ABSENCE_PHASE_TRANSITION,
   spec_cross_confirm:      ABSENCE_SPEC_CROSS_CONFIRM,
   spec_revision:           ABSENCE_SPEC_REVISION,
+  idea_scoping:            ABSENCE_IDEA_SCOPING,
+  idea_constraint_check:   ABSENCE_IDEA_CONSTRAINT_CHECK,
+  idea_user_definition:    ABSENCE_IDEA_USER_DEFINITION,
+  task_ordering:           ABSENCE_TASK_ORDERING,
+  task_sizing:             ABSENCE_TASK_SIZING,
+  task_definition_of_done: ABSENCE_TASK_DEFINITION_OF_DONE,
+  user_feedback_review:    ABSENCE_USER_FEEDBACK_REVIEW,
+  iteration_planning:      ABSENCE_ITERATION_PLANNING,
 };
 
 const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
@@ -1204,6 +1282,14 @@ const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
   phase_transition:        ABSENCE_PHASE_TRANSITION_CASUAL,
   spec_cross_confirm:      ABSENCE_SPEC_CROSS_CONFIRM_CASUAL,
   spec_revision:           ABSENCE_SPEC_REVISION_CASUAL,
+  idea_scoping:            ABSENCE_IDEA_SCOPING_CASUAL,
+  idea_constraint_check:   ABSENCE_IDEA_CONSTRAINT_CHECK_CASUAL,
+  idea_user_definition:    ABSENCE_IDEA_USER_DEFINITION_CASUAL,
+  task_ordering:           ABSENCE_TASK_ORDERING_CASUAL,
+  task_sizing:             ABSENCE_TASK_SIZING_CASUAL,
+  task_definition_of_done: ABSENCE_TASK_DEFINITION_OF_DONE_CASUAL,
+  user_feedback_review:    ABSENCE_USER_FEEDBACK_REVIEW_CASUAL,
+  iteration_planning:      ABSENCE_ITERATION_PLANNING_CASUAL,
 };
 
 /**
@@ -1379,4 +1465,8 @@ export {
   ABSENCE_TASK_SIZING_CASUAL,
   ABSENCE_TASK_DEFINITION_OF_DONE,
   ABSENCE_TASK_DEFINITION_OF_DONE_CASUAL,
+  ABSENCE_USER_FEEDBACK_REVIEW,
+  ABSENCE_USER_FEEDBACK_REVIEW_CASUAL,
+  ABSENCE_ITERATION_PLANNING,
+  ABSENCE_ITERATION_PLANNING_CASUAL,
 };

@@ -74,6 +74,10 @@ import {
   ABSENCE_TASK_SIZING_CASUAL,
   ABSENCE_TASK_DEFINITION_OF_DONE,
   ABSENCE_TASK_DEFINITION_OF_DONE_CASUAL,
+  ABSENCE_USER_FEEDBACK_REVIEW,
+  ABSENCE_USER_FEEDBACK_REVIEW_CASUAL,
+  ABSENCE_ITERATION_PLANNING,
+  ABSENCE_ITERATION_PLANNING_CASUAL,
 } from './options.js';
 import {
   ABSENCE_CONTENT_BEGINNER,
@@ -107,6 +111,8 @@ import {
   ABSENCE_TASK_ORDERING_BEGINNER,
   ABSENCE_TASK_SIZING_BEGINNER,
   ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER,
+  ABSENCE_USER_FEEDBACK_REVIEW_BEGINNER,
+  ABSENCE_ITERATION_PLANNING_BEGINNER,
 } from './options-beginner.js';
 import type { UserProfile } from '../classifier/types.js';
 import {
@@ -755,6 +761,131 @@ describe('resolveDecisionContent — heuristic variant routing', () => {
   it('beginner + absence:spec_revision → ABSENCE_SPEC_REVISION_BEGINNER', () => {
     const content = resolveDecisionContent('implementation', 'absence:spec_revision', makeProfile('beginner'));
     expect(content).toBe(ABSENCE_SPEC_REVISION_BEGINNER);
+  });
+
+  // ── Sub-4 signal routing — all 8 new signals (Groups A + B + C) ─────────────
+
+  // Group A — idea signals
+  it('hardcore_pro + absence:idea_scoping → ABSENCE_IDEA_SCOPING (formal)', () => {
+    const content = resolveDecisionContent('idea', 'absence:idea_scoping', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_IDEA_SCOPING);
+  });
+
+  it('pro_geek_soul + absence:idea_scoping → ABSENCE_IDEA_SCOPING_CASUAL', () => {
+    const content = resolveDecisionContent('idea', 'absence:idea_scoping', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_IDEA_SCOPING_CASUAL);
+  });
+
+  it('beginner + absence:idea_scoping → ABSENCE_IDEA_SCOPING_BEGINNER', () => {
+    const content = resolveDecisionContent('idea', 'absence:idea_scoping', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_IDEA_SCOPING_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:idea_constraint_check → ABSENCE_IDEA_CONSTRAINT_CHECK (formal)', () => {
+    const content = resolveDecisionContent('idea', 'absence:idea_constraint_check', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_IDEA_CONSTRAINT_CHECK);
+  });
+
+  it('pro_geek_soul + absence:idea_constraint_check → ABSENCE_IDEA_CONSTRAINT_CHECK_CASUAL', () => {
+    const content = resolveDecisionContent('idea', 'absence:idea_constraint_check', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_IDEA_CONSTRAINT_CHECK_CASUAL);
+  });
+
+  it('beginner + absence:idea_constraint_check → ABSENCE_IDEA_CONSTRAINT_CHECK_BEGINNER', () => {
+    const content = resolveDecisionContent('idea', 'absence:idea_constraint_check', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_IDEA_CONSTRAINT_CHECK_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:idea_user_definition → ABSENCE_IDEA_USER_DEFINITION (formal)', () => {
+    const content = resolveDecisionContent('idea', 'absence:idea_user_definition', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_IDEA_USER_DEFINITION);
+  });
+
+  it('pro_geek_soul + absence:idea_user_definition → ABSENCE_IDEA_USER_DEFINITION_CASUAL', () => {
+    const content = resolveDecisionContent('idea', 'absence:idea_user_definition', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_IDEA_USER_DEFINITION_CASUAL);
+  });
+
+  it('beginner + absence:idea_user_definition → ABSENCE_IDEA_USER_DEFINITION_BEGINNER', () => {
+    const content = resolveDecisionContent('idea', 'absence:idea_user_definition', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_IDEA_USER_DEFINITION_BEGINNER);
+  });
+
+  // Group B — task_breakdown signals
+  it('hardcore_pro + absence:task_ordering → ABSENCE_TASK_ORDERING (formal)', () => {
+    const content = resolveDecisionContent('task_breakdown', 'absence:task_ordering', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_TASK_ORDERING);
+  });
+
+  it('pro_geek_soul + absence:task_ordering → ABSENCE_TASK_ORDERING_CASUAL', () => {
+    const content = resolveDecisionContent('task_breakdown', 'absence:task_ordering', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_TASK_ORDERING_CASUAL);
+  });
+
+  it('beginner + absence:task_ordering → ABSENCE_TASK_ORDERING_BEGINNER', () => {
+    const content = resolveDecisionContent('task_breakdown', 'absence:task_ordering', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_TASK_ORDERING_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:task_sizing → ABSENCE_TASK_SIZING (formal)', () => {
+    const content = resolveDecisionContent('task_breakdown', 'absence:task_sizing', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_TASK_SIZING);
+  });
+
+  it('pro_geek_soul + absence:task_sizing → ABSENCE_TASK_SIZING_CASUAL', () => {
+    const content = resolveDecisionContent('task_breakdown', 'absence:task_sizing', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_TASK_SIZING_CASUAL);
+  });
+
+  it('beginner + absence:task_sizing → ABSENCE_TASK_SIZING_BEGINNER', () => {
+    const content = resolveDecisionContent('task_breakdown', 'absence:task_sizing', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_TASK_SIZING_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:task_definition_of_done → ABSENCE_TASK_DEFINITION_OF_DONE (formal)', () => {
+    const content = resolveDecisionContent('task_breakdown', 'absence:task_definition_of_done', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_TASK_DEFINITION_OF_DONE);
+  });
+
+  it('pro_geek_soul + absence:task_definition_of_done → ABSENCE_TASK_DEFINITION_OF_DONE_CASUAL', () => {
+    const content = resolveDecisionContent('task_breakdown', 'absence:task_definition_of_done', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_TASK_DEFINITION_OF_DONE_CASUAL);
+  });
+
+  it('beginner + absence:task_definition_of_done → ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER', () => {
+    const content = resolveDecisionContent('task_breakdown', 'absence:task_definition_of_done', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER);
+  });
+
+  // Group C — feedback_loop signals
+  it('hardcore_pro + absence:user_feedback_review → ABSENCE_USER_FEEDBACK_REVIEW (formal)', () => {
+    const content = resolveDecisionContent('feedback_loop', 'absence:user_feedback_review', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_USER_FEEDBACK_REVIEW);
+  });
+
+  it('pro_geek_soul + absence:user_feedback_review → ABSENCE_USER_FEEDBACK_REVIEW_CASUAL', () => {
+    const content = resolveDecisionContent('feedback_loop', 'absence:user_feedback_review', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_USER_FEEDBACK_REVIEW_CASUAL);
+  });
+
+  it('beginner + absence:user_feedback_review → ABSENCE_USER_FEEDBACK_REVIEW_BEGINNER', () => {
+    const content = resolveDecisionContent('feedback_loop', 'absence:user_feedback_review', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_USER_FEEDBACK_REVIEW_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:iteration_planning → ABSENCE_ITERATION_PLANNING (formal)', () => {
+    const content = resolveDecisionContent('feedback_loop', 'absence:iteration_planning', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_ITERATION_PLANNING);
+  });
+
+  it('pro_geek_soul + absence:iteration_planning → ABSENCE_ITERATION_PLANNING_CASUAL', () => {
+    const content = resolveDecisionContent('feedback_loop', 'absence:iteration_planning', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_ITERATION_PLANNING_CASUAL);
+  });
+
+  it('beginner + absence:iteration_planning → ABSENCE_ITERATION_PLANNING_BEGINNER', () => {
+    const content = resolveDecisionContent('feedback_loop', 'absence:iteration_planning', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_ITERATION_PLANNING_BEGINNER);
   });
 });
 
@@ -2670,3 +2801,80 @@ describe('DecisionContent structure — Sub-4 Group B beginner (task_breakdown s
     }
   });
 });
+
+// ── DecisionContent structure — Sub-4 Group C formal/casual (feedback_loop signals) ─
+
+describe('DecisionContent structure — Sub-4 Group C formal/casual (feedback_loop signals)', () => {
+  it('ABSENCE_USER_FEEDBACK_REVIEW has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_USER_FEEDBACK_REVIEW.L1).toHaveLength(3);
+    expect(ABSENCE_USER_FEEDBACK_REVIEW.L2).toHaveLength(2);
+    expect(ABSENCE_USER_FEEDBACK_REVIEW.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_USER_FEEDBACK_REVIEW_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_USER_FEEDBACK_REVIEW_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_USER_FEEDBACK_REVIEW_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_USER_FEEDBACK_REVIEW_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ITERATION_PLANNING has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ITERATION_PLANNING.L1).toHaveLength(3);
+    expect(ABSENCE_ITERATION_PLANNING.L2).toHaveLength(2);
+    expect(ABSENCE_ITERATION_PLANNING.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ITERATION_PLANNING_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ITERATION_PLANNING_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_ITERATION_PLANNING_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_ITERATION_PLANNING_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('every Sub-4 Group C formal/casual entry has non-empty question, pinchFallback, L1[0], L1[1], L2[0], L3[0]', () => {
+    const entries = [
+      ABSENCE_USER_FEEDBACK_REVIEW,
+      ABSENCE_USER_FEEDBACK_REVIEW_CASUAL,
+      ABSENCE_ITERATION_PLANNING,
+      ABSENCE_ITERATION_PLANNING_CASUAL,
+    ];
+    for (const c of entries) {
+      expect(c.question.length).toBeGreaterThan(0);
+      expect(c.pinchFallback.length).toBeGreaterThan(0);
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L1[1].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ── DecisionContent structure — Sub-4 Group C beginner (feedback_loop signals) ─
+
+describe('DecisionContent structure — Sub-4 Group C beginner (feedback_loop signals)', () => {
+  it('ABSENCE_USER_FEEDBACK_REVIEW_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_USER_FEEDBACK_REVIEW_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_USER_FEEDBACK_REVIEW_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_USER_FEEDBACK_REVIEW_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ITERATION_PLANNING_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_ITERATION_PLANNING_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_ITERATION_PLANNING_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_ITERATION_PLANNING_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('every Sub-4 Group C beginner entry has non-empty question, pinchFallback, L1[0], L1[1], L2[0], L3[0]', () => {
+    const entries = [
+      ABSENCE_USER_FEEDBACK_REVIEW_BEGINNER,
+      ABSENCE_ITERATION_PLANNING_BEGINNER,
+    ];
+    for (const c of entries) {
+      expect(c.question.length).toBeGreaterThan(0);
+      expect(c.pinchFallback.length).toBeGreaterThan(0);
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L1[1].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
+  });
+});
+
