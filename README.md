@@ -1,20 +1,20 @@
-# Nexpath
+# Nexpath Cli
 
 > **A behaviour guidance layer for vibe coders and coding-agent users.**
 
-Nexpath gives developers meaningful direction while they work with AI coding agents — helpful suggestions at the right moment, without slowing you down.
+Nexpath Cli gives developers meaningful direction while they work with AI coding agents — helpful suggestions at the right moment, without slowing you down.
 
 ---
 
-## What Is Nexpath?
+## What Is Nexpath Cli?
 
-Nexpath is a behaviour guidance system for developers using AI coding 
+Nexpath Cli is a behaviour guidance system for developers using AI coding 
 agents. It monitors your development sessions, understands where you are in your 
 project lifecycle, and surfaces **"the decision session"** — a 
 lightweight prompt that gives you meaningful direction without ever 
 forcing your hand.
 
-When Nexpath detects a meaningful moment in your workflow — like 
+When Nexpath Cli detects a meaningful moment in your workflow — like 
 moving from planning to architecture, or finishing a task without 
 running tests — it presents pre-filled agent prompts you can select 
 with one keypress. These aren't tips. They're ready-to-send prompts 
@@ -48,14 +48,14 @@ flowchart TB
 
 ---
 
-## Why Nexpath Exists
+## Why Nexpath Cli Exists
 
 AI coding agents can generate entire features from a single sentence — 
 but the speed of generation often outpaces the discipline of process. 
 Developers skip reviews, forget regression checks, ship without 
 acceptance tests. Not out of laziness — out of momentum.
 
-Nexpath closes the gap between what AI agents can generate and what 
+Nexpath Cli closes the gap between what AI agents can generate and what 
 disciplined development actually requires. It appears at the right 
 moments with the right questions: _"You just finished a feature. 
 Want to cross-confirm before moving on?"_
@@ -85,7 +85,7 @@ architecture to task breakdown, completing a task, finishing a phase, and pre-re
 
 ### Vocabulary and Tone Calibration
 
-Nexpath reads your prompt history to calibrate whether you are a pure vibe coder, a
+Nexpath Cli reads your prompt history to calibrate whether you are a pure vibe coder, a
 product-minded builder, or an experienced architect. It classifies your developer nature into
 one of four archetypes (Beginner, Cool Geek, Hardcore Pro, or Pro-Geek Soul) and detects your
 current session mood (focused, excited, frustrated, casual, rushed, or methodical). This shapes
@@ -93,7 +93,7 @@ the tone and wording of the creative 2–3 word labels that open each decision s
 
 ### Prompt Classification
 
-Nexpath classifies your prompts against 8 development stages using a two-tier cascade:
+Nexpath Cli classifies your prompts against 8 development stages using a two-tier cascade:
 - **Tier 1 — Keyword matching** (<1ms): Fast pattern detection against curated signal vocabulary
 - **Tier 2 — TF-IDF scoring** (<5ms): Statistical text analysis when keywords are ambiguous
 
@@ -102,13 +102,13 @@ detection to reduce false positives.
 
 ### Absence Detection
 
-Nexpath tracks which development signals are present or missing in your session. If you've been
+Nexpath Cli tracks which development signals are present or missing in your session. If you've been
 coding for 15+ prompts in a confirmed stage without mentioning tests, cross-confirmation, or
 regression checks, it raises an absence flag and offers relevant suggestions.
 
 ### Agent Support
 
-Nexpath is built for prompt capture across AI coding agents.
+Nexpath Cli is built for prompt capture across AI coding agents.
 
 | Agent | Status in v0.1.1 |
 |-------|-----------------|
@@ -136,7 +136,7 @@ npm link
 nexpath install --yes
 nexpath status
 ```
-**NOTE:** Nexpath is currently fully supported on **Claude Code CLI** — other agents are planned for v0.1.3.  
+**NOTE:** Nexpath Cli is currently fully supported on **Claude Code CLI** — other agents are planned for v0.1.3.  
 
 ### Environment Variables
 
@@ -226,7 +226,7 @@ nexpath store delete -y
 
 Contribution guide coming once the initial implementation is stable.
 
-Nexpath is developed as an independent project alongside ReviewDuel. Contributions to Nexpath
+Nexpath Cli is developed as an independent project alongside ReviewDuel. Contributions to Nexpath Cli
 are tracked in this repo. The ReviewDuel integration is maintained separately.
 
 ---
