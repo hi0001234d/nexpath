@@ -1,4 +1,5 @@
 import type { Stage, UserProfile } from '../classifier/types.js';
+import { STAGES } from '../classifier/types.js';
 import type { FlagType } from '../classifier/Stage2Trigger.js';
 import {
   ABSENCE_CONTENT_BEGINNER,
@@ -1323,13 +1324,29 @@ function selectNonBeginnerVariant(nature: UserProfile['nature'] | null | undefin
  *   3. Implementation stage (within-stage absence) → heuristic variant by profile.nature
  *   4. Ultimate fallback → heuristic variant by profile.nature
  */
+function resolveSkippedTransitionContent(
+  transitionMap: Partial<Record<Stage, DecisionContent>>,
+  prevStage:     Stage,
+  currentStage:  Stage,
+): DecisionContent | null {
+  const prevIdx = STAGES.indexOf(prevStage);
+  const currIdx = STAGES.indexOf(currentStage);
+  if (prevIdx < 0 || currIdx < 0 || currIdx - prevIdx <= 1) return null;
+  for (let i = currIdx - 1; i > prevIdx; i--) {
+    const stage = STAGES[i];
+    if (stage && transitionMap[stage]) return transitionMap[stage]!;
+  }
+  return null;
+}
+
 export function resolveDecisionContent(
   currentStage: Stage,
   flagType:     FlagType,
   profile?:     UserProfile | null,
+  prevStage?:   Stage,
 ): DecisionContent {
-  const isBeginner = profile?.nature === 'beginner';
-  const isVibe     = isBeginner || profile?.nature === 'cool_geek';
+  const isBeginner    = profile?.nature === 'beginner';
+  const isVibe        = isBeginner || profile?.nature === 'cool_geek';
   const absenceMap    = isVibe ? ABSENCE_CONTENT_BEGINNER : selectAbsenceMap(profile?.nature);
   const transitionMap = isVibe ? TRANSITION_CONTENT_BEGINNER : TRANSITION_CONTENT;
 
@@ -1339,8 +1356,13 @@ export function resolveDecisionContent(
     if (override) return override;
   }
 
-  const transitionContent = transitionMap[currentStage];
-  if (transitionContent) return transitionContent;
+  if (flagType === 'stage_transition' && prevStage) {
+    const skipped = resolveSkippedTransitionContent(transitionMap, prevStage, currentStage);
+    if (skipped) return skipped;
+  }
+
+  const direct = transitionMap[currentStage];
+  if (direct) return direct;
 
   if (currentStage === 'implementation') return isBeginner ? TASK_REVIEW_BEGINNER : selectNonBeginnerVariant(profile?.nature);
 

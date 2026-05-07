@@ -391,6 +391,28 @@ describe('resolveDecisionContent', () => {
     const content = resolveDecisionContent('review_testing', 'absence:some_unknown_signal');
     expect(content).toBe(IMPLEMENTATION_TO_REVIEW);
   });
+
+  // ── Skipped-transition firing ────────────────────────────────────────────────
+
+  it('skipped idea→implementation: returns task_breakdown transition content', () => {
+    const content = resolveDecisionContent('implementation', 'stage_transition', null, 'idea');
+    expect(content.question).toBe(ARCHITECTURE_TO_TASKS.question);
+  });
+
+  it('skipped idea→review_testing: returns task_breakdown transition content', () => {
+    const content = resolveDecisionContent('review_testing', 'stage_transition', null, 'idea');
+    expect(content.question).toBe(ARCHITECTURE_TO_TASKS.question);
+  });
+
+  it('normal idea→prd with prevStage: returns IDEA_TO_PRD', () => {
+    const content = resolveDecisionContent('prd', 'stage_transition', null, 'idea');
+    expect(content.question).toBe(IDEA_TO_PRD.question);
+  });
+
+  it('implementation without prevStage: falls to TASK_REVIEW', () => {
+    const content = resolveDecisionContent('implementation', 'stage_transition', null);
+    expect(content.question).toBe(TASK_REVIEW_CASUAL.question);
+  });
 });
 
 // ── resolveDecisionContent — heuristic variant routing ───────────────────────

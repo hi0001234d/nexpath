@@ -318,6 +318,7 @@ export async function runAuto(
     mgr.current.currentStage,
     flagType,
     mgr.current.profile,
+    prevStage,
   );
 
   const [pinchLabel, generatedOptions] = await Promise.all([
