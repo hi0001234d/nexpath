@@ -1043,6 +1043,110 @@ const ABSENCE_IDEA_USER_DEFINITION_CASUAL: DecisionContent = {
   ],
 };
 
+// Group B — task_breakdown signals
+
+const ABSENCE_TASK_ORDERING: DecisionContent = {
+  question:      'Tasks listed — have they been ordered?',
+  pinchFallback: 'Tasks unordered.',
+  L1: [
+    'Order the tasks for this project by dependency and priority: identify which tasks block others, which can be done in parallel, and establish the sequence that minimises rework and delivers the earliest working state.',
+    'Review the task list for this project and establish an explicit order: which task must be done first, which tasks have hard dependencies on others, and what is the critical path to a testable first version?',
+    'Prioritize the task list for this project: rank tasks by impact and dependency, identify the single highest-priority task to start with, and flag any tasks that should be deferred until a working core is established.',
+  ],
+  L2: [
+    'What is the correct order of tasks for this project? Identify the first three tasks in sequence and explain why each one must come before the next.',
+    'Which task in this project should be done first, and why? Establish the top of the ordered list before anything else starts.',
+  ],
+  L3: [
+    'What is the first task to work on for this project, and what does it unblock?',
+  ],
+};
+
+const ABSENCE_TASK_ORDERING_CASUAL: DecisionContent = {
+  question:      'Tasks listed — what order do we do them in?',
+  pinchFallback: 'No order set.',
+  L1: [
+    'Put the tasks for this project in order — which ones have to happen before others, which ones are independent, and what\'s the sequence that gets us to something working as fast as possible?',
+    'Look at the task list for this project and sort it — what comes first, what depends on what, and what\'s the critical path to something we can actually test?',
+    'What\'s the right order to tackle the tasks for this project? Rank them by what\'s blocking what, and tell me which task to start with and why.',
+  ],
+  L2: [
+    'What are the first three tasks for this project in order? Tell me what order makes sense and why.',
+    'Which task should we do first for this project and why does it come before everything else?',
+  ],
+  L3: [
+    'What\'s the first task to work on for this project?',
+  ],
+};
+
+const ABSENCE_TASK_SIZING: DecisionContent = {
+  question:      'Tasks defined — are they scoped to single sessions?',
+  pinchFallback: 'Tasks oversized.',
+  L1: [
+    'Review the task list for this project and validate sizing: each task should be completable in a single focused session. Identify any tasks that span multiple concerns, require too many unknowns to resolve in one sitting, or are so large that progress cannot be verified at the end of a session.',
+    'Break down any oversized tasks in this project: for each task that could not be completed in a single session, decompose it into subtasks — each subtask should have a clear output that can be verified when done.',
+    'Assess the scope of each task for this project: flag any that are too large to complete in one session, too vague to know when they\'re done, or dependent on so many unknowns that work could not proceed without stopping midway.',
+  ],
+  L2: [
+    'Which tasks in this project are too large to finish in a single session? Break the largest one down into smaller units now.',
+    'Is there any task in this project that could not be completed in a single focused session? Identify it and propose how to split it.',
+  ],
+  L3: [
+    'Identify any task in this project that is too large to finish in a single session and break it into smaller units.',
+  ],
+};
+
+const ABSENCE_TASK_SIZING_CASUAL: DecisionContent = {
+  question:      'Tasks listed — are they small enough to do in one go?',
+  pinchFallback: 'Tasks too big.',
+  L1: [
+    'Go through the tasks for this project — are any of them too big to finish in one session? If so, break them down into smaller pieces that each have a clear endpoint.',
+    'Check the task list for this project: which tasks are small enough to finish in one focused session, and which ones are really multiple tasks lumped together? Split the big ones.',
+    'Is any task in this project too big to do in one go? Walk me through the tasks and flag anything that would require stopping midway because there\'s too much or too many unknowns.',
+  ],
+  L2: [
+    'Which task in this project feels the biggest? Break it down into two or three smaller tasks that could each be finished in one session.',
+    'Are the tasks for this project small enough to finish one at a time, or do any of them need to be split up?',
+  ],
+  L3: [
+    'Is there any task in this project that\'s too big to do in one session?',
+  ],
+};
+
+const ABSENCE_TASK_DEFINITION_OF_DONE: DecisionContent = {
+  question:      'Tasks ordered — does each task have a definition of done?',
+  pinchFallback: 'No done criteria.',
+  L1: [
+    'Define the completion criteria for each task in this project: for every task, state what must be true for the task to be considered complete — what output exists, what has been verified, and what has not been left in an ambiguous or partially done state.',
+    'Audit the task list for this project for missing definitions of done: identify every task that lacks explicit completion criteria, then define what \'done\' means for each — the specific, verifiable condition that ends work on that task.',
+    'Write the definition of done for the highest-priority task in this project: what is the exact state of the codebase, tests, and documentation when this task is complete? Use that as a template to define done for the remaining tasks in this project.',
+  ],
+  L2: [
+    'For each task in this project, write one sentence stating what \'done\' looks like — a specific, verifiable condition, not a vague description of intent.',
+    'Which task in this project is missing the clearest definition of done? Define what completion looks like for that task before it starts.',
+  ],
+  L3: [
+    'Does every task in this project have a clear, verifiable definition of done, or are any tasks missing that?',
+  ],
+};
+
+const ABSENCE_TASK_DEFINITION_OF_DONE_CASUAL: DecisionContent = {
+  question:      'Tasks set — how do we know when each one\'s done?',
+  pinchFallback: 'Done criteria missing.',
+  L1: [
+    'For each task in this project, define what done looks like — not just \'it works\' but what specifically is true when the task is finished. What can be checked? What exists that didn\'t before?',
+    'Go through the tasks for this project and for each one, write what \'done\' means — the specific thing you\'d check to know it\'s complete. No vague descriptions, just the actual finish line.',
+    'Pick the most important task for this project and tell me exactly what done looks like for it — what\'s been built, what\'s been tested, what\'s been verified. Use that as a template to define done for the remaining tasks in this project.',
+  ],
+  L2: [
+    'What does done look like for each task in this project? Write a one-liner for each that describes the specific finish line.',
+    'Is there any task in this project where it\'s not clear how we\'d know it\'s done? Define the finish line for that one first.',
+  ],
+  L3: [
+    'How do we know when the first task in this project is done?',
+  ],
+};
+
 // ── Content resolution ─────────────────────────────────────────────────────────
 
 /**
@@ -1269,4 +1373,10 @@ export {
   ABSENCE_IDEA_CONSTRAINT_CHECK_CASUAL,
   ABSENCE_IDEA_USER_DEFINITION,
   ABSENCE_IDEA_USER_DEFINITION_CASUAL,
+  ABSENCE_TASK_ORDERING,
+  ABSENCE_TASK_ORDERING_CASUAL,
+  ABSENCE_TASK_SIZING,
+  ABSENCE_TASK_SIZING_CASUAL,
+  ABSENCE_TASK_DEFINITION_OF_DONE,
+  ABSENCE_TASK_DEFINITION_OF_DONE_CASUAL,
 };

@@ -68,6 +68,12 @@ import {
   ABSENCE_IDEA_CONSTRAINT_CHECK_CASUAL,
   ABSENCE_IDEA_USER_DEFINITION,
   ABSENCE_IDEA_USER_DEFINITION_CASUAL,
+  ABSENCE_TASK_ORDERING,
+  ABSENCE_TASK_ORDERING_CASUAL,
+  ABSENCE_TASK_SIZING,
+  ABSENCE_TASK_SIZING_CASUAL,
+  ABSENCE_TASK_DEFINITION_OF_DONE,
+  ABSENCE_TASK_DEFINITION_OF_DONE_CASUAL,
 } from './options.js';
 import {
   ABSENCE_CONTENT_BEGINNER,
@@ -98,6 +104,9 @@ import {
   ABSENCE_IDEA_SCOPING_BEGINNER,
   ABSENCE_IDEA_CONSTRAINT_CHECK_BEGINNER,
   ABSENCE_IDEA_USER_DEFINITION_BEGINNER,
+  ABSENCE_TASK_ORDERING_BEGINNER,
+  ABSENCE_TASK_SIZING_BEGINNER,
+  ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER,
 } from './options-beginner.js';
 import type { UserProfile } from '../classifier/types.js';
 import {
@@ -2553,6 +2562,103 @@ describe('DecisionContent structure — Sub-4 Group A beginner (idea signals)', 
       ABSENCE_IDEA_SCOPING_BEGINNER,
       ABSENCE_IDEA_CONSTRAINT_CHECK_BEGINNER,
       ABSENCE_IDEA_USER_DEFINITION_BEGINNER,
+    ];
+    for (const c of entries) {
+      expect(c.question.length).toBeGreaterThan(0);
+      expect(c.pinchFallback.length).toBeGreaterThan(0);
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L1[1].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ── DecisionContent structure — Sub-4 Group B formal/casual (task_breakdown signals) ─
+
+describe('DecisionContent structure — Sub-4 Group B formal/casual (task_breakdown signals)', () => {
+  it('ABSENCE_TASK_ORDERING has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TASK_ORDERING.L1).toHaveLength(3);
+    expect(ABSENCE_TASK_ORDERING.L2).toHaveLength(2);
+    expect(ABSENCE_TASK_ORDERING.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_TASK_ORDERING_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TASK_ORDERING_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_TASK_ORDERING_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_TASK_ORDERING_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_TASK_SIZING has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TASK_SIZING.L1).toHaveLength(3);
+    expect(ABSENCE_TASK_SIZING.L2).toHaveLength(2);
+    expect(ABSENCE_TASK_SIZING.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_TASK_SIZING_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TASK_SIZING_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_TASK_SIZING_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_TASK_SIZING_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_TASK_DEFINITION_OF_DONE has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TASK_DEFINITION_OF_DONE.L1).toHaveLength(3);
+    expect(ABSENCE_TASK_DEFINITION_OF_DONE.L2).toHaveLength(2);
+    expect(ABSENCE_TASK_DEFINITION_OF_DONE.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_TASK_DEFINITION_OF_DONE_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TASK_DEFINITION_OF_DONE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_TASK_DEFINITION_OF_DONE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_TASK_DEFINITION_OF_DONE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('every Sub-4 Group B formal/casual entry has non-empty question, pinchFallback, L1[0], L1[1], L2[0], L3[0]', () => {
+    const entries = [
+      ABSENCE_TASK_ORDERING,
+      ABSENCE_TASK_ORDERING_CASUAL,
+      ABSENCE_TASK_SIZING,
+      ABSENCE_TASK_SIZING_CASUAL,
+      ABSENCE_TASK_DEFINITION_OF_DONE,
+      ABSENCE_TASK_DEFINITION_OF_DONE_CASUAL,
+    ];
+    for (const c of entries) {
+      expect(c.question.length).toBeGreaterThan(0);
+      expect(c.pinchFallback.length).toBeGreaterThan(0);
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L1[1].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ── DecisionContent structure — Sub-4 Group B beginner (task_breakdown signals) ─
+
+describe('DecisionContent structure — Sub-4 Group B beginner (task_breakdown signals)', () => {
+  it('ABSENCE_TASK_ORDERING_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_TASK_ORDERING_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_TASK_ORDERING_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_TASK_ORDERING_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_TASK_SIZING_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_TASK_SIZING_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_TASK_SIZING_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_TASK_SIZING_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('every Sub-4 Group B beginner entry has non-empty question, pinchFallback, L1[0], L1[1], L2[0], L3[0]', () => {
+    const entries = [
+      ABSENCE_TASK_ORDERING_BEGINNER,
+      ABSENCE_TASK_SIZING_BEGINNER,
+      ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER,
     ];
     for (const c of entries) {
       expect(c.question.length).toBeGreaterThan(0);

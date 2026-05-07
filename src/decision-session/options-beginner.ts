@@ -489,6 +489,53 @@ export const ABSENCE_IDEA_USER_DEFINITION_BEGINNER: DecisionContent = {
   ],
 };
 
+// Group B — task_breakdown signals (beginner)
+
+export const ABSENCE_TASK_ORDERING_BEGINNER: DecisionContent = {
+  question:      'Tasks listed — what order do we do them in?',
+  pinchFallback: 'No order set.',
+  L1: [
+    '1. Look at the tasks for this project.\n2. Share with me: which one should we do first, and which ones can\'t be done until something else is finished?\n3. Then tell me: what\'s the order we should follow to build this?',
+    'Put the tasks for this project in order — which one goes first? Share the order with me before we start building.',
+  ],
+  L2: [
+    'What\'s the first task to work on for this project? Tell me what it is and why it should come first, then share it with me.',
+  ],
+  L3: [
+    'Is the order of tasks for this project clear, or does anything still need to be sorted out?',
+  ],
+};
+
+export const ABSENCE_TASK_SIZING_BEGINNER: DecisionContent = {
+  question:      'Tasks listed — are they small enough to do in one go?',
+  pinchFallback: 'Tasks too big.',
+  L1: [
+    '1. Look at the tasks for this project.\n2. Share with me: is there any task that feels too big to finish in one sitting?\n3. Then tell me: how would you split that task into smaller pieces that are easier to finish one at a time?',
+    'Are any tasks in this project too big to do in one session? Share which ones feel too large, and let\'s figure out how to break them down.',
+  ],
+  L2: [
+    'Pick the biggest task for this project. Share it with me, and then tell me how you\'d split it into smaller steps that could each be finished in one sitting.',
+  ],
+  L3: [
+    'Are all the tasks for this project small enough to finish one at a time, or do any of them need to be broken down more?',
+  ],
+};
+
+export const ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER: DecisionContent = {
+  question:      'Tasks set — how do we know when each one\'s done?',
+  pinchFallback: 'Done criteria missing.',
+  L1: [
+    '1. Pick one task from this project.\n2. Share with me: how would you know when that task is finished? What would you check?\n3. Then do the same for each of the other tasks — for each one, tell me what \'done\' looks like.',
+    'For each task in this project, help me write one sentence about what \'done\' means — something you could check to know the task is finished. Share the list with me when you\'re done.',
+  ],
+  L2: [
+    'Pick the first task for this project and tell me: how would you know it\'s finished? Share your answer with me before we start building.',
+  ],
+  L3: [
+    'Is it clear how we\'ll know when each task in this project is done?',
+  ],
+};
+
 export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> = {
   test_creation:         ABSENCE_TEST_CREATION_BEGINNER,
   regression_check:      ABSENCE_REGRESSION_CHECK_BEGINNER,
