@@ -413,6 +413,11 @@ describe('resolveDecisionContent', () => {
     const content = resolveDecisionContent('implementation', 'stage_transition', null);
     expect(content.question).toBe(TASK_REVIEW_CASUAL.question);
   });
+
+  it('skipped task_breakdown→release: returns review_testing transition content', () => {
+    const content = resolveDecisionContent('release', 'stage_transition', null, 'task_breakdown');
+    expect(content.question).toBe(IMPLEMENTATION_TO_REVIEW.question);
+  });
 });
 
 // ── resolveDecisionContent — heuristic variant routing ───────────────────────
