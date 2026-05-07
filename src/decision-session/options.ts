@@ -162,6 +162,24 @@ const REVIEW_TO_RELEASE: DecisionContent = {
   ],
 };
 
+/** Transition 7: Release → Feedback Loop */
+const RELEASE_TO_FEEDBACK: DecisionContent = {
+  question:      'Just shipped — is the feedback loop active?',
+  pinchFallback: 'Watch it live.',
+  L1: [
+    'Verify the production monitoring setup for what was just built: confirm error tracking is active, alert thresholds are configured, and dashboards show live metrics — list what is collecting and what still needs to be set up.',
+    'Set up the feedback loop for this feature: identify what signals will tell you it is working (analytics events, error rates, user reports), confirm what is already in place, and list what still needs to be added to close the loop.',
+    'Run smoke checks on what was just built: confirm the main user path works end-to-end in the live environment, check for unexpected errors in the logs, and report anything that looks wrong.',
+  ],
+  L2: [
+    'What are the top 3 signals I should watch in the first 24 hours to know if this feature is behaving as expected in production?',
+    'What is the minimum feedback setup needed to know if this feature is landing well — and what is still missing from what is currently in place?',
+  ],
+  L3: [
+    'Is there anything in what was just built that could silently fail in production without triggering a visible error or alert?',
+  ],
+};
+
 /** Absence trigger: behaviour_testing — fires when implementation proceeds without manual acceptance testing */
 const BEHAVIOUR_TESTING: DecisionContent = {
   question:      'Phase done — any real-user scenario tested?',
