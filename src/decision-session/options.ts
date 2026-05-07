@@ -937,6 +937,112 @@ const ABSENCE_SPEC_REVISION_CASUAL: DecisionContent = {
   ],
 };
 
+// ── Sub-4 — idea / task_breakdown / feedback_loop ─────────────────────────────
+
+// Group A — idea signals
+
+const ABSENCE_IDEA_SCOPING: DecisionContent = {
+  question:      'Idea in mind — is the scope defined?',
+  pinchFallback: 'Scope undefined.',
+  L1: [
+    'Define the scope of this project precisely: what is the core problem it solves, what are the primary capabilities it must deliver, and what does a complete first version look like?',
+    'Write a scope statement for this project: describe the problem in one sentence, the solution in one paragraph, and draw an explicit boundary around what is and is not included in the initial version.',
+    'Cross-confirm the project scope: summarize in your own words what this project is, what problem it solves, and what \'built\' means for this project — then flag what is still ambiguous or undefined.',
+  ],
+  L2: [
+    'Summarize the scope of this project in three sentences: the problem, the core solution, and the boundary of the first version.',
+    'What is the single most important thing to define about this project before building starts? Articulate it precisely.',
+  ],
+  L3: [
+    'What is this project, what problem does it solve, and what will the first version include?',
+  ],
+};
+
+const ABSENCE_IDEA_SCOPING_CASUAL: DecisionContent = {
+  question:      'Idea forming — what exactly are we building?',
+  pinchFallback: 'Scope unclear.',
+  L1: [
+    'Walk me through this project — what\'s the main idea, what problem does it solve, and what\'s in vs out for the first version?',
+    'What exactly are we building here? Describe this project in your own words — what it does, why it exists, and where the line is on what\'s included first.',
+    'Summarize this project back to me in your own words — what it does, what problem it solves, and what \'done\' looks like. Flag anything that still feels fuzzy.',
+  ],
+  L2: [
+    'What\'s this project and what\'s it supposed to do for the first version? Give me the short version.',
+    'What\'s the most important thing to pin down about this project before we start building?',
+  ],
+  L3: [
+    'What is this project and what will it do?',
+  ],
+};
+
+const ABSENCE_IDEA_CONSTRAINT_CHECK: DecisionContent = {
+  question:      'Idea scoped — are the non-goals defined?',
+  pinchFallback: 'Non-goals missing.',
+  L1: [
+    'Define the constraints and non-goals for this project: what is explicitly out of scope for the first version, what functionality will not be built, and what technical constraints limit the solution space?',
+    'Identify the boundary conditions of this project: what adjacent problems will not be solved, what user requests will be deferred, and what are the explicit constraints on scope, technology, or resources?',
+    'Write the non-goals section for this project: list at least three things this project will not do, at least one technical constraint, and at least one explicit decision to defer for a future version.',
+  ],
+  L2: [
+    'What are the top three things this project will not do in the first version? Document them explicitly so they do not creep in during implementation.',
+    'What is the clearest out-of-scope decision for this project? State it as an explicit non-goal.',
+  ],
+  L3: [
+    'What is one thing this project will not do, and why is that boundary important to state now?',
+  ],
+};
+
+const ABSENCE_IDEA_CONSTRAINT_CHECK_CASUAL: DecisionContent = {
+  question:      'Idea forming — what\'s out of scope?',
+  pinchFallback: 'No non-goals set.',
+  L1: [
+    'What are we NOT building in the first version of this project? Walk me through what\'s intentionally out of scope — things that could be asked for but we\'re not doing yet.',
+    'What are the constraints on this project? What won\'t it do, what can\'t it do, and what have we decided to skip for now?',
+    'List the things this project will not do — at least three things that could be asked for but are deliberately left out. Then tell me which one is most likely to cause confusion if it\'s not stated clearly.',
+  ],
+  L2: [
+    'What\'s one thing this project won\'t do — something someone might expect it to do but we\'re leaving out? State it clearly.',
+    'What are we keeping out of this project on purpose? Give me the short list.',
+  ],
+  L3: [
+    'Name one thing this project will not do that should be stated clearly before we start building.',
+  ],
+};
+
+const ABSENCE_IDEA_USER_DEFINITION: DecisionContent = {
+  question:      'Idea scoped — is the target user defined?',
+  pinchFallback: 'Target user undefined.',
+  L1: [
+    'Define the target user for this project precisely: who is the primary user, what is their context and skill level, what problem do they have that this project solves, and what does success look like from their perspective?',
+    'Write a target user profile for this project: describe who will use it, what they are trying to accomplish, what they already know and do not know, and how this project fits into their workflow.',
+    'Cross-confirm the target user definition for this project: given what has been described, who is this project for, who is explicitly not the target user, and what does that boundary imply for the feature set?',
+  ],
+  L2: [
+    'Who is the primary user of this project and what are they trying to accomplish? Define them precisely enough that you could make a product decision on their behalf.',
+    'What does the target user of this project already know and not know? That context will drive every design decision.',
+  ],
+  L3: [
+    'Who is this project for, and what are they trying to do?',
+  ],
+};
+
+const ABSENCE_IDEA_USER_DEFINITION_CASUAL: DecisionContent = {
+  question:      'Idea forming — who is this actually for?',
+  pinchFallback: 'User not defined.',
+  L1: [
+    'Who is this project for? Walk me through who the main user is, what they\'re trying to do, and what they know going in — be specific enough that we could make decisions about this project on their behalf.',
+    'Describe the person who\'ll use this project — who they are, what they want to do with it, and what level of experience they have. Then tell me who it\'s definitely NOT for.',
+    'Think about the person using this project — who are they? Describe them to me, including what problem they have and how this project fits into what they\'re already doing.',
+  ],
+  L2: [
+    'Who\'s the main person this project is for? Give me enough detail that we could make a feature decision based on what they need.',
+    'What does the person using this project actually want to do with it? Describe them simply.',
+  ],
+  L3: [
+    'Who is this project for and what are they trying to do?',
+  ],
+};
+
 // ── Content resolution ─────────────────────────────────────────────────────────
 
 /**
@@ -1157,4 +1263,10 @@ export {
   ABSENCE_SPEC_CROSS_CONFIRM_CASUAL,
   ABSENCE_SPEC_REVISION,
   ABSENCE_SPEC_REVISION_CASUAL,
+  ABSENCE_IDEA_SCOPING,
+  ABSENCE_IDEA_SCOPING_CASUAL,
+  ABSENCE_IDEA_CONSTRAINT_CHECK,
+  ABSENCE_IDEA_CONSTRAINT_CHECK_CASUAL,
+  ABSENCE_IDEA_USER_DEFINITION,
+  ABSENCE_IDEA_USER_DEFINITION_CASUAL,
 };

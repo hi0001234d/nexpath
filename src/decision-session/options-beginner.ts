@@ -440,6 +440,55 @@ export const ABSENCE_SPEC_REVISION_BEGINNER: DecisionContent = {
   ],
 };
 
+// ── Sub-4 — idea / task_breakdown / feedback_loop ─────────────────────────────
+
+// Group A — idea signals (beginner)
+
+export const ABSENCE_IDEA_SCOPING_BEGINNER: DecisionContent = {
+  question:      'Idea forming — what exactly are we building?',
+  pinchFallback: 'Scope unclear.',
+  L1: [
+    '1. Help me describe this project in plain words — what it does and what problem it solves.\n2. Share your description with me before we go further so I can check it sounds right.\n3. Then tell me: is there anything about what we\'re building that\'s still unclear or not decided yet?',
+    'Describe this project in plain language — what it does, what problem it solves, and what we\'re building first. Share your answer with me before we continue.',
+  ],
+  L2: [
+    'Describe this project to me in two sentences: what it does, and what it\'s for. Share it with me before we move on.',
+  ],
+  L3: [
+    'Is it clear what this project is and what it\'s supposed to do?',
+  ],
+};
+
+export const ABSENCE_IDEA_CONSTRAINT_CHECK_BEGINNER: DecisionContent = {
+  question:      'Idea forming — what\'s out of scope?',
+  pinchFallback: 'No non-goals set.',
+  L1: [
+    '1. Think about this project — what is it NOT going to do?\n2. Share a list of at least two things we\'re leaving out of this project on purpose, even if they seem obvious.\n3. Then tell me: why is it helpful to say those things out loud now?',
+    'Help me list the things this project is NOT going to do — at least two. Share the list with me before we go further.',
+  ],
+  L2: [
+    'What\'s one thing this project won\'t do? Share your answer with me and tell me why it\'s good to state that now.',
+  ],
+  L3: [
+    'Is there anything this project won\'t do that we haven\'t said out loud yet?',
+  ],
+};
+
+export const ABSENCE_IDEA_USER_DEFINITION_BEGINNER: DecisionContent = {
+  question:      'Idea forming — who is this actually for?',
+  pinchFallback: 'User not defined.',
+  L1: [
+    '1. Think about who will use this project — who is the main person it\'s for?\n2. Share a description of that person with me: who they are and what they\'re trying to do.\n3. Then tell me: what does that mean for how we build this project?',
+    'Describe the person who will use this project in plain words — who they are and what they need it to do. Share your description with me before we go further.',
+  ],
+  L2: [
+    'Who is this project for? Describe that person to me in a sentence or two, then share it with me so I can check it sounds right.',
+  ],
+  L3: [
+    'Is it clear who this project is for and what they\'re trying to do?',
+  ],
+};
+
 export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> = {
   test_creation:         ABSENCE_TEST_CREATION_BEGINNER,
   regression_check:      ABSENCE_REGRESSION_CHECK_BEGINNER,
