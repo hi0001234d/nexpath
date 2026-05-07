@@ -53,6 +53,13 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'is the spec complete', 'does this cover', 'review the prd',
       'cross confirm the spec', 'review the requirements',
     ],
+    vibeKeywords: [
+      'did we miss anything', 'does this cover everything',
+      'is anything missing', 'have we got everything',
+      'looks complete to you', 'anything we forgot',
+      'is this complete', 'have we covered it all',
+      'does this look finished', 'anything left out',
+    ],
     absenceThreshold: 15,
   },
   {
@@ -151,6 +158,13 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'alternative approach', 'different way', 'which would you recommend',
       'pros and cons', 'options for', 'what are the options',
     ],
+    vibeKeywords: [
+      'what else could we do', 'any other options', 'which is better',
+      'what would you use instead', 'any other ways to do this',
+      'could we do it differently', 'is there an easier way',
+      "what's the best approach here", 'what else is there',
+      'which approach do you prefer',
+    ],
     absenceThreshold: 20,
   },
   {
@@ -161,6 +175,13 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'does this conflict', 'fits the architecture', 'consistent with',
       'does this match the existing', 'won\'t break existing', 'architecture conflict',
       'consistent with the design', 'align with the system',
+    ],
+    vibeKeywords: [
+      'will this break anything', 'will this mess things up',
+      'does this play nice with the rest', "won't mess up what we have",
+      'does this fit with everything', 'is this okay with what we already have',
+      'will this cause problems', 'does this work with the existing setup',
+      "is this compatible with what's there",
     ],
     absenceThreshold: 20,
   },
@@ -223,6 +244,13 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'why did you choose', 'is there a better', 'reconsider',
       "i'd prefer", 'change your approach',
     ],
+    vibeKeywords: [
+      'wait is that right', 'are you sure about that',
+      "that doesn't sound right", "i'm not sure about this",
+      'is that the best way', "i'm not convinced",
+      'that seems off to me', "i really don't think so",
+      'are you certain about that', "hmm i don't think that's right",
+    ],
     absenceThreshold: 20,
   },
   {
@@ -266,6 +294,137 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'happy path', 'sad path', 'end to end test', 'e2e test',
       'user journey', 'test the flow', 'functional test', 'test from a user',
       'manually test', 'real user test', 'test the feature as',
+    ],
+    absenceThreshold: 15,
+  },
+
+  // ── Sub-4 — idea / task_breakdown / feedback_loop ─────────────────────────
+  {
+    key: 'idea_scoping',
+    description: 'User has not articulated what they are building clearly',
+    expectedStages: ['idea'],
+    detectionKeywords: [
+      'the goal is', "the problem i'm solving", 'the app should', 'the main feature',
+      'the scope is', "here's what it needs to do", 'it needs to', 'the key features',
+      'the core thing', 'the main thing we need', 'this solves', "what i'm building is",
+    ],
+    vibeKeywords: [
+      'basically it should', 'the point is to', 'what it does is', 'i need it to',
+      'it will let you', 'the main thing it does', 'what i want is', 'it should be able to',
+    ],
+    absenceThreshold: 8,
+  },
+  {
+    key: 'idea_constraint_check',
+    description: 'No discussion of constraints or non-goals',
+    expectedStages: ['idea'],
+    detectionKeywords: [
+      'out of scope', 'not in scope', "won't do", "we don't need", 'no need for',
+      'just the basics', 'not required', 'skip for now', "that's out of scope",
+    ],
+    vibeKeywords: [
+      'mvp', "i don't want to worry about", "let's not do", 'that can come later',
+      'just the simple version', "we don't need that yet", 'keep it basic',
+      'not needed for now', 'later maybe',
+    ],
+    absenceThreshold: 10,
+  },
+  {
+    key: 'idea_user_definition',
+    description: 'Target user/audience not discussed',
+    expectedStages: ['idea'],
+    detectionKeywords: [
+      'who is this for', 'the user is', 'my users', 'people who',
+      'the target user', 'end users', 'users who want', 'someone who',
+    ],
+    vibeKeywords: [
+      'for people who', 'for someone who', "it's for", 'people like',
+      'someone who wants to', 'the kind of person who', 'for my client', 'for anyone who',
+    ],
+    absenceThreshold: 10,
+  },
+  {
+    key: 'task_ordering',
+    description: 'Tasks not being ordered or prioritized',
+    expectedStages: ['task_breakdown'],
+    detectionKeywords: [
+      'what should i do first', 'which task comes first', 'what order should',
+      'order of tasks', 'which task has priority', 'prioritize the tasks',
+      'task priority', 'what to tackle first', 'sequence the tasks',
+      'which should we start with',
+    ],
+    vibeKeywords: [
+      'where do i start', 'which one first', 'what should we tackle first',
+      'which is more important', 'should i start with', 'what comes next',
+      'what first', 'which one do we do first',
+    ],
+    absenceThreshold: 12,
+  },
+  {
+    key: 'task_sizing',
+    description: 'Tasks not being scoped to single sessions',
+    expectedStages: ['task_breakdown'],
+    detectionKeywords: [
+      'this task is too big', 'break this task down', 'scope this down',
+      'should i split this', 'is this too large', 'this needs to be smaller',
+      'bite-sized', 'can we break this up', 'this task is too large',
+      'single session task',
+    ],
+    vibeKeywords: [
+      'one session', 'can i do this in one go', 'this feels too big',
+      'how do i split this up', 'break it into smaller pieces',
+      'too much to do at once', 'this is a lot to do', 'can i finish this today',
+    ],
+    absenceThreshold: 12,
+  },
+  {
+    key: 'task_definition_of_done',
+    description: 'No definition of done per task',
+    expectedStages: ['task_breakdown'],
+    detectionKeywords: [
+      'definition of done', 'how do i know when this is done', 'what makes this task complete',
+      'when is this task done', 'done criteria', 'success criteria for this task',
+      "how will i know it's finished", 'what does complete look like',
+    ],
+    vibeKeywords: [
+      'when is this done', 'done when', 'finished when', "how do i know i'm done",
+      'what does done look like', 'when can i check this off',
+      'when is it good enough', 'done means what',
+    ],
+    absenceThreshold: 12,
+  },
+  {
+    key: 'user_feedback_review',
+    description: 'No structured review of user/production feedback',
+    expectedStages: ['feedback_loop'],
+    detectionKeywords: [
+      'going through the feedback', 'reviewing the feedback', 'what are users saying',
+      'feedback analysis', 'user feedback shows', 'aggregate the feedback',
+      'what patterns do we see', 'the feedback tells us', 'feedback summary',
+      'categorize the feedback',
+    ],
+    vibeKeywords: [
+      'what are people saying', 'what did users say', 'have we looked at the feedback',
+      'what complaints are we getting', 'what are users asking for',
+      'what feedback did we get', 'what did people think', 'user sentiment',
+    ],
+    absenceThreshold: 12,
+  },
+  {
+    key: 'iteration_planning',
+    description: 'No planning of next iteration based on feedback',
+    expectedStages: ['feedback_loop'],
+    detectionKeywords: [
+      'plan the next iteration', 'next iteration priorities',
+      'based on the feedback we received', 'prioritize based on feedback',
+      'what to work on next', 'next sprint based on feedback',
+      'feedback-driven priorities', 'plan based on user feedback',
+    ],
+    vibeKeywords: [
+      'what should we fix next', 'what do users want most', 'based on what they said',
+      'fix the most complained about', 'what to work on next based on',
+      'top feedback items', 'what does the feedback tell us to do',
+      'what should we tackle next',
     ],
     absenceThreshold: 15,
   },

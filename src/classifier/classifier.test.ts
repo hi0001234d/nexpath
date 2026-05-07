@@ -574,9 +574,9 @@ describe('detectSignals', () => {
     expect(counters['behaviour_testing'].lastSeenAt).toBeNull();
   });
 
-  it('initialSignalCounters covers exactly 23 signals', () => {
+  it('initialSignalCounters covers exactly 31 signals', () => {
     const counters = initialSignalCounters();
-    expect(Object.keys(counters)).toHaveLength(23);
+    expect(Object.keys(counters)).toHaveLength(31);
   });
 
   // ── vibeKeywords — 0.5-weight detection ──────────────────────────────────────
