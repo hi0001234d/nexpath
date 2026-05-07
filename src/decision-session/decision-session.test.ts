@@ -2470,6 +2470,16 @@ describe('resolveDecisionContent — C-02 profile routing', () => {
     const content = resolveDecisionContent('release', 'stage_transition', beginnerProfile);
     expect(content).toBe(TRANSITION_CONTENT_BEGINNER.release);
   });
+
+  it('hardcore_pro + stage_transition to feedback_loop → RELEASE_TO_FEEDBACK', () => {
+    const content = resolveDecisionContent('feedback_loop', 'stage_transition', hardcoreProProfile);
+    expect(content).toBe(RELEASE_TO_FEEDBACK);
+  });
+
+  it('beginner + stage_transition to feedback_loop → RELEASE_TO_FEEDBACK_BEGINNER', () => {
+    const content = resolveDecisionContent('feedback_loop', 'stage_transition', beginnerProfile);
+    expect(content).toBe(TRANSITION_CONTENT_BEGINNER.feedback_loop);
+  });
 });
 
 // ── C-02: options-beginner.ts per-block structure assertions ──────────────────
@@ -2903,6 +2913,46 @@ describe('DecisionContent structure — Sub-4 Group C beginner (feedback_loop si
       expect(c.L2[0].length).toBeGreaterThan(0);
       expect(c.L3[0].length).toBeGreaterThan(0);
     }
+  });
+});
+
+// ── DecisionContent structure — Sub-5 RELEASE_TO_FEEDBACK (non-beginner) ──────
+
+describe('DecisionContent structure — Sub-5 RELEASE_TO_FEEDBACK (non-beginner)', () => {
+  it('RELEASE_TO_FEEDBACK has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(RELEASE_TO_FEEDBACK.L1).toHaveLength(3);
+    expect(RELEASE_TO_FEEDBACK.L2).toHaveLength(2);
+    expect(RELEASE_TO_FEEDBACK.L3).toHaveLength(1);
+  });
+
+  it('RELEASE_TO_FEEDBACK has non-empty question, pinchFallback, L1[0], L1[1], L2[0], L3[0]', () => {
+    expect(RELEASE_TO_FEEDBACK.question.length).toBeGreaterThan(0);
+    expect(RELEASE_TO_FEEDBACK.pinchFallback.length).toBeGreaterThan(0);
+    expect(RELEASE_TO_FEEDBACK.L1[0].length).toBeGreaterThan(0);
+    expect(RELEASE_TO_FEEDBACK.L1[1].length).toBeGreaterThan(0);
+    expect(RELEASE_TO_FEEDBACK.L2[0].length).toBeGreaterThan(0);
+    expect(RELEASE_TO_FEEDBACK.L3[0].length).toBeGreaterThan(0);
+  });
+});
+
+// ── DecisionContent structure — Sub-5 RELEASE_TO_FEEDBACK_BEGINNER ────────────
+
+describe('DecisionContent structure — Sub-5 RELEASE_TO_FEEDBACK_BEGINNER', () => {
+  it('RELEASE_TO_FEEDBACK_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    const beginner = TRANSITION_CONTENT_BEGINNER.feedback_loop!;
+    expect(beginner.L1).toHaveLength(2);
+    expect(beginner.L2).toHaveLength(1);
+    expect(beginner.L3).toHaveLength(1);
+  });
+
+  it('RELEASE_TO_FEEDBACK_BEGINNER has non-empty question, pinchFallback, L1[0], L1[1], L2[0], L3[0]', () => {
+    const beginner = TRANSITION_CONTENT_BEGINNER.feedback_loop!;
+    expect(beginner.question.length).toBeGreaterThan(0);
+    expect(beginner.pinchFallback.length).toBeGreaterThan(0);
+    expect(beginner.L1[0].length).toBeGreaterThan(0);
+    expect(beginner.L1[1].length).toBeGreaterThan(0);
+    expect(beginner.L2[0].length).toBeGreaterThan(0);
+    expect(beginner.L3[0].length).toBeGreaterThan(0);
   });
 });
 
