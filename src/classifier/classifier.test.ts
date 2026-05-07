@@ -620,6 +620,358 @@ describe('detectSignals', () => {
     const signals = detectSignals('run all tests — also did i break anything, nothing is broken?');
     expect(signals).toContain('regression_check');
   });
+
+  // ── Sub-4: idea-stage signals ─────────────────────────────────────────────
+
+  it('detects "the goal is" → idea_scoping', () => {
+    expect(detectSignals('the goal is to build a scheduling app for freelancers')).toContain('idea_scoping');
+  });
+
+  it("detects \"what i'm building is\" → idea_scoping", () => {
+    expect(detectSignals("what i'm building is a task manager for small teams")).toContain('idea_scoping');
+  });
+
+  it('idea_scoping: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('basically it should handle payments, what i want is a simple checkout flow')).toContain('idea_scoping');
+  });
+
+  it('idea_scoping: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('basically it should work')).not.toContain('idea_scoping');
+  });
+
+  it('idea_scoping has absenceThreshold of 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'idea_scoping');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it("idea_scoping expectedStages is ['idea']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'idea_scoping');
+    expect(sig?.expectedStages).toEqual(['idea']);
+  });
+
+  it('SIGNAL_MAP contains idea_scoping', () => {
+    expect(SIGNAL_MAP.has('idea_scoping')).toBe(true);
+  });
+
+  it('initialSignalCounters contains idea_scoping and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('idea_scoping' in counters).toBe(true);
+    expect(counters['idea_scoping'].present).toBe(false);
+    expect(counters['idea_scoping'].lastSeenAt).toBeNull();
+  });
+
+  it('detects "out of scope" → idea_constraint_check', () => {
+    expect(detectSignals('that feature is out of scope for now')).toContain('idea_constraint_check');
+  });
+
+  it("detects \"that's out of scope\" → idea_constraint_check", () => {
+    expect(detectSignals("user auth — that's out of scope for version one")).toContain('idea_constraint_check');
+  });
+
+  it('idea_constraint_check: 2 vibe keywords detect signal', () => {
+    expect(detectSignals("let's build the mvp first, that can come later")).toContain('idea_constraint_check');
+  });
+
+  it('idea_constraint_check: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('mvp approach sounds good for now')).not.toContain('idea_constraint_check');
+  });
+
+  it('idea_constraint_check has absenceThreshold of 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'idea_constraint_check');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it("idea_constraint_check expectedStages is ['idea']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'idea_constraint_check');
+    expect(sig?.expectedStages).toEqual(['idea']);
+  });
+
+  it('SIGNAL_MAP contains idea_constraint_check', () => {
+    expect(SIGNAL_MAP.has('idea_constraint_check')).toBe(true);
+  });
+
+  it('initialSignalCounters contains idea_constraint_check and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('idea_constraint_check' in counters).toBe(true);
+    expect(counters['idea_constraint_check'].present).toBe(false);
+    expect(counters['idea_constraint_check'].lastSeenAt).toBeNull();
+  });
+
+  it('detects "the target user" → idea_user_definition', () => {
+    expect(detectSignals('the target user is a small business owner with no technical background')).toContain('idea_user_definition');
+  });
+
+  it('detects "my users" → idea_user_definition', () => {
+    expect(detectSignals('my users are developers who want faster deploys')).toContain('idea_user_definition');
+  });
+
+  it('idea_user_definition: 2 vibe keywords detect signal', () => {
+    expect(detectSignals("it's for people like freelancers who need time tracking")).toContain('idea_user_definition');
+  });
+
+  it('idea_user_definition: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals("it's for a project management use case")).not.toContain('idea_user_definition');
+  });
+
+  it('idea_user_definition has absenceThreshold of 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'idea_user_definition');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it("idea_user_definition expectedStages is ['idea']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'idea_user_definition');
+    expect(sig?.expectedStages).toEqual(['idea']);
+  });
+
+  it('SIGNAL_MAP contains idea_user_definition', () => {
+    expect(SIGNAL_MAP.has('idea_user_definition')).toBe(true);
+  });
+
+  it('initialSignalCounters contains idea_user_definition and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('idea_user_definition' in counters).toBe(true);
+    expect(counters['idea_user_definition'].present).toBe(false);
+    expect(counters['idea_user_definition'].lastSeenAt).toBeNull();
+  });
+
+  // ── Sub-4: task_breakdown-stage signals ───────────────────────────────────
+
+  it('detects "prioritize the tasks" → task_ordering', () => {
+    expect(detectSignals("let's prioritize the tasks before we start coding")).toContain('task_ordering');
+  });
+
+  it('detects "what should i do first" → task_ordering', () => {
+    expect(detectSignals('what should i do first in this task list')).toContain('task_ordering');
+  });
+
+  it('task_ordering: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('where do i start, which one first makes the most sense')).toContain('task_ordering');
+  });
+
+  it('task_ordering: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('where do i start with this project')).not.toContain('task_ordering');
+  });
+
+  it('task_ordering has absenceThreshold of 12', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'task_ordering');
+    expect(sig?.absenceThreshold).toBe(12);
+  });
+
+  it("task_ordering expectedStages is ['task_breakdown']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'task_ordering');
+    expect(sig?.expectedStages).toEqual(['task_breakdown']);
+  });
+
+  it('SIGNAL_MAP contains task_ordering', () => {
+    expect(SIGNAL_MAP.has('task_ordering')).toBe(true);
+  });
+
+  it('initialSignalCounters contains task_ordering and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('task_ordering' in counters).toBe(true);
+    expect(counters['task_ordering'].present).toBe(false);
+    expect(counters['task_ordering'].lastSeenAt).toBeNull();
+  });
+
+  it('detects "this task is too big" → task_sizing', () => {
+    expect(detectSignals('this task is too big to complete in one session')).toContain('task_sizing');
+  });
+
+  it('detects "bite-sized" → task_sizing', () => {
+    expect(detectSignals('we need to break the tasks into bite-sized chunks')).toContain('task_sizing');
+  });
+
+  it('task_sizing: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('this feels too big, can i finish this today or does it need splitting')).toContain('task_sizing');
+  });
+
+  it('task_sizing: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('this feels too big for one commit')).not.toContain('task_sizing');
+  });
+
+  it('task_sizing has absenceThreshold of 12', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'task_sizing');
+    expect(sig?.absenceThreshold).toBe(12);
+  });
+
+  it("task_sizing expectedStages is ['task_breakdown']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'task_sizing');
+    expect(sig?.expectedStages).toEqual(['task_breakdown']);
+  });
+
+  it('SIGNAL_MAP contains task_sizing', () => {
+    expect(SIGNAL_MAP.has('task_sizing')).toBe(true);
+  });
+
+  it('initialSignalCounters contains task_sizing and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('task_sizing' in counters).toBe(true);
+    expect(counters['task_sizing'].present).toBe(false);
+    expect(counters['task_sizing'].lastSeenAt).toBeNull();
+  });
+
+  it('detects "definition of done" → task_definition_of_done', () => {
+    expect(detectSignals('what is the definition of done for this task')).toContain('task_definition_of_done');
+  });
+
+  it('detects "done criteria" → task_definition_of_done', () => {
+    expect(detectSignals('we need to set done criteria for each task before starting')).toContain('task_definition_of_done');
+  });
+
+  it('task_definition_of_done: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('when is this done — done means what exactly for this task')).toContain('task_definition_of_done');
+  });
+
+  it('task_definition_of_done: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('when is this done')).not.toContain('task_definition_of_done');
+  });
+
+  it('task_definition_of_done has absenceThreshold of 12', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'task_definition_of_done');
+    expect(sig?.absenceThreshold).toBe(12);
+  });
+
+  it("task_definition_of_done expectedStages is ['task_breakdown']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'task_definition_of_done');
+    expect(sig?.expectedStages).toEqual(['task_breakdown']);
+  });
+
+  it('SIGNAL_MAP contains task_definition_of_done', () => {
+    expect(SIGNAL_MAP.has('task_definition_of_done')).toBe(true);
+  });
+
+  it('initialSignalCounters contains task_definition_of_done and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('task_definition_of_done' in counters).toBe(true);
+    expect(counters['task_definition_of_done'].present).toBe(false);
+    expect(counters['task_definition_of_done'].lastSeenAt).toBeNull();
+  });
+
+  // ── Sub-4: feedback_loop-stage signals ────────────────────────────────────
+
+  it('detects "reviewing the feedback" → user_feedback_review', () => {
+    expect(detectSignals("we've been reviewing the feedback from last week's launch")).toContain('user_feedback_review');
+  });
+
+  it('detects "feedback summary" → user_feedback_review', () => {
+    expect(detectSignals('can we put together a feedback summary for the team')).toContain('user_feedback_review');
+  });
+
+  it('user_feedback_review: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what did users say and what are people saying about the new feature')).toContain('user_feedback_review');
+  });
+
+  it('user_feedback_review: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what did users say')).not.toContain('user_feedback_review');
+  });
+
+  it('user_feedback_review has absenceThreshold of 12', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'user_feedback_review');
+    expect(sig?.absenceThreshold).toBe(12);
+  });
+
+  it("user_feedback_review expectedStages is ['feedback_loop']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'user_feedback_review');
+    expect(sig?.expectedStages).toEqual(['feedback_loop']);
+  });
+
+  it('SIGNAL_MAP contains user_feedback_review', () => {
+    expect(SIGNAL_MAP.has('user_feedback_review')).toBe(true);
+  });
+
+  it('initialSignalCounters contains user_feedback_review and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('user_feedback_review' in counters).toBe(true);
+    expect(counters['user_feedback_review'].present).toBe(false);
+    expect(counters['user_feedback_review'].lastSeenAt).toBeNull();
+  });
+
+  it('detects "prioritize based on feedback" → iteration_planning', () => {
+    expect(detectSignals('how do we prioritize based on feedback from the last release')).toContain('iteration_planning');
+  });
+
+  it('detects "feedback-driven priorities" → iteration_planning', () => {
+    expect(detectSignals("let's set feedback-driven priorities for the next sprint")).toContain('iteration_planning');
+  });
+
+  it('iteration_planning: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what should we fix next based on what they said about the release')).toContain('iteration_planning');
+  });
+
+  it('iteration_planning: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what should we fix next')).not.toContain('iteration_planning');
+  });
+
+  it('iteration_planning has absenceThreshold of 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'iteration_planning');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it("iteration_planning expectedStages is ['feedback_loop']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'iteration_planning');
+    expect(sig?.expectedStages).toEqual(['feedback_loop']);
+  });
+
+  it('SIGNAL_MAP contains iteration_planning', () => {
+    expect(SIGNAL_MAP.has('iteration_planning')).toBe(true);
+  });
+
+  it('initialSignalCounters contains iteration_planning and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('iteration_planning' in counters).toBe(true);
+    expect(counters['iteration_planning'].present).toBe(false);
+    expect(counters['iteration_planning'].lastSeenAt).toBeNull();
+  });
+
+  // ── Sub-4: expanded vibeKeywords on existing architecture-stage signals ───
+
+  it('alternatives_seeking: 2 new vibe keywords detect signal', () => {
+    expect(detectSignals('what else could we do here, any other options you can suggest')).toContain('alternatives_seeking');
+  });
+
+  it('alternatives_seeking: 1 new vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what else could we do')).not.toContain('alternatives_seeking');
+  });
+
+  it('alternatives_seeking: full keyword still detects after vibeKeyword expansion', () => {
+    expect(detectSignals('what are the alternatives to using a REST API here')).toContain('alternatives_seeking');
+  });
+
+  it('architecture_conflict: 2 new vibe keywords detect signal', () => {
+    expect(detectSignals('will this break anything, does this play nice with the rest of the codebase')).toContain('architecture_conflict');
+  });
+
+  it('architecture_conflict: 1 new vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('will this break anything')).not.toContain('architecture_conflict');
+  });
+
+  it('architecture_conflict: full keyword still detects after vibeKeyword expansion', () => {
+    expect(detectSignals('does this conflict with the existing architecture')).toContain('architecture_conflict');
+  });
+
+  it('spec_cross_confirm: 2 new vibe keywords detect signal', () => {
+    expect(detectSignals('did we miss anything, does this cover everything we agreed on')).toContain('spec_cross_confirm');
+  });
+
+  it('spec_cross_confirm: 1 new vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('did we miss anything in this sprint')).not.toContain('spec_cross_confirm');
+  });
+
+  it('spec_cross_confirm: full keyword still detects after vibeKeyword expansion', () => {
+    expect(detectSignals('review the spec and tell me if it is complete')).toContain('spec_cross_confirm');
+  });
+
+  it('no_agent_pushback: 2 new vibe keywords detect signal', () => {
+    expect(detectSignals("wait is that right, i'm not convinced this approach makes sense")).toContain('no_agent_pushback');
+  });
+
+  it('no_agent_pushback: 1 new vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('wait is that right here')).not.toContain('no_agent_pushback');
+  });
+
+  it('no_agent_pushback: full keyword still detects after vibeKeyword expansion', () => {
+    expect(detectSignals("i don't agree with this approach at all")).toContain('no_agent_pushback');
+  });
 });
 
 // ── SessionStateManager ────────────────────────────────────────────────────────
