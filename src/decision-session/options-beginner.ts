@@ -91,6 +91,21 @@ const REVIEW_TO_RELEASE_BEGINNER: DecisionContent = {
   ],
 };
 
+const RELEASE_TO_FEEDBACK_BEGINNER: DecisionContent = {
+  question:      'Just shipped — is the feedback loop active?',
+  pinchFallback: 'Watch it live.',
+  L1: [
+    '1. Check that what was just built is actually working now that it\'s live — try the main thing it does and see if it works the way you expected.\n2. Share what you find with me before we move on and flag anything that looks off or unexpected.\n3. Then check: will we know if something breaks after we stop watching, or will it fail without showing an obvious error?',
+    'Check if this project is set up to let us know if something goes wrong now that it\'s live — share what\'s in place and what\'s missing with me before we continue.',
+  ],
+  L2: [
+    'How would we find out if something is going wrong for a real person using this feature right now? Share your answer with me before we continue.',
+  ],
+  L3: [
+    'Is there anything in what was just built that could go wrong without showing a clear error?',
+  ],
+};
+
 const BEHAVIOUR_TESTING_BEGINNER: DecisionContent = {
   question:      'Phase done — any real-user scenario tested?',
   pinchFallback: 'User scenario?',
