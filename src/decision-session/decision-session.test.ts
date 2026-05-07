@@ -2492,6 +2492,7 @@ describe('C-02: beginner content blocks structure', () => {
     { name: 'TASK_REVIEW_BEGINNER',                content: TASK_REVIEW_BEGINNER },
     { name: 'IMPLEMENTATION_TO_REVIEW_BEGINNER',   content: TRANSITION_CONTENT_BEGINNER.review_testing! },
     { name: 'REVIEW_TO_RELEASE_BEGINNER',          content: TRANSITION_CONTENT_BEGINNER.release! },
+    { name: 'RELEASE_TO_FEEDBACK_BEGINNER',        content: TRANSITION_CONTENT_BEGINNER.feedback_loop! },
     { name: 'BEHAVIOUR_TESTING_BEGINNER',          content: ABSENCE_CONTENT_BEGINNER.behaviour_testing! },
     { name: 'ABSENCE_TEST_CREATION_BEGINNER',      content: ABSENCE_TEST_CREATION_BEGINNER },
     { name: 'ABSENCE_REGRESSION_CHECK_BEGINNER',   content: ABSENCE_REGRESSION_CHECK_BEGINNER },
