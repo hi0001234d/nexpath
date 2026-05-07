@@ -327,9 +327,9 @@ describe('resolveDecisionContent', () => {
     expect(content).toBe(TASK_REVIEW_CASUAL);
   });
 
-  it('stage_transition to feedback_loop → TASK_REVIEW_CASUAL (generic fallback, no profile)', () => {
+  it('stage_transition to feedback_loop → RELEASE_TO_FEEDBACK (no profile)', () => {
     const content = resolveDecisionContent('feedback_loop', 'stage_transition');
-    expect(content).toBe(TASK_REVIEW_CASUAL);
+    expect(content).toBe(RELEASE_TO_FEEDBACK);
   });
 
   it('absence:test_creation → ABSENCE_TEST_CREATION_CASUAL content (no profile, casual default)', () => {
@@ -363,9 +363,9 @@ describe('resolveDecisionContent', () => {
     expect(content).toBe(TASK_REVIEW_CASUAL);
   });
 
-  it('absence:unknown_signal in feedback_loop stage → falls back to TASK_REVIEW_CASUAL (no profile)', () => {
+  it('absence:unknown_signal in feedback_loop stage → RELEASE_TO_FEEDBACK (falls through to TRANSITION_CONTENT, no profile)', () => {
     const content = resolveDecisionContent('feedback_loop', 'absence:some_signal');
-    expect(content).toBe(TASK_REVIEW_CASUAL);
+    expect(content).toBe(RELEASE_TO_FEEDBACK);
   });
 
   // Priority contract: absence override wins over TRANSITION_CONTENT
