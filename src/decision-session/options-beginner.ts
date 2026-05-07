@@ -623,4 +623,5 @@ export const TRANSITION_CONTENT_BEGINNER: Partial<Record<Stage, DecisionContent>
   task_breakdown: ARCHITECTURE_TO_TASKS_BEGINNER,
   review_testing: IMPLEMENTATION_TO_REVIEW_BEGINNER,
   release:        REVIEW_TO_RELEASE_BEGINNER,
+  feedback_loop:  RELEASE_TO_FEEDBACK_BEGINNER,
 };

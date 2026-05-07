@@ -1321,6 +1321,7 @@ const TRANSITION_CONTENT: Partial<Record<Stage, DecisionContent>> = {
   task_breakdown: ARCHITECTURE_TO_TASKS,
   review_testing: IMPLEMENTATION_TO_REVIEW,
   release:        REVIEW_TO_RELEASE,
+  feedback_loop:  RELEASE_TO_FEEDBACK,
 };
 
 function selectAbsenceMap(nature: UserProfile['nature'] | null | undefined): Partial<Record<string, DecisionContent>> {
