@@ -287,6 +287,42 @@ describe('buildOptionList', () => {
     const { options } = buildOptionList(BEHAVIOUR_TESTING, 3);
     expect(options[0]).toContain('manually test right now');
   });
+
+  // ── BEHAVIOUR_TESTING_CASUAL buildOptionList at all 3 levels (sub-6) ─────────
+
+  it('BEHAVIOUR_TESTING_CASUAL L1 has exactly 5 options (3 content + Show simpler + Skip)', () => {
+    const { options, hasNextLevel } = buildOptionList(BEHAVIOUR_TESTING_CASUAL, 1);
+    expect(options).toHaveLength(5);
+    expect(hasNextLevel).toBe(true);
+    expect(options.at(-1)).toBe(SKIP_NOW);
+    expect(options.at(-2)).toBe(SHOW_SIMPLER);
+  });
+
+  it('BEHAVIOUR_TESTING_CASUAL L2 has exactly 4 options (2 content + Show simpler + Skip)', () => {
+    const { options, hasNextLevel } = buildOptionList(BEHAVIOUR_TESTING_CASUAL, 2);
+    expect(options).toHaveLength(4);
+    expect(hasNextLevel).toBe(true);
+    expect(options.at(-1)).toBe(SKIP_NOW);
+    expect(options.at(-2)).toBe(SHOW_SIMPLER);
+  });
+
+  it('BEHAVIOUR_TESTING_CASUAL L3 has exactly 2 options (1 content + Skip, no Show simpler)', () => {
+    const { options, hasNextLevel } = buildOptionList(BEHAVIOUR_TESTING_CASUAL, 3);
+    expect(options).toHaveLength(2);
+    expect(hasNextLevel).toBe(false);
+    expect(options.at(-1)).toBe(SKIP_NOW);
+    expect(options).not.toContain(SHOW_SIMPLER);
+  });
+
+  it('BEHAVIOUR_TESTING_CASUAL L1 first option is the end-to-end user flow prompt', () => {
+    const { options } = buildOptionList(BEHAVIOUR_TESTING_CASUAL, 1);
+    expect(options[0]).toContain('go through');
+  });
+
+  it('BEHAVIOUR_TESTING_CASUAL L3 only option mentions breaking or trying by hand', () => {
+    const { options } = buildOptionList(BEHAVIOUR_TESTING_CASUAL, 3);
+    expect(options[0]).toMatch(/break|tried by hand/);
+  });
 });
 
 // ── resolveDecisionContent ────────────────────────────────────────────────────
@@ -930,6 +966,7 @@ describe('DecisionContent structure', () => {
     IMPLEMENTATION_TO_REVIEW,
     REVIEW_TO_RELEASE,
     BEHAVIOUR_TESTING,
+    BEHAVIOUR_TESTING_CASUAL,
     ABSENCE_TEST_CREATION,
     ABSENCE_TEST_CREATION_CASUAL,
     ABSENCE_REGRESSION_CHECK,
@@ -1067,6 +1104,18 @@ describe('DecisionContent structure', () => {
     expect(REVIEW_TO_RELEASE.L1).toHaveLength(4);
     expect(REVIEW_TO_RELEASE.L2).toHaveLength(2);
     expect(REVIEW_TO_RELEASE.L3).toHaveLength(1);
+  });
+
+  it('BEHAVIOUR_TESTING has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(BEHAVIOUR_TESTING.L1).toHaveLength(3);
+    expect(BEHAVIOUR_TESTING.L2).toHaveLength(2);
+    expect(BEHAVIOUR_TESTING.L3).toHaveLength(1);
+  });
+
+  it('BEHAVIOUR_TESTING_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(BEHAVIOUR_TESTING_CASUAL.L1).toHaveLength(3);
+    expect(BEHAVIOUR_TESTING_CASUAL.L2).toHaveLength(2);
+    expect(BEHAVIOUR_TESTING_CASUAL.L3).toHaveLength(1);
   });
 
   it('ABSENCE_TEST_CREATION has exactly 3 L1, 2 L2, 1 L3 options', () => {
@@ -2037,6 +2086,53 @@ describe('BEHAVIOUR_TESTING content', () => {
 
   it('all L1 options are non-empty strings', () => {
     for (const opt of BEHAVIOUR_TESTING.L1) {
+      expect(typeof opt).toBe('string');
+      expect(opt.trim().length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ── BEHAVIOUR_TESTING_CASUAL content block (sub-6) ────────────────────────────
+
+describe('BEHAVIOUR_TESTING_CASUAL content', () => {
+  it('has correct question text', () => {
+    expect(BEHAVIOUR_TESTING_CASUAL.question).toBe('Implementation done — user scenarios tested?');
+  });
+
+  it('has correct pinchFallback', () => {
+    expect(BEHAVIOUR_TESTING_CASUAL.pinchFallback).toBe('User scenario?');
+  });
+
+  it('has 3 L1 options', () => {
+    expect(BEHAVIOUR_TESTING_CASUAL.L1).toHaveLength(3);
+  });
+
+  it('has 2 L2 options', () => {
+    expect(BEHAVIOUR_TESTING_CASUAL.L2).toHaveLength(2);
+  });
+
+  it('has 1 L3 option', () => {
+    expect(BEHAVIOUR_TESTING_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('L1 option 1 is end-to-end user flow — mentions user or go through', () => {
+    expect(BEHAVIOUR_TESTING_CASUAL.L1[0].toLowerCase()).toMatch(/user|go through/);
+  });
+
+  it('L1 option 2 is scenario variety — mentions different ways or real life', () => {
+    expect(BEHAVIOUR_TESTING_CASUAL.L1[1].toLowerCase()).toMatch(/different ways|real life/);
+  });
+
+  it('L1 option 3 is breakage hunting — mentions automated tests or wrong', () => {
+    expect(BEHAVIOUR_TESTING_CASUAL.L1[2].toLowerCase()).toMatch(/automated|wrong/);
+  });
+
+  it('L3 minimum option ends with a question mark', () => {
+    expect(BEHAVIOUR_TESTING_CASUAL.L3[0]).toMatch(/\?$/);
+  });
+
+  it('all L1 options are non-empty strings', () => {
+    for (const opt of BEHAVIOUR_TESTING_CASUAL.L1) {
       expect(typeof opt).toBe('string');
       expect(opt.trim().length).toBeGreaterThan(0);
     }
