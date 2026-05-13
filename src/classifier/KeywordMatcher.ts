@@ -108,6 +108,11 @@ const KEYWORD_MAP: Array<[string, Stage, number]> = [
   ['bug report', 'feedback_loop', 0.9],
   ['production issue', 'feedback_loop', 1.0],
   ['feedback from users', 'feedback_loop', 0.9],
+  ['plan the next iteration', 'feedback_loop', 0.9],
+  ['based on user feedback', 'feedback_loop', 0.8],
+  ['based on what users said', 'feedback_loop', 0.8],
+  ['what to prioritize based on feedback', 'feedback_loop', 0.9],
+  ['what should we work on next', 'feedback_loop', 0.7],
 ];
 
 export function matchKeywords(text: string): ClassificationResult | null {

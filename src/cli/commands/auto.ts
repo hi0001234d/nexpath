@@ -172,7 +172,9 @@ export async function runAuto(
 
   // ── 3.5. Effective language — read from projects table (detection runs in nexpath stop) ──
   const langOverride  = getConfig(store.db, 'language_override');
-  const detectedLang  = getProject(store, input.projectRoot)?.detectedLanguage ?? undefined;
+  const project       = getProject(store, input.projectRoot);
+  const detectedLang  = project?.detectedLanguage ?? undefined;
+  const projectType   = project?.projectType ?? undefined;
   const effectiveLang = resolveLanguage(langOverride, detectedLang);
   logger.debug('language', { effectiveLang: effectiveLang ?? null });
 
@@ -180,6 +182,7 @@ export async function runAuto(
   const newFlags = detectAbsenceFlags(
     mgr.current as import('../../classifier/types.js').SessionState,
     mgr.current.profile,
+    projectType,
   );
   for (const flag of newFlags) {
     mgr.addAbsenceFlag(store, flag);
@@ -318,6 +321,7 @@ export async function runAuto(
     mgr.current.currentStage,
     flagType,
     mgr.current.profile,
+    prevStage,
   );
 
   const [pinchLabel, generatedOptions] = await Promise.all([
