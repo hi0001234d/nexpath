@@ -338,10 +338,7 @@ export async function installAction(
             console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath} (CLI fallback)`);
           }
         }
-        // Register the advisory pipeline hook (separate from MCP — different file).
-        // Delegated to the Claude Code HookAdapter (registered via src/agents/index.ts
-        // side-effect import at the top of this file). The adapter's install() does
-        // the same writeHookEntry + console.log as before — byte-identical output.
+        // Register the advisory pipeline hook (separate from MCP — different file)
         const claudeAdapter = getAdapter('claude-code') as HookAdapter | undefined;
         if (claudeAdapter) {
           await claudeAdapter.install({
