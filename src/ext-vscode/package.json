@@ -42,13 +42,12 @@
     "dump-cursor-state": "tsx scripts/dump-cursor-state.ts"
   },
   "dependencies": {
-    "sql.js": "^1"
+    "better-sqlite3": "^11"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7",
     "@types/node": "^20",
     "@types/vscode": "^1.80.0",
-    "better-sqlite3": "^11",
     "esbuild": "^0.21",
     "tsx": "^4",
     "typescript": "^5",

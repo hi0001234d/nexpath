@@ -15,6 +15,11 @@ const {
 
 vi.mock('vscode', () => ({
   window: { registerWebviewViewProvider: mockRegisterWebviewViewProvider },
+  env: { appName: 'Visual Studio Code' },
+  commands: {
+    executeCommand: vi.fn(),
+    getCommands: vi.fn().mockResolvedValue([]),
+  },
 }));
 vi.mock('./onboarding.js', () => ({
   showOnboardingIfNeeded: mockShowOnboarding,
@@ -26,6 +31,15 @@ vi.mock('./webview/view-provider.js', () => ({
       mockProviderCtor(...args);
     }
   },
+}));
+vi.mock('./webview/prompt-injection.js', () => ({
+  handleOptionSelection: vi.fn(),
+}));
+vi.mock('./host-detector.js', () => ({
+  detectHost: vi.fn(() => 'vscode-generic'),
+}));
+vi.mock('./chat-input-injector.js', () => ({
+  chatInputInject: vi.fn(),
 }));
 
 import { activate, deactivate, getViewProvider } from './extension.js';
@@ -74,7 +88,7 @@ describe('activate', () => {
     const ctx = makeCtx();
     await activate(ctx as never);
     expect(mockProviderCtor).toHaveBeenCalledTimes(1);
-    expect(mockProviderCtor).toHaveBeenCalledWith(ctx.extensionUri);
+    expect(mockProviderCtor).toHaveBeenCalledWith(ctx.extensionUri, expect.any(Function));
     expect(mockRegisterWebviewViewProvider).toHaveBeenCalledTimes(1);
     expect(mockRegisterWebviewViewProvider.mock.calls[0]![0]).toBe(
       'nexpath.status',

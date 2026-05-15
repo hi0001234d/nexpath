@@ -1,5 +1,4 @@
 import { watch, type FSWatcher, type WatchListener } from 'node:fs';
-import { readFile } from 'node:fs/promises';
 import type {
   ChatHistoryEvent,
   ChatHistoryExtractor,
@@ -29,39 +28,89 @@ import { pickExtractor } from './extractors/index.js';
  *   emit via `onEvent`.
  *
  * The actual SQLite parsing is injected via `readItemTableFn` so tests
- * can run without sql.js. In production a sql.js-backed reader is used
- * (loaded lazily so the wasm boot cost only hits on first read).
+ * can run without better-sqlite3. In production a better-sqlite3-backed
+ * reader is used — chosen over sql.js because the live Cursor `.vscdb`
+ * file is in **WAL mode** (the main file is ~4 KB; all writes go to the
+ * sibling `.vscdb-wal`). sql.js operates on a buffer and cannot read the
+ * WAL siblings, so it never sees the live data (dev plan §2.5). The
+ * better-sqlite3 reader copies main + wal + shm to a tmp staging dir,
+ * checkpoints the WAL into the staged main file, then reads — never
+ * touching the live file Cursor is actively writing to.
  */
 
-/** Pure function that turns a state.vscdb byte buffer into ItemTable rows. */
-export type ReadItemTableFn = (dbBytes: Buffer) => Promise<ItemTableRow[]>;
+/** Pure function that turns a state.vscdb FILE PATH into ItemTable rows. */
+export type ReadItemTableFn = (dbPath: string) => Promise<ItemTableRow[]>;
 
 /**
- * Default sql.js-backed reader. Dynamic import keeps wasm out of the eager
- * require graph; only loaded on first read.
+ * Default WAL-aware reader using better-sqlite3.
+ *
+ * Strategy:
+ *   1. Stage: copy main + .vscdb-wal + .vscdb-shm to a tmp dir.
+ *   2. Open the staged copy read-only with better-sqlite3 (native module —
+ *      handles WAL transparently because the staged copy retains the WAL
+ *      file alongside).
+ *   3. Run `PRAGMA wal_checkpoint(TRUNCATE)` on the staged copy to fold
+ *      the WAL pages into the main file (belt-and-braces; better-sqlite3
+ *      reads them either way).
+ *   4. Query `ItemTable`.
+ *   5. Close + clean up the staging dir.
+ *
+ * Dynamic import keeps the native module out of the eager require graph
+ * (cheaper extension startup; only loaded on first chat-history read).
  */
-const defaultReadItemTable: ReadItemTableFn = async (dbBytes) => {
-  const mod = (await import('sql.js')) as unknown as {
-    default: (config?: { locateFile?: (f: string) => string }) => Promise<{
-      Database: new (data: Uint8Array) => {
-        exec(sql: string): Array<{ columns: string[]; values: unknown[][] }>;
-        close(): void;
+const defaultReadItemTable: ReadItemTableFn = async (dbPath) => {
+  const { copyFile, mkdir, rm } = await import('node:fs/promises');
+  const { existsSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { basename, join } = await import('node:path');
+
+  const stagingDir = join(
+    tmpdir(),
+    `nexpath-watcher-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  );
+  await mkdir(stagingDir, { recursive: true });
+  const stagedMain = join(stagingDir, basename(dbPath));
+  await copyFile(dbPath, stagedMain);
+  for (const suffix of ['-wal', '-shm'] as const) {
+    const sibling = dbPath + suffix;
+    if (existsSync(sibling)) await copyFile(sibling, stagedMain + suffix);
+  }
+
+  const mod = (await import('better-sqlite3')) as unknown as {
+    default: new (path: string, options?: { readonly?: boolean }) => {
+      prepare(sql: string): {
+        all(...params: unknown[]): Array<Record<string, unknown>>;
       };
-    }>;
+      pragma(pragma: string): unknown;
+      close(): void;
+    };
   };
-  const SQL = await mod.default();
-  const db = new SQL.Database(new Uint8Array(dbBytes));
+  const Database = mod.default;
+  const db = new Database(stagedMain, { readonly: true });
   try {
-    const result = db.exec('SELECT key, value FROM ItemTable');
-    const rows: ItemTableRow[] = [];
-    for (const r of result) {
-      for (const v of r.values) {
-        rows.push({ key: String(v[0]), value: String(v[1]) });
-      }
+    try {
+      db.pragma('wal_checkpoint(TRUNCATE)');
+    } catch {
+      // Not in WAL mode — fine, continue.
     }
-    return rows;
+    // Defensive: ItemTable may not exist on freshly-created VS Code
+    // state.vscdb files; treat as empty rather than throwing.
+    const tables = (
+      db
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='ItemTable'",
+        )
+        .all() as Array<{ name: string }>
+    ).length;
+    if (tables === 0) return [];
+    const rows = db
+      .prepare('SELECT key, value FROM ItemTable')
+      .all() as Array<{ key: string; value: string }>;
+    return rows.map((r) => ({ key: String(r.key), value: String(r.value) }));
   } finally {
     db.close();
+    // Best-effort cleanup — staging dir is in /tmp, OS will clean up eventually.
+    void rm(stagingDir, { recursive: true, force: true }).catch(() => {});
   }
 };
 
@@ -87,9 +136,7 @@ export interface ChatHistoryWatcherOptions {
   debounceMs?: number;
   /** Inject `fs.watch` (defaults to node:fs `watch`). */
   watchFn?: typeof watch;
-  /** Inject the file reader (defaults to node:fs/promises `readFile`). */
-  readFileFn?: (path: string) => Promise<Buffer>;
-  /** Inject the ItemTable reader (defaults to sql.js-backed reader). */
+  /** Inject the ItemTable reader (defaults to better-sqlite3 WAL-aware reader). */
   readItemTableFn?: ReadItemTableFn;
   /** Inject the clock (defaults to `() => new Date()`). */
   nowFn?: () => Date;
@@ -107,7 +154,6 @@ export function createChatHistoryWatcher(
 ): ChatHistoryWatcher {
   const debounceMs = opts.debounceMs ?? 250;
   const watchFn = opts.watchFn ?? watch;
-  const readFileFn = opts.readFileFn ?? readFile;
   const readItemTableFn = opts.readItemTableFn ?? defaultReadItemTable;
   const nowFn = opts.nowFn ?? (() => new Date());
 
@@ -129,8 +175,7 @@ export function createChatHistoryWatcher(
 
   async function processSqliteTarget(target: WatchTarget): Promise<void> {
     try {
-      const buf = await readFileFn(target.path);
-      const rows = await readItemTableFn(buf);
+      const rows = await readItemTableFn(target.path);
 
       let extractor: ChatHistoryExtractor | undefined =
         target.extractor ?? extractorCache.get(target.path);

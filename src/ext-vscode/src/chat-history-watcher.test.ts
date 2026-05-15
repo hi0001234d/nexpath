@@ -59,7 +59,6 @@ const cursorTarget = (path: string, extractor?: ChatHistoryExtractor): WatchTarg
 describe('createChatHistoryWatcher', () => {
   let watchFn: ReturnType<typeof vi.fn>;
   let createdWatchers: FakeFSWatcher[];
-  let readFileFn: ReturnType<typeof vi.fn>;
   let readItemTableFn: ReturnType<typeof vi.fn>;
   let onEvent: ReturnType<typeof vi.fn>;
   let onError: ReturnType<typeof vi.fn>;
@@ -72,7 +71,6 @@ describe('createChatHistoryWatcher', () => {
       createdWatchers.push(w);
       return w;
     });
-    readFileFn = vi.fn(async () => Buffer.from('fake-db-bytes'));
     readItemTableFn = vi.fn<ReadItemTableFn>(async () => []);
     onEvent = vi.fn();
     onError = vi.fn();
@@ -84,7 +82,6 @@ describe('createChatHistoryWatcher', () => {
       targets: [cursorTarget('/a/state.vscdb'), cursorTarget('/b/state.vscdb')],
       onEvent,
       watchFn: watchFn as never,
-      readFileFn,
       readItemTableFn,
     });
     w.start();
@@ -101,7 +98,6 @@ describe('createChatHistoryWatcher', () => {
       targets: [cursorTarget('/p', extractor)],
       onEvent,
       watchFn: watchFn as never,
-      readFileFn,
       readItemTableFn,
       debounceMs: 1,
     });
@@ -118,7 +114,6 @@ describe('createChatHistoryWatcher', () => {
       targets: [cursorTarget('/p', extractor)],
       onEvent,
       watchFn: watchFn as never,
-      readFileFn,
       readItemTableFn,
       debounceMs: 1,
     });
@@ -141,7 +136,6 @@ describe('createChatHistoryWatcher', () => {
       targets: [cursorTarget('/p', makeExtractor('test', []))],
       onEvent,
       watchFn: watchFn as never,
-      readFileFn,
       readItemTableFn,
       debounceMs: 50,
     });
@@ -165,7 +159,6 @@ describe('createChatHistoryWatcher', () => {
       onEvent,
       onSchemaUnknown,
       watchFn: watchFn as never,
-      readFileFn,
       readItemTableFn,
       debounceMs: 1,
     });
@@ -181,23 +174,6 @@ describe('createChatHistoryWatcher', () => {
     expect(onEvent).not.toHaveBeenCalled();
   });
 
-  it('forwards readFileFn errors to onError without crashing', async () => {
-    readFileFn.mockRejectedValueOnce(new Error('disk gone'));
-    const w = createChatHistoryWatcher({
-      targets: [cursorTarget('/p', makeExtractor('test', []))],
-      onEvent,
-      onError,
-      watchFn: watchFn as never,
-      readFileFn,
-      readItemTableFn,
-      debounceMs: 1,
-    });
-    w.start();
-    await new Promise((r) => setTimeout(r, 20));
-    expect(onError).toHaveBeenCalledTimes(1);
-    expect(onError.mock.calls[0]![0].message).toContain('disk gone');
-  });
-
   it('forwards readItemTableFn errors to onError without crashing', async () => {
     readItemTableFn.mockRejectedValueOnce(new Error('sqlite parse error'));
     const w = createChatHistoryWatcher({
@@ -205,7 +181,6 @@ describe('createChatHistoryWatcher', () => {
       onEvent,
       onError,
       watchFn: watchFn as never,
-      readFileFn,
       readItemTableFn,
       debounceMs: 1,
     });
@@ -221,7 +196,6 @@ describe('createChatHistoryWatcher', () => {
       onEvent,
       onError,
       watchFn: watchFn as never,
-      readFileFn,
       readItemTableFn,
       debounceMs: 1,
     });
@@ -236,7 +210,6 @@ describe('createChatHistoryWatcher', () => {
       targets: [cursorTarget('/a'), cursorTarget('/b')],
       onEvent,
       watchFn: watchFn as never,
-      readFileFn,
       readItemTableFn,
       debounceMs: 50,
     });
@@ -259,7 +232,6 @@ describe('createChatHistoryWatcher', () => {
       targets: [cursorTarget('/p', extractor)],
       onEvent,
       watchFn: watchFn as never,
-      readFileFn,
       readItemTableFn,
       nowFn: () => fixedDate,
       debounceMs: 1,
@@ -274,7 +246,6 @@ describe('createChatHistoryWatcher', () => {
       targets: [{ path: '/ws', kind: 'windsurf-dir' }],
       onEvent,
       watchFn: watchFn as never,
-      readFileFn,
       readItemTableFn,
       debounceMs: 1,
     });

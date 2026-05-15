@@ -9,10 +9,11 @@ const config = {
   platform: 'node',
   target: 'node18',
   format: 'cjs',
-  // `vscode` is provided by the host. `sql.js` ships node_modules into the
-  // .vsix and is loaded via dynamic import at runtime so the wasm boot
-  // happens only on first chat-history read.
-  external: ['vscode', 'sql.js'],
+  // `vscode` is provided by the host. `better-sqlite3` is a native module
+  // (.node bindings) that esbuild cannot bundle; node_modules/better-sqlite3
+  // ships in the .vsix and is loaded via dynamic import at runtime so the
+  // native load only hits on first chat-history read.
+  external: ['vscode', 'better-sqlite3'],
   sourcemap: true,
   minify: false,
   logLevel: 'info',
