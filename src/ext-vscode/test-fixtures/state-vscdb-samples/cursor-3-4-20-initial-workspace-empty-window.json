@@ -1,0 +1,22 @@
+{
+  "capturedAt": "2026-05-15T06:51:16.495Z",
+  "sourcePath": "/home/emptyops/.config/Cursor/User/workspaceStorage/empty-window/state.vscdb",
+  "platform": "linux",
+  "redacted": true,
+  "tables": [
+    "ItemTable",
+    "cursorDiskKV"
+  ],
+  "rows": [
+    {
+      "table": "ItemTable",
+      "key": "aiService.generations",
+      "value": "[]"
+    },
+    {
+      "table": "ItemTable",
+      "key": "aiService.prompts",
+      "value": "[]"
+    }
+  ]
+}
