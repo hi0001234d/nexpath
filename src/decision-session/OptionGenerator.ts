@@ -227,6 +227,13 @@ export function buildOptionPrompt(
     l3: content.L3.map(toPromptItem),
   });
 
+  const typeLabel    = (s: string): string => s.includes('\n') ? `ARRAY(${s.split('\n').length})` : 'STRING';
+  const typeContract = [
+    `l1: [${content.L1.map(typeLabel).join(', ')}]`,
+    `l2: [${content.L2.map(typeLabel).join(', ')}]`,
+    `l3: [${content.L3.map(typeLabel).join(', ')}]`,
+  ].join('\n  ');
+
   return `Context:
   A developer is using an AI coding agent. An advisory has been triggered.
   ${profile ? `Session profile: nature=${profile.nature}, mood=${profile.mood}, depth=${profile.depth}, precision=${profile.precisionOrdinal} (${profile.precisionScore}/10), playfulness=${profile.playfulnessOrdinal} (${profile.playfulnessScore}/10).` : 'Session profile: not yet computed — use neutral style.'}
@@ -279,6 +286,9 @@ Output: {"l1":[["1. Say what you changed in plain words.","2. Tell me it's worki
 Example 4 — feature word grounding ("recurring invoice feature" replaces "this project" in a planning option):
 Input:  {"l1":["Write a PRD for this project: define the problem, target user, core features with acceptance criteria, and what is out of scope.","Define the problem and success criteria first: who is this project for and what problem does it solve?"],"l2":["Write a one-paragraph scope statement for this project."],"l3":["List the 3 most important acceptance criteria for this project."]}
 Output: {"l1":["Write a PRD for the recurring invoice feature: define the problem, target user, core features with acceptance criteria, and what is out of scope.","Define the problem and success criteria first: who is the recurring invoice feature for and what problem does it solve?"],"l2":["Write a one-paragraph scope statement for the recurring invoice feature."],"l3":["List the 3 most important acceptance criteria for the recurring invoice feature."]}
+
+Item type contract (absolute — semantic content does not override this):
+  ${typeContract}
 
 Now rewrite the following input:
 ${inputJson}
