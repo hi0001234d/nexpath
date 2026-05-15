@@ -58,7 +58,7 @@ export type ReadItemTableFn = (dbPath: string) => Promise<ItemTableRow[]>;
  * Dynamic import keeps the native module out of the eager require graph
  * (cheaper extension startup; only loaded on first chat-history read).
  */
-const defaultReadItemTable: ReadItemTableFn = async (dbPath) => {
+export const defaultReadItemTable: ReadItemTableFn = async (dbPath) => {
   const { copyFile, mkdir, rm } = await import('node:fs/promises');
   const { existsSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');

@@ -884,6 +884,39 @@ describe('installAction', () => {
       cleanup();
     }
   });
+
+  it('catches adapter.install errors from the registry loop and prints failed line; loop continues', async () => {
+    const { cursorAdapter } = await import('../../agents/adapters/cursor.js');
+    const installSpy = vi
+      .spyOn(cursorAdapter, 'install')
+      .mockRejectedValueOnce(new Error('synthetic disk failure'));
+    const { dir, cleanup } = tmpDir();
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      // Need cursor detect()=true so it's in detectAll's results AND windsurf
+      // detect()=true so we can verify the loop continued past the throwing one.
+      mkdirSync(join(dir, '.config', 'Cursor'), { recursive: true });
+      mkdirSync(join(dir, '.config', 'Windsurf'), { recursive: true });
+      vi.stubEnv('HOME', dir);
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true }, {
+        paths,
+        isWin: false,
+        execFn: () => {},
+        skipClipboardCheck: true,
+      });
+      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
+      expect(installSpy).toHaveBeenCalledOnce();
+      // The catch block prints the ✗ line with the error message
+      expect(output).toMatch(/failed:.*synthetic disk failure/);
+      // The loop continued — windsurf's install ran too
+      expect(output).toContain('windsurf --install-extension');
+    } finally {
+      installSpy.mockRestore();
+      vi.unstubAllEnvs();
+      cleanup();
+    }
+  });
 });
 
 // ── uninstallAction ───────────────────────────────────────────────────────────
@@ -1025,6 +1058,31 @@ describe('uninstallAction', () => {
       expect(output).toContain('Windsurf');
       expect(output).toContain('windsurf --uninstall-extension');
     } finally {
+      vi.unstubAllEnvs();
+      cleanup();
+    }
+  });
+
+  it('catches adapter.uninstall errors from the registry loop and prints failed line; loop continues', async () => {
+    const { cursorAdapter } = await import('../../agents/adapters/cursor.js');
+    const uninstallSpy = vi
+      .spyOn(cursorAdapter, 'uninstall')
+      .mockRejectedValueOnce(new Error('synthetic uninstall failure'));
+    const { dir, cleanup } = tmpDir();
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      mkdirSync(join(dir, '.config', 'Cursor'), { recursive: true });
+      mkdirSync(join(dir, '.config', 'Windsurf'), { recursive: true });
+      vi.stubEnv('HOME', dir);
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await uninstallAction({ paths, execFn: () => {} });
+      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
+      expect(uninstallSpy).toHaveBeenCalledOnce();
+      expect(output).toMatch(/failed:.*synthetic uninstall failure/);
+      // Loop continued — windsurf's uninstall ran too
+      expect(output).toContain('windsurf --uninstall-extension');
+    } finally {
+      uninstallSpy.mockRestore();
       vi.unstubAllEnvs();
       cleanup();
     }

@@ -1,7 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EventEmitter } from 'node:events';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   createChatHistoryWatcher,
+  defaultReadItemTable,
   type ReadItemTableFn,
 } from './chat-history-watcher.js';
 import type {
@@ -251,5 +255,110 @@ describe('createChatHistoryWatcher', () => {
     });
     expect(() => w.start()).not.toThrow();
     expect(() => w.stop()).not.toThrow();
+  });
+});
+
+// ── defaultReadItemTable — the production better-sqlite3 + WAL reader ─────────
+//
+// These tests exercise the REAL reader against synthetic SQLite files (built
+// with better-sqlite3 in the test setup). They cover the WAL-mode branch
+// from dev plan §2.5 — the whole reason we swapped sql.js → better-sqlite3
+// in M2/B4.
+
+describe('defaultReadItemTable', () => {
+  let tmpDirPath: string;
+
+  beforeEach(() => {
+    tmpDirPath = mkdtempSync(join(tmpdir(), 'nexpath-readtable-test-'));
+  });
+  afterEach(() => {
+    rmSync(tmpDirPath, { recursive: true, force: true });
+  });
+
+  /** Build a real .vscdb file with an ItemTable populated from the given rows. */
+  async function createTestVscdb(
+    fileName: string,
+    rows: Array<{ key: string; value: string }>,
+    options: { walMode?: boolean } = {},
+  ): Promise<string> {
+    const mod = (await import('better-sqlite3')) as unknown as {
+      default: new (path: string) => {
+        exec(sql: string): unknown;
+        prepare(sql: string): { run(...args: unknown[]): unknown };
+        pragma(pragma: string): unknown;
+        close(): void;
+      };
+    };
+    const Database = mod.default;
+    const path = join(tmpDirPath, fileName);
+    const db = new Database(path);
+    if (options.walMode) db.pragma('journal_mode = WAL');
+    db.exec('CREATE TABLE ItemTable (key TEXT NOT NULL, value TEXT NOT NULL)');
+    const insert = db.prepare('INSERT INTO ItemTable (key, value) VALUES (?, ?)');
+    for (const r of rows) insert.run(r.key, r.value);
+    db.close();
+    return path;
+  }
+
+  /** Build a real .vscdb file with NO ItemTable (different schema). */
+  async function createEmptyVscdb(fileName: string): Promise<string> {
+    const mod = (await import('better-sqlite3')) as unknown as {
+      default: new (path: string) => { exec(sql: string): unknown; close(): void };
+    };
+    const Database = mod.default;
+    const path = join(tmpDirPath, fileName);
+    const db = new Database(path);
+    db.exec('CREATE TABLE OtherTable (x INTEGER)');
+    db.close();
+    return path;
+  }
+
+  it('reads happy-path ItemTable rows from a real .vscdb file', async () => {
+    const dbPath = await createTestVscdb('happy.vscdb', [
+      { key: 'aiService.prompts', value: '["hello","world"]' },
+      { key: 'composer.composerData', value: '{"selectedComposerIds":[]}' },
+      { key: 'workbench.editor.recent', value: '[]' },
+    ]);
+    const rows = await defaultReadItemTable(dbPath);
+    expect(rows).toHaveLength(3);
+    expect(rows.find((r) => r.key === 'aiService.prompts')?.value).toBe('["hello","world"]');
+    expect(rows.find((r) => r.key === 'composer.composerData')?.value).toBe('{"selectedComposerIds":[]}');
+  });
+
+  it('returns [] when the .vscdb has no ItemTable (defensive)', async () => {
+    const dbPath = await createEmptyVscdb('no-itemtable.vscdb');
+    const rows = await defaultReadItemTable(dbPath);
+    expect(rows).toEqual([]);
+  });
+
+  it('reads rows from a .vscdb opened in WAL mode (the Cursor scenario)', async () => {
+    // Build a WAL-mode .vscdb. The journal-mode pragma + the inserts create
+    // the .vscdb-wal sibling. better-sqlite3 reads from both transparently
+    // when opening the staged copy.
+    const dbPath = await createTestVscdb(
+      'wal.vscdb',
+      [
+        { key: 'aiService.prompts', value: '[]' },
+        { key: 'cursor/agentLayout.sidebarWidth', value: '320' },
+      ],
+      { walMode: true },
+    );
+    const rows = await defaultReadItemTable(dbPath);
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+    expect(rows.find((r) => r.key === 'aiService.prompts')?.value).toBe('[]');
+    expect(rows.find((r) => r.key === 'cursor/agentLayout.sidebarWidth')?.value).toBe('320');
+  });
+
+  it('does not modify the source .vscdb file (operates on a tmp staging copy)', async () => {
+    const dbPath = await createTestVscdb('source-untouched.vscdb', [
+      { key: 'aiService.prompts', value: '["x"]' },
+    ]);
+    const { statSync } = await import('node:fs');
+    const sizeBefore = statSync(dbPath).size;
+    await defaultReadItemTable(dbPath);
+    await defaultReadItemTable(dbPath);
+    await defaultReadItemTable(dbPath);
+    const sizeAfter = statSync(dbPath).size;
+    expect(sizeAfter).toBe(sizeBefore);
   });
 });
