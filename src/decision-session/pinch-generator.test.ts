@@ -17,6 +17,7 @@ import {
   TASK_REVIEW,
   IMPLEMENTATION_TO_REVIEW,
   REVIEW_TO_RELEASE,
+  ABSENCE_TEST_CREATION,
 } from './options.js';
 import type OpenAI from 'openai';
 
@@ -255,9 +256,9 @@ describe('generatePinchLabel', () => {
     expect(result).toBe(REVIEW_TO_RELEASE.pinchFallback);
   });
 
-  it('uses TASK_REVIEW fallback for absence:test_creation', async () => {
+  it('uses ABSENCE_TEST_CREATION fallback for absence:test_creation', async () => {
     const result = await generatePinchLabel('implementation', 'absence:test_creation', makeErrorClient());
-    expect(result).toBe(TASK_REVIEW.pinchFallback);
+    expect(result).toBe(ABSENCE_TEST_CREATION.pinchFallback);
   });
 
   it('uses ARCHITECTURE_TO_TASKS fallback for task_breakdown stage transition', async () => {

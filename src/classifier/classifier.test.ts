@@ -574,9 +574,9 @@ describe('detectSignals', () => {
     expect(counters['behaviour_testing'].lastSeenAt).toBeNull();
   });
 
-  it('initialSignalCounters covers exactly 23 signals', () => {
+  it('initialSignalCounters covers exactly 39 signals', () => {
     const counters = initialSignalCounters();
-    expect(Object.keys(counters)).toHaveLength(23);
+    expect(Object.keys(counters)).toHaveLength(39);
   });
 
   // ── vibeKeywords — 0.5-weight detection ──────────────────────────────────────
@@ -619,6 +619,699 @@ describe('detectSignals', () => {
     // 'run all tests' is a full-weight keyword for regression_check
     const signals = detectSignals('run all tests — also did i break anything, nothing is broken?');
     expect(signals).toContain('regression_check');
+  });
+
+  // ── Sub-4: idea-stage signals ─────────────────────────────────────────────
+
+  it('detects "the goal is" → idea_scoping', () => {
+    expect(detectSignals('the goal is to build a scheduling app for freelancers')).toContain('idea_scoping');
+  });
+
+  it("detects \"what i'm building is\" → idea_scoping", () => {
+    expect(detectSignals("what i'm building is a task manager for small teams")).toContain('idea_scoping');
+  });
+
+  it('idea_scoping: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('basically it should handle payments, what i want is a simple checkout flow')).toContain('idea_scoping');
+  });
+
+  it('idea_scoping: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('basically it should work')).not.toContain('idea_scoping');
+  });
+
+  it('idea_scoping has absenceThreshold of 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'idea_scoping');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it("idea_scoping expectedStages is ['idea']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'idea_scoping');
+    expect(sig?.expectedStages).toEqual(['idea']);
+  });
+
+  it('SIGNAL_MAP contains idea_scoping', () => {
+    expect(SIGNAL_MAP.has('idea_scoping')).toBe(true);
+  });
+
+  it('initialSignalCounters contains idea_scoping and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('idea_scoping' in counters).toBe(true);
+    expect(counters['idea_scoping'].present).toBe(false);
+    expect(counters['idea_scoping'].lastSeenAt).toBeNull();
+  });
+
+  it('detects "out of scope" → idea_constraint_check', () => {
+    expect(detectSignals('that feature is out of scope for now')).toContain('idea_constraint_check');
+  });
+
+  it("detects \"that's out of scope\" → idea_constraint_check", () => {
+    expect(detectSignals("user auth — that's out of scope for version one")).toContain('idea_constraint_check');
+  });
+
+  it('idea_constraint_check: 2 vibe keywords detect signal', () => {
+    expect(detectSignals("let's build the mvp first, that can come later")).toContain('idea_constraint_check');
+  });
+
+  it('idea_constraint_check: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('mvp approach sounds good for now')).not.toContain('idea_constraint_check');
+  });
+
+  it('idea_constraint_check has absenceThreshold of 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'idea_constraint_check');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it("idea_constraint_check expectedStages is ['idea']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'idea_constraint_check');
+    expect(sig?.expectedStages).toEqual(['idea']);
+  });
+
+  it('SIGNAL_MAP contains idea_constraint_check', () => {
+    expect(SIGNAL_MAP.has('idea_constraint_check')).toBe(true);
+  });
+
+  it('initialSignalCounters contains idea_constraint_check and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('idea_constraint_check' in counters).toBe(true);
+    expect(counters['idea_constraint_check'].present).toBe(false);
+    expect(counters['idea_constraint_check'].lastSeenAt).toBeNull();
+  });
+
+  it('detects "the target user" → idea_user_definition', () => {
+    expect(detectSignals('the target user is a small business owner with no technical background')).toContain('idea_user_definition');
+  });
+
+  it('detects "my users" → idea_user_definition', () => {
+    expect(detectSignals('my users are developers who want faster deploys')).toContain('idea_user_definition');
+  });
+
+  it('idea_user_definition: 2 vibe keywords detect signal', () => {
+    expect(detectSignals("it's for people like freelancers who need time tracking")).toContain('idea_user_definition');
+  });
+
+  it('idea_user_definition: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals("it's for a project management use case")).not.toContain('idea_user_definition');
+  });
+
+  it('idea_user_definition has absenceThreshold of 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'idea_user_definition');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it("idea_user_definition expectedStages is ['idea']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'idea_user_definition');
+    expect(sig?.expectedStages).toEqual(['idea']);
+  });
+
+  it('SIGNAL_MAP contains idea_user_definition', () => {
+    expect(SIGNAL_MAP.has('idea_user_definition')).toBe(true);
+  });
+
+  it('initialSignalCounters contains idea_user_definition and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('idea_user_definition' in counters).toBe(true);
+    expect(counters['idea_user_definition'].present).toBe(false);
+    expect(counters['idea_user_definition'].lastSeenAt).toBeNull();
+  });
+
+  // ── Sub-4: task_breakdown-stage signals ───────────────────────────────────
+
+  it('detects "prioritize the tasks" → task_ordering', () => {
+    expect(detectSignals("let's prioritize the tasks before we start coding")).toContain('task_ordering');
+  });
+
+  it('detects "what should i do first" → task_ordering', () => {
+    expect(detectSignals('what should i do first in this task list')).toContain('task_ordering');
+  });
+
+  it('task_ordering: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('where do i start, which one first makes the most sense')).toContain('task_ordering');
+  });
+
+  it('task_ordering: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('where do i start with this project')).not.toContain('task_ordering');
+  });
+
+  it('task_ordering has absenceThreshold of 12', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'task_ordering');
+    expect(sig?.absenceThreshold).toBe(12);
+  });
+
+  it("task_ordering expectedStages is ['task_breakdown']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'task_ordering');
+    expect(sig?.expectedStages).toEqual(['task_breakdown']);
+  });
+
+  it('SIGNAL_MAP contains task_ordering', () => {
+    expect(SIGNAL_MAP.has('task_ordering')).toBe(true);
+  });
+
+  it('initialSignalCounters contains task_ordering and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('task_ordering' in counters).toBe(true);
+    expect(counters['task_ordering'].present).toBe(false);
+    expect(counters['task_ordering'].lastSeenAt).toBeNull();
+  });
+
+  it('detects "this task is too big" → task_sizing', () => {
+    expect(detectSignals('this task is too big to complete in one session')).toContain('task_sizing');
+  });
+
+  it('detects "bite-sized" → task_sizing', () => {
+    expect(detectSignals('we need to break the tasks into bite-sized chunks')).toContain('task_sizing');
+  });
+
+  it('task_sizing: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('this feels too big, can i finish this today or does it need splitting')).toContain('task_sizing');
+  });
+
+  it('task_sizing: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('this feels too big for one commit')).not.toContain('task_sizing');
+  });
+
+  it('task_sizing has absenceThreshold of 12', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'task_sizing');
+    expect(sig?.absenceThreshold).toBe(12);
+  });
+
+  it("task_sizing expectedStages is ['task_breakdown']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'task_sizing');
+    expect(sig?.expectedStages).toEqual(['task_breakdown']);
+  });
+
+  it('SIGNAL_MAP contains task_sizing', () => {
+    expect(SIGNAL_MAP.has('task_sizing')).toBe(true);
+  });
+
+  it('initialSignalCounters contains task_sizing and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('task_sizing' in counters).toBe(true);
+    expect(counters['task_sizing'].present).toBe(false);
+    expect(counters['task_sizing'].lastSeenAt).toBeNull();
+  });
+
+  it('detects "definition of done" → task_definition_of_done', () => {
+    expect(detectSignals('what is the definition of done for this task')).toContain('task_definition_of_done');
+  });
+
+  it('detects "done criteria" → task_definition_of_done', () => {
+    expect(detectSignals('we need to set done criteria for each task before starting')).toContain('task_definition_of_done');
+  });
+
+  it('task_definition_of_done: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('when is this done — done means what exactly for this task')).toContain('task_definition_of_done');
+  });
+
+  it('task_definition_of_done: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('when is this done')).not.toContain('task_definition_of_done');
+  });
+
+  it('task_definition_of_done has absenceThreshold of 12', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'task_definition_of_done');
+    expect(sig?.absenceThreshold).toBe(12);
+  });
+
+  it("task_definition_of_done expectedStages is ['task_breakdown']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'task_definition_of_done');
+    expect(sig?.expectedStages).toEqual(['task_breakdown']);
+  });
+
+  it('SIGNAL_MAP contains task_definition_of_done', () => {
+    expect(SIGNAL_MAP.has('task_definition_of_done')).toBe(true);
+  });
+
+  it('initialSignalCounters contains task_definition_of_done and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('task_definition_of_done' in counters).toBe(true);
+    expect(counters['task_definition_of_done'].present).toBe(false);
+    expect(counters['task_definition_of_done'].lastSeenAt).toBeNull();
+  });
+
+  // ── Sub-4: feedback_loop-stage signals ────────────────────────────────────
+
+  it('detects "reviewing the feedback" → user_feedback_review', () => {
+    expect(detectSignals("we've been reviewing the feedback from last week's launch")).toContain('user_feedback_review');
+  });
+
+  it('detects "feedback summary" → user_feedback_review', () => {
+    expect(detectSignals('can we put together a feedback summary for the team')).toContain('user_feedback_review');
+  });
+
+  it('user_feedback_review: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what did users say and what are people saying about the new feature')).toContain('user_feedback_review');
+  });
+
+  it('user_feedback_review: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what did users say')).not.toContain('user_feedback_review');
+  });
+
+  it('user_feedback_review has absenceThreshold of 12', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'user_feedback_review');
+    expect(sig?.absenceThreshold).toBe(12);
+  });
+
+  it("user_feedback_review expectedStages is ['feedback_loop']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'user_feedback_review');
+    expect(sig?.expectedStages).toEqual(['feedback_loop']);
+  });
+
+  it('SIGNAL_MAP contains user_feedback_review', () => {
+    expect(SIGNAL_MAP.has('user_feedback_review')).toBe(true);
+  });
+
+  it('initialSignalCounters contains user_feedback_review and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('user_feedback_review' in counters).toBe(true);
+    expect(counters['user_feedback_review'].present).toBe(false);
+    expect(counters['user_feedback_review'].lastSeenAt).toBeNull();
+  });
+
+  it('detects "prioritize based on feedback" → iteration_planning', () => {
+    expect(detectSignals('how do we prioritize based on feedback from the last release')).toContain('iteration_planning');
+  });
+
+  it('detects "feedback-driven priorities" → iteration_planning', () => {
+    expect(detectSignals("let's set feedback-driven priorities for the next sprint")).toContain('iteration_planning');
+  });
+
+  it('iteration_planning: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what should we fix next based on what they said about the release')).toContain('iteration_planning');
+  });
+
+  it('iteration_planning: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what should we fix next')).not.toContain('iteration_planning');
+  });
+
+  it('iteration_planning has absenceThreshold of 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'iteration_planning');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it("iteration_planning expectedStages is ['feedback_loop']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'iteration_planning');
+    expect(sig?.expectedStages).toEqual(['feedback_loop']);
+  });
+
+  it('SIGNAL_MAP contains iteration_planning', () => {
+    expect(SIGNAL_MAP.has('iteration_planning')).toBe(true);
+  });
+
+  it('initialSignalCounters contains iteration_planning and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('iteration_planning' in counters).toBe(true);
+    expect(counters['iteration_planning'].present).toBe(false);
+    expect(counters['iteration_planning'].lastSeenAt).toBeNull();
+  });
+
+  // ── Sub-4: expanded vibeKeywords on existing architecture-stage signals ───
+
+  it('alternatives_seeking: 2 new vibe keywords detect signal', () => {
+    expect(detectSignals('what else could we do here, any other options you can suggest')).toContain('alternatives_seeking');
+  });
+
+  it('alternatives_seeking: 1 new vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what else could we do')).not.toContain('alternatives_seeking');
+  });
+
+  it('alternatives_seeking: full keyword still detects after vibeKeyword expansion', () => {
+    expect(detectSignals('what are the alternatives to using a REST API here')).toContain('alternatives_seeking');
+  });
+
+  it('architecture_conflict: 2 new vibe keywords detect signal', () => {
+    expect(detectSignals('will this break anything, does this play nice with the rest of the codebase')).toContain('architecture_conflict');
+  });
+
+  it('architecture_conflict: 1 new vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('will this break anything')).not.toContain('architecture_conflict');
+  });
+
+  it('architecture_conflict: full keyword still detects after vibeKeyword expansion', () => {
+    expect(detectSignals('does this conflict with the existing architecture')).toContain('architecture_conflict');
+  });
+
+  it('spec_cross_confirm: 2 new vibe keywords detect signal', () => {
+    expect(detectSignals('did we miss anything, does this cover everything we agreed on')).toContain('spec_cross_confirm');
+  });
+
+  it('spec_cross_confirm: 1 new vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('did we miss anything in this sprint')).not.toContain('spec_cross_confirm');
+  });
+
+  it('spec_cross_confirm: full keyword still detects after vibeKeyword expansion', () => {
+    expect(detectSignals('review the spec and tell me if it is complete')).toContain('spec_cross_confirm');
+  });
+
+  it('no_agent_pushback: 2 new vibe keywords detect signal', () => {
+    expect(detectSignals("wait is that right, i'm not convinced this approach makes sense")).toContain('no_agent_pushback');
+  });
+
+  it('no_agent_pushback: 1 new vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('wait is that right here')).not.toContain('no_agent_pushback');
+  });
+
+  it('no_agent_pushback: full keyword still detects after vibeKeyword expansion', () => {
+    expect(detectSignals("i don't agree with this approach at all")).toContain('no_agent_pushback');
+  });
+
+  // ── Sub-7: new advisory signals ───────────────────────────────────────────
+
+  // scope_creep
+  it("detects 'scope creep' → scope_creep", () => {
+    expect(detectSignals('we need to watch out for scope creep here')).toContain('scope_creep');
+  });
+
+  it("detects 'let\\'s focus on' → scope_creep", () => {
+    expect(detectSignals("let's focus on the login feature before adding anything new")).toContain('scope_creep');
+  });
+
+  it('scope_creep: 2 vibe keywords detect signal', () => {
+    expect(detectSignals("one thing at a time — don't get sidetracked by extra features")).toContain('scope_creep');
+  });
+
+  it('scope_creep: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('one thing at a time for now')).not.toContain('scope_creep');
+  });
+
+  it('scope_creep has absenceThreshold of 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'scope_creep');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it("scope_creep expectedStages includes 'implementation' and 'review_testing'", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'scope_creep');
+    expect(sig?.expectedStages).toContain('implementation');
+    expect(sig?.expectedStages).toContain('review_testing');
+  });
+
+  it('SIGNAL_MAP contains scope_creep', () => {
+    expect(SIGNAL_MAP.has('scope_creep')).toBe(true);
+  });
+
+  it('initialSignalCounters contains scope_creep and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('scope_creep' in counters).toBe(true);
+    expect(counters['scope_creep'].present).toBe(false);
+    expect(counters['scope_creep'].lastSeenAt).toBeNull();
+  });
+
+  // context_loss
+  it("detects 'to recap' → context_loss", () => {
+    expect(detectSignals('to recap what we have done so far in this session')).toContain('context_loss');
+  });
+
+  it("detects 'here\\'s where we are' → context_loss", () => {
+    expect(detectSignals("here's where we are before continuing the implementation")).toContain('context_loss');
+  });
+
+  it('context_loss: 2 vibe keywords detect signal', () => {
+    expect(detectSignals("just to recap — here's where we're at with this project")).toContain('context_loss');
+  });
+
+  it('context_loss: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('let me catch you up on the project status')).not.toContain('context_loss');
+  });
+
+  it('context_loss has absenceThreshold of 30', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'context_loss');
+    expect(sig?.absenceThreshold).toBe(30);
+  });
+
+  it("context_loss expectedStages includes 'implementation', 'review_testing', and 'architecture'", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'context_loss');
+    expect(sig?.expectedStages).toContain('implementation');
+    expect(sig?.expectedStages).toContain('review_testing');
+    expect(sig?.expectedStages).toContain('architecture');
+  });
+
+  it('SIGNAL_MAP contains context_loss', () => {
+    expect(SIGNAL_MAP.has('context_loss')).toBe(true);
+  });
+
+  it('initialSignalCounters contains context_loss and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('context_loss' in counters).toBe(true);
+    expect(counters['context_loss'].present).toBe(false);
+    expect(counters['context_loss'].lastSeenAt).toBeNull();
+  });
+
+  // api_design_review
+  it("detects 'api contract' → api_design_review", () => {
+    expect(detectSignals('we need to define the api contract before adding more endpoints')).toContain('api_design_review');
+  });
+
+  it("detects 'backwards compatible' → api_design_review", () => {
+    expect(detectSignals('is this change backwards compatible with v1 clients')).toContain('api_design_review');
+  });
+
+  it('api_design_review: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what if the api changes — will this break anything using the api')).toContain('api_design_review');
+  });
+
+  it('api_design_review: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what if the api changes for mobile clients')).not.toContain('api_design_review');
+  });
+
+  it('api_design_review has absenceThreshold of 20', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'api_design_review');
+    expect(sig?.absenceThreshold).toBe(20);
+  });
+
+  it("api_design_review expectedStages is ['implementation']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'api_design_review');
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains api_design_review', () => {
+    expect(SIGNAL_MAP.has('api_design_review')).toBe(true);
+  });
+
+  it('initialSignalCounters contains api_design_review and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('api_design_review' in counters).toBe(true);
+    expect(counters['api_design_review'].present).toBe(false);
+    expect(counters['api_design_review'].lastSeenAt).toBeNull();
+  });
+
+  it('api_design_review relevantProjectTypes is exactly [api, web-app, library]', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'api_design_review');
+    expect(sig?.relevantProjectTypes).toEqual(expect.arrayContaining(['api', 'web-app', 'library']));
+    expect(sig?.relevantProjectTypes).toHaveLength(3);
+  });
+
+  // accessibility
+  it("detects 'wcag' → accessibility", () => {
+    expect(detectSignals('does this component meet wcag AA standards')).toContain('accessibility');
+  });
+
+  it("detects 'keyboard navigation' → accessibility", () => {
+    expect(detectSignals('we need keyboard navigation support for this modal')).toContain('accessibility');
+  });
+
+  it('accessibility: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('can someone use this without a mouse — is this keyboard accessible')).toContain('accessibility');
+  });
+
+  it('accessibility: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('can someone use this without a mouse')).not.toContain('accessibility');
+  });
+
+  it('accessibility has absenceThreshold of 20', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'accessibility');
+    expect(sig?.absenceThreshold).toBe(20);
+  });
+
+  it("accessibility expectedStages includes 'implementation' and 'review_testing'", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'accessibility');
+    expect(sig?.expectedStages).toContain('implementation');
+    expect(sig?.expectedStages).toContain('review_testing');
+  });
+
+  it('SIGNAL_MAP contains accessibility', () => {
+    expect(SIGNAL_MAP.has('accessibility')).toBe(true);
+  });
+
+  it('initialSignalCounters contains accessibility and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('accessibility' in counters).toBe(true);
+    expect(counters['accessibility'].present).toBe(false);
+    expect(counters['accessibility'].lastSeenAt).toBeNull();
+  });
+
+  it('accessibility relevantProjectTypes is exactly [web-app, mobile, desktop]', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'accessibility');
+    expect(sig?.relevantProjectTypes).toEqual(expect.arrayContaining(['web-app', 'mobile', 'desktop']));
+    expect(sig?.relevantProjectTypes).toHaveLength(3);
+  });
+
+  // environment_and_secrets
+  it("detects 'dotenv' → environment_and_secrets", () => {
+    expect(detectSignals('we should use dotenv to load the config values')).toContain('environment_and_secrets');
+  });
+
+  it("detects 'secrets management' → environment_and_secrets", () => {
+    expect(detectSignals('we need a proper secrets management solution for production')).toContain('environment_and_secrets');
+  });
+
+  it('environment_and_secrets: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('where do the api keys go — should the key be in the code')).toContain('environment_and_secrets');
+  });
+
+  it('environment_and_secrets: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('where do the api keys go in this repo')).not.toContain('environment_and_secrets');
+  });
+
+  it('environment_and_secrets has absenceThreshold of 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'environment_and_secrets');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it("environment_and_secrets expectedStages is ['implementation']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'environment_and_secrets');
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains environment_and_secrets', () => {
+    expect(SIGNAL_MAP.has('environment_and_secrets')).toBe(true);
+  });
+
+  it('initialSignalCounters contains environment_and_secrets and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('environment_and_secrets' in counters).toBe(true);
+    expect(counters['environment_and_secrets'].present).toBe(false);
+    expect(counters['environment_and_secrets'].lastSeenAt).toBeNull();
+  });
+
+  it("'environment variables' does NOT fire environment_and_secrets (that's deployment_planning)", () => {
+    expect(detectSignals('set the environment variables in the deployment config')).not.toContain('environment_and_secrets');
+  });
+
+  // data_validation
+  it("detects 'zod' → data_validation", () => {
+    expect(detectSignals('we should use zod to validate the request body')).toContain('data_validation');
+  });
+
+  it("detects 'schema validation' → data_validation", () => {
+    expect(detectSignals('we need schema validation before saving to the database')).toContain('data_validation');
+  });
+
+  it('data_validation: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what if someone sends bad data — what if the input is wrong')).toContain('data_validation');
+  });
+
+  it('data_validation: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what if someone sends bad data to the server')).not.toContain('data_validation');
+  });
+
+  it('data_validation has absenceThreshold of 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'data_validation');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it("data_validation expectedStages is ['implementation']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'data_validation');
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains data_validation', () => {
+    expect(SIGNAL_MAP.has('data_validation')).toBe(true);
+  });
+
+  it('initialSignalCounters contains data_validation and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('data_validation' in counters).toBe(true);
+    expect(counters['data_validation'].present).toBe(false);
+    expect(counters['data_validation'].lastSeenAt).toBeNull();
+  });
+
+  it("'validate input' does NOT fire data_validation (that's security_check)", () => {
+    expect(detectSignals('make sure to validate input from the user')).not.toContain('data_validation');
+  });
+
+  // ci_pipeline
+  it("detects 'github actions' → ci_pipeline", () => {
+    expect(detectSignals('we should set up github actions to run tests on each push')).toContain('ci_pipeline');
+  });
+
+  it("detects 'ci/cd' → ci_pipeline", () => {
+    expect(detectSignals('the ci/cd pipeline needs to be configured before release')).toContain('ci_pipeline');
+  });
+
+  it('ci_pipeline: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('does this run automatically — can we automate the build')).toContain('ci_pipeline');
+  });
+
+  it('ci_pipeline: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('does this run automatically on every push')).not.toContain('ci_pipeline');
+  });
+
+  it('ci_pipeline has absenceThreshold of 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'ci_pipeline');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it("ci_pipeline expectedStages includes 'review_testing' and 'release'", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'ci_pipeline');
+    expect(sig?.expectedStages).toContain('review_testing');
+    expect(sig?.expectedStages).toContain('release');
+  });
+
+  it('SIGNAL_MAP contains ci_pipeline', () => {
+    expect(SIGNAL_MAP.has('ci_pipeline')).toBe(true);
+  });
+
+  it('initialSignalCounters contains ci_pipeline and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('ci_pipeline' in counters).toBe(true);
+    expect(counters['ci_pipeline'].present).toBe(false);
+    expect(counters['ci_pipeline'].lastSeenAt).toBeNull();
+  });
+
+  // rate_limiting
+  it("detects 'throttle requests' → rate_limiting", () => {
+    expect(detectSignals('we need to throttle requests to avoid overloading the server')).toContain('rate_limiting');
+  });
+
+  it("detects '429 handling' → rate_limiting", () => {
+    expect(detectSignals('the client needs proper 429 handling with exponential backoff')).toContain('rate_limiting');
+  });
+
+  it('rate_limiting: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what if someone calls this too many times — limiting how often this can be called')).toContain('rate_limiting');
+  });
+
+  it('rate_limiting: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what if someone calls this too many times by accident')).not.toContain('rate_limiting');
+  });
+
+  it('rate_limiting has absenceThreshold of 20', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'rate_limiting');
+    expect(sig?.absenceThreshold).toBe(20);
+  });
+
+  it("rate_limiting expectedStages is ['implementation']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'rate_limiting');
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains rate_limiting', () => {
+    expect(SIGNAL_MAP.has('rate_limiting')).toBe(true);
+  });
+
+  it('initialSignalCounters contains rate_limiting and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('rate_limiting' in counters).toBe(true);
+    expect(counters['rate_limiting'].present).toBe(false);
+    expect(counters['rate_limiting'].lastSeenAt).toBeNull();
+  });
+
+  it('rate_limiting relevantProjectTypes is exactly [api, web-app]', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'rate_limiting');
+    expect(sig?.relevantProjectTypes).toEqual(expect.arrayContaining(['api', 'web-app']));
+    expect(sig?.relevantProjectTypes).toHaveLength(2);
+  });
+
+  it("'rate limit' does NOT fire rate_limiting (that's security_check)", () => {
+    expect(detectSignals('we should add rate limit to this endpoint')).not.toContain('rate_limiting');
   });
 });
 
@@ -1177,11 +1870,11 @@ describe('AbsenceDetector', () => {
     }
   });
 
-  it('beginner profile: promptsInCurrentStage=6 fires signals (effectiveMinPrompts=5)', () => {
+  it('beginner profile: promptsInCurrentStage=8 fires signals (vibe×min-threshold=8)', () => {
     const state = makeState({
       stageConfidence:       0.85,
-      promptsInCurrentStage: 6,
-      promptCount:           6,
+      promptsInCurrentStage: 8,
+      promptCount:           8,
       currentStage:          'implementation',
       signalCounters:        initialSignalCounters(),
     });
@@ -1206,7 +1899,7 @@ describe('AbsenceDetector', () => {
     expect(detectAbsenceFlags(state, profile)).toHaveLength(0);
   });
 
-  it('hardcore_pro profile: promptsInCurrentStage=6 fires no signals (effectiveMinPrompts=10)', () => {
+  it('hardcore_pro profile: promptsInCurrentStage=6 fires no signals (pro-threshold for implementation=15)', () => {
     const state = makeState({
       stageConfidence:       0.85,
       promptsInCurrentStage: 6,
@@ -1220,11 +1913,11 @@ describe('AbsenceDetector', () => {
     expect(detectAbsenceFlags(state, profile)).toHaveLength(0);
   });
 
-  it('hardcore_pro profile: promptsInCurrentStage=11 fires signals (11 ≥ effectiveMinPrompts=10)', () => {
+  it('hardcore_pro profile: promptsInCurrentStage=15 fires signals (pro×min-threshold=15)', () => {
     const state = makeState({
       stageConfidence:       0.85,
-      promptsInCurrentStage: 11,
-      promptCount:           11,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
       currentStage:          'implementation',
       signalCounters:        initialSignalCounters(),
     });
@@ -1235,7 +1928,7 @@ describe('AbsenceDetector', () => {
     expect(flags.length).toBeGreaterThan(0);
   });
 
-  it('profile=null uses effectiveMinPrompts=10 — no signals at promptsInCurrentStage=9', () => {
+  it('profile=null: no signals at promptsInCurrentStage=9 (pro-threshold for implementation=15)', () => {
     const state = makeState({
       stageConfidence:       0.85,
       promptsInCurrentStage: 9,
@@ -1244,6 +1937,176 @@ describe('AbsenceDetector', () => {
       signalCounters:        initialSignalCounters(),
     });
     expect(detectAbsenceFlags(state, null)).toHaveLength(0);
+  });
+
+  // ── Per-signal threshold — context_loss (absenceThreshold=30) ─────────────
+
+  it('context_loss not flagged at promptsInCurrentStage=29 for pro (30×1.0=30)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 29,
+      promptCount:           29,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state);
+    expect(flags.map((f) => f.signalKey)).not.toContain('context_loss');
+  });
+
+  it('context_loss flagged at promptsInCurrentStage=30 for pro (30×1.0=30)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 30,
+      promptCount:           30,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state);
+    expect(flags.map((f) => f.signalKey)).toContain('context_loss');
+  });
+
+  it('context_loss flagged at promptsInCurrentStage=15 for vibe (30×0.5=15)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const profile = { nature: 'beginner' as const, precisionScore: 1, playfulnessScore: 1,
+      precisionOrdinal: 'low' as const, playfulnessOrdinal: 'low' as const,
+      mood: 'casual' as const, depth: 'low' as const, depthScore: 1, computedAt: 1 };
+    const flags = detectAbsenceFlags(state, profile);
+    expect(flags.map((f) => f.signalKey)).toContain('context_loss');
+  });
+
+  // ── Project-type gate — Element 3 ─────────────────────────────────────────
+
+  it('projectType=cli: accessibility suppressed (cli not in web-app/mobile/desktop)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, 'cli');
+    expect(flags.map((f) => f.signalKey)).not.toContain('accessibility');
+  });
+
+  it('projectType=web-app: accessibility fires (web-app in relevant list)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, 'web-app');
+    expect(flags.map((f) => f.signalKey)).toContain('accessibility');
+  });
+
+  it('projectType=cli: rate_limiting suppressed (cli not in api/web-app)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, 'cli');
+    expect(flags.map((f) => f.signalKey)).not.toContain('rate_limiting');
+  });
+
+  it('projectType=api: rate_limiting fires (api in relevant list)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, 'api');
+    expect(flags.map((f) => f.signalKey)).toContain('rate_limiting');
+  });
+
+  it('projectType=other: bypasses filter — accessibility and rate_limiting both fire', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, 'other');
+    const keys = flags.map((f) => f.signalKey);
+    expect(keys).toContain('accessibility');
+    expect(keys).toContain('rate_limiting');
+  });
+
+  it('projectType=undefined: bypasses filter — accessibility and rate_limiting both fire', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, undefined);
+    const keys = flags.map((f) => f.signalKey);
+    expect(keys).toContain('accessibility');
+    expect(keys).toContain('rate_limiting');
+  });
+
+  it('projectType=desktop: accessibility fires, rate_limiting suppressed', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, 'desktop');
+    const keys = flags.map((f) => f.signalKey);
+    expect(keys).toContain('accessibility');
+    expect(keys).not.toContain('rate_limiting');
+  });
+
+  it('projectType=library: api_design_review fires; accessibility and rate_limiting suppressed', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, 'library');
+    const keys = flags.map((f) => f.signalKey);
+    expect(keys).toContain('api_design_review');
+    expect(keys).not.toContain('accessibility');
+    expect(keys).not.toContain('rate_limiting');
+  });
+
+  it('projectType=mobile: api_design_review suppressed (mobile not in api/web-app/library)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, 'mobile');
+    expect(flags.map((f) => f.signalKey)).not.toContain('api_design_review');
+  });
+
+  it('universal signal (scope_creep has no relevantProjectTypes): fires for any projectType', () => {
+    const makeImpl = (promptsInCurrentStage: number) => makeState({
+      stageConfidence: 0.85, promptsInCurrentStage, promptCount: promptsInCurrentStage,
+      currentStage: 'implementation', signalCounters: initialSignalCounters(),
+    });
+    expect(detectAbsenceFlags(makeImpl(15), null, 'cli').map((f) => f.signalKey)).toContain('scope_creep');
+    expect(detectAbsenceFlags(makeImpl(15), null, 'mobile').map((f) => f.signalKey)).toContain('scope_creep');
+    expect(detectAbsenceFlags(makeImpl(15), null, 'library').map((f) => f.signalKey)).toContain('scope_creep');
   });
 });
 
