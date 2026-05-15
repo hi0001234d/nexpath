@@ -27,16 +27,11 @@
       "nexpath": [
         {
           "id": "nexpath.status",
-          "name": "Nexpath"
+          "name": "Nexpath",
+          "type": "webview"
         }
       ]
-    },
-    "viewsWelcome": [
-      {
-        "view": "nexpath.status",
-        "contents": "Nexpath is active and watching for AI chat prompts.\n\nDecision sessions appear in this panel automatically when guidance is generated for a prompt — no manual action required."
-      }
-    ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run build",
