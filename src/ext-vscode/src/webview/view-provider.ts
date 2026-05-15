@@ -102,13 +102,26 @@ export class NexpathDecisionSessionViewProvider
     });
   }
 
-  /** Visible to tests so the message-routing logic can be exercised directly. */
+  /**
+   * Visible to tests so the message-routing logic can be exercised directly.
+   *
+   * `onSelect` errors are caught + logged here rather than propagated, because
+   * the caller chain (`webview.onDidReceiveMessage` → `void handleMessage()`)
+   * has no `await` to catch them — an unhandled rejection would crash the
+   * extension host. Real failures (e.g. a B4 `injectFn` throwing because the
+   * Cursor command went away) should surface via the user-facing toast in
+   * `handleOptionSelection` itself; the catch here is a last-resort guard.
+   */
   async handleMessage(raw: unknown): Promise<void> {
     if (!raw || typeof raw !== 'object') return;
     const msg = raw as WebviewMessage;
     if (msg.type === 'select') {
       if (typeof msg.optionLabel === 'string') {
-        await this.onSelect(msg.optionLabel);
+        try {
+          await this.onSelect(msg.optionLabel);
+        } catch (err) {
+          console.error('[nexpath] onSelect failed:', err);
+        }
       }
       return;
     }

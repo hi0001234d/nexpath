@@ -127,6 +127,28 @@ describe('NexpathDecisionSessionViewProvider', () => {
       provider.publishPayload(payload);
       expect(view.show).toHaveBeenCalledWith(true);
     });
+
+    it('a second publishPayload replaces the first (no stacking)', () => {
+      const provider = new NexpathDecisionSessionViewProvider(fakeUri);
+      const view = makeFakeView();
+      provider.resolveWebviewView(view as never, {} as never, {} as never);
+      const first: DecisionSessionPayload = {
+        advisory: 'FIRST advisory text here',
+        options: [{ id: 'a', label: 'first-only' }],
+      };
+      const second: DecisionSessionPayload = {
+        advisory: 'SECOND advisory text here',
+        options: [{ id: 'b', label: 'second-only' }],
+      };
+      provider.publishPayload(first);
+      provider.publishPayload(second);
+      expect(provider.getCurrentPayload()).toBe(second);
+      expect(view.webview.html).toContain('SECOND advisory text here');
+      expect(view.webview.html).toContain('second-only');
+      expect(view.webview.html).not.toContain('FIRST advisory text here');
+      expect(view.webview.html).not.toContain('first-only');
+      expect(view.show).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('clearPayload', () => {
@@ -177,6 +199,21 @@ describe('NexpathDecisionSessionViewProvider', () => {
       await expect(provider.handleMessage('string')).resolves.toBeUndefined();
       await expect(provider.handleMessage({ type: 'bogus' })).resolves.toBeUndefined();
       expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it('catches errors from onSelect so they never become unhandled rejections', async () => {
+      const onSelect = vi.fn().mockRejectedValue(new Error('inject blew up'));
+      const provider = new NexpathDecisionSessionViewProvider(fakeUri, onSelect);
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      await expect(
+        provider.handleMessage({ type: 'select', optionLabel: 'x' }),
+      ).resolves.toBeUndefined();
+      expect(onSelect).toHaveBeenCalledOnce();
+      expect(errSpy).toHaveBeenCalledWith(
+        '[nexpath] onSelect failed:',
+        expect.any(Error),
+      );
+      errSpy.mockRestore();
     });
 
     it('routes messages from the webview via the registered listener', async () => {

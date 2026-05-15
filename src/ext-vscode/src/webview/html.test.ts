@@ -116,6 +116,25 @@ describe('renderDecisionSessionHtml — populated state', () => {
     expect(html).toContain('data-option-id="&lt;a&gt;"');
   });
 
+  it('escapes attribute-breaking quote characters in option id and label', () => {
+    // If an option id or label ever contains `"`, naive interpolation would
+    // close the data-option-id attribute and allow attribute injection.
+    // escapeHtml must convert `"` to `&quot;` so the attribute stays intact.
+    const breakOutPayload: DecisionSessionPayload = {
+      advisory: 'irrelevant',
+      options: [{ id: 'a"b', label: 'c"d' }],
+    };
+    const html = renderDecisionSessionHtml(breakOutPayload, {
+      cspSource: CSP_SRC,
+      nonce: FIXED_NONCE,
+    });
+    expect(html).toContain('data-option-id="a&quot;b"');
+    expect(html).toContain('data-option-label="c&quot;d"');
+    // Raw quote in the attribute would break the markup — must NOT appear.
+    expect(html).not.toMatch(/data-option-id="a"b"/);
+    expect(html).not.toMatch(/data-option-label="c"d"/);
+  });
+
   it('handles an empty options array without crashing', () => {
     const html = renderDecisionSessionHtml(
       { advisory: 'No options for you', options: [] },
