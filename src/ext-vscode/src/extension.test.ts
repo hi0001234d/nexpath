@@ -241,6 +241,71 @@ describe('activate', () => {
     await activate(makeCtx() as never);
     expect(getViewProvider()).toBeDefined();
   });
+
+  // ── Watcher-callback wiring (B5 audit follow-up) ───────────────────────────
+  // The watcher takes three callbacks at construction time (onEvent,
+  // onError, onSchemaUnknown). The watcher itself is mocked in these tests,
+  // so we capture the callbacks from the createChatHistoryWatcher call args
+  // and invoke them directly — verifying that what extension.ts wires up
+  // does the right thing.
+
+  /** Helper: drive activate() with watcher-starting conditions + return the watcher opts. */
+  async function activateWithWatcher(): Promise<{
+    onEvent: (event: unknown) => void;
+    onError: (err: Error) => void;
+    onSchemaUnknown: (info: { path: string; observedSampleKeys: readonly string[] }) => void;
+  }> {
+    mockShowOnboarding.mockResolvedValueOnce(undefined);
+    mockDetectHost.mockReturnValueOnce('cursor');
+    mockWorkspaceStorageDir.mockReturnValueOnce('/fake/ws');
+    mockEnumerateStateVscdbPaths.mockReturnValueOnce(['/fake/ws/a/state.vscdb']);
+    await activate(makeCtx(true) as never);
+    const opts = mockCreateChatHistoryWatcher.mock.calls[0]![0] as {
+      onEvent: (event: unknown) => void;
+      onError: (err: Error) => void;
+      onSchemaUnknown: (info: {
+        path: string;
+        observedSampleKeys: readonly string[];
+      }) => void;
+    };
+    return opts;
+  }
+
+  it('routes watcher onEvent through the chat-event handler (the integration proof)', async () => {
+    const trackedHandler = vi.fn();
+    mockCreateChatEventHandler.mockReturnValueOnce(trackedHandler);
+    const opts = await activateWithWatcher();
+    const event = {
+      prompt: 'hi',
+      rawSessionId: 'tab-7',
+      capturedAt: new Date(0),
+      sourcePath: '/fake/ws/a/state.vscdb',
+      extractorId: 'cursor-v2025-q2',
+    };
+    opts.onEvent(event);
+    expect(trackedHandler).toHaveBeenCalledOnce();
+    expect(trackedHandler).toHaveBeenCalledWith(event);
+  });
+
+  it('watcher onSchemaUnknown surfaces a visible info toast with path + observed keys', async () => {
+    const opts = await activateWithWatcher();
+    opts.onSchemaUnknown({
+      path: '/fake/ws/a/state.vscdb',
+      observedSampleKeys: ['unknown.key.1', 'unknown.key.2', 'unknown.key.3'],
+    });
+    expect(mockShowInformationMessage).toHaveBeenCalledOnce();
+    const msg = mockShowInformationMessage.mock.calls[0]![0] as string;
+    expect(msg).toContain('/fake/ws/a/state.vscdb');
+    expect(msg).toContain('schema is not recognised');
+    expect(msg).toContain('unknown.key.1');
+  });
+
+  it('watcher onError logs to console.error (does not crash the extension)', async () => {
+    const opts = await activateWithWatcher();
+    const watcherErr = new Error('watch boom');
+    expect(() => opts.onError(watcherErr)).not.toThrow();
+    expect(errorSpy).toHaveBeenCalledWith('[nexpath] watcher error:', watcherErr);
+  });
 });
 
 describe('deactivate', () => {
