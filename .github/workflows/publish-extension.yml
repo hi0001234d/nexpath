@@ -35,14 +35,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Pin every runner to a specific version so the matrix is reproducible
+          # across runs; otherwise GitHub's `*-latest` labels drift to new minor
+          # versions without warning (and our better-sqlite3 prebuilds are
+          # node-abi keyed, which can desync with the runner's default node).
           - target: linux-x64
-            runner: ubuntu-latest
+            runner: ubuntu-22.04
           - target: darwin-x64
             runner: macos-13         # Intel mac for x64 prebuild
           - target: darwin-arm64
-            runner: macos-latest     # Apple Silicon
+            runner: macos-14         # Apple Silicon (pinned; previously macos-latest)
           - target: win32-x64
-            runner: windows-latest
+            runner: windows-2022
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -91,7 +95,7 @@ jobs:
   # is available on npm for linux-arm64.
   package-linux-arm64:
     name: Package (linux-arm64)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -132,7 +136,7 @@ jobs:
     name: Publish to marketplaces
     needs: [package, package-linux-arm64]
     if: ${{ github.event_name == 'push' || inputs.publish == true }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -183,7 +187,7 @@ jobs:
       - name: Sanity-check publication
         run: |
           echo "If the steps above succeeded:"
-          echo "  - https://marketplace.visualstudio.com/items?itemName=nexpath.nexpath-vscode"
-          echo "  - https://open-vsx.org/extension/nexpath/nexpath-vscode"
+          echo "  - https://marketplace.visualstudio.com/items?itemName=emptyops.nexpath-vscode"
+          echo "  - https://open-vsx.org/extension/emptyops/nexpath-vscode"
           echo ""
           echo "Note: marketplace ingestion may lag a few minutes after publish."

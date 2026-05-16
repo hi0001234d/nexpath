@@ -3,7 +3,7 @@
   "displayName": "Nexpath",
   "description": "Coding-agent prompt guidance for Cursor and Windsurf — between-prompt advisory that helps you stop, reconsider, and reframe before sending.",
   "version": "0.1.3",
-  "publisher": "nexpath",
+  "publisher": "emptyops",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",

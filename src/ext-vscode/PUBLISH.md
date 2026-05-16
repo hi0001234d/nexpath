@@ -8,12 +8,14 @@
 
 ### 1. Marketplace publisher accounts
 
-The extension publishes under the publisher id `nexpath` (matches `package.json#publisher`). You need credentials for both registries:
+The extension publishes under the publisher id `emptyops` (matches `package.json#publisher`) — the org-scoped namespace per dev plan §6 Q3 resolution (revision 15). The full marketplace ID is `emptyops.nexpath-vscode`. You need credentials for both registries:
 
 | Registry | Account | Token |
 |---|---|---|
-| **VS Code Marketplace** | Azure DevOps org with the `nexpath` publisher | Personal Access Token (PAT) with `Marketplace: Manage` scope. [Docs](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#get-a-personal-access-token). |
-| **Open VSX** | <https://open-vsx.org> account in the `nexpath` namespace | Access token from the user's profile page. [Docs](https://github.com/eclipse/openvsx/wiki/Publishing-Extensions). |
+| **VS Code Marketplace** | Azure DevOps org with the `emptyops` publisher | Personal Access Token (PAT) with `Marketplace: Manage` scope. [Docs](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#get-a-personal-access-token). |
+| **Open VSX** | <https://open-vsx.org> account in the `emptyops` namespace | Access token from the user's profile page. [Docs](https://github.com/eclipse/openvsx/wiki/Publishing-Extensions). |
+
+> **First-publish prerequisite — claim the publisher namespace.** Visit each marketplace and confirm that `emptyops` is either already owned by your account or available to claim. If `emptyops` is taken on either side, talk to the team lead before publishing — the choice was deliberately org-scoped to make collision unlikely, but verify before the first push.
 
 ### 2. Export the tokens
 
@@ -76,6 +78,42 @@ Each `publish:*` reads its respective `*_PAT` env var.
 
 ---
 
+## Pre-merge CI dry-run (recommended before opening the B6 PR)
+
+Before merging Branch 6, run the matrix workflow once with publishing disabled — confirms every platform's `.vsix` builds cleanly without touching either marketplace. Fast and free.
+
+```bash
+# 1. Push the branch to your fork so GitHub Actions can see it.
+git push -u origin v0.1.3/m2/publish-and-cross-os-verify
+
+# 2. Trigger the workflow manually with publish=false.
+gh workflow run "Publish Nexpath VS Code Extension" \
+   --ref v0.1.3/m2/publish-and-cross-os-verify \
+   -f publish=false
+
+# 3. Watch the run.
+gh run watch
+```
+
+What to check on the run:
+
+| Job | Expected |
+|---|---|
+| `Package (linux-x64)` | green, uploads `vsix-linux-x64` artefact |
+| `Package (darwin-x64)` | green, uploads `vsix-darwin-x64` artefact |
+| `Package (darwin-arm64)` | green, uploads `vsix-darwin-arm64` artefact |
+| `Package (win32-x64)` | green, uploads `vsix-win32-x64` artefact |
+| `Package (linux-arm64)` | green (slow — QEMU emulation, expect ~10–15 min) |
+| `Publish to marketplaces` | **skipped** (gated on `publish=true` or tag push) |
+
+Download all 5 artefacts and skim each .vsix's manifest with `vsce ls --tree --packagePath ./<file>.vsix` to confirm the right native binding landed for each target.
+
+Only after this dry-run is green should the engineer:
+1. Open the B6 PR with the matrix link pasted as evidence.
+2. Run the real publish flow below.
+
+---
+
 ## Publishing — multi-platform path (CI-equivalent)
 
 For an actual release, every supported platform needs its own `.vsix` because `better-sqlite3` is a native module. Five targets:
@@ -121,8 +159,8 @@ done
 After publish succeeds:
 
 1. **Marketplace listings live** — visit the URLs and confirm the version appears:
-   - <https://marketplace.visualstudio.com/items?itemName=nexpath.nexpath-vscode>
-   - <https://open-vsx.org/extension/nexpath/nexpath-vscode>
+   - <https://marketplace.visualstudio.com/items?itemName=emptyops.nexpath-vscode>
+   - <https://open-vsx.org/extension/emptyops/nexpath-vscode>
 2. **Install from each marketplace** (using a fresh Cursor profile, e.g. `cursor --user-data-dir /tmp/fresh-profile`) and confirm:
    - Extension shows up in the Extensions panel.
    - Activity bar icon appears after activation.
@@ -141,7 +179,7 @@ After publish succeeds:
 If a published version turns out to be broken:
 
 1. **Open VSX:** there's no "unpublish" endpoint — bump the patch version and publish a fix. The previous version stays listed but new installs get the fix.
-2. **VS Code Marketplace:** same — bump + republish. Use `vsce unpublish nexpath.nexpath-vscode@<version>` only as a last resort (causes marketplace to flag the publisher).
+2. **VS Code Marketplace:** same — bump + republish. Use `vsce unpublish emptyops.nexpath-vscode@<version>` only as a last resort (causes marketplace to flag the publisher).
 
 For both: keep `package.json#version` always strictly ahead of the latest published version.
 

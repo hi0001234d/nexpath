@@ -38,8 +38,8 @@ describe('windsurfAdapter — static fields', () => {
   });
 
   it('declares Open VSX + VS Code Marketplace ids', () => {
-    expect(windsurfAdapter.marketplace.openVsx).toBe('nexpath.nexpath-vscode');
-    expect(windsurfAdapter.marketplace.vsCode).toBe('nexpath.nexpath-vscode');
+    expect(windsurfAdapter.marketplace.openVsx).toBe('emptyops.nexpath-vscode');
+    expect(windsurfAdapter.marketplace.vsCode).toBe('emptyops.nexpath-vscode');
   });
 });
 
@@ -115,7 +115,7 @@ describe('windsurfAdapter.install', () => {
     const allLogs = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
     expect(allLogs).toContain('Open VSX');
     expect(allLogs).toContain('windsurf --install-extension');
-    expect(allLogs).toContain('nexpath.nexpath-vscode');
+    expect(allLogs).toContain('emptyops.nexpath-vscode');
   });
 });
 

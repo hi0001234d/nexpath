@@ -108,10 +108,10 @@ Follow the same procedure documented in `SMOKE-TEST.md` steps 4-6, then paste th
 To start fresh for the next host on the same OS:
 
 ```bash
-cursor --uninstall-extension nexpath.nexpath-vscode
-windsurf --uninstall-extension nexpath.nexpath-vscode
+cursor --uninstall-extension emptyops.nexpath-vscode
+windsurf --uninstall-extension emptyops.nexpath-vscode
 # Optional: clear globalState so the consent toast re-prompts
-rm -rf ~/.config/Cursor/User/globalStorage/nexpath.nexpath-vscode/
+rm -rf ~/.config/Cursor/User/globalStorage/emptyops.nexpath-vscode/
 # (or the equivalent path on macOS / Windows)
 ```
 
