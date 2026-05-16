@@ -28,6 +28,15 @@ export interface DecisionSessionPayload {
 export interface IpcOptions {
   binaryPath?: string;
   dbPath?: string;
+  /**
+   * Working directory for the spawned nexpath process. This is REQUIRED for
+   * correct project-root resolution: `nexpath auto` defaults `--project` to
+   * `process.cwd()`, and `nexpath stop` reads `payload.cwd` from stdin. In
+   * extension use, this is the user's current workspace folder.
+   *
+   * If omitted, `process.cwd()` of the calling process is used.
+   */
+  cwd?: string;
   spawnFn?: typeof spawn;
 }
 
@@ -60,11 +69,29 @@ function buildArgs(
   return args;
 }
 
-const spawnOptions: SpawnOptions = { stdio: ['pipe', 'pipe', 'pipe'] };
+function buildSpawnOptions(opts: IpcOptions): SpawnOptions {
+  // `cwd` is required by Layer C for correct project-root resolution:
+  //   - `nexpath auto` defaults its `--project` flag to `process.cwd()` of the
+  //     spawned process, then loads `.env` from there and writes hook-stats
+  //     to the matching project.
+  //   - `nexpath stop` reads `payload.cwd` from stdin (we pass it explicitly
+  //     in `spawnStop`), but also benefits from spawning at the right cwd
+  //     for consistency with auto.
+  return {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    cwd:   opts.cwd ?? process.cwd(),
+  };
+}
 
 /**
- * Spawn `nexpath auto` and forward the prompt + session id via stdin.
- * Resolves on a clean exit; rejects on spawn failure or non-zero exit.
+ * Spawn `nexpath auto` and forward the prompt to it.
+ *
+ * Layer C's `nexpath auto` accepts the prompt via stdin JSON in hook mode
+ * (parsed as `{ prompt: string }` — see `src/cli/commands/auto.ts:417-425`).
+ * The spawned process's `cwd` controls `--project` defaulting, which in
+ * turn drives `.env` loading + prompt-store writes.
+ *
+ * Resolves on clean exit; rejects on spawn failure or non-zero exit.
  */
 export function spawnAuto(
   prompt: string,
@@ -74,7 +101,7 @@ export function spawnAuto(
   const bin = resolveBinaryPath(opts);
   const args = buildArgs('auto', opts.dbPath);
   const spawner = opts.spawnFn ?? spawn;
-  const child = spawner(bin, args, spawnOptions);
+  const child = spawner(bin, args, buildSpawnOptions(opts));
 
   return new Promise<void>((resolve, reject) => {
     let stderr = '';
@@ -108,6 +135,23 @@ export function spawnAuto(
 
 /**
  * Spawn `nexpath stop` and parse the decision-session payload from stdout.
+ *
+ * Layer C's `nexpath stop` expects a full Claude Code-shaped `StopPayload`
+ * on stdin (parsed in `src/cli/commands/stop.ts:186-192`):
+ *
+ *   {
+ *     session_id?:       string;
+ *     cwd:               string;   // REQUIRED — project-root resolver
+ *     hook_event_name:   string;   // REQUIRED — 'Stop'
+ *     stop_hook_active:  boolean;  // REQUIRED — loop-guard
+ *     last_assistant_message?: string;
+ *   }
+ *
+ * We construct the full shape here so Layer C's stdin parse succeeds and
+ * `runStop` reads our request correctly. `last_assistant_message` is
+ * omitted (the watcher emits user-prompt events only; the assistant
+ * response isn't part of our captured signal).
+ *
  * Resolves with `null` when stdout is empty (no advisory generated).
  * Resolves with the parsed payload otherwise.
  * Rejects on spawn failure, non-zero exit, or malformed JSON.
@@ -119,7 +163,7 @@ export function spawnStop(
   const bin = resolveBinaryPath(opts);
   const args = buildArgs('stop', opts.dbPath);
   const spawner = opts.spawnFn ?? spawn;
-  const child = spawner(bin, args, spawnOptions);
+  const child = spawner(bin, args, buildSpawnOptions(opts));
 
   return new Promise<DecisionSessionPayload | null>((resolve, reject) => {
     let stdout = '';
@@ -158,6 +202,15 @@ export function spawnStop(
       }
     });
 
-    child.stdin?.end(JSON.stringify({ session_id: sessionId }) + '\n');
+    // Full StopPayload shape — Layer C requires cwd / hook_event_name /
+    // stop_hook_active in addition to the optional session_id.
+    child.stdin?.end(
+      JSON.stringify({
+        session_id:       sessionId,
+        cwd:              opts.cwd ?? process.cwd(),
+        hook_event_name:  'Stop',
+        stop_hook_active: false,
+      }) + '\n',
+    );
   });
 }

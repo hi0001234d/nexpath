@@ -203,10 +203,11 @@ If any **NO** appears, log it as an issue with reproduction steps. **Step 6's di
 |---|---|
 | `[nexpath] consent not granted` | Click "Allow" on the first-launch toast. If the toast doesn't reappear, the user explicitly denied — clear globalState via `Ctrl+Shift+P` → `Developer: Reload Window With Extensions Disabled`, then re-open. |
 | `[nexpath] no workspace state.vscdb found` | Open at least one folder in Cursor (`File → Open Folder`) and reload the window. |
-| Watcher fires but nothing is rendered | `nexpath stop` returned `null` — Layer C decided no advisory is needed for this prompt. Try a prompt that's known to trigger an advisory (something with `delete`, `force`, etc.). |
+| Watcher fires but nothing is rendered | `nexpath stop` returned `null` — Layer C decided no advisory is needed for this prompt. Try a prompt that's known to trigger an advisory (something with `delete`, `force`, etc.). Or, if there's no `.env` with `OPENAI_API_KEY` in the workspace, Stage 2 may silently no-op. |
 | `Error: Cannot find module 'better-sqlite3'` | Run `npm install` inside `src/ext-vscode/`. If the prebuilt binary fails on your platform, `npm install --build-from-source` (needs `node-gyp`). |
 | Schema-unknown toast appears | Cursor schema isn't recognised by any of the extractors. Capture a dump via `npx tsx scripts/dump-cursor-state.ts --name cursor-debug --redact` and share — see dev plan §2.5. |
 | Extension activates but webview never reveals | Check the developer console for errors. Specifically: spawn-failures (nexpath CLI not on PATH), or `viewProvider undefined`. |
+| `nexpath auto` runs but no advisory appears later | `OPENAI_API_KEY` not set in the workspace `.env`, or the prompt didn't trigger Stage 2. Check `~/.nexpath/prompt-store.db` for the captured prompt: `sqlite3 ~/.nexpath/prompt-store.db "SELECT prompt_text FROM prompts ORDER BY id DESC LIMIT 3;"` |
 
 ---
 

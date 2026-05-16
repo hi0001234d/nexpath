@@ -82,6 +82,23 @@ describe('spawnAuto', () => {
     );
   });
 
+  it('passes opts.cwd as the spawned process cwd (so Layer C resolves --project correctly)', async () => {
+    const spawnFn = vi.fn(() => makeFakeChild({ exitCode: 0 }));
+    await spawnAuto('p', 's', {
+      spawnFn: spawnFn as never,
+      cwd: '/some/workspace/path',
+    });
+    const opts = spawnFn.mock.calls[0]![2] as { cwd?: string };
+    expect(opts.cwd).toBe('/some/workspace/path');
+  });
+
+  it('defaults the spawned process cwd to process.cwd() when opts.cwd is omitted', async () => {
+    const spawnFn = vi.fn(() => makeFakeChild({ exitCode: 0 }));
+    await spawnAuto('p', 's', { spawnFn: spawnFn as never });
+    const opts = spawnFn.mock.calls[0]![2] as { cwd?: string };
+    expect(opts.cwd).toBe(process.cwd());
+  });
+
   it('rejects with NexpathBinaryNotFoundError when the child emits error', async () => {
     const enoent = Object.assign(new Error('spawn nexpath ENOENT'), {
       code: 'ENOENT',
@@ -157,5 +174,62 @@ describe('spawnStop', () => {
     await expect(
       spawnStop('s', { spawnFn: spawnFn as never }),
     ).rejects.toBeInstanceOf(NexpathBinaryNotFoundError);
+  });
+
+  // ── Stdin payload contract — must match Layer C's StopPayload shape ──────────
+  // `src/cli/commands/stop.ts` lines 37-43 declare StopPayload requires
+  // `cwd`, `hook_event_name`, and `stop_hook_active` in addition to the
+  // optional `session_id`. We must send the full shape so Layer C's
+  // `runStop` works correctly.
+
+  it('writes the full StopPayload shape to stdin (session_id + cwd + hook_event_name + stop_hook_active)', async () => {
+    let captured = '';
+    const spawnFn = vi.fn(() => {
+      const c = makeFakeChild({ stdoutChunks: [''], exitCode: 0 });
+      const origEnd = c.stdin.end.bind(c.stdin);
+      c.stdin.end = ((chunk: unknown, ...args: unknown[]) => {
+        if (chunk !== undefined) captured = String(chunk);
+        return origEnd(chunk as never, ...(args as never[]));
+      }) as typeof c.stdin.end;
+      return c;
+    });
+    await spawnStop('sess-X', {
+      spawnFn: spawnFn as never,
+      cwd: '/workspace/abc',
+    });
+    const parsed = JSON.parse(captured.trim());
+    expect(parsed).toEqual({
+      session_id:       'sess-X',
+      cwd:              '/workspace/abc',
+      hook_event_name:  'Stop',
+      stop_hook_active: false,
+    });
+  });
+
+  it('defaults the stdin cwd to process.cwd() when opts.cwd is omitted', async () => {
+    let captured = '';
+    const spawnFn = vi.fn(() => {
+      const c = makeFakeChild({ stdoutChunks: [''], exitCode: 0 });
+      const origEnd = c.stdin.end.bind(c.stdin);
+      c.stdin.end = ((chunk: unknown, ...args: unknown[]) => {
+        if (chunk !== undefined) captured = String(chunk);
+        return origEnd(chunk as never, ...(args as never[]));
+      }) as typeof c.stdin.end;
+      return c;
+    });
+    await spawnStop('sess-Y', { spawnFn: spawnFn as never });
+    const parsed = JSON.parse(captured.trim());
+    expect(parsed.cwd).toBe(process.cwd());
+    expect(parsed.hook_event_name).toBe('Stop');
+    expect(parsed.stop_hook_active).toBe(false);
+  });
+
+  it('passes opts.cwd as the spawned process cwd', async () => {
+    const spawnFn = vi.fn(() =>
+      makeFakeChild({ stdoutChunks: [''], exitCode: 0 }),
+    );
+    await spawnStop('s', { spawnFn: spawnFn as never, cwd: '/spawn/cwd' });
+    const opts = spawnFn.mock.calls[0]![2] as { cwd?: string };
+    expect(opts.cwd).toBe('/spawn/cwd');
   });
 });

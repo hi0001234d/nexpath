@@ -88,13 +88,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   //    dependencies (ipc.spawnAuto / ipc.spawnStop / viewProvider.publishPayload).
   //    Session id is workspace-prefixed so concurrent workspaces don't
   //    collide on the same chat tab id.
-  const workspaceLabel =
-    vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? 'no-workspace';
+  // Workspace folder fsPath drives:
+  //   - the spawn-time `cwd` for nexpath auto/stop (so Layer C resolves
+  //     project root / .env / hook-stats correctly)
+  //   - the session-id prefix so concurrent workspaces don't collide on
+  //     the same chat-tab id
+  // When VS Code is opened without a folder, fall back to the extension's
+  // own cwd — Layer C will use its DEFAULT_DB_PATH and skip project-specific
+  // .env loading.
+  const workspaceCwd =
+    vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
   const handleChatEvent = createChatEventHandler({
-    spawnAuto,
-    spawnStop,
+    spawnAuto: (prompt, sid) => spawnAuto(prompt, sid, { cwd: workspaceCwd }),
+    spawnStop: (sid) => spawnStop(sid, { cwd: workspaceCwd }),
     publishPayload: (payload) => viewProvider?.publishPayload(payload),
-    composeSessionId: (event) => `${workspaceLabel}|${event.rawSessionId}`,
+    composeSessionId: (event) => `${workspaceCwd}|${event.rawSessionId}`,
   });
 
   watcher = createChatHistoryWatcher({

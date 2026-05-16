@@ -219,8 +219,11 @@ describe('activate', () => {
     };
     expect(typeof deps.composeSessionId).toBe('function');
     const composed = deps.composeSessionId!({ rawSessionId: 'tab-1' });
-    // workspaceFolders is undefined in the mock, so the composer uses 'no-workspace'
-    expect(composed).toBe('no-workspace|tab-1');
+    // workspaceFolders is undefined in the mock → the composer falls back to
+    // `process.cwd()`. We don't pin the literal value because it differs by
+    // runner; just assert it ends with the tab id and contains the pipe.
+    expect(composed.endsWith('|tab-1')).toBe(true);
+    expect(composed).toMatch(/.+\|tab-1$/);
   });
 
   it('does not throw when showOnboardingIfNeeded rejects — logs error and continues', async () => {
