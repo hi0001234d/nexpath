@@ -1,0 +1,79 @@
+# Files NOT to include in the packaged .vsix.
+#
+# `vsce package` walks the sub-package directory and includes everything
+# EXCEPT what matches a pattern here (or in the default ignore list).
+# What we ship in the final .vsix is the minimum runtime surface:
+#   - out/extension.js (the esbuild bundle, ~31 KB)
+#   - media/icon.svg
+#   - package.json (with the marketplace metadata)
+#   - README.md (user-facing)
+#   - LICENSE (mandatory for Open VSX)
+#   - node_modules/better-sqlite3/  (native dep — marked external by esbuild)
+#
+# Everything else is dev/test/build noise.
+
+# Source TypeScript — bundled by esbuild into out/, never imported at runtime
+src/**
+**/*.ts
+**/*.ts.map
+**/*.js.map
+
+# Test fixtures + dump artefacts — never used at runtime
+test-fixtures/**
+
+# Build / runtime configs — needed only at dev time
+tsconfig.json
+esbuild.config.mjs
+vitest.config.ts
+.vscode/**
+.editorconfig
+.eslintrc*
+.eslintignore
+.prettierrc*
+
+# Test infrastructure
+**/*.test.ts
+**/*.test.js
+**/__snapshots__/**
+
+# Dev scripts — engineer-only, not needed at runtime
+scripts/**
+
+# Internal docs — public README is the only doc that ships
+SMOKE-TEST.md
+PUBLISH.md
+CROSS-OS-VERIFY.md
+CHANGELOG-internal.md
+
+# Build outputs that should NOT ship
+dist-vsix/**
+*.vsix
+out/**/*.map
+
+# Source-control / CI / OS junk
+.git/
+.gitignore
+.gitattributes
+.github/**
+.travis.yml
+.circleci/**
+.DS_Store
+Thumbs.db
+
+# Lockfile — vsce defaults to ignoring this; explicit for clarity
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ────────────────────────────────────────────────────────────────────────────
+# Native-module slimming — better-sqlite3's prebuild includes all platforms
+# in node_modules/better-sqlite3/build/Release/. We want only the platform
+# whose .vsix this is. Per-platform vsix builds run via the per-platform
+# packager script (scripts/package-per-platform.mjs) which uses
+# vsce package --target <os>-<arch> to mark the resulting vsix.
+#
+# Note: we deliberately do NOT filter out prebuilds at this level — the
+# resulting vsix is ~10 MB instead of ~3 MB. M5 hardening can move to a
+# per-platform tighter filter via a custom packaging step. For B6 the size
+# trade-off is acceptable for simplicity.
+# ────────────────────────────────────────────────────────────────────────────

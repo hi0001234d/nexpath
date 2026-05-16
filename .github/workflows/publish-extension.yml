@@ -1,0 +1,189 @@
+name: Publish Nexpath VS Code Extension
+
+# Manual trigger (workflow_dispatch) AND automatic trigger on tag push.
+# The build step always runs on every supported OS; the publish step only
+# runs when triggered with publish=true OR by a tag matching vsix-v*.
+#
+# Required repository secrets for publishing:
+#   VSCE_PAT — Azure DevOps Personal Access Token (Marketplace: Manage)
+#   OVSX_PAT — Open VSX namespace access token
+#
+# Both should be created via Settings → Secrets and variables → Actions.
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to marketplaces (false = artefacts only)"
+        type: boolean
+        required: true
+        default: false
+  push:
+    tags:
+      - "vsix-v*"
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # Matrix: build one .vsix per supported (os, arch) pair.
+  # better-sqlite3 ships per-platform prebuilds; each runner naturally has
+  # the right binary in node_modules after `npm install`.
+  # ──────────────────────────────────────────────────────────────────────────
+  package:
+    name: Package (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            runner: ubuntu-latest
+          - target: darwin-x64
+            runner: macos-13         # Intel mac for x64 prebuild
+          - target: darwin-arm64
+            runner: macos-latest     # Apple Silicon
+          - target: win32-x64
+            runner: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: src/ext-vscode/package-lock.json
+
+      - name: Install sub-package deps
+        working-directory: src/ext-vscode
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: src/ext-vscode
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        working-directory: src/ext-vscode
+        run: npm test
+
+      - name: Build esbuild bundle
+        working-directory: src/ext-vscode
+        run: npm run build
+
+      - name: Package .vsix
+        working-directory: src/ext-vscode
+        run: |
+          mkdir -p dist-vsix
+          npx vsce package --target ${{ matrix.target }} --out dist-vsix/
+
+      - name: Upload .vsix artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsix-${{ matrix.target }}
+          path: src/ext-vscode/dist-vsix/*.vsix
+          if-no-files-found: error
+          retention-days: 30
+
+  # Linux ARM64 builds via QEMU emulation — separate job because the
+  # ubuntu-latest runner is x64. Slower, but the prebuilt better-sqlite3
+  # is available on npm for linux-arm64.
+  package-linux-arm64:
+    name: Package (linux-arm64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build + package inside arm64 container
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v "${{ github.workspace }}":/work -w /work/src/ext-vscode \
+            node:20-bullseye bash -lc "
+              npm ci &&
+              npx tsc --noEmit &&
+              npm test &&
+              npm run build &&
+              mkdir -p dist-vsix &&
+              npx vsce package --target linux-arm64 --out dist-vsix/
+            "
+
+      - name: Upload .vsix artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsix-linux-arm64
+          path: src/ext-vscode/dist-vsix/*.vsix
+          if-no-files-found: error
+          retention-days: 30
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Publish — only runs on tag push or when manually triggered with publish=true.
+  # Pulls every matrix .vsix as an artefact, then loops them through vsce + ovsx.
+  # ──────────────────────────────────────────────────────────────────────────
+  publish:
+    name: Publish to marketplaces
+    needs: [package, package-linux-arm64]
+    if: ${{ github.event_name == 'push' || inputs.publish == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: src/ext-vscode/package-lock.json
+
+      - name: Install sub-package deps (for vsce + ovsx)
+        working-directory: src/ext-vscode
+        run: npm ci
+
+      - name: Download all .vsix artefacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: vsix-*
+          path: dist-vsix-all
+          merge-multiple: true
+
+      - name: List downloaded .vsix files
+        run: ls -la dist-vsix-all/
+
+      - name: Publish to VS Code Marketplace (vsce)
+        if: ${{ env.VSCE_PAT != '' }}
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        working-directory: src/ext-vscode
+        run: |
+          for vsix in ../../dist-vsix-all/*.vsix ; do
+            echo "Publishing $vsix to VS Code Marketplace..."
+            npx vsce publish --packagePath "$vsix"
+          done
+
+      - name: Publish to Open VSX (ovsx)
+        if: ${{ env.OVSX_PAT != '' }}
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        working-directory: src/ext-vscode
+        run: |
+          for vsix in ../../dist-vsix-all/*.vsix ; do
+            echo "Publishing $vsix to Open VSX..."
+            npx ovsx publish "$vsix"
+          done
+
+      - name: Sanity-check publication
+        run: |
+          echo "If the steps above succeeded:"
+          echo "  - https://marketplace.visualstudio.com/items?itemName=nexpath.nexpath-vscode"
+          echo "  - https://open-vsx.org/extension/nexpath/nexpath-vscode"
+          echo ""
+          echo "Note: marketplace ingestion may lag a few minutes after publish."
