@@ -53,6 +53,13 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'is the spec complete', 'does this cover', 'review the prd',
       'cross confirm the spec', 'review the requirements',
     ],
+    vibeKeywords: [
+      'did we miss anything', 'does this cover everything',
+      'is anything missing', 'have we got everything',
+      'looks complete to you', 'anything we forgot',
+      'is this complete', 'have we covered it all',
+      'does this look finished', 'anything left out',
+    ],
     absenceThreshold: 15,
   },
   {
@@ -151,6 +158,13 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'alternative approach', 'different way', 'which would you recommend',
       'pros and cons', 'options for', 'what are the options',
     ],
+    vibeKeywords: [
+      'what else could we do', 'any other options', 'which is better',
+      'what would you use instead', 'any other ways to do this',
+      'could we do it differently', 'is there an easier way',
+      "what's the best approach here", 'what else is there',
+      'which approach do you prefer',
+    ],
     absenceThreshold: 20,
   },
   {
@@ -161,6 +175,13 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'does this conflict', 'fits the architecture', 'consistent with',
       'does this match the existing', 'won\'t break existing', 'architecture conflict',
       'consistent with the design', 'align with the system',
+    ],
+    vibeKeywords: [
+      'will this break anything', 'will this mess things up',
+      'does this play nice with the rest', "won't mess up what we have",
+      'does this fit with everything', 'is this okay with what we already have',
+      'will this cause problems', 'does this work with the existing setup',
+      "is this compatible with what's there",
     ],
     absenceThreshold: 20,
   },
@@ -223,6 +244,13 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'why did you choose', 'is there a better', 'reconsider',
       "i'd prefer", 'change your approach',
     ],
+    vibeKeywords: [
+      'wait is that right', 'are you sure about that',
+      "that doesn't sound right", "i'm not sure about this",
+      'is that the best way', "i'm not convinced",
+      'that seems off to me', "i really don't think so",
+      'are you certain about that', "hmm i don't think that's right",
+    ],
     absenceThreshold: 20,
   },
   {
@@ -268,6 +296,270 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'manually test', 'real user test', 'test the feature as',
     ],
     absenceThreshold: 15,
+  },
+
+  // ── Sub-4 — idea / task_breakdown / feedback_loop ─────────────────────────
+  {
+    key: 'idea_scoping',
+    description: 'User has not articulated what they are building clearly',
+    expectedStages: ['idea'],
+    detectionKeywords: [
+      'the goal is', "the problem i'm solving", 'the app should', 'the main feature',
+      'the scope is', "here's what it needs to do", 'it needs to', 'the key features',
+      'the core thing', 'the main thing we need', 'this solves', "what i'm building is",
+    ],
+    vibeKeywords: [
+      'basically it should', 'the point is to', 'what it does is', 'i need it to',
+      'it will let you', 'the main thing it does', 'what i want is', 'it should be able to',
+    ],
+    absenceThreshold: 8,
+  },
+  {
+    key: 'idea_constraint_check',
+    description: 'No discussion of constraints or non-goals',
+    expectedStages: ['idea'],
+    detectionKeywords: [
+      'out of scope', 'not in scope', "won't do", "we don't need", 'no need for',
+      'just the basics', 'not required', 'skip for now', "that's out of scope",
+    ],
+    vibeKeywords: [
+      'mvp', "i don't want to worry about", "let's not do", 'that can come later',
+      'just the simple version', "we don't need that yet", 'keep it basic',
+      'not needed for now', 'later maybe',
+    ],
+    absenceThreshold: 10,
+  },
+  {
+    key: 'idea_user_definition',
+    description: 'Target user/audience not discussed',
+    expectedStages: ['idea'],
+    detectionKeywords: [
+      'who is this for', 'the user is', 'my users', 'people who',
+      'the target user', 'end users', 'users who want', 'someone who',
+    ],
+    vibeKeywords: [
+      'for people who', 'for someone who', "it's for", 'people like',
+      'someone who wants to', 'the kind of person who', 'for my client', 'for anyone who',
+    ],
+    absenceThreshold: 10,
+  },
+  {
+    key: 'task_ordering',
+    description: 'Tasks not being ordered or prioritized',
+    expectedStages: ['task_breakdown'],
+    detectionKeywords: [
+      'what should i do first', 'which task comes first', 'what order should',
+      'order of tasks', 'which task has priority', 'prioritize the tasks',
+      'task priority', 'what to tackle first', 'sequence the tasks',
+      'which should we start with',
+    ],
+    vibeKeywords: [
+      'where do i start', 'which one first', 'what should we tackle first',
+      'which is more important', 'should i start with', 'what comes next',
+      'what first', 'which one do we do first',
+    ],
+    absenceThreshold: 12,
+  },
+  {
+    key: 'task_sizing',
+    description: 'Tasks not being scoped to single sessions',
+    expectedStages: ['task_breakdown'],
+    detectionKeywords: [
+      'this task is too big', 'break this task down', 'scope this down',
+      'should i split this', 'is this too large', 'this needs to be smaller',
+      'bite-sized', 'can we break this up', 'this task is too large',
+      'single session task',
+    ],
+    vibeKeywords: [
+      'one session', 'can i do this in one go', 'this feels too big',
+      'how do i split this up', 'break it into smaller pieces',
+      'too much to do at once', 'this is a lot to do', 'can i finish this today',
+    ],
+    absenceThreshold: 12,
+  },
+  {
+    key: 'task_definition_of_done',
+    description: 'No definition of done per task',
+    expectedStages: ['task_breakdown'],
+    detectionKeywords: [
+      'definition of done', 'how do i know when this is done', 'what makes this task complete',
+      'when is this task done', 'done criteria', 'success criteria for this task',
+      "how will i know it's finished", 'what does complete look like',
+    ],
+    vibeKeywords: [
+      'when is this done', 'done when', 'finished when', "how do i know i'm done",
+      'what does done look like', 'when can i check this off',
+      'when is it good enough', 'done means what',
+    ],
+    absenceThreshold: 12,
+  },
+  {
+    key: 'user_feedback_review',
+    description: 'No structured review of user/production feedback',
+    expectedStages: ['feedback_loop'],
+    detectionKeywords: [
+      'going through the feedback', 'reviewing the feedback', 'what are users saying',
+      'feedback analysis', 'user feedback shows', 'aggregate the feedback',
+      'what patterns do we see', 'the feedback tells us', 'feedback summary',
+      'categorize the feedback',
+    ],
+    vibeKeywords: [
+      'what are people saying', 'what did users say', 'have we looked at the feedback',
+      'what complaints are we getting', 'what are users asking for',
+      'what feedback did we get', 'what did people think', 'user sentiment',
+    ],
+    absenceThreshold: 12,
+  },
+  {
+    key: 'iteration_planning',
+    description: 'No planning of next iteration based on feedback',
+    expectedStages: ['feedback_loop'],
+    detectionKeywords: [
+      'plan the next iteration', 'next iteration priorities',
+      'based on the feedback we received', 'prioritize based on feedback',
+      'what to work on next', 'next sprint based on feedback',
+      'feedback-driven priorities', 'plan based on user feedback',
+    ],
+    vibeKeywords: [
+      'what should we fix next', 'what do users want most', 'based on what they said',
+      'fix the most complained about', 'what to work on next based on',
+      'top feedback items', 'what does the feedback tell us to do',
+      'what should we tackle next',
+    ],
+    absenceThreshold: 15,
+  },
+
+  // ── Sub-7 — new advisory types ─────────────────────────────────────────────
+  {
+    key: 'scope_creep',
+    description: 'Checking for scope creep — staying focused on current feature before adding new ones',
+    expectedStages: ['implementation', 'review_testing'],
+    detectionKeywords: [
+      'scope creep', 'let\'s focus on', 'finish this first', 'let\'s not add more',
+      'that\'s out of scope for now', 'feature creep', 'before we add anything else',
+      'let\'s complete this first', 'stay focused on', 'we\'re getting sidetracked',
+      'not in scope for this', 'let\'s scope this down',
+    ],
+    vibeKeywords: [
+      'one thing at a time', 'don\'t get sidetracked', 'let\'s not scope creep',
+      'scope check', 'let\'s keep it focused', 'just this one thing for now',
+    ],
+    absenceThreshold: 15,
+  },
+  {
+    key: 'context_loss',
+    description: 'Recapping or re-anchoring session context in a long session',
+    expectedStages: ['implementation', 'review_testing', 'architecture'],
+    detectionKeywords: [
+      'let me summarize', 'to recap', 'here\'s where we are', 'so far we\'ve',
+      'as a reminder', 'let me bring you up to speed', 'to summarize our progress',
+      'before we continue let me recap', 'to catch you up', 'summary of what we\'ve done',
+    ],
+    vibeKeywords: [
+      'just to recap', 'so here\'s what we\'ve done', 'here\'s where we\'re at',
+      'to bring you up to speed', 'let me catch you up',
+    ],
+    absenceThreshold: 30,
+  },
+  {
+    key: 'api_design_review',
+    description: 'API contract, versioning, and backwards compatibility discussion',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'api contract', 'api versioning', 'backwards compatible', 'breaking change',
+      'openapi', 'swagger', 'api design', 'contract-first', 'api specification',
+      'api version', 'versioning strategy', 'backwards compatibility',
+    ],
+    vibeKeywords: [
+      'does this api work with older versions', 'what about existing clients',
+      'will this break anything using the api', 'is this backwards compatible',
+      'what if the api changes', 'how do we version this',
+    ],
+    absenceThreshold: 20,
+    relevantProjectTypes: ['api', 'web-app', 'library'],
+  },
+  {
+    key: 'accessibility',
+    description: 'Accessibility considerations during UI development',
+    expectedStages: ['implementation', 'review_testing'],
+    detectionKeywords: [
+      'accessibility', 'aria', 'screen reader', 'wcag', 'alt text',
+      'keyboard navigation', 'color contrast', 'focus management', 'a11y',
+      'aria-label', 'aria-describedby', 'tab order', 'focus trap',
+    ],
+    vibeKeywords: [
+      'can someone use this without a mouse', 'what about people with disabilities',
+      'is this keyboard accessible', 'does this work with a screen reader',
+      'can blind users use this', 'is the contrast good enough',
+    ],
+    absenceThreshold: 20,
+    relevantProjectTypes: ['web-app', 'mobile', 'desktop'],
+  },
+  {
+    key: 'environment_and_secrets',
+    description: 'Environment config and secrets management during implementation',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      '.env file', 'dotenv', 'secrets management', 'api key storage',
+      'credential storage', '.env.example', 'secrets vault', 'environment secrets',
+      'secret rotation', 'env secret', 'store the secret', 'secret management',
+    ],
+    vibeKeywords: [
+      'where do the api keys go', 'how do we handle secrets',
+      'where do secrets live', 'how do we store credentials',
+      'should the key be in the code', 'where does the password go',
+    ],
+    absenceThreshold: 15,
+  },
+  {
+    key: 'data_validation',
+    description: 'Data schema and structural validation of inputs',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'schema validation', 'zod', 'yup', 'joi', 'form validation',
+      'validate the form', 'required fields', 'data schema', 'input schema',
+      'payload validation', 'validate the request body', 'data type check',
+    ],
+    vibeKeywords: [
+      'what if someone sends bad data', 'what if the input is wrong',
+      'what if they put something unexpected', 'checking the input format',
+      'making sure the data is right', 'what if the fields are missing',
+    ],
+    absenceThreshold: 15,
+  },
+  {
+    key: 'ci_pipeline',
+    description: 'CI/CD pipeline setup and automation discussion',
+    expectedStages: ['review_testing', 'release'],
+    detectionKeywords: [
+      'github actions', 'ci/cd', 'continuous integration', 'build pipeline',
+      'ci pipeline', 'workflow yaml', 'ci configuration', 'pipeline setup',
+      'run in ci', 'ci runs', 'run tests automatically', 'on push trigger',
+    ],
+    vibeKeywords: [
+      'does this run automatically', 'can we automate the build',
+      'what about deployment automation', 'how does this deploy automatically',
+      'automating the release', 'trigger on commit',
+    ],
+    absenceThreshold: 15,
+  },
+  {
+    key: 'rate_limiting',
+    description: 'API rate limiting and throttling design',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'throttle requests', 'request throttling', 'requests per second',
+      'api quota', 'rate cap', 'throttle middleware', 'too many requests limit',
+      'backoff strategy', '429 handling', 'rate limit per user',
+      'request rate', 'throttle the api',
+    ],
+    vibeKeywords: [
+      'what if someone calls this too many times', 'what if too many requests come in',
+      'protecting the api from overuse', 'preventing api abuse',
+      'what if they spam the endpoint', 'limiting how often this can be called',
+    ],
+    absenceThreshold: 20,
+    relevantProjectTypes: ['api', 'web-app'],
   },
 ];
 
