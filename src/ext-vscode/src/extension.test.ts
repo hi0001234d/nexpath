@@ -8,24 +8,28 @@ const {
   mockProviderCtor,
   mockDetectHost,
   mockWorkspaceStorageDir,
+  mockWindsurfCodeiumDir,
   mockEnumerateStateVscdbPaths,
   mockCreateChatHistoryWatcher,
   mockWatcherStart,
   mockWatcherStop,
   mockCreateChatEventHandler,
   mockShowInformationMessage,
+  mockExistsSync,
 } = vi.hoisted(() => ({
   mockShowOnboarding: vi.fn(),
   mockRegisterWebviewViewProvider: vi.fn(),
   mockProviderCtor: vi.fn(),
   mockDetectHost: vi.fn(() => 'vscode-generic'),
   mockWorkspaceStorageDir: vi.fn(() => null),
+  mockWindsurfCodeiumDir: vi.fn(() => '/home/u/.codeium/windsurf'),
   mockEnumerateStateVscdbPaths: vi.fn(() => []),
   mockCreateChatHistoryWatcher: vi.fn(),
   mockWatcherStart: vi.fn(),
   mockWatcherStop: vi.fn(),
   mockCreateChatEventHandler: vi.fn(() => vi.fn()),
   mockShowInformationMessage: vi.fn(),
+  mockExistsSync: vi.fn(() => false),
 }));
 
 vi.mock('vscode', () => ({
@@ -58,9 +62,14 @@ vi.mock('./webview/view-provider.js', () => ({
 vi.mock('./webview/prompt-injection.js', () => ({
   handleOptionSelection: vi.fn(),
 }));
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return { ...actual, existsSync: mockExistsSync };
+});
 vi.mock('./host-detector.js', () => ({
   detectHost: mockDetectHost,
   workspaceStorageDir: mockWorkspaceStorageDir,
+  windsurfCodeiumDir: mockWindsurfCodeiumDir,
 }));
 vi.mock('./chat-input-injector.js', () => ({
   chatInputInject: vi.fn(),
@@ -110,6 +119,7 @@ describe('activate', () => {
     mockProviderCtor.mockReset();
     mockDetectHost.mockReset().mockReturnValue('vscode-generic');
     mockWorkspaceStorageDir.mockReset().mockReturnValue(null);
+    mockWindsurfCodeiumDir.mockReset().mockReturnValue('/home/u/.codeium/windsurf');
     mockEnumerateStateVscdbPaths.mockReset().mockReturnValue([]);
     mockCreateChatHistoryWatcher.mockReset().mockReturnValue({
       start: mockWatcherStart,
@@ -119,6 +129,7 @@ describe('activate', () => {
     mockWatcherStop.mockReset();
     mockCreateChatEventHandler.mockReset().mockReturnValue(vi.fn());
     mockShowInformationMessage.mockReset();
+    mockExistsSync.mockReset().mockReturnValue(false);
     mockRegisterWebviewViewProvider.mockReturnValue({ dispose: vi.fn() });
     logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -242,6 +253,98 @@ describe('activate', () => {
     expect(getViewProvider()).toBeDefined();
   });
 
+  // ── Windsurf codeium-cascade dir wiring (Drift A fix) ──────────────────────
+  // Per dev plan §2.3 acceptance #2: when host=windsurf, the watcher must
+  // monitor BOTH state.vscdb files AND `~/.codeium/windsurf/`. These tests
+  // verify the extension.ts wiring that adds the codeium dir as a
+  // windsurf-dir WatchTarget alongside the cursor-sqlite targets.
+
+  it('windsurf host: adds codeium cascade dir as a windsurf-dir target when it exists on disk', async () => {
+    mockShowOnboarding.mockResolvedValueOnce(undefined);
+    mockDetectHost.mockReturnValueOnce('windsurf');
+    mockWorkspaceStorageDir.mockReturnValueOnce('/fake/ws');
+    mockEnumerateStateVscdbPaths.mockReturnValueOnce(['/fake/ws/a/state.vscdb']);
+    mockWindsurfCodeiumDir.mockReturnValueOnce('/home/u/.codeium/windsurf');
+    mockExistsSync.mockImplementation(
+      (p: string) => p === '/home/u/.codeium/windsurf',
+    );
+
+    await activate(makeCtx(true) as never);
+
+    expect(mockCreateChatHistoryWatcher).toHaveBeenCalledOnce();
+    const watcherOpts = mockCreateChatHistoryWatcher.mock.calls[0]![0] as {
+      targets: Array<{ path: string; kind: string }>;
+    };
+    expect(watcherOpts.targets).toHaveLength(2);
+    expect(watcherOpts.targets[0]).toEqual({
+      path: '/fake/ws/a/state.vscdb',
+      kind: 'cursor-sqlite',
+    });
+    expect(watcherOpts.targets[1]).toEqual({
+      path: '/home/u/.codeium/windsurf',
+      kind: 'windsurf-dir',
+    });
+  });
+
+  it('windsurf host: skips codeium dir when it does not exist (existsSync = false)', async () => {
+    mockShowOnboarding.mockResolvedValueOnce(undefined);
+    mockDetectHost.mockReturnValueOnce('windsurf');
+    mockWorkspaceStorageDir.mockReturnValueOnce('/fake/ws');
+    mockEnumerateStateVscdbPaths.mockReturnValueOnce(['/fake/ws/a/state.vscdb']);
+    mockExistsSync.mockReturnValue(false);
+
+    await activate(makeCtx(true) as never);
+
+    const watcherOpts = mockCreateChatHistoryWatcher.mock.calls[0]![0] as {
+      targets: Array<{ path: string; kind: string }>;
+    };
+    expect(watcherOpts.targets).toHaveLength(1);
+    expect(watcherOpts.targets[0]!.kind).toBe('cursor-sqlite');
+  });
+
+  it('windsurf host: starts watcher when ONLY the codeium dir exists (no state.vscdb yet)', async () => {
+    mockShowOnboarding.mockResolvedValueOnce(undefined);
+    mockDetectHost.mockReturnValueOnce('windsurf');
+    mockWorkspaceStorageDir.mockReturnValueOnce('/fake/ws');
+    mockEnumerateStateVscdbPaths.mockReturnValueOnce([]);
+    mockWindsurfCodeiumDir.mockReturnValueOnce('/home/u/.codeium/windsurf');
+    mockExistsSync.mockImplementation(
+      (p: string) => p === '/home/u/.codeium/windsurf',
+    );
+
+    await activate(makeCtx(true) as never);
+
+    expect(mockCreateChatHistoryWatcher).toHaveBeenCalledOnce();
+    const watcherOpts = mockCreateChatHistoryWatcher.mock.calls[0]![0] as {
+      targets: Array<{ path: string; kind: string }>;
+    };
+    expect(watcherOpts.targets).toHaveLength(1);
+    expect(watcherOpts.targets[0]).toEqual({
+      path: '/home/u/.codeium/windsurf',
+      kind: 'windsurf-dir',
+    });
+  });
+
+  it('cursor host: never adds a windsurf-dir target (no cross-host leakage)', async () => {
+    mockShowOnboarding.mockResolvedValueOnce(undefined);
+    mockDetectHost.mockReturnValueOnce('cursor');
+    mockWorkspaceStorageDir.mockReturnValueOnce('/fake/ws');
+    mockEnumerateStateVscdbPaths.mockReturnValueOnce(['/fake/ws/a/state.vscdb']);
+    // Even if existsSync would say yes for /home/u/.codeium/windsurf, the
+    // cursor-host branch must never consult it.
+    mockExistsSync.mockReturnValue(true);
+
+    await activate(makeCtx(true) as never);
+
+    expect(mockWindsurfCodeiumDir).not.toHaveBeenCalled();
+    const watcherOpts = mockCreateChatHistoryWatcher.mock.calls[0]![0] as {
+      targets: Array<{ path: string; kind: string }>;
+    };
+    expect(watcherOpts.targets.every((t) => t.kind === 'cursor-sqlite')).toBe(
+      true,
+    );
+  });
+
   // ── Watcher-callback wiring (B5 audit follow-up) ───────────────────────────
   // The watcher takes three callbacks at construction time (onEvent,
   // onError, onSchemaUnknown). The watcher itself is mocked in these tests,
@@ -317,6 +420,7 @@ describe('deactivate', () => {
     mockProviderCtor.mockReset();
     mockDetectHost.mockReset().mockReturnValue('vscode-generic');
     mockWorkspaceStorageDir.mockReset().mockReturnValue(null);
+    mockWindsurfCodeiumDir.mockReset().mockReturnValue('/home/u/.codeium/windsurf');
     mockEnumerateStateVscdbPaths.mockReset().mockReturnValue([]);
     mockCreateChatHistoryWatcher.mockReset().mockReturnValue({
       start: mockWatcherStart,
@@ -324,6 +428,7 @@ describe('deactivate', () => {
     });
     mockWatcherStart.mockReset();
     mockWatcherStop.mockReset();
+    mockExistsSync.mockReset().mockReturnValue(false);
     mockRegisterWebviewViewProvider.mockReturnValue({ dispose: vi.fn() });
     logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
   });

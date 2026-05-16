@@ -6,6 +6,7 @@ import type {
   WatchTarget,
 } from './chat-history-types.js';
 import { pickExtractor } from './extractors/index.js';
+import { decodeWindsurfJsonFile } from './extractors/windsurf.js';
 
 /**
  * Chat-history watcher (M2 Branch 2).
@@ -17,9 +18,12 @@ import { pickExtractor } from './extractors/index.js';
  *   - Cursor: a single SQLite file (`state.vscdb`) under
  *     `User/globalStorage/`. Treated as kind `cursor-sqlite`.
  *   - Windsurf: a directory under `~/.codeium/windsurf/` containing JSON
- *     conversation files. Treated as kind `windsurf-dir`. Decoding lands
- *     in Branch 4; here the watcher only fires the file events and
- *     forwards them to a no-op extractor.
+ *     conversation files. Treated as kind `windsurf-dir`. Each fs.watch
+ *     fire rescans the directory, parses every .json file, and passes the
+ *     parsed value to `decodeWindsurfJsonFile` (in `extractors/windsurf.ts`).
+ *     The decoder is currently a no-op pending live-install schema
+ *     inspection (see its TODO); the FS plumbing is in place so the only
+ *     missing piece is the field extraction.
  *
  * Pipeline (Cursor / sqlite):
  *   fs.watch fires -> debounce (default 250 ms) -> read file bytes
@@ -40,6 +44,59 @@ import { pickExtractor } from './extractors/index.js';
 
 /** Pure function that turns a state.vscdb FILE PATH into ItemTable rows. */
 export type ReadItemTableFn = (dbPath: string) => Promise<ItemTableRow[]>;
+
+/**
+ * Pure function that scans a Windsurf chat-data directory and returns its
+ * `.json` files as `{path, parsed}` pairs. Malformed or unreadable files
+ * are skipped silently (drop one bad file, don't blow up the whole scan);
+ * a missing directory returns `[]` so activate-time enumeration doesn't
+ * have to pre-check existence.
+ */
+export type ReadWindsurfJsonFilesFn = (
+  dirPath: string,
+) => Promise<Array<{ path: string; parsed: unknown }>>;
+
+/**
+ * Default Windsurf JSON reader: lists `<dir>/*.json`, reads each file,
+ * `JSON.parse`s the contents, skips files that fail either step. Used by
+ * the watcher when the host is Windsurf and a codeium cascade target was
+ * enumerated at activate time.
+ */
+export const defaultReadWindsurfJsonFiles: ReadWindsurfJsonFilesFn = async (
+  dirPath,
+) => {
+  const { readdir, readFile } = await import('node:fs/promises');
+  const { existsSync } = await import('node:fs');
+  const { join } = await import('node:path');
+
+  if (!existsSync(dirPath)) return [];
+  let entries: string[];
+  try {
+    entries = await readdir(dirPath);
+  } catch {
+    return [];
+  }
+
+  const out: Array<{ path: string; parsed: unknown }> = [];
+  for (const name of entries) {
+    if (!name.toLowerCase().endsWith('.json')) continue;
+    const fullPath = join(dirPath, name);
+    let content: string;
+    try {
+      content = await readFile(fullPath, 'utf8');
+    } catch {
+      continue;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      continue;
+    }
+    out.push({ path: fullPath, parsed });
+  }
+  return out;
+};
 
 /**
  * Default WAL-aware reader using better-sqlite3.
@@ -138,6 +195,15 @@ export interface ChatHistoryWatcherOptions {
   watchFn?: typeof watch;
   /** Inject the ItemTable reader (defaults to better-sqlite3 WAL-aware reader). */
   readItemTableFn?: ReadItemTableFn;
+  /** Inject the Windsurf JSON-dir reader (defaults to fs/promises-backed scan). */
+  readWindsurfJsonFilesFn?: ReadWindsurfJsonFilesFn;
+  /**
+   * Inject the Windsurf JSON-file decoder. Defaults to
+   * `decodeWindsurfJsonFile` from `./extractors/windsurf.js`. Exposed for
+   * tests; once a real decoder is filled in upstream, production callers
+   * normally leave this unset and pick up the new behaviour automatically.
+   */
+  decodeWindsurfFn?: (parsed: unknown, sourcePath: string) => ChatHistoryEvent[];
   /** Inject the clock (defaults to `() => new Date()`). */
   nowFn?: () => Date;
 }
@@ -155,6 +221,9 @@ export function createChatHistoryWatcher(
   const debounceMs = opts.debounceMs ?? 250;
   const watchFn = opts.watchFn ?? watch;
   const readItemTableFn = opts.readItemTableFn ?? defaultReadItemTable;
+  const readWindsurfJsonFilesFn =
+    opts.readWindsurfJsonFilesFn ?? defaultReadWindsurfJsonFiles;
+  const decodeWindsurfFn = opts.decodeWindsurfFn ?? decodeWindsurfJsonFile;
   const nowFn = opts.nowFn ?? (() => new Date());
 
   const fsWatchers: FSWatcher[] = [];
@@ -209,10 +278,21 @@ export function createChatHistoryWatcher(
     }
   }
 
-  function processWindsurfTarget(_target: WatchTarget): void {
-    // Branch 4 wires Windsurf JSON-file decoding alongside the
-    // windsurfAdapter.chatHistoryPaths implementation. For Branch 2
-    // we only ensure the watcher itself doesn't crash on Windsurf targets.
+  async function processWindsurfTarget(target: WatchTarget): Promise<void> {
+    try {
+      const files = await readWindsurfJsonFilesFn(target.path);
+      for (const { path: filePath, parsed } of files) {
+        const decoded = decodeWindsurfFn(parsed, filePath);
+        for (const ev of decoded) {
+          const sig = signatureOf(ev);
+          if (seenSignatures.has(sig)) continue;
+          seenSignatures.add(sig);
+          opts.onEvent({ ...ev, capturedAt: nowFn() });
+        }
+      }
+    } catch (err) {
+      reportError(err, target.path);
+    }
   }
 
   function schedule(target: WatchTarget): void {
@@ -223,7 +303,7 @@ export function createChatHistoryWatcher(
       if (target.kind === 'cursor-sqlite') {
         void processSqliteTarget(target);
       } else {
-        processWindsurfTarget(target);
+        void processWindsurfTarget(target);
       }
     }, debounceMs);
     debouncers.set(target.path, t);

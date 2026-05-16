@@ -9,6 +9,7 @@ import {
   detectHost,
   chatHistoryBaseDir,
   workspaceStorageDir,
+  windsurfCodeiumDir,
 } from './host-detector.js';
 
 describe('classifyHost', () => {
@@ -98,5 +99,25 @@ describe('workspaceStorageDir', () => {
 
   it('returns null for vscode-generic (passes the base null through)', () => {
     expect(workspaceStorageDir({ host: 'vscode-generic' })).toBeNull();
+  });
+});
+
+describe('windsurfCodeiumDir', () => {
+  it('joins ~/.codeium/windsurf for an explicit home', () => {
+    expect(windsurfCodeiumDir('/home/u')).toBe('/home/u/.codeium/windsurf');
+  });
+
+  it('matches the windsurfAdapter codeiumCascadeDir convention (cross-file invariant)', () => {
+    // The CLI-side adapter at src/agents/adapters/windsurf.ts uses
+    // join(home, '.codeium', 'windsurf'). Locking the same shape here so
+    // a future rename on either side stays obvious.
+    expect(windsurfCodeiumDir('/Users/u')).toBe('/Users/u/.codeium/windsurf');
+    expect(windsurfCodeiumDir('C:\\Users\\u')).toBe('C:\\Users\\u/.codeium/windsurf');
+  });
+
+  it('defaults to os.homedir() when no argument provided', () => {
+    // Don't pin a literal value (runner-dependent); just assert structure.
+    const result = windsurfCodeiumDir();
+    expect(result.endsWith('/.codeium/windsurf')).toBe(true);
   });
 });

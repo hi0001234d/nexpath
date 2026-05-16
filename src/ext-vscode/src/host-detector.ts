@@ -93,3 +93,20 @@ export function workspaceStorageDir(inputs: HostStorageInputs = {}): string | nu
   const base = chatHistoryBaseDir(inputs);
   return base === null ? null : join(base, 'User', 'workspaceStorage');
 }
+
+/**
+ * Windsurf's legacy Codeium Cascade chat-data directory: `~/.codeium/windsurf`.
+ *
+ * Per dev plan §2.3 acceptance #2, the watcher monitors BOTH `state.vscdb`
+ * (under `workspaceStorageDir`) AND this directory for Windsurf. The
+ * directory holds per-session JSON files; the watcher dispatches it as a
+ * `windsurf-dir` `WatchTarget`.
+ *
+ * Mirrors `codeiumCascadeDir` in `src/agents/adapters/windsurf.ts`. Kept as
+ * a local copy because the sub-package's tsconfig rootDir prevents importing
+ * from the root `src/agents/` tree. The `marketplace-id.test.ts` pattern is
+ * the model for catching cross-file drift if either side moves.
+ */
+export function windsurfCodeiumDir(home: string = homedir()): string {
+  return join(home, '.codeium', 'windsurf');
+}

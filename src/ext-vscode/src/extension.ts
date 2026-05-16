@@ -1,11 +1,16 @@
 import * as vscode from 'vscode';
+import { existsSync } from 'node:fs';
 import { CONSENT_KEY, showOnboardingIfNeeded } from './onboarding.js';
 import {
   NexpathDecisionSessionViewProvider,
   VIEW_ID,
 } from './webview/view-provider.js';
 import { handleOptionSelection } from './webview/prompt-injection.js';
-import { detectHost, workspaceStorageDir } from './host-detector.js';
+import {
+  detectHost,
+  windsurfCodeiumDir,
+  workspaceStorageDir,
+} from './host-detector.js';
 import { chatInputInject } from './chat-input-injector.js';
 import { enumerateStateVscdbPaths } from './path-enumerator.js';
 import {
@@ -71,7 +76,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const wsStorage = workspaceStorageDir({ host });
   const dbPaths = enumerateStateVscdbPaths(wsStorage);
-  if (dbPaths.length === 0) {
+
+  // Per dev plan §2.3 acceptance #2, Windsurf's chat data may also live at
+  // `~/.codeium/windsurf/` (legacy Codeium Cascade store) in addition to
+  // `state.vscdb`. Watch both when host=windsurf; skip silently if the
+  // cascade dir doesn't exist (fs.watch on a missing path would throw).
+  // Existence is captured at activate time — same activate-time-only
+  // limitation that path-enumerator.ts documents for workspaceStorage.
+  const codeiumDir =
+    host === 'windsurf' ? windsurfCodeiumDir() : null;
+  const codeiumExists = codeiumDir !== null && existsSync(codeiumDir);
+
+  if (dbPaths.length === 0 && !codeiumExists) {
     console.log(
       `[nexpath] no workspace state.vscdb found under ${wsStorage} — watcher not started. ` +
         'Open at least one workspace in the host and reload the extension to retry.',
@@ -83,6 +99,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     path,
     kind: 'cursor-sqlite',
   }));
+  if (codeiumExists) {
+    targets.push({ path: codeiumDir!, kind: 'windsurf-dir' });
+  }
 
   // 5. Build the pipeline handler (auto → stop → publish) with real
   //    dependencies (ipc.spawnAuto / ipc.spawnStop / viewProvider.publishPayload).
@@ -123,8 +142,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   watcher.start();
   context.subscriptions.push({ dispose: () => watcher?.stop() });
+  const cascadeNote = codeiumExists ? ' + 1 windsurf-dir' : '';
   console.log(
-    `[nexpath] watcher started on ${dbPaths.length} state.vscdb file(s) for host=${host}`,
+    `[nexpath] watcher started on ${dbPaths.length} state.vscdb file(s)${cascadeNote} for host=${host}`,
   );
 }
 

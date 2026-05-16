@@ -6,8 +6,11 @@ import { join } from 'node:path';
 import {
   createChatHistoryWatcher,
   defaultReadItemTable,
+  defaultReadWindsurfJsonFiles,
   type ReadItemTableFn,
+  type ReadWindsurfJsonFilesFn,
 } from './chat-history-watcher.js';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import type {
   ChatHistoryEvent,
   ChatHistoryExtractor,
@@ -245,16 +248,197 @@ describe('createChatHistoryWatcher', () => {
     expect(onEvent.mock.calls[0]![0].capturedAt).toEqual(fixedDate);
   });
 
-  it('windsurf-dir targets are accepted without crashing (decoding deferred to Branch 4)', () => {
+  it('windsurf-dir targets are accepted without crashing (default stub decoder = no events)', () => {
     const w = createChatHistoryWatcher({
       targets: [{ path: '/ws', kind: 'windsurf-dir' }],
       onEvent,
       watchFn: watchFn as never,
       readItemTableFn,
+      // Default readWindsurfJsonFilesFn handles missing dir (returns [])
+      // so this passes without disk IO.
       debounceMs: 1,
     });
     expect(() => w.start()).not.toThrow();
     expect(() => w.stop()).not.toThrow();
+  });
+
+  // ── windsurf-dir code path (Drift A fix) ────────────────────────────────
+  // These tests cover the new processWindsurfTarget flow: readWindsurf →
+  // decodeWindsurf → dedup → onEvent. The default decoder is a stub, so
+  // we inject `decodeWindsurfFn` to simulate what the engineer's real
+  // decoder will eventually do.
+
+  it('windsurf-dir: pipes readWindsurfJsonFilesFn output through decodeWindsurfFn → onEvent', async () => {
+    const fakeFiles = [
+      { path: '/ws/a.json', parsed: { user_prompt: 'first' } },
+      { path: '/ws/b.json', parsed: { user_prompt: 'second' } },
+    ];
+    const readWindsurfJsonFilesFn = vi.fn<ReadWindsurfJsonFilesFn>(
+      async () => fakeFiles,
+    );
+    // Test stand-in for the real decoder: emit one event per file with the
+    // user_prompt field. Mirrors what the engineer's real decoder will do.
+    const decodeWindsurfFn = vi.fn(
+      (parsed: unknown, sourcePath: string): ChatHistoryEvent[] => {
+        if (typeof parsed === 'object' && parsed !== null && 'user_prompt' in parsed) {
+          return [
+            ev(
+              (parsed as { user_prompt: string }).user_prompt,
+              `windsurf-session:${sourcePath}`,
+              sourcePath,
+            ),
+          ];
+        }
+        return [];
+      },
+    );
+
+    const w = createChatHistoryWatcher({
+      targets: [{ path: '/ws', kind: 'windsurf-dir' }],
+      onEvent,
+      watchFn: watchFn as never,
+      readItemTableFn,
+      readWindsurfJsonFilesFn,
+      decodeWindsurfFn,
+      debounceMs: 1,
+    });
+    w.start();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(readWindsurfJsonFilesFn).toHaveBeenCalledWith('/ws');
+    expect(decodeWindsurfFn).toHaveBeenCalledTimes(2);
+    expect(decodeWindsurfFn).toHaveBeenCalledWith(fakeFiles[0]!.parsed, '/ws/a.json');
+    expect(onEvent).toHaveBeenCalledTimes(2);
+    expect(onEvent.mock.calls[0]![0].prompt).toBe('first');
+    expect(onEvent.mock.calls[1]![0].prompt).toBe('second');
+  });
+
+  it('windsurf-dir: deduplicates emitted events across multiple files (signature dedup)', async () => {
+    // Realistic case: same conversation referenced in two JSON files (e.g.
+    // Windsurf renamed a session file, leaving an old copy + a new one).
+    // Both decode to the same prompt+sessionId+sourcePath* — dedup should
+    // emit only the first.
+    // (*signature includes sourcePath; we use the same path here to force
+    // a true dedup hit. The realistic engineer's decoder will derive
+    // `rawSessionId` from session metadata inside the JSON, not the file
+    // path, making dedup work even when the same conversation is split
+    // across files.)
+    const fakeFiles = [
+      { path: '/ws/a.json', parsed: { p: 'hi' } },
+      { path: '/ws/a.json', parsed: { p: 'hi' } }, // same path → same signature
+    ];
+    const readWindsurfJsonFilesFn = vi.fn<ReadWindsurfJsonFilesFn>(
+      async () => fakeFiles,
+    );
+    const decodeWindsurfFn = vi.fn(
+      (_parsed: unknown, sourcePath: string): ChatHistoryEvent[] => [
+        ev('hi', 'sess-1', sourcePath),
+      ],
+    );
+
+    const w = createChatHistoryWatcher({
+      targets: [{ path: '/ws', kind: 'windsurf-dir' }],
+      onEvent,
+      watchFn: watchFn as never,
+      readItemTableFn,
+      readWindsurfJsonFilesFn,
+      decodeWindsurfFn,
+      debounceMs: 1,
+    });
+    w.start();
+    await new Promise((r) => setTimeout(r, 20));
+
+    // Decoder ran for both files (one event each), but signature dedup
+    // collapses them into a single onEvent emission.
+    expect(decodeWindsurfFn).toHaveBeenCalledTimes(2);
+    expect(onEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it('windsurf-dir: forwards readWindsurfJsonFilesFn errors to onError', async () => {
+    const readWindsurfJsonFilesFn = vi.fn<ReadWindsurfJsonFilesFn>(async () => {
+      throw new Error('windsurf read boom');
+    });
+    const w = createChatHistoryWatcher({
+      targets: [{ path: '/ws', kind: 'windsurf-dir' }],
+      onEvent,
+      onError,
+      watchFn: watchFn as never,
+      readItemTableFn,
+      readWindsurfJsonFilesFn,
+      debounceMs: 1,
+    });
+    w.start();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0]![0].message).toContain('windsurf read boom');
+    expect(onEvent).not.toHaveBeenCalled();
+  });
+});
+
+// ── defaultReadWindsurfJsonFiles — real fs scan against a tmp dir ─────────
+//
+// Tests the production reader's directory-scan + JSON-parse logic. Uses
+// real fs (no mocks) because the implementation is fs-IO-bound and the
+// test cost is trivial (a tmp dir + a few small files).
+
+describe('defaultReadWindsurfJsonFiles', () => {
+  let tmpDirPath: string;
+
+  beforeEach(() => {
+    tmpDirPath = mkdtempSync(join(tmpdir(), 'nexpath-windsurf-test-'));
+  });
+  afterEach(() => {
+    rmSync(tmpDirPath, { recursive: true, force: true });
+  });
+
+  it('returns [] when the directory does not exist (no crash)', async () => {
+    const out = await defaultReadWindsurfJsonFiles(
+      join(tmpDirPath, 'does-not-exist'),
+    );
+    expect(out).toEqual([]);
+  });
+
+  it('returns [] for an empty directory', async () => {
+    const out = await defaultReadWindsurfJsonFiles(tmpDirPath);
+    expect(out).toEqual([]);
+  });
+
+  it('reads + parses every .json file in the directory', async () => {
+    writeFileSync(join(tmpDirPath, 'a.json'), JSON.stringify({ x: 1 }));
+    writeFileSync(join(tmpDirPath, 'b.json'), JSON.stringify({ y: 2 }));
+    const out = await defaultReadWindsurfJsonFiles(tmpDirPath);
+    expect(out).toHaveLength(2);
+    const byPath = new Map(out.map((r) => [r.path, r.parsed]));
+    expect(byPath.get(join(tmpDirPath, 'a.json'))).toEqual({ x: 1 });
+    expect(byPath.get(join(tmpDirPath, 'b.json'))).toEqual({ y: 2 });
+  });
+
+  it('skips files that are not .json (case-insensitive on the suffix)', async () => {
+    writeFileSync(join(tmpDirPath, 'data.json'), JSON.stringify({ ok: true }));
+    writeFileSync(join(tmpDirPath, 'README.md'), 'not json');
+    writeFileSync(join(tmpDirPath, 'binary.dat'), 'not json');
+    const out = await defaultReadWindsurfJsonFiles(tmpDirPath);
+    expect(out).toHaveLength(1);
+    expect(out[0]!.path.endsWith('data.json')).toBe(true);
+  });
+
+  it('silently drops malformed JSON files (preserves valid siblings)', async () => {
+    writeFileSync(join(tmpDirPath, 'good.json'), JSON.stringify({ valid: true }));
+    writeFileSync(join(tmpDirPath, 'bad.json'), '{ not valid json,');
+    const out = await defaultReadWindsurfJsonFiles(tmpDirPath);
+    expect(out).toHaveLength(1);
+    expect(out[0]!.path.endsWith('good.json')).toBe(true);
+    expect(out[0]!.parsed).toEqual({ valid: true });
+  });
+
+  it('honours nested directories by NOT recursing (shallow scan only)', async () => {
+    writeFileSync(join(tmpDirPath, 'top.json'), JSON.stringify({ depth: 0 }));
+    mkdirSync(join(tmpDirPath, 'nested'));
+    writeFileSync(join(tmpDirPath, 'nested', 'deep.json'), JSON.stringify({ depth: 1 }));
+    const out = await defaultReadWindsurfJsonFiles(tmpDirPath);
+    // Only top.json; nested/deep.json is not reached
+    expect(out).toHaveLength(1);
+    expect(out[0]!.parsed).toEqual({ depth: 0 });
   });
 });
 
