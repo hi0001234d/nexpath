@@ -3,7 +3,7 @@
 # `vsce package` walks the sub-package directory and includes everything
 # EXCEPT what matches a pattern here (or in the default ignore list).
 # What we ship in the final .vsix is the minimum runtime surface:
-#   - out/extension.js (the esbuild bundle, ~31 KB)
+#   - out/extension.cjs (the esbuild bundle, ~33 KB — .cjs to bypass package.json type:module)
 #   - media/icon.svg
 #   - package.json (with the marketplace metadata)
 #   - README.md (user-facing)
