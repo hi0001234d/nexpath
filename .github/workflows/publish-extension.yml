@@ -76,11 +76,16 @@ jobs:
         working-directory: src/ext-vscode
         run: npm run build
 
-      - name: Package .vsix
+      - name: Package .vsix (with better-sqlite3 rebuilt for Cursor's Electron ABI)
         working-directory: src/ext-vscode
         run: |
           mkdir -p dist-vsix
-          npx vsce package --target ${{ matrix.target }} --out dist-vsix/
+          # package-with-electron-abi.mjs rebuilds better-sqlite3 against the
+          # Electron version pinned in package.json#nexpathTargets.electron,
+          # runs vsce package, then restores the Node-ABI binary. Skipping
+          # this wrapper would ship a Node-ABI binding in the .vsix and Cursor
+          # would fail to activate with NODE_MODULE_VERSION mismatch.
+          node scripts/package-with-electron-abi.mjs --target ${{ matrix.target }} --out dist-vsix/
 
       - name: Upload .vsix artefact
         uses: actions/upload-artifact@v4
@@ -117,7 +122,7 @@ jobs:
               npm test &&
               npm run build &&
               mkdir -p dist-vsix &&
-              npx vsce package --target linux-arm64 --out dist-vsix/
+              node scripts/package-with-electron-abi.mjs --target linux-arm64 --out dist-vsix/
             "
 
       - name: Upload .vsix artefact

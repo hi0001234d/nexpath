@@ -66,14 +66,68 @@ yarn.lock
 pnpm-lock.yaml
 
 # ────────────────────────────────────────────────────────────────────────────
-# Native-module slimming — better-sqlite3's prebuild includes all platforms
-# in node_modules/better-sqlite3/build/Release/. We want only the platform
-# whose .vsix this is. Per-platform vsix builds run via the per-platform
-# packager script (scripts/package-per-platform.mjs) which uses
-# vsce package --target <os>-<arch> to mark the resulting vsix.
-#
-# Note: we deliberately do NOT filter out prebuilds at this level — the
-# resulting vsix is ~10 MB instead of ~3 MB. M5 hardening can move to a
-# per-platform tighter filter via a custom packaging step. For B6 the size
-# trade-off is acceptable for simplicity.
+# Native-module slimming — strip the parts of better-sqlite3 that aren't
+# needed at runtime. The extension only loads
+#   node_modules/better-sqlite3/lib/index.js  →  build/Release/better_sqlite3.node
+# Everything else (C++ source, SQLite amalgamation, node-gyp intermediates)
+# is build-time only and ships ~25 MB of dead weight if not excluded.
 # ────────────────────────────────────────────────────────────────────────────
+
+# C++ source + SQLite amalgamation (huge, source-build only)
+node_modules/better-sqlite3/src/**
+node_modules/better-sqlite3/deps/**
+node_modules/better-sqlite3/binding.gyp
+
+# node-gyp intermediate files — keep only the final .node binary
+node_modules/better-sqlite3/build/config.gypi
+node_modules/better-sqlite3/build/Makefile
+node_modules/better-sqlite3/build/binding.Makefile
+node_modules/better-sqlite3/build/better_sqlite3.target.mk
+node_modules/better-sqlite3/build/sqlite3.target.mk
+node_modules/better-sqlite3/build/test_extension.target.mk
+node_modules/better-sqlite3/build/Release/.deps/**
+node_modules/better-sqlite3/build/Release/obj/**
+node_modules/better-sqlite3/build/Release/obj.target/**
+node_modules/better-sqlite3/build/Release/test_extension.node
+
+# prebuild-install + its transitive deps — only used at install time.
+# Without these the vsce package step would still pass, but the user's
+# Cursor never runs `npm install` after install, so they're dead weight.
+node_modules/prebuild-install/**
+node_modules/detect-libc/**
+node_modules/expand-template/**
+node_modules/github-from-package/**
+node_modules/mkdirp-classic/**
+node_modules/napi-build-utils/**
+node_modules/node-abi/**
+node_modules/pump/**
+node_modules/simple-get/**
+node_modules/tar-fs/**
+node_modules/tar-stream/**
+node_modules/tunnel-agent/**
+node_modules/decompress-response/**
+node_modules/mimic-response/**
+node_modules/rc/**
+node_modules/deep-extend/**
+node_modules/ini/**
+node_modules/minimist/**
+node_modules/strip-json-comments/**
+node_modules/end-of-stream/**
+node_modules/once/**
+node_modules/wrappy/**
+node_modules/chownr/**
+node_modules/fs-constants/**
+node_modules/buffer/**
+node_modules/base64-js/**
+node_modules/ieee754/**
+node_modules/bl/**
+node_modules/readable-stream/**
+node_modules/safe-buffer/**
+node_modules/inherits/**
+node_modules/string_decoder/**
+node_modules/util-deprecate/**
+node_modules/simple-concat/**
+
+# bindings + file-uri-to-path: KEEP — these ARE required at runtime by
+# better-sqlite3's lib/index.js to locate the .node file.
+# Exception, so explicitly NOT excluded above.
