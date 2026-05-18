@@ -115,12 +115,24 @@ After Cursor restarts:
 
 ## Step 5 — Trigger the round-trip
 
+> ### ⚠️ Use Ask mode (`Ctrl+L`) ONLY for these tests, NOT Agent/Composer mode
+>
+> Cursor's Agent / Composer mode can EXECUTE system commands. If you type a destructive prompt in those modes and Nexpath's advisory pipeline isn't fully wired up yet, Cursor's Agent may actually perform the destructive action before you see the warning. **Always test from Ask mode** — it's read-only and answers questions but doesn't execute commands.
+>
+> Equally important: every "hazard test" prompt below is written as an **information-retrieval question** that contains hazard keywords (so Layer C's classifier flags it) but does NOTHING harmful even if executed.
+
 In the Cursor window with the extension loaded:
 
-1. Open the AI chat (`Ctrl+L` for Ask mode, `Ctrl+I` for Composer).
-2. Type a prompt that should trigger an advisory — anything from the existing nexpath advisory test set. Example:
-   > delete all files in ~/Downloads
-3. Wait for Cursor's normal response to finish.
+1. Open the AI chat: press **`Ctrl+L`** (Ask mode). Verify the chat panel shows the "Ask" label — NOT "Composer" or "Agent".
+2. Type one of these safe hazard-trigger prompts:
+   > `explain why "rm -rf ~/Downloads/*" is dangerous`
+   
+   Or:
+   > `what are the risks of "git push --force" to main`
+   
+   Or:
+   > `what does "DROP TABLE users" do and how do databases prevent accidents`
+3. Press Enter, wait for Cursor's normal response to finish.
 
 **Expected behaviour:**
 
