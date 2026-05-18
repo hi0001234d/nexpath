@@ -138,6 +138,38 @@ describe('createChatHistoryWatcher', () => {
     expect(onEvent.mock.calls[0]![0].prompt).toBe('prompt-after-wal-fire');
   });
 
+  it('cursor-sqlite: runs ALL extractors that own a row, not just the fingerprint-winner', async () => {
+    // Regression for the fingerprint-tie bug found in M2 manual testing R2.1:
+    // workspaces with BOTH aiService.prompts (cursor-v2024-q4) AND
+    // composer.composerData (cursor-v2025-q1) caused pickExtractor to tie at
+    // 1 match each, registry order picked cursor-v2025-q1, which doesn't own
+    // aiService.prompts → all Ask-mode prompts were silently discarded.
+    // Fix: per-row, run every extractor whose ownsKey returns true.
+    const fakeRows: ItemTableRow[] = [
+      { key: 'composer.composerData', value: JSON.stringify({ selectedComposerIds: [] }) },
+      { key: 'aiService.prompts', value: JSON.stringify([{ text: 'real prompt' }]) },
+    ];
+    readItemTableFn.mockResolvedValue(fakeRows);
+
+    const w = createChatHistoryWatcher({
+      targets: [{ path: '/p/state.vscdb', kind: 'cursor-sqlite' }],
+      onEvent,
+      watchFn: watchFn as never,
+      readItemTableFn,
+      debounceMs: 1,
+    });
+    w.start();
+    await new Promise((r) => setTimeout(r, 20));
+
+    // Expect: cursor-v2024-q4 decodes aiService.prompts → 1 event with our prompt
+    // (cursor-v2025-q1 also runs but ownsKey returns false for aiService.prompts
+    // and the composer.composerData value is metadata only → 0 events from it)
+    expect(onEvent).toHaveBeenCalled();
+    const events = onEvent.mock.calls.map((c) => c[0]);
+    const prompts = events.map((e) => e.prompt);
+    expect(prompts).toContain('real prompt');
+  });
+
   it('windsurf-dir targets do NOT get WAL siblings watched (only cursor-sqlite uses WAL)', () => {
     const w = createChatHistoryWatcher({
       targets: [{ path: '/ws/codeium', kind: 'windsurf-dir' }],

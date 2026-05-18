@@ -5,7 +5,7 @@ import type {
   ItemTableRow,
   WatchTarget,
 } from './chat-history-types.js';
-import { pickExtractor } from './extractors/index.js';
+import { ALL_EXTRACTORS, pickExtractor } from './extractors/index.js';
 import { decodeWindsurfJsonFile } from './extractors/windsurf.js';
 
 /**
@@ -231,7 +231,7 @@ export function createChatHistoryWatcher(
   /** Deduplication key per emitted event so we never emit the same prompt twice. */
   const seenSignatures = new Set<string>();
   /** Per-target extractor cache — first read decides; subsequent reads reuse. */
-  const extractorCache = new Map<string, ChatHistoryExtractor>();
+  const extractorCache = new Map<string, readonly ChatHistoryExtractor[]>();
 
   function signatureOf(e: ChatHistoryEvent): string {
     return `${e.sourcePath}|${e.rawSessionId}|${e.prompt}`;
@@ -246,14 +246,32 @@ export function createChatHistoryWatcher(
     try {
       const rows = await readItemTableFn(target.path);
 
-      let extractor: ChatHistoryExtractor | undefined =
-        target.extractor ?? extractorCache.get(target.path);
+      // Per-row, run ALL extractors that own the row's key — not just the
+      // single "fingerprint winner". The old logic picked one extractor via
+      // `pickExtractor` and used it for every row, which silently dropped
+      // prompts when the workspace had keys from multiple Cursor eras: e.g.
+      // both `aiService.prompts` (cursor-v2024-q4) AND `composer.composerData`
+      // (cursor-v2025-q1) exist in modern Cursor workspaces. The fingerprint
+      // count tied at 1 each, registry order picked cursor-v2025-q1, which
+      // doesn't own aiService.prompts → all Ask-mode prompts were silently
+      // discarded. Discovered during M2 manual testing Round 2 after the WAL
+      // fix (which got fs.watch firing correctly) revealed that events
+      // STILL weren't emitting.
+      //
+      // `pickExtractor` is still used to drive the schema-unknown toast
+      // (matching ANY extractor = schema known, matching NONE = unknown),
+      // but the per-row decoding now uses every extractor whose `ownsKey`
+      // returns true for that row.
+      const extractorsToTry = target.extractor
+        ? [target.extractor]
+        : (extractorCache.get(target.path) ?? ALL_EXTRACTORS);
 
-      if (!extractor) {
+      if (!target.extractor && !extractorCache.has(target.path)) {
         const fp = pickExtractor(rows.map((r) => r.key));
         if (fp.kind === 'known') {
-          extractor = fp.extractor;
-          extractorCache.set(target.path, extractor);
+          // Cache ALL_EXTRACTORS once we've confirmed at least one matches —
+          // subsequent reads of this target skip the unknown-schema check.
+          extractorCache.set(target.path, ALL_EXTRACTORS);
         } else {
           opts.onSchemaUnknown?.({
             path: target.path,
@@ -264,13 +282,15 @@ export function createChatHistoryWatcher(
       }
 
       for (const row of rows) {
-        if (!extractor.ownsKey(row.key)) continue;
-        const decoded = extractor.decodeRow(row, target.path);
-        for (const ev of decoded) {
-          const sig = signatureOf(ev);
-          if (seenSignatures.has(sig)) continue;
-          seenSignatures.add(sig);
-          opts.onEvent({ ...ev, capturedAt: nowFn() });
+        for (const extractor of extractorsToTry) {
+          if (!extractor.ownsKey(row.key)) continue;
+          const decoded = extractor.decodeRow(row, target.path);
+          for (const ev of decoded) {
+            const sig = signatureOf(ev);
+            if (seenSignatures.has(sig)) continue;
+            seenSignatures.add(sig);
+            opts.onEvent({ ...ev, capturedAt: nowFn() });
+          }
         }
       }
     } catch (err) {
