@@ -314,9 +314,39 @@ export function createChatHistoryWatcher(
       for (const target of opts.targets) {
         try {
           const listener: WatchListener<string> = () => schedule(target);
+          // Watch the primary path (the SQLite main file for cursor-sqlite,
+          // or the codeium dir for windsurf-dir).
           const w = watchFn(target.path, listener);
           w.on('error', (err: Error) => reportError(err, target.path));
           fsWatchers.push(w);
+
+          // ── WAL-mode liveness fix ────────────────────────────────────────
+          // For cursor-sqlite targets, Cursor uses SQLite WAL mode — all
+          // writes go to `<path>-wal`, NOT the main file. fs.watch on the
+          // main file alone would never fire for new prompts (the main file
+          // only changes at checkpoint time, which can be minutes or hours
+          // later). Also watch the WAL sibling so we re-read whenever Cursor
+          // writes a new prompt. The read path (defaultReadItemTable) already
+          // copies main + wal + shm to a tmp staging dir and checkpoints
+          // before reading, so it always sees the latest data regardless of
+          // which file triggered the watch. Discovered during M2 manual
+          // testing Round 2 when live Cursor prompts didn't reach the store.
+          if (target.kind === 'cursor-sqlite') {
+            for (const suffix of ['-wal', '-shm'] as const) {
+              const siblingPath = target.path + suffix;
+              try {
+                const sw = watchFn(siblingPath, listener);
+                sw.on('error', (err: Error) => reportError(err, siblingPath));
+                fsWatchers.push(sw);
+              } catch {
+                // Sibling doesn't exist yet (WAL hasn't been initialised) —
+                // that's fine; Cursor creates it on first chat write, and
+                // the main-file watch will fire when SQLite eventually
+                // checkpoints, prompting a re-read that sees the new rows.
+              }
+            }
+          }
+
           // Initial pass so any existing rows are diffed immediately
           schedule(target);
         } catch (err) {

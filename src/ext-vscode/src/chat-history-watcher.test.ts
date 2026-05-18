@@ -73,8 +73,12 @@ describe('createChatHistoryWatcher', () => {
 
   beforeEach(() => {
     createdWatchers = [];
-    watchFn = vi.fn(() => {
+    watchFn = vi.fn((_path: string, listener?: (event: string, filename: string) => void) => {
       const w = makeFakeWatcher();
+      // Wire the listener so .emit('change', ...) actually triggers it.
+      // Mirrors node:fs watch() behaviour where the listener arg is
+      // registered as a 'change' / 'rename' event handler on the FSWatcher.
+      if (listener) w.on('change', listener);
       createdWatchers.push(w);
       return w;
     });
@@ -84,7 +88,7 @@ describe('createChatHistoryWatcher', () => {
     onSchemaUnknown = vi.fn();
   });
 
-  it('start() registers a watcher for every target', () => {
+  it('start() registers a watcher for every target (plus WAL+SHM siblings for cursor-sqlite)', () => {
     const w = createChatHistoryWatcher({
       targets: [cursorTarget('/a/state.vscdb'), cursorTarget('/b/state.vscdb')],
       onEvent,
@@ -92,9 +96,59 @@ describe('createChatHistoryWatcher', () => {
       readItemTableFn,
     });
     w.start();
-    expect(watchFn).toHaveBeenCalledTimes(2);
+    // Per target: main file + -wal + -shm = 3 watchers. Two targets = 6.
+    // The -wal / -shm watches are load-bearing because live Cursor uses
+    // SQLite WAL mode and writes go to the sibling, not the main file.
+    expect(watchFn).toHaveBeenCalledTimes(6);
     expect(watchFn).toHaveBeenCalledWith('/a/state.vscdb', expect.any(Function));
+    expect(watchFn).toHaveBeenCalledWith('/a/state.vscdb-wal', expect.any(Function));
+    expect(watchFn).toHaveBeenCalledWith('/a/state.vscdb-shm', expect.any(Function));
     expect(watchFn).toHaveBeenCalledWith('/b/state.vscdb', expect.any(Function));
+    expect(watchFn).toHaveBeenCalledWith('/b/state.vscdb-wal', expect.any(Function));
+    expect(watchFn).toHaveBeenCalledWith('/b/state.vscdb-shm', expect.any(Function));
+  });
+
+  it('WAL sibling change triggers a re-read of the main target (WAL-mode liveness)', async () => {
+    const fakeRows: ItemTableRow[] = [{ key: 'k1', value: 'v1' }];
+    readItemTableFn.mockResolvedValue(fakeRows);
+    const extractor = makeExtractor('test', [ev('prompt-from-wal', 's-1', '/p/state.vscdb')]);
+    const w = createChatHistoryWatcher({
+      targets: [cursorTarget('/p/state.vscdb', extractor)],
+      onEvent,
+      watchFn: watchFn as never,
+      readItemTableFn,
+      debounceMs: 5,
+    });
+    w.start();
+    // Initial pass first
+    await new Promise((r) => setTimeout(r, 20));
+    expect(onEvent).toHaveBeenCalledTimes(1);
+    onEvent.mockClear();
+    readItemTableFn.mockResolvedValue([{ key: 'k1', value: 'v1' }, { key: 'k2', value: 'v2' }]);
+    extractor.decodeRow = () => [ev('prompt-after-wal-fire', 's-2', '/p/state.vscdb')];
+
+    // The 2nd watcher in createdWatchers is the -wal sibling (index 1).
+    // Emit 'change' on it — the listener should re-schedule the main target.
+    expect(createdWatchers.length).toBeGreaterThanOrEqual(2);
+    createdWatchers[1]!.emit('change', 'change', '/p/state.vscdb-wal');
+    await new Promise((r) => setTimeout(r, 30));
+
+    // After the WAL fire + re-schedule + read, we should see the NEW event.
+    expect(onEvent).toHaveBeenCalledTimes(1);
+    expect(onEvent.mock.calls[0]![0].prompt).toBe('prompt-after-wal-fire');
+  });
+
+  it('windsurf-dir targets do NOT get WAL siblings watched (only cursor-sqlite uses WAL)', () => {
+    const w = createChatHistoryWatcher({
+      targets: [{ path: '/ws/codeium', kind: 'windsurf-dir' }],
+      onEvent,
+      watchFn: watchFn as never,
+      readItemTableFn,
+    });
+    w.start();
+    // Just the dir itself, no WAL siblings (Windsurf uses JSON files not SQLite)
+    expect(watchFn).toHaveBeenCalledTimes(1);
+    expect(watchFn).toHaveBeenCalledWith('/ws/codeium', expect.any(Function));
   });
 
   it('initial-pass after start() reads + emits events for already-existing rows', async () => {
