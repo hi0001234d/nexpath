@@ -76,19 +76,26 @@ async function main() {
   console.log(`Output dir: ${outDir}`);
   console.log('');
 
+  // Each per-platform package call goes through package-with-electron-abi.mjs
+  // so better-sqlite3 is rebuilt against the target Electron ABI before vsce
+  // package runs, and restored to the system-Node ABI afterwards. Skipping
+  // that wrapper would package a Node-ABI binary inside the .vsix and Cursor
+  // would fail to activate with NODE_MODULE_VERSION 127 vs 140 (see the
+  // wrapper script's JSDoc for the full story).
+  const wrapperScript = join(subPackageRoot, 'scripts', 'package-with-electron-abi.mjs');
   const results = [];
   for (const target of args.targets) {
     const filename = buildVsixFilename(name, target, version);
     const outPath  = join(outDir, filename);
     console.log(`▸ ${target} → ${filename}`);
     const r = spawnSync(
-      'npx',
-      ['vsce', 'package', '--target', target, '--out', outPath],
+      'node',
+      [wrapperScript, '--target', target, '--out', outPath],
       { stdio: 'inherit', cwd: subPackageRoot },
     );
     results.push({ target, ok: r.status === 0, exitCode: r.status });
     if (r.status !== 0) {
-      console.error(`  ✗ vsce package failed for ${target} (exit ${r.status})`);
+      console.error(`  ✗ vsce package (with electron rebuild) failed for ${target} (exit ${r.status})`);
     }
   }
 

@@ -11,7 +11,11 @@
     "vscode": "^1.80.0",
     "node": ">=18"
   },
-  "categories": ["Other", "Machine Learning", "Programming Languages"],
+  "categories": [
+    "Other",
+    "Machine Learning",
+    "Programming Languages"
+  ],
   "keywords": [
     "cursor",
     "windsurf",
@@ -30,7 +34,9 @@
   "bugs": {
     "url": "https://github.com/hi0001234d/nexpath/issues"
   },
-  "activationEvents": ["onStartupFinished"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.cjs",
   "icon": "media/icon.png",
   "galleryBanner": {
@@ -64,15 +70,23 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "dump-cursor-state": "tsx scripts/dump-cursor-state.ts",
-    "package": "vsce package",
+    "rebuild:electron": "electron-rebuild --version $npm_package_nexpathTargets_electron --force --only better-sqlite3 --module-dir .",
+    "rebuild:node": "npm rebuild better-sqlite3",
+    "package": "node scripts/package-with-electron-abi.mjs",
     "package:all-platforms": "node scripts/package-per-platform.mjs",
     "publish:ovsx": "ovsx publish",
     "publish:vsce": "vsce publish"
   },
+  "nexpathTargets": {
+    "comment": "Target Electron version for the native better-sqlite3 binding inside .vsix. Cursor 3.4.20 + recent VS Code use Electron 39 (NODE_MODULE_VERSION 140). Bump this when Cursor / VS Code upgrade Electron; locked by src/native-binding-abi.test.ts.",
+    "electron": "39.0.0",
+    "electronAbi": 140
+  },
   "dependencies": {
-    "better-sqlite3": "^11"
+    "better-sqlite3": "^12"
   },
   "devDependencies": {
+    "@electron/rebuild": "^3.7.2",
     "@types/better-sqlite3": "^7",
     "@types/node": "^20",
     "@types/vscode": "^1.80.0",
