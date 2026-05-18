@@ -36,6 +36,10 @@ vi.mock('vscode', () => ({
   window: {
     registerWebviewViewProvider: mockRegisterWebviewViewProvider,
     showInformationMessage: mockShowInformationMessage,
+    createOutputChannel: vi.fn(() => ({
+      appendLine: vi.fn(),
+      dispose: vi.fn(),
+    })),
   },
   workspace: {
     workspaceFolders: undefined,
