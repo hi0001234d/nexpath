@@ -31,7 +31,7 @@
     "url": "https://github.com/hi0001234d/nexpath/issues"
   },
   "activationEvents": ["onStartupFinished"],
-  "main": "./out/extension.js",
+  "main": "./out/extension.cjs",
   "icon": "media/icon.png",
   "galleryBanner": {
     "color": "#1e1e2e",
