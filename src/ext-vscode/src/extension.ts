@@ -29,9 +29,26 @@ import type { WatchTarget } from './chat-history-types.js';
  */
 let viewProvider: NexpathDecisionSessionViewProvider | undefined;
 let watcher: ChatHistoryWatcher | undefined;
+let logChannel: vscode.OutputChannel | undefined;
+
+/**
+ * Dedicated VS Code OutputChannel for nexpath messages — visible to
+ * engineers and end-users at `View → Output → Nexpath`. Replaces the
+ * plain console.log path which Cursor / VS Code only surface in the
+ * Developer Tools Console (hard to discover, easy to miss). All key
+ * lifecycle + watcher events log through this channel; console.log is
+ * kept as a secondary destination so the existing extension.test.ts
+ * console-spy assertions still pass.
+ */
+function log(line: string): void {
+  console.log(line);
+  logChannel?.appendLine(`[${new Date().toISOString()}] ${line}`);
+}
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  console.log('[nexpath] extension activated');
+  logChannel = vscode.window.createOutputChannel('Nexpath');
+  context.subscriptions.push(logChannel);
+  log('[nexpath] extension activated');
 
   // 1. Detect host (Cursor / Windsurf / vscode-generic). Stable for the
   //    lifetime of this extension instance.
@@ -57,6 +74,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   try {
     await showOnboardingIfNeeded(context);
   } catch (err) {
+    log(`[nexpath] onboarding failed: ${err instanceof Error ? err.stack ?? err.message : String(err)}`);
     console.error('[nexpath] onboarding failed:', err);
   }
 
@@ -65,12 +83,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   //    not start. If the host is vscode-generic, there's no AI chat to
   //    watch.
   const consent = context.globalState.get<boolean>(CONSENT_KEY);
+  log(`[nexpath] consent state: ${JSON.stringify(consent)}, host: ${host}`);
   if (consent !== true) {
-    console.log('[nexpath] consent not granted — watcher not started');
+    log('[nexpath] consent not granted — watcher not started');
     return;
   }
   if (host === 'vscode-generic') {
-    console.log('[nexpath] host is plain VS Code — no chat to watch');
+    log('[nexpath] host is plain VS Code — no chat to watch');
     return;
   }
 
@@ -87,8 +106,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     host === 'windsurf' ? windsurfCodeiumDir() : null;
   const codeiumExists = codeiumDir !== null && existsSync(codeiumDir);
 
+  log(`[nexpath] enumerated ${dbPaths.length} state.vscdb file(s) under ${wsStorage}; codeiumExists=${codeiumExists}`);
   if (dbPaths.length === 0 && !codeiumExists) {
-    console.log(
+    log(
       `[nexpath] no workspace state.vscdb found under ${wsStorage} — watcher not started. ` +
         'Open at least one workspace in the host and reload the extension to retry.',
     );
@@ -127,12 +147,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   watcher = createChatHistoryWatcher({
     targets,
     onEvent: (event) => {
+      log(`[nexpath] watcher event: prompt="${event.prompt.slice(0, 80)}" raw_session_id=${event.rawSessionId} extractor=${event.extractorId}`);
       // The watcher's onEvent is sync-fire-and-forget; the handler returns
       // a Promise we deliberately don't await.
       void handleChatEvent(event);
     },
-    onError: (err) => console.error('[nexpath] watcher error:', err),
+    onError: (err) => {
+      log(`[nexpath] watcher error: ${err.message}`);
+      console.error('[nexpath] watcher error:', err);
+    },
     onSchemaUnknown: ({ path, observedSampleKeys }) => {
+      log(`[nexpath] schema unknown for ${path}; sample keys: ${observedSampleKeys.slice(0, 3).join(', ')}`);
       void vscode.window.showInformationMessage(
         `Nexpath: ${path} schema is not recognised. The chat-history extractors may need updating. ` +
           `Observed keys: ${observedSampleKeys.slice(0, 3).join(', ')}…`,
@@ -143,16 +168,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   watcher.start();
   context.subscriptions.push({ dispose: () => watcher?.stop() });
   const cascadeNote = codeiumExists ? ' + 1 windsurf-dir' : '';
-  console.log(
+  log(
     `[nexpath] watcher started on ${dbPaths.length} state.vscdb file(s)${cascadeNote} for host=${host}`,
   );
 }
 
 export function deactivate(): void {
-  console.log('[nexpath] extension deactivated');
+  log('[nexpath] extension deactivated');
   watcher?.stop();
   watcher = undefined;
   viewProvider = undefined;
+  logChannel = undefined;
 }
 
 /** Lookup for other extension modules that want to publish payloads. */
