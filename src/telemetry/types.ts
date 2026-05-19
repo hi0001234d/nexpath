@@ -45,3 +45,11 @@ export interface CursorState {
   offset:         number;
   last_synced_ts: string | null;
 }
+
+export interface SyncState {
+  next_sync_at:         string | null;
+  last_attempt_at:      string | null;
+  last_success_at:      string | null;
+  last_error:           string | null;
+  consecutive_failures: number;
+}
