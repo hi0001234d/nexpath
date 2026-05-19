@@ -5,9 +5,11 @@ import { getConfig, setConfig } from '../../store/config.js';
 import { loadSyncState } from '../../telemetry/TelemetrySyncScheduler.js';
 import { loadCursor, saveCursor, clearCursor } from '../../telemetry/TelemetryCursor.js';
 import { runSyncAttempt } from '../../telemetry/TelemetrySyncRunner.js';
-import { DEFAULT_POSTHOG_ENDPOINT } from '../../telemetry/TelemetryClient.js';
+import { DEFAULT_POSTHOG_ENDPOINT, postBatch, type FetchLike } from '../../telemetry/TelemetryClient.js';
+import { POSTHOG_LIB_NAME, POSTHOG_LIB_VERSION } from '../../telemetry/TelemetryBatcher.js';
 import { TELEMETRY_PATH, TELEMETRY_SYNC_CURSOR_PATH } from '../../telemetry/paths.js';
 import { logger } from '../../logger.js';
+import type { PostHogBatchEnvelope } from '../../telemetry/types.js';
 
 const NEXPATH_VERSION = '0.1.1';
 
@@ -165,6 +167,56 @@ export async function telemetrySyncResetCursorAction(opts: TelemetrySyncActionOp
     }
     print(`Error: ${(err as Error).message}`);
     process.exitCode = 1;
+  }
+}
+
+export async function telemetrySyncPingAction(
+  opts:      TelemetrySyncActionOpts = {},
+  fetchImpl: FetchLike = globalThis.fetch as unknown as FetchLike,
+): Promise<void> {
+  const print = opts.output ?? defaultPrint;
+  const store = await openStore(opts.dbPath ?? DEFAULT_DB_PATH);
+  try {
+    const apiKey = getConfig(store.db, 'telemetry_sync_api_key');
+    if (!apiKey) {
+      print('Error: telemetry_sync_api_key is not configured.');
+      print('Set it with: nexpath config set telemetry_sync_api_key <token>');
+      process.exitCode = 1;
+      return;
+    }
+    const endpoint = getConfig(store.db, 'telemetry_sync_endpoint') ?? DEFAULT_POSTHOG_ENDPOINT;
+
+    const envelope: PostHogBatchEnvelope = {
+      api_key: apiKey,
+      batch: [{
+        event:       'nexpath_ping_test',
+        distinct_id: `nexpath-ping-${Date.now()}`,
+        timestamp:   new Date().toISOString(),
+        properties: {
+          $lib:          POSTHOG_LIB_NAME,
+          $lib_version:  POSTHOG_LIB_VERSION,
+          ping:          true,
+        },
+      }],
+    };
+
+    print(`Pinging ${endpoint}...`);
+    const result = await postBatch(endpoint, envelope, { fetch: fetchImpl });
+
+    if (result.ok) {
+      print(`✓ Ping succeeded (HTTP ${result.status}). Telemetry sync is reachable.`);
+      return;
+    }
+    if (result.kind === 'network') {
+      print('✗ Network error. Check connectivity and endpoint.');
+      process.exitCode = 1;
+      return;
+    }
+    print(`✗ HTTP ${result.status}. Check api_key and endpoint config.`);
+    if (result.retryAfterSeconds !== undefined) print(`  Retry-After: ${result.retryAfterSeconds}s`);
+    process.exitCode = 1;
+  } finally {
+    closeStore(store);
   }
 }
 

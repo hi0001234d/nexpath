@@ -9,7 +9,9 @@ import {
   telemetrySyncDisableAction,
   telemetrySyncResetCursorAction,
   telemetrySyncRunAction,
+  telemetrySyncPingAction,
 } from './telemetry-sync.js';
+import type { FetchLike } from '../../telemetry/TelemetryClient.js';
 import { openStore, closeStore } from '../../store/db.js';
 import { setConfig, getConfig } from '../../store/config.js';
 import { saveCursor, loadCursor } from '../../telemetry/TelemetryCursor.js';
@@ -395,6 +397,84 @@ describe('telemetrySyncRunAction', () => {
     expect(process.exitCode).toBe(1);
   });
 
+});
+
+describe('telemetrySyncPingAction', () => {
+  it('exits 1 when api_key is not configured', async () => {
+    const { lines, print } = captureOutput();
+    await telemetrySyncPingAction({ dbPath, output: print });
+    expect(process.exitCode).toBe(1);
+    expect(lines.join('\n')).toContain('telemetry_sync_api_key is not configured');
+  });
+
+  it('sends a single test event with valid PostHog shape and reports success', async () => {
+    await withConfig(store => setConfig(store, 'telemetry_sync_api_key', 'phc_ping_test'));
+
+    const fetchMock = vi.fn<FetchLike>(async () => ({
+      ok: true, status: 200, headers: { get: () => null },
+    }));
+
+    const { lines, print } = captureOutput();
+    await telemetrySyncPingAction({ dbPath, output: print }, fetchMock);
+    expect(process.exitCode).toBe(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const init = fetchMock.mock.calls[0][1];
+    const body = JSON.parse(init.body);
+    expect(body.api_key).toBe('phc_ping_test');
+    expect(body.batch).toHaveLength(1);
+    expect(body.batch[0].event).toBe('nexpath_ping_test');
+    expect(body.batch[0].properties.ping).toBe(true);
+    expect(body.batch[0].properties.$lib).toBe('nexpath');
+    expect(lines.join('\n')).toContain('Ping succeeded');
+  });
+
+  it('uses configured endpoint when set', async () => {
+    await withConfig(store => {
+      setConfig(store, 'telemetry_sync_api_key',  'phc_test');
+      setConfig(store, 'telemetry_sync_endpoint', 'https://eu.example/capture/');
+    });
+    const fetchMock = vi.fn<FetchLike>(async () => ({
+      ok: true, status: 200, headers: { get: () => null },
+    }));
+    const { print } = captureOutput();
+    await telemetrySyncPingAction({ dbPath, output: print }, fetchMock);
+    expect(fetchMock.mock.calls[0][0]).toBe('https://eu.example/capture/');
+  });
+
+  it('reports network error and exits 1', async () => {
+    await withConfig(store => setConfig(store, 'telemetry_sync_api_key', 'phc_test'));
+    const fetchMock = vi.fn<FetchLike>(async () => { throw new Error('ENETDOWN'); });
+    const { lines, print } = captureOutput();
+    await telemetrySyncPingAction({ dbPath, output: print }, fetchMock);
+    expect(process.exitCode).toBe(1);
+    expect(lines.join('\n')).toContain('Network error');
+  });
+
+  it('reports HTTP error with status and exits 1', async () => {
+    await withConfig(store => setConfig(store, 'telemetry_sync_api_key', 'phc_test'));
+    const fetchMock = vi.fn<FetchLike>(async () => ({
+      ok: false, status: 401, headers: { get: () => null },
+    }));
+    const { lines, print } = captureOutput();
+    await telemetrySyncPingAction({ dbPath, output: print }, fetchMock);
+    expect(process.exitCode).toBe(1);
+    expect(lines.join('\n')).toContain('HTTP 401');
+  });
+
+  it('prints retry-after seconds on 429', async () => {
+    await withConfig(store => setConfig(store, 'telemetry_sync_api_key', 'phc_test'));
+    const fetchMock = vi.fn<FetchLike>(async () => ({
+      ok: false, status: 429,
+      headers: { get: (h: string) => h === 'Retry-After' ? '60' : null },
+    }));
+    const { lines, print } = captureOutput();
+    await telemetrySyncPingAction({ dbPath, output: print }, fetchMock);
+    expect(lines.join('\n')).toContain('Retry-After: 60s');
+  });
+});
+
+describe('telemetrySyncRunAction (continued)', () => {
   it('non-ok / non-noop result sets exit code 1', async () => {
     await withConfig(store => {
       setConfig(store, 'telemetry_sync_api_key', 'phc_test');

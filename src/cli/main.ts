@@ -16,6 +16,7 @@ import {
   telemetrySyncDisableAction,
   telemetrySyncResetCursorAction,
   telemetrySyncRunAction,
+  telemetrySyncPingAction,
 } from './commands/telemetry-sync.js';
 
 export function createProgram(): Command {
@@ -190,6 +191,14 @@ export function createProgram(): Command {
     .description('Skip backlog: jump cursor to current end-of-file')
     .action(async () => {
       await telemetrySyncResetCursorAction();
+    });
+
+  telemetrySyncCmd
+    .command('ping')
+    .description('Smoke-test: send one event to verify network + api_key reachability')
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (opts: { db?: string }) => {
+      await telemetrySyncPingAction(opts.db ? { dbPath: opts.db } : {});
     });
 
   // ── DB command ────────────────────────────────────────────────────────────────
