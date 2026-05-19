@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { openStore, type Store } from '../store/db.js';
+import { setConfig } from '../store/config.js';
 import { _resetIdentityCache } from './identity.js';
 
 vi.mock('node:fs', async (importOriginal) => {
@@ -292,6 +293,151 @@ describe('TelemetryWriter — writeTelemetry', () => {
       expect(parsed['installationId']).toMatch(UUID_V4);
       expect(parsed['userId']).toMatch(UUID_V4);
       expect(parsed['teamId']).toMatch(UUID_V4);
+    });
+  });
+
+  // ── telemetry.enabled gate (Phase 2) ─────────────────────────────────────────
+
+  describe('telemetry.enabled config gate', () => {
+    let store: Store;
+
+    beforeEach(async () => {
+      store = await openStore(':memory:');
+    });
+
+    afterEach(() => {
+      store.db.close();
+    });
+
+    it('writes happen by default when no config key is set (DEFAULT_CONFIG = true)', async () => {
+      const { writeTelemetry } = await import('./TelemetryWriter.js');
+      const fs = await import('node:fs');
+
+      const appendSpy = vi.spyOn(fs, 'appendFileSync').mockImplementation(() => {});
+      vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+      vi.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined as never);
+
+      writeTelemetry('/proj', 'prompt_received', { promptCount: 1 }, store);
+
+      expect(appendSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('writes happen when telemetry.enabled is explicitly set to "true"', async () => {
+      setConfig(store, 'telemetry.enabled', 'true');
+      const { writeTelemetry } = await import('./TelemetryWriter.js');
+      const fs = await import('node:fs');
+
+      const appendSpy = vi.spyOn(fs, 'appendFileSync').mockImplementation(() => {});
+      vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+      vi.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined as never);
+
+      writeTelemetry('/proj', 'prompt_received', { promptCount: 1 }, store);
+
+      expect(appendSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('writes are silently skipped when telemetry.enabled is "false"', async () => {
+      setConfig(store, 'telemetry.enabled', 'false');
+      const { writeTelemetry } = await import('./TelemetryWriter.js');
+      const fs = await import('node:fs');
+
+      const appendSpy = vi.spyOn(fs, 'appendFileSync').mockImplementation(() => {});
+      vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+      const mkdirSpy = vi.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined as never);
+
+      writeTelemetry('/proj', 'prompt_received', { promptCount: 1 }, store);
+
+      expect(appendSpy).not.toHaveBeenCalled();
+      // Gate runs BEFORE rotate(), so mkdirSync should not run either.
+      expect(mkdirSpy).not.toHaveBeenCalled();
+    });
+
+    it('toggle false → true with cache reset resumes writes', async () => {
+      // Pull writeTelemetry AND _resetEnabledCache from the same fresh module
+      // instance — top-level imports are a different instance after resetModules.
+      const tw = await import('./TelemetryWriter.js');
+      const fs = await import('node:fs');
+
+      const appendSpy = vi.spyOn(fs, 'appendFileSync').mockImplementation(() => {});
+      vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+      vi.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined as never);
+
+      // Step 1 — disabled, write skipped.
+      setConfig(store, 'telemetry.enabled', 'false');
+      tw.writeTelemetry('/proj', 'prompt_received', { promptCount: 1 }, store);
+      expect(appendSpy).not.toHaveBeenCalled();
+
+      // Step 2 — flip to true; without cache reset the cached 'false' still wins.
+      setConfig(store, 'telemetry.enabled', 'true');
+      tw.writeTelemetry('/proj', 'prompt_received', { promptCount: 2 }, store);
+      expect(appendSpy).not.toHaveBeenCalled();
+
+      // Step 3 — reset cache; gate re-reads config and writes resume.
+      tw._resetEnabledCache();
+      tw.writeTelemetry('/proj', 'prompt_received', { promptCount: 3 }, store);
+      expect(appendSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('config read failure fails open — write still happens', async () => {
+      // Spy on the freshly-imported config module so the binding inside
+      // the freshly-imported TelemetryWriter sees the mock.
+      const config = await import('../store/config.js');
+      const { writeTelemetry } = await import('./TelemetryWriter.js');
+      const fs = await import('node:fs');
+
+      const appendSpy = vi.spyOn(fs, 'appendFileSync').mockImplementation(() => {});
+      vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+      vi.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined as never);
+
+      // Make getConfig throw — isEnabled's try/catch should swallow and return true.
+      vi.spyOn(config, 'getConfig').mockImplementation(() => {
+        throw new Error('simulated config read failure');
+      });
+
+      expect(() =>
+        writeTelemetry('/proj', 'prompt_received', { promptCount: 1 }, store),
+      ).not.toThrow();
+      expect(appendSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('no-store call bypasses the gate (fail-open — runLevel sites until Phase 3)', async () => {
+      const { writeTelemetry } = await import('./TelemetryWriter.js');
+      const fs = await import('node:fs');
+
+      // Even with telemetry.enabled='false' in the only known store, a writer
+      // call WITHOUT a store cannot check the gate — so it must still write.
+      setConfig(store, 'telemetry.enabled', 'false');
+
+      const appendSpy = vi.spyOn(fs, 'appendFileSync').mockImplementation(() => {});
+      vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+      vi.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined as never);
+
+      writeTelemetry('/proj', 'prompt_received', { promptCount: 1 });
+
+      expect(appendSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('cache avoids repeated config reads within the same process', async () => {
+      const config = await import('../store/config.js');
+      const { writeTelemetry } = await import('./TelemetryWriter.js');
+      const fs = await import('node:fs');
+
+      vi.spyOn(fs, 'appendFileSync').mockImplementation(() => {});
+      vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+      vi.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined as never);
+
+      const getConfigSpy = vi.spyOn(config, 'getConfig');
+
+      writeTelemetry('/proj', 'prompt_received', { promptCount: 1 }, store);
+      writeTelemetry('/proj', 'prompt_classified', { stage: 'planning' }, store);
+      writeTelemetry('/proj', 'absence_flags_detected', { newFlagsCount: 0 }, store);
+
+      // getConfig should only be called once for 'telemetry.enabled' — the cache
+      // serves subsequent isEnabled() invocations.
+      const enabledReads = getConfigSpy.mock.calls.filter(
+        (call) => call[1] === 'telemetry.enabled',
+      );
+      expect(enabledReads.length).toBe(1);
     });
   });
 });
