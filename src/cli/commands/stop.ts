@@ -14,6 +14,7 @@ import { logger, initLogger } from '../../logger.js';
 import type { LogLevel } from '../../logger.js';
 import { writeHookStats } from '../../store/hook-stats.js';
 import { writeTelemetry } from '../../telemetry/index.js';
+import { recentPromptMetadata } from '../../telemetry/recent-prompts.js';
 import { readStdin } from './auto.js';
 
 /**
@@ -150,6 +151,8 @@ export async function runStop(
       decisionSessionCount,
       generatedOptions,
       profile:              mgr.current.profile,
+      // Phase 4 — Item B: last-5 prompt metadata for decision_session_started.
+      recentPrompts:        recentPromptMetadata(mgr.current.promptHistory),
     },
     store,
     effectiveSelectFn,

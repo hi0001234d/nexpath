@@ -3123,6 +3123,64 @@ describe('runDecisionSession — telemetry: decision_session_started', () => {
       undefined,
     );
   });
+
+  // ── Phase 4 — decision_session_started enriched payload (Items B + J) ──────
+
+  it('decision_session_started carries decisionSessionCountInProject from input', async () => {
+    await runDecisionSession(
+      makeInput({ decisionSessionCount: 7 }),
+      undefined,
+      mockSelect(SKIP_NOW),
+    );
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_started',
+      expect.objectContaining({ decisionSessionCountInProject: 7 }),
+      undefined,
+    );
+  });
+
+  it('decision_session_started defaults decisionSessionCountInProject to 0 when input is 0', async () => {
+    await runDecisionSession(
+      makeInput({ decisionSessionCount: 0 }),
+      undefined,
+      mockSelect(SKIP_NOW),
+    );
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_started',
+      expect.objectContaining({ decisionSessionCountInProject: 0 }),
+      undefined,
+    );
+  });
+
+  it('decision_session_started carries recentPrompts from input when provided', async () => {
+    const recentPrompts = [
+      { index: 1, classifiedStage: 'planning',       confidence: 0.7, capturedAt: 100 },
+      { index: 2, classifiedStage: 'implementation', confidence: 0.9, capturedAt: 200 },
+    ];
+    await runDecisionSession(
+      makeInput({ recentPrompts }),
+      undefined,
+      mockSelect(SKIP_NOW),
+    );
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_started',
+      expect.objectContaining({ recentPrompts }),
+      undefined,
+    );
+  });
+
+  it('decision_session_started defaults recentPrompts to [] when input is undefined', async () => {
+    await runDecisionSession(makeInput(), undefined, mockSelect(SKIP_NOW));
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_started',
+      expect.objectContaining({ recentPrompts: [] }),
+      undefined,
+    );
+  });
 });
 
 describe('runLevel — NEXPATH_SIM=1 support', () => {

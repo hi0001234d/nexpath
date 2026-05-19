@@ -27,6 +27,7 @@ import { writeHookStats } from '../../store/hook-stats.js';
 import { upsertPendingAdvisory } from '../../store/pending-advisories.js';
 import { insertSkippedSession } from '../../store/skipped-sessions.js';
 import { writeTelemetry } from '../../telemetry/index.js';
+import { recentPromptMetadata } from '../../telemetry/recent-prompts.js';
 
 /**
  * nexpath auto — orchestration command (per decision-session-ux-research.md).
@@ -359,7 +360,17 @@ export async function runAuto(
     generatedL2: generatedOptions?.l2,
     generatedL3: generatedOptions?.l3,
   });
-  writeTelemetry(input.projectRoot, 'pipeline_advisory_pending', { flagType, stage: mgr.current.currentStage, pinchLabel }, store);
+  writeTelemetry(input.projectRoot, 'pipeline_advisory_pending', {
+    flagType,
+    stage:                         mgr.current.currentStage,
+    pinchLabel,
+    // Item H — session-scoped advisory counter (from session state).
+    advisoryCountInSession:        mgr.current.advisoryCount ?? 0,
+    // Item J — project-scoped decision-session counter (from projects table).
+    decisionSessionCountInProject: getProject(store, input.projectRoot)?.decisionSessionCount ?? 0,
+    // Item B — last-5 prompt metadata, PII-safe (no text).
+    recentPrompts:                 recentPromptMetadata(mgr.current.promptHistory),
+  }, store);
   mgr.markAdvisoryFired(store);
 
   logger.info('pipeline_outcome', { outcome: 'pending', pinchLabel });

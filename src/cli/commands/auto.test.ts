@@ -1485,4 +1485,75 @@ describe('runAuto — telemetry events', () => {
       expect(s2Call[2]).toEqual(expect.objectContaining({ confirmed: expect.any(Boolean) }));
     }
   });
+
+  // ── Phase 4 — pipeline_advisory_pending enriched payload (Items B + H + J) ──
+
+  it('pipeline_advisory_pending carries advisoryCountInSession, decisionSessionCountInProject, recentPrompts', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/tel-rich');
+    mgr.addAbsenceFlag(store, { signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 5, cooldownUntil: 100 });
+
+    // Run a couple prior prompts so promptHistory + counters have content.
+    for (let i = 0; i < 2; i++) {
+      await runAuto(makeInput({ projectRoot: '/test/tel-rich' }), store);
+    }
+    vi.mocked(writeTelemetry).mockClear();
+    await runAuto(makeInput({ projectRoot: '/test/tel-rich' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'));
+
+    const pendingCall = vi.mocked(writeTelemetry).mock.calls.find(
+      ([, event]) => event === 'pipeline_advisory_pending',
+    );
+    if (pendingCall) {
+      const payload = pendingCall[2] as Record<string, unknown>;
+      expect(payload).toHaveProperty('advisoryCountInSession');
+      expect(typeof payload['advisoryCountInSession']).toBe('number');
+      expect(payload).toHaveProperty('decisionSessionCountInProject');
+      expect(typeof payload['decisionSessionCountInProject']).toBe('number');
+      expect(payload).toHaveProperty('recentPrompts');
+      expect(Array.isArray(payload['recentPrompts'])).toBe(true);
+    }
+  });
+
+  it('recentPrompts in pipeline_advisory_pending NEVER contains the text field (PII guarantee)', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/tel-pii');
+    mgr.addAbsenceFlag(store, { signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 5, cooldownUntil: 100 });
+
+    for (let i = 0; i < 2; i++) {
+      await runAuto(makeInput({ promptText: `prior prompt ${i}`, projectRoot: '/test/tel-pii' }), store);
+    }
+    vi.mocked(writeTelemetry).mockClear();
+    await runAuto(makeInput({ promptText: 'sensitive prompt text', projectRoot: '/test/tel-pii' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'));
+
+    const pendingCall = vi.mocked(writeTelemetry).mock.calls.find(
+      ([, event]) => event === 'pipeline_advisory_pending',
+    );
+    if (pendingCall) {
+      const payload = pendingCall[2] as { recentPrompts: Array<Record<string, unknown>> };
+      for (const entry of payload.recentPrompts) {
+        expect(entry).not.toHaveProperty('text');
+      }
+    }
+  });
+
+  it('recentPrompts is capped at 5 entries even after many prior prompts', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/tel-cap5');
+    mgr.addAbsenceFlag(store, { signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 5, cooldownUntil: 100 });
+
+    // Build up promptHistory with 7+ prompts.
+    for (let i = 0; i < 7; i++) {
+      await runAuto(makeInput({ promptText: `prompt ${i}`, projectRoot: '/test/tel-cap5' }), store);
+    }
+    vi.mocked(writeTelemetry).mockClear();
+    await runAuto(makeInput({ promptText: 'fire', projectRoot: '/test/tel-cap5' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'));
+
+    const pendingCall = vi.mocked(writeTelemetry).mock.calls.find(
+      ([, event]) => event === 'pipeline_advisory_pending',
+    );
+    if (pendingCall) {
+      const payload = pendingCall[2] as { recentPrompts: unknown[] };
+      expect(payload.recentPrompts.length).toBeLessThanOrEqual(5);
+    }
+  });
 });

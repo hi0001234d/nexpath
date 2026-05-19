@@ -14,6 +14,7 @@ import {
 } from './options.js';
 import type { GeneratedOptions } from './OptionGenerator.js';
 import { writeTelemetry } from '../telemetry/index.js';
+import { type RecentPromptMetadata } from '../telemetry/recent-prompts.js';
 
 /**
  * Decision session terminal UI (per decision-session-ux-research.md).
@@ -92,6 +93,8 @@ export interface DecisionSessionInput {
   generatedOptions?:    GeneratedOptions;
   /** User profile — used to route beginner/cool_geek to BEGINNER content blocks. */
   profile?:             UserProfile | null;
+  /** Last-5 prompt metadata for the `decision_session_started` telemetry event (Item B). */
+  recentPrompts?:       RecentPromptMetadata[];
 }
 
 /**
@@ -300,10 +303,14 @@ export async function runDecisionSession(
   }
 
   writeTelemetry(input.projectRoot, 'decision_session_started', {
-    flagType:   input.flagType,
-    stage:      input.stage,
-    pinchLabel: input.pinchLabel,
-    sessionId:  input.sessionId,
+    flagType:                      input.flagType,
+    stage:                         input.stage,
+    pinchLabel:                    input.pinchLabel,
+    sessionId:                     input.sessionId,
+    // Item J — project counter, populated by the call site (stop.ts).
+    decisionSessionCountInProject: input.decisionSessionCount ?? 0,
+    // Item B — last-5 prompt metadata, populated by the call site.
+    recentPrompts:                 input.recentPrompts ?? [],
   }, store);
 
   let level: 1 | 2 | 3 = 1;
