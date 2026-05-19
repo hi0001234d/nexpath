@@ -3255,6 +3255,47 @@ describe('runLevel — telemetry: decision_session_dismissed enriched payload (P
       undefined,
     );
   });
+
+  it('runDecisionSession plumbs store through runLevel — full chain delivers rich payload', async () => {
+    // End-to-end guard: if a future refactor accidentally drops `store` from
+    // the runLevel() call inside runDecisionSession, this test catches it
+    // even though both runLevel and runDecisionSession individually still work.
+    const store = await openStore(':memory:');
+    try {
+      const { insertSkippedSession } = await import('../store/skipped-sessions.js');
+      for (let i = 0; i < 2; i++) {
+        insertSkippedSession(store, {
+          projectRoot:          '/proj/plumb',
+          sessionId:            `prior-${i}`,
+          flagType:             'absence:test_creation',
+          stage:                'implementation',
+          levelReached:         1,
+          skippedAtPromptCount: 5 + i,
+        });
+      }
+
+      vi.mocked(writeTelemetry).mockClear();
+      await runDecisionSession(
+        makeInput({ projectRoot: '/proj/plumb' }),
+        store,
+        mockSelect(SKIP_NOW),
+      );
+
+      expect(writeTelemetry).toHaveBeenCalledWith(
+        '/proj/plumb',
+        'decision_session_dismissed',
+        expect.objectContaining({
+          level:              1,
+          reason:             'skip',
+          flagType:           'stage_transition',
+          skipCountInProject: 2,
+        }),
+        store,
+      );
+    } finally {
+      store.db.close();
+    }
+  });
 });
 
 // ── DecisionContent structure — Sub-4 Group A formal/casual (idea signals) ───
