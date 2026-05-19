@@ -439,6 +439,7 @@ describe('store — config', () => {
     expect(getConfig(store.db, 'prompt_capture_enabled')).toBe('true');
     expect(getConfig(store.db, 'prompt_store_max_per_project')).toBe('500');
     expect(getConfig(store.db, 'prompt_store_max_db_mb')).toBe('100');
+    expect(getConfig(store.db, 'telemetry.enabled')).toBe('true');
   });
 
   it('getConfig returns undefined for unknown non-default keys', () => {
