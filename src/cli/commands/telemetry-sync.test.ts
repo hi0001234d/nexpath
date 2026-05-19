@@ -64,6 +64,17 @@ describe('telemetrySyncStatusAction', () => {
     expect(text).toContain('Cursor offset:        0');
   });
 
+  it('gracefully shows defaults when state and cursor files are corrupt JSON', async () => {
+    writeFileSync(statePath,  'not-json{', 'utf8');
+    writeFileSync(cursorPath, 'also-corrupt}}}', 'utf8');
+    const { lines, print } = captureOutput();
+    await telemetrySyncStatusAction({ dbPath, statePath, cursorPath, output: print });
+    const text = lines.join('\n');
+    expect(text).toContain('Last attempt:         (never)');
+    expect(text).toContain('Cursor inode:         (uninitialised)');
+    expect(text).toContain('Cursor offset:        0');
+  });
+
   it('reflects config and persisted state', async () => {
     await withConfig(store => {
       setConfig(store, 'telemetry_sync_enabled', 'true');
@@ -176,6 +187,94 @@ describe('telemetrySyncRunAction', () => {
     const text = lines.join('\n');
     expect(text).toContain('Status:      ok');
     expect(text).toContain('Sent events: 1');
+  });
+
+  it('prints "noop" and exit code 0 when there are no events to send', async () => {
+    await withConfig(store => {
+      setConfig(store, 'telemetry_sync_api_key', 'phc_test');
+    });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    const { lines, print } = captureOutput();
+    await telemetrySyncRunAction({
+      dbPath, cursorPath, liveLogPath: livePath, rotatedLogPath: rotPath, errorLogPath, output: print,
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(0);
+    expect(lines.join('\n')).toContain('Status:      noop');
+  });
+
+  it('uses telemetry_sync_endpoint config override when sending', async () => {
+    await withConfig(store => {
+      setConfig(store, 'telemetry_sync_api_key',  'phc_test');
+      setConfig(store, 'telemetry_sync_endpoint', 'https://eu.example/capture/');
+    });
+    const ev = {
+      ts: '2026-05-19T10:00:00.000Z', v: 1,
+      installationId: '550e8400-e29b-41d4-a716-446655440000',
+      userId: 'u', teamId: 't', projectRoot: '/tmp/p', event: 'prompt_received',
+    };
+    appendFileSync(livePath, JSON.stringify(ev) + '\n', 'utf8');
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(null, { status: 200 }) as unknown as Response,
+    );
+
+    const { print } = captureOutput();
+    await telemetrySyncRunAction({
+      dbPath, cursorPath, liveLogPath: livePath, rotatedLogPath: rotPath, errorLogPath, output: print,
+    });
+    expect(fetchSpy.mock.calls[0][0]).toBe('https://eu.example/capture/');
+  });
+
+  it('sends raw projectRoot when telemetry_sync_hash_project_root=false', async () => {
+    await withConfig(store => {
+      setConfig(store, 'telemetry_sync_api_key',              'phc_test');
+      setConfig(store, 'telemetry_sync_hash_project_root',    'false');
+    });
+    const ev = {
+      ts: '2026-05-19T10:00:00.000Z', v: 1,
+      installationId: '550e8400-e29b-41d4-a716-446655440000',
+      userId: 'u', teamId: 't', projectRoot: '/home/jemi/raw-path', event: 'prompt_received',
+    };
+    appendFileSync(livePath, JSON.stringify(ev) + '\n', 'utf8');
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(null, { status: 200 }) as unknown as Response,
+    );
+
+    const { print } = captureOutput();
+    await telemetrySyncRunAction({
+      dbPath, cursorPath, liveLogPath: livePath, rotatedLogPath: rotPath, errorLogPath, output: print,
+    });
+    const init = fetchSpy.mock.calls[0][1] as { body: string };
+    const body = JSON.parse(init.body);
+    expect(body.batch[0].properties.projectRoot).toBe('/home/jemi/raw-path');
+  });
+
+  it('prints Retry-After value on 429', async () => {
+    await withConfig(store => {
+      setConfig(store, 'telemetry_sync_api_key', 'phc_test');
+    });
+    const ev = {
+      ts: '2026-05-19T10:00:00.000Z', v: 1,
+      installationId: '550e8400-e29b-41d4-a716-446655440000',
+      userId: 'u', teamId: 't', projectRoot: '/tmp/p', event: 'prompt_received',
+    };
+    appendFileSync(livePath, JSON.stringify(ev) + '\n', 'utf8');
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(null, { status: 429, headers: { 'Retry-After': '120' } }) as unknown as Response,
+    );
+
+    const { lines, print } = captureOutput();
+    await telemetrySyncRunAction({
+      dbPath, cursorPath, liveLogPath: livePath, rotatedLogPath: rotPath, errorLogPath, output: print,
+    });
+    const text = lines.join('\n');
+    expect(text).toContain('Status:      rate_limited');
+    expect(text).toContain('Retry-After: 120s');
+    expect(process.exitCode).toBe(1);
   });
 
   it('non-ok / non-noop result sets exit code 1', async () => {
