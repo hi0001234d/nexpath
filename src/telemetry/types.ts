@@ -39,3 +39,9 @@ export interface TelemetryEvent {
   event:           TelemetryEventName;
   [key: string]:   unknown;
 }
+
+export interface CursorState {
+  inode:          number;
+  offset:         number;
+  last_synced_ts: string | null;
+}

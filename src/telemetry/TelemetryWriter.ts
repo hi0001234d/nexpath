@@ -1,12 +1,12 @@
 import { appendFileSync, existsSync, mkdirSync, renameSync, statSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { homedir } from 'node:os';
+import { dirname } from 'node:path';
 import type { TelemetryEventName } from './types.js';
 import type { Store } from '../store/db.js';
 import { getConfig } from '../store/config.js';
 import { getInstallationId, getUserId, getTeamId } from './identity.js';
+import { TELEMETRY_PATH } from './paths.js';
 
-export const TELEMETRY_PATH = join(homedir(), '.nexpath', 'telemetry.jsonl');
+export { TELEMETRY_PATH };
 const MAX_BYTES = 5 * 1024 * 1024;
 
 // Module-level cache for the telemetry.enabled config value.
