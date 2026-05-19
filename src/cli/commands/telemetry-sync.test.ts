@@ -474,6 +474,22 @@ describe('telemetrySyncPingAction', () => {
     await telemetrySyncPingAction({ dbPath, output: print }, fetchMock);
     expect(lines.join('\n')).toContain('Retry-After: 60s');
   });
+
+  it('does NOT touch cursor or sync-state files (ping is isolated debug-only)', async () => {
+    await withConfig(store => setConfig(store, 'telemetry_sync_api_key', 'phc_test'));
+    const fetchMock = vi.fn<FetchLike>(async () => ({
+      ok: true, status: 200, headers: { get: () => null },
+    }));
+
+    const cursorPathBefore = existsSync(cursorPath);
+    const statePathBefore  = existsSync(statePath);
+
+    const { print } = captureOutput();
+    await telemetrySyncPingAction({ dbPath, output: print }, fetchMock);
+
+    expect(existsSync(cursorPath)).toBe(cursorPathBefore);
+    expect(existsSync(statePath)).toBe(statePathBefore);
+  });
 });
 
 describe('telemetrySyncRunAction (continued)', () => {

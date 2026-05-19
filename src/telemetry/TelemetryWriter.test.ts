@@ -43,6 +43,30 @@ describe('TelemetryWriter — hook latency budget (Plan §18)', () => {
     const written = JSON.parse(appends[0].trim());
     expect(written.event).toBe('prompt_received');
   });
+
+  it('with a real store where telemetry_sync_enabled=true, 1000 writeTelemetry calls still complete in <500ms', async () => {
+    const { writeTelemetry } = await import('./TelemetryWriter.js');
+    const fs = await import('node:fs');
+    vi.spyOn(fs, 'appendFileSync').mockImplementation(() => {});
+    vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+    vi.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined as never);
+    vi.spyOn(fs, 'statSync').mockReturnValue({ size: 100 } as ReturnType<typeof fs.statSync>);
+
+    const store = await openStore(':memory:');
+    try {
+      setConfig(store, 'telemetry_sync_enabled', 'true');
+      setConfig(store, 'telemetry.enabled',      'true');
+
+      const start = Date.now();
+      for (let i = 0; i < 1000; i++) {
+        writeTelemetry('/tmp/proj', 'prompt_received', { promptCount: i }, store);
+      }
+      const elapsed = Date.now() - start;
+      expect(elapsed).toBeLessThan(500);
+    } finally {
+      store.db.close();
+    }
+  });
 });
 
 describe('TelemetryWriter — writeTelemetry', () => {
