@@ -152,6 +152,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       // a Promise we deliberately don't await.
       void handleChatEvent(event);
     },
+    onTrace: (t) => {
+      // Diagnostic trace for M2 R3. Logs every processSqliteTarget /
+      // processWindsurfTarget invocation so the live race (if any) is
+      // visible in the Nexpath OutputChannel.
+      log(
+        `[nexpath] watcher trace: target=${t.targetPath.replace(/^.*workspaceStorage\//, '…/')}` +
+          ` initialPass=${t.isInitialPass} rows=${t.rowsLen}` +
+          ` primedTargets=${t.primedTargetsSize} seenSigs=${t.seenSignaturesSize}`,
+      );
+    },
     onError: (err) => {
       log(`[nexpath] watcher error: ${err.message}`);
       console.error('[nexpath] watcher error:', err);

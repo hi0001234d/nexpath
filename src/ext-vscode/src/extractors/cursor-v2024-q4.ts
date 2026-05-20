@@ -9,15 +9,26 @@ import type {
  *
  * Community-documented key: `aiService.prompts` — a single JSON array of all
  * prompts globally (not per-tab). Each entry has at minimum a `text` field;
- * older entries lack any tab/session identifier, so we fall back to the
- * entry's index in the array as `rawSessionId`.
+ * older entries lack any tab/session identifier.
  *
- * TODO(M2/B2): verify against a real Cursor v2024-Q4 `state.vscdb` dump
- * before Branch 6 ships. Schema details below reflect community
- * reverse-engineering and may need adjustment. Run
- * `scripts/dump-cursor-state.ts` on a machine with this Cursor version
- * installed to capture a verified fixture, then update the field names
- * here if they diverge.
+ * **`rawSessionId` is a content-stable constant (`ask-mode`), NOT the
+ * entry's array index.** Live-tested on Cursor 3.4.20 during M2 R3 manual
+ * testing (2026-05-20): the `aiService.prompts` array is a rolling FIFO
+ * (capacity ~10). When a new prompt is submitted, the oldest is dropped
+ * and ALL subsequent prompts shift left by one. Using the positional
+ * index as the session id meant the dedup signature
+ * (`sourcePath|rawSessionId|prompt`) changed for every existing prompt
+ * after each FIFO shift, causing every Cursor restart to re-emit the
+ * entire backlog. Switching to a stable session id makes the signature
+ * content-driven (sourcePath + prompt text), so a shifted array is
+ * correctly recognised as containing the same prompts.
+ *
+ * Trade-off: if a user submits the *exact same text* twice within the
+ * FIFO window, only the first emit fires. Layer C's session state will
+ * undercount by that one prompt. Acceptable because (a) byte-identical
+ * re-submission is rare in practice, (b) Layer C tolerates undercount
+ * gracefully (advisory gating still functions), and (c) it's strictly
+ * better than the FIFO-shift flood it replaces.
  */
 
 const PROMPTS_KEY = 'aiService.prompts';
@@ -52,14 +63,13 @@ export const cursorV2024Q4: ChatHistoryExtractor = {
 
     const events: ChatHistoryEvent[] = [];
     const entries = parsed as CursorV2024Q4PromptEntry[];
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i];
+    for (const entry of entries) {
       if (!entry || typeof entry.text !== 'string' || entry.text.length === 0) {
         continue;
       }
       events.push({
         prompt: entry.text,
-        rawSessionId: `prompts-index:${i}`,
+        rawSessionId: 'ask-mode',
         capturedAt: new Date(),
         sourcePath,
         extractorId: 'cursor-v2024-q4',

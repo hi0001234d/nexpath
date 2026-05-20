@@ -185,6 +185,47 @@ describe('createChatHistoryWatcher', () => {
     expect(watchFn).toHaveBeenCalledWith('/ws/codeium', expect.any(Function));
   });
 
+  it('FIFO-shift regression: a single new prompt that pushes the oldest out emits exactly once (real cursor-v2024-q4 wiring)', async () => {
+    // The exact M2 R3 live-test scenario (2026-05-20): Cursor's
+    // aiService.prompts is a rolling FIFO of ~10 prompts. When a new
+    // prompt is submitted, the oldest is dropped and ALL indexes shift.
+    // Before the cursor-v2024-q4 rawSessionId fix, the dedup signature
+    // shifted along with the indexes → every restart re-emitted all 10
+    // prompts. After the fix (rawSessionId = 'ask-mode' constant), the
+    // signature is sourcePath+text-driven and survives FIFO shifts.
+    // This test wires the real cursor-v2024-q4 extractor — via the
+    // unified extractor cache — to prove the integration works.
+    const { cursorV2024Q4 } = await import('./extractors/cursor-v2024-q4.js');
+    const initialPrompts = Array.from({ length: 10 }, (_, i) => ({ text: `prompt-${i}` }));
+    readItemTableFn.mockResolvedValueOnce([
+      { key: 'aiService.prompts', value: JSON.stringify(initialPrompts) },
+    ]);
+    const w = createChatHistoryWatcher({
+      targets: [cursorTarget('/p/state.vscdb', cursorV2024Q4)],
+      onEvent,
+      watchFn: watchFn as never,
+      readItemTableFn,
+      debounceMs: 1,
+    });
+    w.start();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(onEvent).toHaveBeenCalledTimes(0); // initial pass primed only
+
+    // User submits a new prompt — FIFO drops prompt-0, appends prompt-10.
+    const shifted = [
+      ...Array.from({ length: 9 }, (_, i) => ({ text: `prompt-${i + 1}` })),
+      { text: 'prompt-10' },
+    ];
+    readItemTableFn.mockResolvedValue([
+      { key: 'aiService.prompts', value: JSON.stringify(shifted) },
+    ]);
+    createdWatchers[0]!.emit('change', 'change', '/p/state.vscdb');
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(onEvent).toHaveBeenCalledTimes(1);
+    expect(onEvent.mock.calls[0]![0].prompt).toBe('prompt-10');
+  });
+
   it('prime-then-new-prompt: existing rows are primed silently, NEW row after start() emits once', async () => {
     // End-to-end of the M2 R2/R3 fix: extension activation must not replay
     // historical state.vscdb rows to Layer C; only prompts that appear
