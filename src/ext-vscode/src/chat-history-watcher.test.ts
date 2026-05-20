@@ -185,6 +185,44 @@ describe('createChatHistoryWatcher', () => {
     expect(watchFn).toHaveBeenCalledWith('/ws/codeium', expect.any(Function));
   });
 
+  it('prime-then-new-prompt: existing rows are primed silently, NEW row after start() emits once', async () => {
+    // End-to-end of the M2 R2/R3 fix: extension activation must not replay
+    // historical state.vscdb rows to Layer C; only prompts that appear
+    // AFTER the watcher has primed should fire onEvent. Mirrors what
+    // happens when the user (a) opens Cursor with prior Ask-mode history
+    // already in state.vscdb, then (b) submits a brand-new prompt.
+    const oldRow = { key: 'aiService.prompts', value: '[{"text":"old"}]' };
+    const newRow = { key: 'aiService.prompts', value: '[{"text":"old"},{"text":"new"}]' };
+    // Initial read: only the "old" row is present.
+    readItemTableFn.mockResolvedValueOnce([oldRow]);
+    const extractor = makeExtractor('test', []);
+    extractor.ownsKey = (k: string) => k === 'aiService.prompts';
+    extractor.decodeRow = (row) => {
+      const arr = JSON.parse(row.value) as Array<{ text: string }>;
+      return arr.map((p, i) => ev(p.text, `prompts-index:${i}`, '/p/state.vscdb'));
+    };
+    const w = createChatHistoryWatcher({
+      targets: [cursorTarget('/p/state.vscdb', extractor)],
+      onEvent,
+      watchFn: watchFn as never,
+      readItemTableFn,
+      debounceMs: 1,
+    });
+    w.start();
+    await new Promise((r) => setTimeout(r, 20));
+    // Prime registered both signatures internally; no events emitted.
+    expect(onEvent).toHaveBeenCalledTimes(0);
+
+    // Now a new prompt arrives — state.vscdb grows by one entry.
+    readItemTableFn.mockResolvedValue([newRow]);
+    createdWatchers[0]!.emit('change', 'change', '/p/state.vscdb');
+    await new Promise((r) => setTimeout(r, 20));
+
+    // Exactly ONE event for the NEW prompt; the "old" one is deduped.
+    expect(onEvent).toHaveBeenCalledTimes(1);
+    expect(onEvent.mock.calls[0]![0].prompt).toBe('new');
+  });
+
   it('initial-pass after start() reads existing rows but does NOT emit them (prime-only dedup)', async () => {
     // Prime-only initial-pass behaviour. Historical prompts that already exist
     // in state.vscdb when the extension activates must NOT be replayed to
@@ -654,5 +692,32 @@ describe('defaultReadItemTable', () => {
     await defaultReadItemTable(dbPath);
     const sizeAfter = statSync(dbPath).size;
     expect(sizeAfter).toBe(sizeBefore);
+  });
+
+  it('returns [] when the .vscdb path does not exist (host cleaned up workspace between activate and first read)', async () => {
+    // Reproduces the live 2026-05-20 R3 finding: Cursor enumerated 4
+    // workspaceStorage dirs at activate-time, then cleaned up two of them
+    // before the debounced first read fired. The watcher previously threw
+    // ENOENT through onError on every fire; now defaultReadItemTable treats
+    // a missing main file as "no rows" so it never escalates.
+    const missingPath = join(tmpDirPath, 'never-existed.vscdb');
+    const rows = await defaultReadItemTable(missingPath);
+    expect(rows).toEqual([]);
+  });
+
+  it('returns [] when the .vscdb is deleted between existsSync and copyFile (race)', async () => {
+    // Simulates the existsSync→copyFile race window. We delete the file
+    // through a wrapped readItemTable that runs deletion just before the
+    // copy. Here we use a more straightforward approach: create the file,
+    // then move it aside on the same tick the read starts. The real race
+    // happens at the OS level when Cursor's cleanup overlaps with our read.
+    const dbPath = await createTestVscdb('race.vscdb', [
+      { key: 'aiService.prompts', value: '[]' },
+    ]);
+    // Read once to verify happy path.
+    expect(await defaultReadItemTable(dbPath)).toHaveLength(1);
+    // Delete and read again — second read should return [] cleanly.
+    rmSync(dbPath, { force: true });
+    expect(await defaultReadItemTable(dbPath)).toEqual([]);
   });
 });

@@ -121,16 +121,38 @@ export const defaultReadItemTable: ReadItemTableFn = async (dbPath) => {
   const { tmpdir } = await import('node:os');
   const { basename, join } = await import('node:path');
 
+  // Race-safe read: a workspace storage dir enumerated at activate-time can
+  // be deleted by the host (e.g. Cursor cleaning up stale workspaces) before
+  // the first debounced read fires. Treat a missing main file as "no rows"
+  // rather than throwing a noisy ENOENT through onError. fs.watch on the
+  // missing path will continue to fire harmlessly if the file ever returns.
+  if (!existsSync(dbPath)) return [];
+
   const stagingDir = join(
     tmpdir(),
     `nexpath-watcher-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   );
   await mkdir(stagingDir, { recursive: true });
   const stagedMain = join(stagingDir, basename(dbPath));
-  await copyFile(dbPath, stagedMain);
+  try {
+    await copyFile(dbPath, stagedMain);
+  } catch (err) {
+    // Lost the race between the existsSync above and the copyFile here, or
+    // the file became unreadable for another reason. Clean up the (empty)
+    // staging dir and treat as no rows.
+    void rm(stagingDir, { recursive: true, force: true }).catch(() => {});
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    throw err;
+  }
   for (const suffix of ['-wal', '-shm'] as const) {
     const sibling = dbPath + suffix;
-    if (existsSync(sibling)) await copyFile(sibling, stagedMain + suffix);
+    if (existsSync(sibling)) {
+      try {
+        await copyFile(sibling, stagedMain + suffix);
+      } catch {
+        // WAL/SHM races are common; better-sqlite3 reads main regardless.
+      }
+    }
   }
 
   const mod = (await import('better-sqlite3')) as unknown as {
