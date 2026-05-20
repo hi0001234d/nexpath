@@ -15,10 +15,10 @@ export const GroundingConfig = {
 
   /**
    * Maximum number of grounding words the LLM may embed per option text.
-   * 2–3 is the sweet spot — enough to feel contextual, not enough to be awkward.
-   * Set to 1 for very conservative grounding; 5 for richer (higher hallucination risk).
+   * 3–5 is the sweet spot — enough to feel contextual, not enough to be awkward.
+   * Set to 1 for very conservative grounding; 9 for richer (higher hallucination risk).
    */
-  maxWords:     5,
+  maxWords:     9,
 
   /**
    * How many of the most recent session prompts to pass as grounding context.
@@ -26,7 +26,7 @@ export const GroundingConfig = {
    * Larger = broader (may pull in older, less relevant context).
    * Must not exceed MAX_HISTORY (30) in SessionStateManager.
    */
-  promptWindow: 5,
+  promptWindow: 12,
 } as const;
 
 export type GroundingConfigShape = typeof GroundingConfig;
