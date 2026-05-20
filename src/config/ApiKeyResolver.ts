@@ -22,8 +22,8 @@ export function isValidApiKey(key: string): boolean {
 export async function resolveOpenAIKey(projectRoot: string, opts: ResolveOptions = {}): Promise<string | null> {
   const fallbackPath = opts.fallbackPath ?? FALLBACK_PATH;
 
-  const envKey = process.env.OPENAI_API_KEY;
-  if (envKey && isValidApiKey(envKey)) return envKey;
+  const envKey = tryEnv();
+  if (envKey) return envKey;
 
   const dotenvKey = tryProjectDotenv(projectRoot);
   if (dotenvKey) {
@@ -49,10 +49,9 @@ export async function resolveOpenAIKey(projectRoot: string, opts: ResolveOptions
 export async function getKeySource(projectRoot: string, opts: ResolveOptions = {}): Promise<KeySource> {
   const fallbackPath = opts.fallbackPath ?? FALLBACK_PATH;
 
-  const envKey = process.env.OPENAI_API_KEY;
-  if (envKey && isValidApiKey(envKey)) return 'env';
-  if (tryProjectDotenv(projectRoot))    return 'dotenv';
-  if (await tryKeychain())              return 'keychain';
+  if (tryEnv())                            return 'env';
+  if (tryProjectDotenv(projectRoot))       return 'dotenv';
+  if (await tryKeychain())                 return 'keychain';
   if (await tryFallbackFile(fallbackPath)) return 'file';
   return 'none';
 }
@@ -77,6 +76,12 @@ export async function removeApiKey(opts: ResolveOptions = {}): Promise<void> {
 
   try { await deletePassword(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT); } catch { /* silent */ }
   try { await fs.unlink(fallbackPath); } catch { /* silent */ }
+}
+
+function tryEnv(): string | null {
+  const key = process.env.OPENAI_API_KEY;
+  if (key && isValidApiKey(key)) return key;
+  return null;
 }
 
 function tryProjectDotenv(projectRoot: string): string | null {
