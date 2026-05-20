@@ -198,21 +198,6 @@ export interface ChatHistoryWatcherOptions {
   targets: WatchTarget[];
   /** Emitted for every NEW user prompt detected. */
   onEvent: (e: ChatHistoryEvent) => void;
-  /**
-   * OPTIONAL — diagnostic trace emitted on every read, BEFORE any onEvent
-   * fires. Used during M2 manual testing to surface the runtime race that
-   * unit tests don't reproduce (concurrent processSqliteTarget calls,
-   * ENOENT-then-recovered targets, etc.). Production caller wires this to
-   * the OutputChannel so the live trace is visible alongside watcher
-   * events.
-   */
-  onTrace?: (trace: {
-    targetPath: string;
-    isInitialPass: boolean;
-    rowsLen: number;
-    primedTargetsSize: number;
-    seenSignaturesSize: number;
-  }) => void;
   /** Emitted on any non-fatal error (read failure, watch error, etc.). */
   onError?: (err: Error) => void;
   /**
@@ -294,17 +279,6 @@ export function createChatHistoryWatcher(
     try {
       const rows = await readItemTableFn(target.path);
       const isInitialPass = !primedTargets.has(target.path);
-      // Trace BEFORE marking primed so we observe the decision exactly as
-      // taken. This is the load-bearing signal for the M2 R3 diagnosis —
-      // if isInitialPass is false on the very first call for a target, a
-      // concurrent call has already raced ahead.
-      opts.onTrace?.({
-        targetPath: target.path,
-        isInitialPass,
-        rowsLen: rows.length,
-        primedTargetsSize: primedTargets.size,
-        seenSignaturesSize: seenSignatures.size,
-      });
       primedTargets.add(target.path);
 
       // Per-row, run ALL extractors that own the row's key — not just the
@@ -366,13 +340,6 @@ export function createChatHistoryWatcher(
     try {
       const files = await readWindsurfJsonFilesFn(target.path);
       const isInitialPass = !primedTargets.has(target.path);
-      opts.onTrace?.({
-        targetPath: target.path,
-        isInitialPass,
-        rowsLen: files.length,
-        primedTargetsSize: primedTargets.size,
-        seenSignaturesSize: seenSignatures.size,
-      });
       primedTargets.add(target.path);
       for (const { path: filePath, parsed } of files) {
         const decoded = decodeWindsurfFn(parsed, filePath);
