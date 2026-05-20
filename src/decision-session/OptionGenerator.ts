@@ -414,7 +414,7 @@ export async function generateOptionList(
           max_tokens:      OPTION_GEN_MAX_TOKENS,
           response_format: { type: 'json_object' },
         },
-        { timeout: 5_000 },
+        { timeout: 12_000 },
       );
 
       const raw    = response.choices[0]?.message?.content ?? '';
