@@ -1,6 +1,14 @@
 import { Command } from 'commander';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../store/db.js';
-import { configGetAction, configSetAction, configUnsetAction } from './commands/config.js';
+import {
+  configGetAction,
+  configSetAction,
+  configUnsetAction,
+  configSetApiKeyAction,
+  configRotateApiKeyAction,
+  configShowKeySourceAction,
+  configRemoveApiKeyAction,
+} from './commands/config.js';
 import { runMigrations } from '../store/schema.js';
 import { logAction } from './commands/log.js';
 import { storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAction } from './commands/store.js';
@@ -104,6 +112,34 @@ export function createProgram(): Command {
     .option('--db <path>', 'Path to the SQLite database file')
     .action(async (key: string, opts: { db?: string }) => {
       await configUnsetAction(key, opts.db);
+    });
+
+  configCmd
+    .command('set-api-key')
+    .description('Prompt for an OpenAI API key and store it securely (keychain → fallback file)')
+    .action(async () => {
+      await configSetApiKeyAction();
+    });
+
+  configCmd
+    .command('rotate-api-key')
+    .description('Replace the stored OpenAI API key (errors if no key is currently stored)')
+    .action(async () => {
+      await configRotateApiKeyAction();
+    });
+
+  configCmd
+    .command('show-key-source')
+    .description('Print which layer is supplying the OpenAI API key (env / dotenv / keychain / file / none)')
+    .action(async () => {
+      await configShowKeySourceAction();
+    });
+
+  configCmd
+    .command('remove-api-key')
+    .description('Remove the stored OpenAI API key from both the keychain and the fallback file')
+    .action(async () => {
+      await configRemoveApiKeyAction();
     });
 
   // ── Store command ─────────────────────────────────────────────────────────────
