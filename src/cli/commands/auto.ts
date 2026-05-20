@@ -456,12 +456,25 @@ export function registerAutoCommand(program: import('commander').Command): void 
 
       // Diagnostic: log the source layer that produced the key so a missing
       // key (Stage-2 failure) can be traced to the actual fallback chain.
+      const keySource = await getKeySource(opts.project);
+      const keyFound  = !!process.env['OPENAI_API_KEY'];
       logger.debug('env_load', {
         cwd:       process.cwd(),
         project:   opts.project,
-        keySource: await getKeySource(opts.project),
-        keyFound:  !!process.env['OPENAI_API_KEY'],
+        keySource,
+        keyFound,
       });
+
+      // Surface a single visible warn line when no source produced a key. We
+      // do NOT exit here — Stage-1-only hook calls (prompt capture, blocking
+      // gates, low-confidence classifications) don't need the key and should
+      // still run. Stage-2 paths surface a richer OpenAI error if they fire.
+      if (!keyFound) {
+        logger.warn('openai_api_key_missing', {
+          project:    opts.project,
+          actionable: 'Set OPENAI_API_KEY in the shell, in the project\'s .env file, or via the OS keychain — Stage 2 calls will fail until a key is configured.',
+        });
+      }
 
       try {
         const result = await runAuto(

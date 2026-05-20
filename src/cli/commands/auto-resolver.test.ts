@@ -77,6 +77,35 @@ describe('auto.ts → ApiKeyResolver wiring', () => {
     expect(resolver.resolveOpenAIKey).toHaveBeenCalledTimes(1);
   });
 
+  it('logs a warn line "openai_api_key_missing" when no source produces a key', async () => {
+    vi.mocked(resolver.resolveOpenAIKey).mockResolvedValueOnce(null);
+    vi.mocked(resolver.getKeySource).mockResolvedValueOnce('none');
+
+    const logger = await import('../../logger.js');
+    const warnSpy = vi.spyOn(logger.logger, 'warn');
+
+    await runAutoCommand(['--db', ':memory:', 'ok']);
+
+    const warnEvents = warnSpy.mock.calls.map(c => c[0]);
+    expect(warnEvents).toContain('openai_api_key_missing');
+  });
+
+  it('does NOT log "openai_api_key_missing" when the resolver promotes a valid key', async () => {
+    vi.mocked(resolver.resolveOpenAIKey).mockImplementationOnce(async () => {
+      process.env.OPENAI_API_KEY = 'sk-abcdefghij1234567890abcdefghij';
+      return process.env.OPENAI_API_KEY;
+    });
+    vi.mocked(resolver.getKeySource).mockResolvedValueOnce('env');
+
+    const logger = await import('../../logger.js');
+    const warnSpy = vi.spyOn(logger.logger, 'warn');
+
+    await runAutoCommand(['--db', ':memory:', 'ok']);
+
+    const warnEvents = warnSpy.mock.calls.map(c => c[0]);
+    expect(warnEvents).not.toContain('openai_api_key_missing');
+  });
+
   it('resolver is awaited before logger initialisation downstream', async () => {
     let resolveResolver!: (v: string | null) => void;
     vi.mocked(resolver.resolveOpenAIKey).mockReturnValueOnce(
