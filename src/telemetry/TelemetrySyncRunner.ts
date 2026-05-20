@@ -2,8 +2,8 @@ import { appendFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { readNewEvents, type ReadResult } from './TelemetryReader.js';
 import { saveCursor } from './TelemetryCursor.js';
-import { partitionEvents } from './TelemetryBatcher.js';
-import { postBatch, DEFAULT_POSTHOG_ENDPOINT, DEFAULT_TIMEOUT_MS, type FetchLike, type SendResult } from './TelemetryClient.js';
+import { buildEnvelopes } from './TelemetryBatcher.js';
+import { postEvent, DEFAULT_POSTHOG_ENDPOINT, DEFAULT_TIMEOUT_MS, type FetchLike, type SendResult } from './TelemetryClient.js';
 import { TELEMETRY_SYNC_ERROR_LOG_PATH } from './paths.js';
 import type { TelemetryEvent, TelemetryEventName } from './types.js';
 
@@ -40,6 +40,7 @@ export interface RunnerOptions {
   maxEventsPerBatch?:         number;
   maxBytesPerBatch?:          number;
   maxBatchesPerRun?:          number;
+  maxEventsPerRun?:           number;
   failureDisableThreshold?:   number;
   liveLogPath?:               string;
   rotatedLogPath?:            string;
@@ -95,15 +96,12 @@ export async function runSyncAttempt(
     };
   }
 
-  const { batches, batchEndIndices, consumedCount } = partitionEvents(filteredEvents, {
-    apiKey:             opts.apiKey,
-    hashProjectRoot:    opts.hashProjectRoot,
-    maxEventsPerBatch:  opts.maxEventsPerBatch,
-    maxBytesPerBatch:   opts.maxBytesPerBatch,
-    maxBatchesPerRun:   opts.maxBatchesPerRun,
-  });
+  const buildOptions: Parameters<typeof buildEnvelopes>[1] = { apiKey: opts.apiKey };
+  if (opts.hashProjectRoot !== undefined) buildOptions.hashProjectRoot = opts.hashProjectRoot;
+  if (opts.maxEventsPerRun !== undefined) buildOptions.maxEventsPerRun = opts.maxEventsPerRun;
+  const { envelopes, consumedCount } = buildEnvelopes(filteredEvents, buildOptions);
 
-  if (batches.length === 0) {
+  if (envelopes.length === 0) {
     saveCursor({
       inode:          read.newInode,
       offset:         read.newOffset,
@@ -119,25 +117,25 @@ export async function runSyncAttempt(
 
   emit('telemetry_sync_attempt', { event_count: consumedCount });
 
-  let sentEvents               = 0;
-  let lastSuccessfulBatchIndex = -1;
+  let sentEvents              = 0;
+  let lastSuccessfulFilteredIdx = -1;
 
-  for (let i = 0; i < batches.length; i++) {
-    const sendResult: SendResult = await postBatch(endpoint, batches[i], {
+  for (let i = 0; i < envelopes.length; i++) {
+    const sendResult: SendResult = await postEvent(endpoint, envelopes[i], {
       fetch:     opts.fetch,
       timeoutMs,
     });
 
     if (sendResult.ok) {
-      sentEvents += sendResult.acceptedCount;
-      lastSuccessfulBatchIndex = i;
+      sentEvents += 1;
+      lastSuccessfulFilteredIdx = i;
       continue;
     }
 
     const latencyMs = now().getTime() - startTime;
 
-    if (lastSuccessfulBatchIndex >= 0) {
-      advanceCursorAfter(read, filteredIndices, batchEndIndices[lastSuccessfulBatchIndex], opts.cursorPath, startTime);
+    if (lastSuccessfulFilteredIdx >= 0) {
+      advanceCursorAfter(read, filteredIndices, lastSuccessfulFilteredIdx + 1, opts.cursorPath, startTime);
     }
 
     if (sendResult.kind === 'network') {
@@ -167,8 +165,7 @@ export async function runSyncAttempt(
       logErrorLine(errorLogPath, {
         ts:          new Date(startTime).toISOString(),
         status:      sendResult.status,
-        batchIndex:  i,
-        batchSize:   batches[i].batch.length,
+        eventIndex:  i,
       });
       const newFailures   = consecutiveFailuresBefore + 1;
       const shouldDisable = newFailures >= failureThreshold;
@@ -192,7 +189,7 @@ export async function runSyncAttempt(
     };
   }
 
-  advanceCursorAfter(read, filteredIndices, batchEndIndices[batches.length - 1], opts.cursorPath, startTime);
+  advanceCursorAfter(read, filteredIndices, envelopes.length, opts.cursorPath, startTime);
 
   const latencyMs = now().getTime() - startTime;
   emit('telemetry_sync_success', { event_count: sentEvents, latency_ms: latencyMs });
@@ -213,6 +210,15 @@ function advanceCursorAfter(
   startTimeMs:        number,
 ): void {
   if (filteredCount === 0) return;
+
+  if (filteredCount === filteredIndices.length) {
+    saveCursor({
+      inode:          read.newInode,
+      offset:         read.newOffset,
+      last_synced_ts: new Date(startTimeMs).toISOString(),
+    }, cursorPath);
+    return;
+  }
 
   const lastFilteredIdx = filteredCount - 1;
   const originalIdx     = filteredIndices[lastFilteredIdx];

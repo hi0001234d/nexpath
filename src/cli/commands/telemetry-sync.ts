@@ -5,11 +5,11 @@ import { getConfig, setConfig } from '../../store/config.js';
 import { loadSyncState } from '../../telemetry/TelemetrySyncScheduler.js';
 import { loadCursor, saveCursor, clearCursor } from '../../telemetry/TelemetryCursor.js';
 import { runSyncAttempt } from '../../telemetry/TelemetrySyncRunner.js';
-import { DEFAULT_POSTHOG_ENDPOINT, postBatch, type FetchLike } from '../../telemetry/TelemetryClient.js';
+import { DEFAULT_POSTHOG_ENDPOINT, postEvent, type FetchLike } from '../../telemetry/TelemetryClient.js';
 import { POSTHOG_LIB_NAME, POSTHOG_LIB_VERSION } from '../../telemetry/TelemetryBatcher.js';
 import { TELEMETRY_PATH, TELEMETRY_SYNC_CURSOR_PATH } from '../../telemetry/paths.js';
 import { logger } from '../../logger.js';
-import type { PostHogBatchEnvelope } from '../../telemetry/types.js';
+import type { PostHogSingleEnvelope } from '../../telemetry/types.js';
 
 const NEXPATH_VERSION = '0.1.1';
 
@@ -186,22 +186,20 @@ export async function telemetrySyncPingAction(
     }
     const endpoint = getConfig(store.db, 'telemetry_sync_endpoint') ?? DEFAULT_POSTHOG_ENDPOINT;
 
-    const envelope: PostHogBatchEnvelope = {
-      api_key: apiKey,
-      batch: [{
-        event:       'nexpath_ping_test',
-        distinct_id: `nexpath-ping-${Date.now()}`,
-        timestamp:   new Date().toISOString(),
-        properties: {
-          $lib:          POSTHOG_LIB_NAME,
-          $lib_version:  POSTHOG_LIB_VERSION,
-          ping:          true,
-        },
-      }],
+    const envelope: PostHogSingleEnvelope = {
+      api_key:     apiKey,
+      event:       'nexpath_ping_test',
+      distinct_id: `nexpath-ping-${Date.now()}`,
+      timestamp:   new Date().toISOString(),
+      properties: {
+        $lib:          POSTHOG_LIB_NAME,
+        $lib_version:  POSTHOG_LIB_VERSION,
+        ping:          true,
+      },
     };
 
     print(`Pinging ${endpoint}...`);
-    const result = await postBatch(endpoint, envelope, { fetch: fetchImpl });
+    const result = await postEvent(endpoint, envelope, { fetch: fetchImpl });
 
     if (result.ok) {
       print(`✓ Ping succeeded (HTTP ${result.status}). Telemetry sync is reachable.`);

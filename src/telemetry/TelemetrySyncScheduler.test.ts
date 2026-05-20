@@ -498,10 +498,12 @@ describe('createDefaultScheduler → runner integration', () => {
         fetch: fetch as unknown as never,
       });
       await s.syncNow();
-      expect(fetch).toHaveBeenCalledTimes(1);
-      const body = JSON.parse((fetch.mock.calls[0][1] as { body: string }).body);
-      expect(body.api_key).toBe('phc_int');
-      expect(body.batch).toHaveLength(2);
+      expect(fetch).toHaveBeenCalledTimes(2);
+      const body0 = JSON.parse((fetch.mock.calls[0][1] as { body: string }).body);
+      const body1 = JSON.parse((fetch.mock.calls[1][1] as { body: string }).body);
+      expect(body0.api_key).toBe('phc_int');
+      expect(body0.event).toBe('prompt_received');
+      expect(body1.event).toBe('prompt_classified');
       expect(s.getState().consecutive_failures).toBe(0);
     } finally {
       closeStore(store);

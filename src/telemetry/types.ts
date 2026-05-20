@@ -58,14 +58,10 @@ export interface SyncState {
   consecutive_failures: number;
 }
 
-export interface PostHogEvent {
+export interface PostHogSingleEnvelope {
+  api_key:     string;
   event:       string;
   distinct_id: string;
   timestamp:   string;
   properties:  Record<string, unknown>;
-}
-
-export interface PostHogBatchEnvelope {
-  api_key: string;
-  batch:   PostHogEvent[];
 }

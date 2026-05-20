@@ -118,9 +118,9 @@ describe('TelemetrySyncRunner — success path', () => {
       fetch,
     });
     expect(result.sentEvents).toBe(2);
-    const body = JSON.parse((fetch.mock.calls[0][1] as { body: string }).body);
-    expect(body.batch).toHaveLength(2);
-    expect(body.batch.map((e: { event: string }) => e.event)).toEqual(['prompt_received', 'prompt_classified']);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const events = fetch.mock.calls.map(c => JSON.parse((c[1] as { body: string }).body).event);
+    expect(events).toEqual(['prompt_received', 'prompt_classified']);
   });
 });
 
@@ -214,7 +214,7 @@ describe('TelemetrySyncRunner — HTTP errors', () => {
 });
 
 describe('TelemetrySyncRunner — partial-credit cursor advance', () => {
-  it('after first batch succeeds and second fails, cursor advances by first batch only', async () => {
+  it('after first event POST succeeds and second fails, cursor advances by one event only', async () => {
     for (let i = 0; i < 5; i++) writeEvent(livePath, 'prompt_received', { promptCount: i });
 
     let callCount = 0;
@@ -225,30 +225,27 @@ describe('TelemetrySyncRunner — partial-credit cursor advance', () => {
     });
 
     const result = await runSyncAttempt({
-      apiKey:             API_KEY,
-      liveLogPath:        livePath, rotatedLogPath: rotPath, cursorPath, errorLogPath,
+      apiKey:        API_KEY,
+      liveLogPath:   livePath, rotatedLogPath: rotPath, cursorPath, errorLogPath,
       fetch,
-      maxEventsPerBatch:  2,
-      maxBatchesPerRun:   10,
     });
 
     expect(result.status).toBe('network');
-    expect(result.sentEvents).toBe(2);
+    expect(result.sentEvents).toBe(1);
     const cursor = loadCursor(cursorPath);
     expect(cursor).not.toBeNull();
     expect(cursor!.offset).toBeGreaterThan(0);
     expect(cursor!.offset).toBeLessThan(statSync(livePath).size);
   });
 
-  it('cap-hit (consumedCount < events.length): cursor advances only through consumed events', async () => {
+  it('cap-hit (maxEventsPerRun): cursor advances only through consumed events', async () => {
     for (let i = 0; i < 8; i++) writeEvent(livePath, 'prompt_received', { promptCount: i });
 
     const result = await runSyncAttempt({
-      apiKey:             API_KEY,
-      liveLogPath:        livePath, rotatedLogPath: rotPath, cursorPath, errorLogPath,
-      fetch:              mockOkFetch(),
-      maxEventsPerBatch:  2,
-      maxBatchesPerRun:   2,
+      apiKey:           API_KEY,
+      liveLogPath:      livePath, rotatedLogPath: rotPath, cursorPath, errorLogPath,
+      fetch:            mockOkFetch(),
+      maxEventsPerRun:  4,
     });
 
     expect(result.status).toBe('ok');
@@ -377,13 +374,12 @@ describe('TelemetrySyncRunner — error log format', () => {
     const parsed = JSON.parse(lines[0]);
     expect(parsed.status).toBe(422);
     expect(typeof parsed.ts).toBe('string');
-    expect(typeof parsed.batchIndex).toBe('number');
-    expect(typeof parsed.batchSize).toBe('number');
+    expect(typeof parsed.eventIndex).toBe('number');
   });
 });
 
 describe('TelemetrySyncRunner — high-volume scenario (50-event scale)', () => {
-  it('sends 50 events across multiple batches, advances cursor to EOF, emits success', async () => {
+  it('sends 50 events as 50 individual POSTs, advances cursor to EOF, emits success', async () => {
     for (let i = 0; i < 50; i++) writeEvent(livePath, 'prompt_received', { promptCount: i });
 
     const fetch = vi.fn<FetchLike>(async () => ({
@@ -391,16 +387,14 @@ describe('TelemetrySyncRunner — high-volume scenario (50-event scale)', () => 
     }));
     const emit  = vi.fn();
     const result = await runSyncAttempt({
-      apiKey:             API_KEY,
-      liveLogPath:        livePath, rotatedLogPath: rotPath, cursorPath, errorLogPath,
+      apiKey:        API_KEY,
+      liveLogPath:   livePath, rotatedLogPath: rotPath, cursorPath, errorLogPath,
       fetch, emitTelemetry: emit,
-      maxEventsPerBatch:  20,
-      maxBatchesPerRun:   10,
     });
 
     expect(result.status).toBe('ok');
     expect(result.sentEvents).toBe(50);
-    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(fetch).toHaveBeenCalledTimes(50);
     expect(loadCursor(cursorPath)?.offset).toBe(statSync(livePath).size);
     const attempt = emit.mock.calls.find(c => c[0] === 'telemetry_sync_attempt');
     expect((attempt![1] as { event_count: number }).event_count).toBe(50);

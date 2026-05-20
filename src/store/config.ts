@@ -9,7 +9,7 @@ export const DEFAULT_CONFIG: Record<string, string> = {
   log_level: 'info',
   'telemetry.enabled': 'true',
   telemetry_sync_endpoint: 'https://us.i.posthog.com/capture/',
-  telemetry_sync_api_key:  'phc_nL63UqSD2meGY4wPhBFAkB2yu34QZbwxvwbacA8922DJ',
+  telemetry_sync_api_key:  'phc_mBETUUXjX2MLDCBpHmRoVMqHmRF2dUpnuByqVGw5qej9',
 };
 
 /** Returns true only if the key has been explicitly written to the config table. */

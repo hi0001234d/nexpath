@@ -370,7 +370,7 @@ describe('telemetrySyncRunAction', () => {
     });
     const init = fetchSpy.mock.calls[0][1] as { body: string };
     const body = JSON.parse(init.body);
-    expect(body.batch[0].properties.projectRoot).toBe('/home/jemi/raw-path');
+    expect(body.properties.projectRoot).toBe('/home/jemi/raw-path');
   });
 
   it('prints Retry-After value on 429', async () => {
@@ -424,10 +424,11 @@ describe('telemetrySyncPingAction', () => {
     const init = fetchMock.mock.calls[0][1];
     const body = JSON.parse(init.body);
     expect(body.api_key).toBe('phc_ping_test');
-    expect(body.batch).toHaveLength(1);
-    expect(body.batch[0].event).toBe('nexpath_ping_test');
-    expect(body.batch[0].properties.ping).toBe(true);
-    expect(body.batch[0].properties.$lib).toBe('nexpath');
+    expect(body.event).toBe('nexpath_ping_test');
+    expect(body.distinct_id).toMatch(/^nexpath-ping-/);
+    expect(body.properties.ping).toBe(true);
+    expect(body.properties.$lib).toBe('nexpath');
+    expect(body.batch).toBeUndefined();
     expect(lines.join('\n')).toContain('Ping succeeded');
   });
 

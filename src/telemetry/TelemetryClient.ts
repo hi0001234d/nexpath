@@ -1,5 +1,5 @@
 import { POSTHOG_LIB_VERSION } from './TelemetryBatcher.js';
-import type { PostHogBatchEnvelope } from './types.js';
+import type { PostHogSingleEnvelope } from './types.js';
 
 export const DEFAULT_POSTHOG_ENDPOINT = 'https://us.i.posthog.com/capture/';
 export const DEFAULT_TIMEOUT_MS       = 10_000;
@@ -23,7 +23,7 @@ export interface ClientOptions {
 export interface SuccessResult {
   ok:            true;
   status:        number;
-  acceptedCount: number;
+  acceptedCount: 1;
 }
 
 export interface NetworkErrorResult {
@@ -40,9 +40,9 @@ export interface HttpErrorResult {
 
 export type SendResult = SuccessResult | NetworkErrorResult | HttpErrorResult;
 
-export async function postBatch(
+export async function postEvent(
   url:      string,
-  envelope: PostHogBatchEnvelope,
+  envelope: PostHogSingleEnvelope,
   opts:     ClientOptions = {},
 ): Promise<SendResult> {
   const fetchImpl = opts.fetch     ?? (globalThis.fetch as unknown as FetchLike);
@@ -63,7 +63,7 @@ export async function postBatch(
     });
 
     if (res.ok) {
-      return { ok: true, status: res.status, acceptedCount: envelope.batch.length };
+      return { ok: true, status: res.status, acceptedCount: 1 };
     }
 
     if (res.status === 429) {

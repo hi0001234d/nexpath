@@ -1,12 +1,10 @@
 import { createHash } from 'node:crypto';
-import type { PostHogBatchEnvelope, PostHogEvent, TelemetryEvent } from './types.js';
+import type { PostHogSingleEnvelope, TelemetryEvent } from './types.js';
 
 export const POSTHOG_LIB_NAME    = 'nexpath';
 export const POSTHOG_LIB_VERSION = '0.1.1';
 
-export const MAX_EVENTS_PER_BATCH = 500;
-export const MAX_BYTES_PER_BATCH  = 256 * 1024;
-export const MAX_BATCHES_PER_RUN  = 4;
+export const MAX_EVENTS_PER_RUN = 2000;
 
 export const ALLOWED_PROPERTY_KEYS: ReadonlyArray<string> = [
   '$lib', '$lib_version',
@@ -25,30 +23,28 @@ export const ALLOWED_PROPERTY_KEYS: ReadonlyArray<string> = [
   'event_count', 'latency_ms', 'http_status',
 ];
 
-export interface BatchOptions {
+export interface BuildOptions {
   apiKey:           string;
   hashProjectRoot?: boolean;
   libVersion?:      string;
   allowedKeys?:     ReadonlyArray<string>;
-  maxEventsPerBatch?: number;
-  maxBytesPerBatch?:  number;
-  maxBatchesPerRun?:  number;
+  maxEventsPerRun?: number;
 }
 
-export interface BatchPartitions {
-  batches:          PostHogBatchEnvelope[];
-  batchEndIndices:  number[];
-  consumedCount:    number;
+export interface BuildResult {
+  envelopes:     PostHogSingleEnvelope[];
+  consumedCount: number;
 }
 
 export function hashProjectRootValue(raw: string): string {
   return `sha256:${createHash('sha256').update(raw).digest('hex')}`;
 }
 
-export function toPostHogEvent(
-  raw:  TelemetryEvent,
-  opts: { hashProjectRoot: boolean; libVersion: string; allowedKeys: ReadonlyArray<string> },
-): PostHogEvent | null {
+export function toPostHogEnvelope(
+  raw:    TelemetryEvent,
+  apiKey: string,
+  opts:   { hashProjectRoot: boolean; libVersion: string; allowedKeys: ReadonlyArray<string> },
+): PostHogSingleEnvelope | null {
   if (typeof raw.installationId !== 'string' || raw.installationId === '') return null;
 
   const properties: Record<string, unknown> = {
@@ -68,6 +64,7 @@ export function toPostHogEvent(
   }
 
   return {
+    api_key:     apiKey,
     event:       raw.event,
     distinct_id: raw.installationId,
     timestamp:   raw.ts,
@@ -75,54 +72,27 @@ export function toPostHogEvent(
   };
 }
 
-export function partitionEvents(events: TelemetryEvent[], opts: BatchOptions): BatchPartitions {
-  const libVersion      = opts.libVersion       ?? POSTHOG_LIB_VERSION;
-  const allowedKeys     = opts.allowedKeys      ?? ALLOWED_PROPERTY_KEYS;
-  const hashProjectRoot = opts.hashProjectRoot  ?? true;
-  const maxEvents       = opts.maxEventsPerBatch ?? MAX_EVENTS_PER_BATCH;
-  const maxBytes        = opts.maxBytesPerBatch  ?? MAX_BYTES_PER_BATCH;
-  const maxBatches      = opts.maxBatchesPerRun  ?? MAX_BATCHES_PER_RUN;
+export function buildEnvelopes(events: TelemetryEvent[], opts: BuildOptions): BuildResult {
+  const libVersion       = opts.libVersion       ?? POSTHOG_LIB_VERSION;
+  const allowedKeys      = opts.allowedKeys      ?? ALLOWED_PROPERTY_KEYS;
+  const hashProjectRoot  = opts.hashProjectRoot  ?? true;
+  const maxEventsPerRun  = opts.maxEventsPerRun  ?? MAX_EVENTS_PER_RUN;
 
-  const batches:         PostHogBatchEnvelope[] = [];
-  const batchEndIndices: number[]               = [];
-  let current:           PostHogEvent[]         = [];
-  let currentBytes     = 0;
-  let consumedCount    = 0;
-
-  const flush = () => {
-    if (current.length > 0) {
-      batches.push({ api_key: opts.apiKey, batch: current });
-      batchEndIndices.push(consumedCount);
-      current = [];
-      currentBytes = 0;
-    }
-  };
+  const envelopes:     PostHogSingleEnvelope[] = [];
+  let consumedCount = 0;
 
   for (const raw of events) {
-    if (batches.length >= maxBatches) break;
+    if (envelopes.length >= maxEventsPerRun) break;
 
-    const phEvent = toPostHogEvent(raw, { hashProjectRoot, libVersion, allowedKeys });
-    if (phEvent === null) {
+    const envelope = toPostHogEnvelope(raw, opts.apiKey, { hashProjectRoot, libVersion, allowedKeys });
+    if (envelope === null) {
       consumedCount++;
       continue;
     }
 
-    const phBytes = Buffer.byteLength(JSON.stringify(phEvent), 'utf8');
-    const wouldOverflow =
-      current.length > 0 &&
-      (current.length >= maxEvents || currentBytes + phBytes > maxBytes);
-
-    if (wouldOverflow) {
-      flush();
-      if (batches.length >= maxBatches) break;
-    }
-
-    current.push(phEvent);
-    currentBytes += phBytes;
+    envelopes.push(envelope);
     consumedCount++;
   }
 
-  if (batches.length < maxBatches) flush();
-
-  return { batches, batchEndIndices, consumedCount };
+  return { envelopes, consumedCount };
 }
