@@ -392,17 +392,19 @@ describe('generateOptionList', () => {
 
 describe('buildOptionPrompt — feature word grounding', () => {
   it('includes grounding section with last promptWindow prompts when enabled', () => {
-    const history = Array.from({ length: 7 }, (_, i) => makePrompt(`prompt-text-${i}`, i));
+    const total = GroundingConfig.promptWindow + 3;
+    const history = Array.from({ length: total }, (_, i) => makePrompt(`prompt-text-${i}`, i));
     const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
     expect(prompt).toContain('Feature word grounding');
-    // Last promptWindow (5) entries — indices 2..6 — must appear in prompt
-    for (let i = 2; i < 7; i++) {
+    // Last promptWindow entries must appear in the grounding block
+    for (let i = 3; i < total; i++) {
       expect(prompt).toContain(`prompt-text-${i}`);
     }
     // Entries outside the window must not appear in the grounding block
     const groundingBlock = prompt.slice(prompt.indexOf('Feature word grounding'));
     expect(groundingBlock).not.toContain('prompt-text-0');
     expect(groundingBlock).not.toContain('prompt-text-1');
+    expect(groundingBlock).not.toContain('prompt-text-2');
   });
 
   it('omits grounding section when GroundingConfig.enabled is false', () => {
@@ -428,15 +430,16 @@ describe('buildOptionPrompt — feature word grounding', () => {
   });
 
   it('grounding section contains exactly promptWindow entries, not all history', () => {
-    const history = Array.from({ length: 10 }, (_, i) => makePrompt(`feat-${i}`, i));
+    const total = GroundingConfig.promptWindow + 3;
+    const history = Array.from({ length: total }, (_, i) => makePrompt(`feat-${i}`, i));
     const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
     const groundingBlock = prompt.slice(prompt.indexOf('Feature word grounding'));
-    // Last 5 (promptWindow) entries — indices 5..9 — must appear in grounding block
-    for (let i = 5; i < 10; i++) {
+    // Last promptWindow entries must appear in grounding block
+    for (let i = 3; i < total; i++) {
       expect(groundingBlock).toContain(`feat-${i}`);
     }
-    // Earlier entries must not appear in the grounding block
-    for (let i = 0; i < 5; i++) {
+    // Earlier entries (outside the window) must not appear
+    for (let i = 0; i < 3; i++) {
       expect(groundingBlock).not.toContain(`feat-${i}`);
     }
   });
