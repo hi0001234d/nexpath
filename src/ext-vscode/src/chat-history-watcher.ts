@@ -232,6 +232,17 @@ export function createChatHistoryWatcher(
   const seenSignatures = new Set<string>();
   /** Per-target extractor cache — first read decides; subsequent reads reuse. */
   const extractorCache = new Map<string, readonly ChatHistoryExtractor[]>();
+  /**
+   * Targets whose initial read has completed. On the first read for a target,
+   * existing rows are registered in `seenSignatures` WITHOUT calling `onEvent`
+   * — this matches the Claude-Code-hook contract that downstream Layer C is
+   * built around (only NEW user prompts feed the pipeline; historical prompts
+   * accumulated in state.vscdb are NOT replayed every activation). Without
+   * this prime-only behaviour, every Cursor restart re-emitted the entire
+   * prompt backlog, flooding Layer C's session-state machine and producing
+   * advisory storms that bypass the 3-prompt warmup + 5-prompt cooldown gates.
+   */
+  const primedTargets = new Set<string>();
 
   function signatureOf(e: ChatHistoryEvent): string {
     return `${e.sourcePath}|${e.rawSessionId}|${e.prompt}`;
@@ -245,6 +256,8 @@ export function createChatHistoryWatcher(
   async function processSqliteTarget(target: WatchTarget): Promise<void> {
     try {
       const rows = await readItemTableFn(target.path);
+      const isInitialPass = !primedTargets.has(target.path);
+      primedTargets.add(target.path);
 
       // Per-row, run ALL extractors that own the row's key — not just the
       // single "fingerprint winner". The old logic picked one extractor via
@@ -289,6 +302,9 @@ export function createChatHistoryWatcher(
             const sig = signatureOf(ev);
             if (seenSignatures.has(sig)) continue;
             seenSignatures.add(sig);
+            // Initial pass: prime dedup only. Subsequent fs.watch fires emit
+            // only truly-new prompts. See primedTargets docstring.
+            if (isInitialPass) continue;
             opts.onEvent({ ...ev, capturedAt: nowFn() });
           }
         }
@@ -301,12 +317,15 @@ export function createChatHistoryWatcher(
   async function processWindsurfTarget(target: WatchTarget): Promise<void> {
     try {
       const files = await readWindsurfJsonFilesFn(target.path);
+      const isInitialPass = !primedTargets.has(target.path);
+      primedTargets.add(target.path);
       for (const { path: filePath, parsed } of files) {
         const decoded = decodeWindsurfFn(parsed, filePath);
         for (const ev of decoded) {
           const sig = signatureOf(ev);
           if (seenSignatures.has(sig)) continue;
           seenSignatures.add(sig);
+          if (isInitialPass) continue;
           opts.onEvent({ ...ev, capturedAt: nowFn() });
         }
       }

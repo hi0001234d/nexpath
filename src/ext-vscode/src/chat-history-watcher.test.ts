@@ -109,9 +109,10 @@ describe('createChatHistoryWatcher', () => {
   });
 
   it('WAL sibling change triggers a re-read of the main target (WAL-mode liveness)', async () => {
-    const fakeRows: ItemTableRow[] = [{ key: 'k1', value: 'v1' }];
-    readItemTableFn.mockResolvedValue(fakeRows);
-    const extractor = makeExtractor('test', [ev('prompt-from-wal', 's-1', '/p/state.vscdb')]);
+    // Start with no rows so the initial pass primes nothing; then a NEW row
+    // appears via a WAL-sibling change and that should produce one emit.
+    readItemTableFn.mockResolvedValue([]);
+    const extractor = makeExtractor('test', [ev('prompt-after-wal-fire', 's-2', '/p/state.vscdb')]);
     const w = createChatHistoryWatcher({
       targets: [cursorTarget('/p/state.vscdb', extractor)],
       onEvent,
@@ -120,20 +121,17 @@ describe('createChatHistoryWatcher', () => {
       debounceMs: 5,
     });
     w.start();
-    // Initial pass first
     await new Promise((r) => setTimeout(r, 20));
-    expect(onEvent).toHaveBeenCalledTimes(1);
-    onEvent.mockClear();
-    readItemTableFn.mockResolvedValue([{ key: 'k1', value: 'v1' }, { key: 'k2', value: 'v2' }]);
-    extractor.decodeRow = () => [ev('prompt-after-wal-fire', 's-2', '/p/state.vscdb')];
+    // After prime: no events emitted yet.
+    expect(onEvent).toHaveBeenCalledTimes(0);
 
+    // Now a new row appears. WAL-sibling change should drive a re-read.
+    readItemTableFn.mockResolvedValue([{ key: 'k2', value: 'v2' }]);
     // The 2nd watcher in createdWatchers is the -wal sibling (index 1).
-    // Emit 'change' on it — the listener should re-schedule the main target.
     expect(createdWatchers.length).toBeGreaterThanOrEqual(2);
     createdWatchers[1]!.emit('change', 'change', '/p/state.vscdb-wal');
     await new Promise((r) => setTimeout(r, 30));
 
-    // After the WAL fire + re-schedule + read, we should see the NEW event.
     expect(onEvent).toHaveBeenCalledTimes(1);
     expect(onEvent.mock.calls[0]![0].prompt).toBe('prompt-after-wal-fire');
   });
@@ -145,11 +143,8 @@ describe('createChatHistoryWatcher', () => {
     // 1 match each, registry order picked cursor-v2025-q1, which doesn't own
     // aiService.prompts → all Ask-mode prompts were silently discarded.
     // Fix: per-row, run every extractor whose ownsKey returns true.
-    const fakeRows: ItemTableRow[] = [
-      { key: 'composer.composerData', value: JSON.stringify({ selectedComposerIds: [] }) },
-      { key: 'aiService.prompts', value: JSON.stringify([{ text: 'real prompt' }]) },
-    ];
-    readItemTableFn.mockResolvedValue(fakeRows);
+    // Empty first read primes nothing; then the multi-key rows appear.
+    readItemTableFn.mockResolvedValue([]);
 
     const w = createChatHistoryWatcher({
       targets: [{ path: '/p/state.vscdb', kind: 'cursor-sqlite' }],
@@ -159,6 +154,13 @@ describe('createChatHistoryWatcher', () => {
       debounceMs: 1,
     });
     w.start();
+    await new Promise((r) => setTimeout(r, 20));
+
+    readItemTableFn.mockResolvedValue([
+      { key: 'composer.composerData', value: JSON.stringify({ selectedComposerIds: [] }) },
+      { key: 'aiService.prompts', value: JSON.stringify([{ text: 'real prompt' }]) },
+    ]);
+    createdWatchers[0]!.emit('change', 'change', '/p/state.vscdb');
     await new Promise((r) => setTimeout(r, 20));
 
     // Expect: cursor-v2024-q4 decodes aiService.prompts → 1 event with our prompt
@@ -183,7 +185,13 @@ describe('createChatHistoryWatcher', () => {
     expect(watchFn).toHaveBeenCalledWith('/ws/codeium', expect.any(Function));
   });
 
-  it('initial-pass after start() reads + emits events for already-existing rows', async () => {
+  it('initial-pass after start() reads existing rows but does NOT emit them (prime-only dedup)', async () => {
+    // Prime-only initial-pass behaviour. Historical prompts that already exist
+    // in state.vscdb when the extension activates must NOT be replayed to
+    // Layer C — Layer C is built around Claude Code's hook semantics, which
+    // fire only on NEW prompts. Replaying historical prompts on every Cursor
+    // restart bypassed Layer C's 3-prompt warmup + 5-prompt cooldown gates
+    // and caused advisory storms (root-caused during M2 R2/R3 manual testing).
     const fakeRows: ItemTableRow[] = [{ key: 'k1', value: 'v1' }];
     readItemTableFn.mockResolvedValue(fakeRows);
     const extractor = makeExtractor('test', [ev('hi', 's-1', '/p')]);
@@ -196,13 +204,17 @@ describe('createChatHistoryWatcher', () => {
     });
     w.start();
     await new Promise((r) => setTimeout(r, 20));
-    expect(onEvent).toHaveBeenCalledTimes(1);
-    expect(onEvent.mock.calls[0]![0].prompt).toBe('hi');
+    // Read happened (so dedup is primed) but no event was emitted.
+    expect(readItemTableFn).toHaveBeenCalledTimes(1);
+    expect(onEvent).toHaveBeenCalledTimes(0);
   });
 
   it('deduplicates events across multiple reads (signature dedup)', async () => {
-    readItemTableFn.mockResolvedValue([{ key: 'k', value: 'v' }]);
+    // Initial pass primes dedup with the existing row (no emit). Then we
+    // simulate a NEW row appearing — that's the first emit. A subsequent
+    // change with the same row hits dedup and does not re-emit.
     const extractor = makeExtractor('test', [ev('same', 's-1', '/p')]);
+    readItemTableFn.mockResolvedValue([]); // first read = empty (prime with no rows)
     const w = createChatHistoryWatcher({
       targets: [cursorTarget('/p', extractor)],
       onEvent,
@@ -213,13 +225,14 @@ describe('createChatHistoryWatcher', () => {
     w.start();
     await new Promise((r) => setTimeout(r, 20));
 
-    // simulate three more fs.watch events
+    // Now a real new prompt arrives on disk. Subsequent reads return the row.
+    readItemTableFn.mockResolvedValue([{ key: 'k', value: 'v' }]);
     createdWatchers[0]!.emit('change', 'change', '/p');
     await new Promise((r) => setTimeout(r, 20));
     createdWatchers[0]!.emit('change', 'change', '/p');
     await new Promise((r) => setTimeout(r, 20));
 
-    // still only one emission (the same prompt was already seen)
+    // First post-prime read emitted once; subsequent reads dedup the same row.
     expect(onEvent).toHaveBeenCalledTimes(1);
   });
 
@@ -319,7 +332,9 @@ describe('createChatHistoryWatcher', () => {
 
   it('stamps capturedAt with nowFn (clock injection)', async () => {
     const fixedDate = new Date('2026-05-14T17:00:00Z');
-    readItemTableFn.mockResolvedValue([{ key: 'k', value: 'v' }]);
+    // Empty first read so the initial pass primes nothing — then the real
+    // emit happens after a simulated change.
+    readItemTableFn.mockResolvedValue([]);
     const extractor = makeExtractor('test', [ev('hi', 's', '/p')]);
     const w = createChatHistoryWatcher({
       targets: [cursorTarget('/p', extractor)],
@@ -330,6 +345,9 @@ describe('createChatHistoryWatcher', () => {
       debounceMs: 1,
     });
     w.start();
+    await new Promise((r) => setTimeout(r, 20));
+    readItemTableFn.mockResolvedValue([{ key: 'k', value: 'v' }]);
+    createdWatchers[0]!.emit('change', 'change', '/p');
     await new Promise((r) => setTimeout(r, 20));
     expect(onEvent.mock.calls[0]![0].capturedAt).toEqual(fixedDate);
   });
@@ -355,13 +373,12 @@ describe('createChatHistoryWatcher', () => {
   // decoder will eventually do.
 
   it('windsurf-dir: pipes readWindsurfJsonFilesFn output through decodeWindsurfFn → onEvent', async () => {
+    // Initial pass primes (empty), then files appear → emits.
     const fakeFiles = [
       { path: '/ws/a.json', parsed: { user_prompt: 'first' } },
       { path: '/ws/b.json', parsed: { user_prompt: 'second' } },
     ];
-    const readWindsurfJsonFilesFn = vi.fn<ReadWindsurfJsonFilesFn>(
-      async () => fakeFiles,
-    );
+    const readWindsurfJsonFilesFn = vi.fn<ReadWindsurfJsonFilesFn>(async () => []);
     // Test stand-in for the real decoder: emit one event per file with the
     // user_prompt field. Mirrors what the engineer's real decoder will do.
     const decodeWindsurfFn = vi.fn(
@@ -391,6 +408,10 @@ describe('createChatHistoryWatcher', () => {
     w.start();
     await new Promise((r) => setTimeout(r, 20));
 
+    readWindsurfJsonFilesFn.mockResolvedValue(fakeFiles);
+    createdWatchers[0]!.emit('change', 'change', '/ws');
+    await new Promise((r) => setTimeout(r, 20));
+
     expect(readWindsurfJsonFilesFn).toHaveBeenCalledWith('/ws');
     expect(decodeWindsurfFn).toHaveBeenCalledTimes(2);
     expect(decodeWindsurfFn).toHaveBeenCalledWith(fakeFiles[0]!.parsed, '/ws/a.json');
@@ -413,9 +434,7 @@ describe('createChatHistoryWatcher', () => {
       { path: '/ws/a.json', parsed: { p: 'hi' } },
       { path: '/ws/a.json', parsed: { p: 'hi' } }, // same path → same signature
     ];
-    const readWindsurfJsonFilesFn = vi.fn<ReadWindsurfJsonFilesFn>(
-      async () => fakeFiles,
-    );
+    const readWindsurfJsonFilesFn = vi.fn<ReadWindsurfJsonFilesFn>(async () => []);
     const decodeWindsurfFn = vi.fn(
       (_parsed: unknown, sourcePath: string): ChatHistoryEvent[] => [
         ev('hi', 'sess-1', sourcePath),
@@ -432,6 +451,11 @@ describe('createChatHistoryWatcher', () => {
       debounceMs: 1,
     });
     w.start();
+    await new Promise((r) => setTimeout(r, 20));
+
+    // Initial pass primes (empty). Now the duplicate-file scenario appears.
+    readWindsurfJsonFilesFn.mockResolvedValue(fakeFiles);
+    createdWatchers[0]!.emit('change', 'change', '/ws');
     await new Promise((r) => setTimeout(r, 20));
 
     // Decoder ran for both files (one event each), but signature dedup
