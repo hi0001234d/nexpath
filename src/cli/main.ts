@@ -48,9 +48,12 @@ export function createProgram(): Command {
 
   program
     .command('uninstall')
-    .description('Remove nexpath-serve MCP registration from all agents')
-    .action(async () => {
-      await uninstallAction();
+    .description('Remove nexpath-serve MCP registration from all agents (and stored API key)')
+    .option('-y, --yes', 'Skip confirmation prompt for API key removal (assumes yes)')
+    .action(async (opts: { yes?: boolean }) => {
+      const uninstallOpts: { yes?: boolean } = {};
+      if (opts.yes) uninstallOpts.yes = true;
+      await uninstallAction(uninstallOpts);
     });
 
   program

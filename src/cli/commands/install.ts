@@ -7,6 +7,7 @@ import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
 import { setConfig } from '../../store/config.js';
 import {
   storeApiKey,
+  removeApiKey,
   isValidApiKey,
   getKeySource,
   type KeySource,
@@ -785,13 +786,29 @@ export async function ensureLinuxClipboard(
 
 // ── uninstallAction ────────────────────────────────────────────────────────────
 
+export type UninstallApiKeyConfirmFn = () => Promise<boolean>;
+
+const defaultUninstallApiKeyConfirm: UninstallApiKeyConfirmFn = async () => {
+  const answer = await confirm({
+    message:      'Remove stored API key?',
+    initialValue: true,
+  });
+  return !isCancel(answer) && answer === true;
+};
+
 export async function uninstallAction(
   {
     paths = resolveAgentPaths(),
     execFn,
+    apiKeyConfirmFn = defaultUninstallApiKeyConfirm,
+    yes = false,
+    projectRoot = process.cwd(),
   }: {
-    paths?: AgentPaths;
-    execFn?: ExecFn;
+    paths?:           AgentPaths;
+    execFn?:          ExecFn;
+    apiKeyConfirmFn?: UninstallApiKeyConfirmFn;
+    yes?:             boolean;
+    projectRoot?:     string;
   } = {},
 ): Promise<void> {
   const agents = detectAgents(paths);
@@ -831,6 +848,22 @@ export async function uninstallAction(
 
   console.log('');
   console.log('MCP registration removed from all agents.');
+
+  // ── API key cleanup ──────────────────────────────────────────────────────
+  const currentSource = await getKeySource(projectRoot);
+  if (currentSource === 'none') {
+    console.log('No stored API key found, nothing to remove.');
+  } else {
+    const shouldRemove = yes || await apiKeyConfirmFn();
+    if (shouldRemove) {
+      await removeApiKey();
+      console.log(`✓ API key removed (was in ${currentSource}).`);
+    } else {
+      console.log('- API key retained; remove later with `nexpath config remove-api-key`.');
+    }
+  }
+
+  console.log('');
   console.log('Prompt history retained at ~/.nexpath/prompt-store.db');
   console.log('To delete it: nexpath store delete');
 }
