@@ -39,8 +39,8 @@ export function createProgram(): Command {
 
   program
     .command('install')
-    .description('Register nexpath-serve MCP server with all detected AI coding agents')
-    .option('-y, --yes', 'Skip confirmation prompt')
+    .description('Interactive 3-step setup: OpenAI API key → telemetry consent → agent registration')
+    .option('-y, --yes', 'Non-interactive mode: skip the API key and telemetry prompts and auto-confirm agent registration')
     .option('--db <path>', 'Path to the SQLite database file')
     .action(async (opts: { yes?: boolean; db?: string }) => {
       await installAction(opts, { dbPath: opts.db ?? DEFAULT_DB_PATH });
