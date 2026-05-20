@@ -19,7 +19,7 @@ import { GroundingConfig } from '../config/GroundingConfig.js';
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 export const OPTION_GEN_MODEL       = 'gpt-4o-mini';
-export const OPTION_GEN_MAX_TOKENS  = 750;
+export const OPTION_GEN_MAX_TOKENS  = 900;
 export const OPTION_GEN_TEMP        = 0;
 export const OPTION_GEN_MAX_RETRIES = 2;
 
