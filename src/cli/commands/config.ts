@@ -1,4 +1,4 @@
-import { password, isCancel } from '@clack/prompts';
+import { password, confirm, isCancel } from '@clack/prompts';
 import { openStore, closeStore, DEFAULT_DB_PATH, getConfig, setConfig, deleteConfig } from '../../store/index.js';
 import {
   storeApiKey,
@@ -36,6 +36,7 @@ export async function configUnsetAction(key: string, dbPath = DEFAULT_DB_PATH): 
 // ── API key management (Plan #1 Phase 5) ─────────────────────────────────────
 
 export type ApiKeyPasswordFn = () => Promise<string | null>;
+export type ApiKeyConfirmFn  = () => Promise<boolean>;
 
 const defaultApiKeyPasswordFn: ApiKeyPasswordFn = async () => {
   const input = await password({
@@ -49,9 +50,18 @@ const defaultApiKeyPasswordFn: ApiKeyPasswordFn = async () => {
   return String(input);
 };
 
+const defaultRotateConfirmFn: ApiKeyConfirmFn = async () => {
+  const answer = await confirm({
+    message:      'Overwrite the existing API key?',
+    initialValue: false,
+  });
+  return !isCancel(answer) && answer === true;
+};
+
 export interface ConfigApiKeyOpts {
   projectRoot?: string;
   passwordFn?:  ApiKeyPasswordFn;
+  confirmFn?:   ApiKeyConfirmFn;
   output?:      (line: string) => void;
 }
 
@@ -72,6 +82,7 @@ export async function configSetApiKeyAction(opts: ConfigApiKeyOpts = {}): Promis
 export async function configRotateApiKeyAction(opts: ConfigApiKeyOpts = {}): Promise<void> {
   const print       = opts.output      ?? defaultPrint;
   const passwordFn  = opts.passwordFn  ?? defaultApiKeyPasswordFn;
+  const confirmFn   = opts.confirmFn   ?? defaultRotateConfirmFn;
   const projectRoot = opts.projectRoot ?? process.cwd();
 
   const currentSource = await getKeySource(projectRoot);
@@ -80,6 +91,14 @@ export async function configRotateApiKeyAction(opts: ConfigApiKeyOpts = {}): Pro
     process.exitCode = 1;
     return;
   }
+
+  print(`Existing API key is stored in ${currentSource}.`);
+  const ok = await confirmFn();
+  if (!ok) {
+    print('Cancelled — existing API key retained.');
+    return;
+  }
+
   const key = await passwordFn();
   if (key === null || key === '') {
     print('Cancelled — existing API key retained.');

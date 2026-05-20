@@ -87,6 +87,7 @@ describe('configRotateApiKeyAction', () => {
     const { lines, print } = captureOutput();
     await configRotateApiKeyAction({
       output:     print,
+      confirmFn:  async () => true,
       passwordFn: async () => VALID_KEY,
     });
     expect(resolver.storeApiKey).toHaveBeenCalledWith(VALID_KEY);
@@ -95,15 +96,41 @@ describe('configRotateApiKeyAction', () => {
     expect(text).toContain('was in keychain');
   });
 
-  it('cancelled rotation retains the existing key (no storeApiKey call)', async () => {
+  it('cancelled password prompt retains the existing key (no storeApiKey call)', async () => {
     vi.mocked(resolver.getKeySource).mockResolvedValueOnce('keychain');
     const { lines, print } = captureOutput();
     await configRotateApiKeyAction({
       output:     print,
+      confirmFn:  async () => true,
       passwordFn: async () => null,
     });
     expect(resolver.storeApiKey).not.toHaveBeenCalled();
     expect(lines.join('\n')).toContain('existing API key retained');
+  });
+
+  it('declined overwrite confirmation skips the password prompt and storeApiKey', async () => {
+    vi.mocked(resolver.getKeySource).mockResolvedValueOnce('keychain');
+    const passwordFn = vi.fn<() => Promise<string | null>>().mockResolvedValue(VALID_KEY);
+    const { lines, print } = captureOutput();
+    await configRotateApiKeyAction({
+      output:     print,
+      confirmFn:  async () => false,
+      passwordFn,
+    });
+    expect(passwordFn).not.toHaveBeenCalled();
+    expect(resolver.storeApiKey).not.toHaveBeenCalled();
+    expect(lines.join('\n')).toContain('existing API key retained');
+  });
+
+  it('prints which layer holds the existing key before asking for confirmation', async () => {
+    vi.mocked(resolver.getKeySource).mockResolvedValueOnce('file');
+    const { lines, print } = captureOutput();
+    await configRotateApiKeyAction({
+      output:     print,
+      confirmFn:  async () => false,
+      passwordFn: async () => null,
+    });
+    expect(lines.join('\n')).toContain('Existing API key is stored in file');
   });
 });
 
