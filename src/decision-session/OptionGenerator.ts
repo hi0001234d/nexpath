@@ -334,10 +334,10 @@ function validateWithError(raw: string, content: DecisionContent): ValidationRes
       const srcMultiLine = source[i].includes('\n');
       const item = items[i];
       if (srcMultiLine) {
-        if (!Array.isArray(item))
-          return `${key}[${i}] must be an array of ${srcSteps} step(s) (input was multi-line), got string.`;
-        if ((item as unknown[]).length !== srcSteps)
-          return `${key}[${i}] is an array of ${(item as unknown[]).length} step(s) but must have exactly ${srcSteps}.`;
+        if (!Array.isArray(item) || (item as unknown[]).length !== srcSteps) {
+          result.push(source[i]);
+          continue;
+        }
         if (!(item as unknown[]).every((x) => typeof x === 'string' && (x as string).trim().length > 0))
           return `${key}[${i}] contains an empty or non-string step.`;
         result.push((item as string[]).join('\n'));

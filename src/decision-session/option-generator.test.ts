@@ -341,6 +341,61 @@ describe('validateGeneratedOptions', () => {
   });
 });
 
+// ── validateGeneratedOptions — multi-step fallback ───────────────────────────
+
+describe('validateGeneratedOptions — multi-step fallback', () => {
+  it('multi-step item with wrong step count falls back to source text', () => {
+    const raw = JSON.stringify({
+      l1: [['step one', 'step two'], 'Check done'],
+      l2: ['Looks good'],
+      l3: ['Nothing wrong'],
+    });
+    const result = validateGeneratedOptions(raw, TASK_REVIEW_BEGINNER);
+    expect(result).not.toBeNull();
+    expect(result!.l1[0]).toBe(TASK_REVIEW_BEGINNER.L1[0]);
+  });
+
+  it('multi-step item returned as string falls back to source text', () => {
+    const raw = JSON.stringify({
+      l1: ['not an array', 'Check done'],
+      l2: ['Looks good'],
+      l3: ['Nothing wrong'],
+    });
+    const result = validateGeneratedOptions(raw, TASK_REVIEW_BEGINNER);
+    expect(result).not.toBeNull();
+    expect(result!.l1[0]).toBe(TASK_REVIEW_BEGINNER.L1[0]);
+  });
+
+  it('valid multi-step item is joined and returned without fallback', () => {
+    const raw = JSON.stringify({
+      l1: [['step one', 'step two', 'step three'], 'Check done'],
+      l2: ['Looks good'],
+      l3: ['Nothing wrong'],
+    });
+    const result = validateGeneratedOptions(raw, TASK_REVIEW_BEGINNER);
+    expect(result).not.toBeNull();
+    expect(result!.l1[0]).toBe('step one\nstep two\nstep three');
+  });
+
+  it('correct-length array with empty step returns null', () => {
+    const raw = JSON.stringify({
+      l1: [['step one', '', 'step three'], 'Check done'],
+      l2: ['Looks good'],
+      l3: ['Nothing wrong'],
+    });
+    expect(validateGeneratedOptions(raw, TASK_REVIEW_BEGINNER)).toBeNull();
+  });
+
+  it('array returned for single-line source item returns null', () => {
+    const raw = JSON.stringify({
+      l1: [['step one', 'step two', 'step three'], ['array', 'for', 'string']],
+      l2: ['Looks good'],
+      l3: ['Nothing wrong'],
+    });
+    expect(validateGeneratedOptions(raw, TASK_REVIEW_BEGINNER)).toBeNull();
+  });
+});
+
 // ── generateOptionList ────────────────────────────────────────────────────────
 
 describe('generateOptionList', () => {
