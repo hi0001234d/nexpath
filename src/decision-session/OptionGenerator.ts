@@ -3,6 +3,7 @@ import type { UserProfile, PromptRecord, Stage } from '../classifier/types.js';
 import type { FlagType } from '../classifier/Stage2Trigger.js';
 import type { DecisionContent } from './options.js';
 import { logger } from '../logger.js';
+import { GroundingConfig } from '../config/GroundingConfig.js';
 
 /**
  * Dynamic option text generator.
@@ -194,13 +195,7 @@ Use 'this feature' ONLY when the last prompt contains NO named feature at all:
 
 Step B — if Step A falls back to 'this feature', scan the 4 prompts immediately before
 the last one. Use the most recent specific feature noun found there instead. Only keep
-'this feature' if none of those 4 prompts contains a specific feature noun.
-
-Embed the extracted term into each option by replacing the first matching generic noun phrase:
-  "what was just built", "what was just made", "what was just created",
-  "this project", "this feature".
-Replace the first occurrence per option only. If none of these phrases appears in an
-option, leave that option unchanged.`;
+'this feature' if none of those 4 prompts contains a specific feature noun.`;
 }
 
 // ── CO-STAR prompt ─────────────────────────────────────────────────────────────
@@ -288,6 +283,80 @@ Item type contract (absolute — semantic content does not override this):
   ${typeContract}
 
 Now rewrite the following input:
+${inputJson}
+
+Response — return JSON only, no explanation, no markdown fencing:
+{"l1":[...],"l2":[...],"l3":[...]}`;
+}
+
+// ── Pass 2 prompt — feature noun embedding ─────────────────────────────────────
+
+export function buildEmbeddingPrompt(
+  adaptedOptions: GeneratedOptions,
+  history:        PromptRecord[],
+  context?:       OptionGenContext,
+): string {
+  const groundingSection = buildFeatureGroundingSection(
+    history,
+    GroundingConfig.promptWindow,
+    GroundingConfig.maxWords,
+    context,
+  );
+
+  const typeLabel = (s: string): string => s.includes('\n') ? `ARRAY(${s.split('\n').length})` : 'STRING';
+  const typeContract = [
+    `l1: [${adaptedOptions.l1.map(typeLabel).join(', ')}]`,
+    `l2: [${adaptedOptions.l2.map(typeLabel).join(', ')}]`,
+    `l3: [${adaptedOptions.l3.map(typeLabel).join(', ')}]`,
+  ].join('\n  ');
+
+  const toPromptItem = (s: string): string | string[] =>
+    s.includes('\n') ? s.split('\n') : s;
+
+  const inputJson = JSON.stringify({
+    l1: adaptedOptions.l1.map(toPromptItem),
+    l2: adaptedOptions.l2.map(toPromptItem),
+    l3: adaptedOptions.l3.map(toPromptItem),
+  });
+
+  return `${groundingSection.trimStart()}
+
+Embed the extracted feature noun into each adapted option below. Prefer replacing a standard generic phrase if present:
+  "what was just built", "what was just made", "what was just created",
+  "this project", "this feature".
+If none of these phrases survived adaptation, embed the feature noun at the most appropriate place with minimal rewrite — preserve the option's meaning, action, and intent. Replace one occurrence per option only.
+
+Schema examples — each shows adapted input → grounded output:
+
+Example 1 — "what was just built" replaced with the extracted feature noun:
+Input:  {"l1":["Review what was just built: does it match the spec? Flag any gaps.","Run the tests for what was just built and report results."],"l2":["Quick check on what was just built — any obvious issues?"],"l3":["Any problems in what was just built before moving on?"]}
+Feature noun: "login flow"
+Output: {"l1":["Review the login flow: does it match the spec? Flag any gaps.","Run the tests for the login flow and report results."],"l2":["Quick check on the login flow — any obvious issues?"],"l3":["Any problems in the login flow before moving on?"]}
+
+Example 2 — "what was just made" in a step array — replace the first step that contains the phrase; other steps unchanged:
+Input:  {"l1":[["Review what was just made — does it do what this task asked for?","Share your review before I mark this done.","Flag anything that looks off."],"Check if what was just made matches what the task asked for."],"l2":["Does what was just made look right to you?"],"l3":["Is there anything in what was just made that looks wrong?"]}
+Feature noun: "recurring invoice"
+Output: {"l1":[["Review the recurring invoice — does it do what this task asked for?","Share your review before I mark this done.","Flag anything that looks off."],"Check if the recurring invoice matches what the task asked for."],"l2":["Does the recurring invoice look right to you?"],"l3":["Is there anything in the recurring invoice that looks wrong?"]}
+
+Example 3 — "this project" replaced with the extracted feature noun:
+Input:  {"l1":["Write a PRD for this project: define the problem, target user, and core features.","What does the first version of this project need to deliver?"],"l2":["Write a one-paragraph scope statement for this project."],"l3":["What is this project for and what problem does it solve?"]}
+Feature noun: "client portal"
+Output: {"l1":["Write a PRD for the client portal: define the problem, target user, and core features.","What does the first version of the client portal need to deliver?"],"l2":["Write a one-paragraph scope statement for the client portal."],"l3":["What is the client portal for and what problem does it solve?"]}
+
+Example 4 — "this feature" replaced with the extracted feature noun:
+Input:  {"l1":["Set up the feedback loop for this feature: what signals tell you it is working?","What are the top 3 signals to watch for this feature in the first 24 hours?"],"l2":["Is there a signal that would tell you if this feature breaks silently in production?"],"l3":["What is the most important thing to monitor for this feature?"]}
+Feature noun: "invoice reminder"
+Output: {"l1":["Set up the feedback loop for the invoice reminder: what signals tell you it is working?","What are the top 3 signals to watch for the invoice reminder in the first 24 hours?"],"l2":["Is there a signal that would tell you if the invoice reminder breaks silently in production?"],"l3":["What is the most important thing to monitor for the invoice reminder?"]}
+
+Example 5 — no standard target phrase in any option — embed the feature noun at the most appropriate place with minimal rewrite:
+Input:  {"l1":[["Check that everything still works — go through the main things before we ship.","Share the results before releasing.","Is there anything that could go wrong once it's live?"],"Check if this is ready to go live."],"l2":["What is the biggest risk in shipping this right now?"],"l3":["Is there anything that could break once it's live?"]}
+Feature noun: "login"
+Output: {"l1":[["Check that login is still working — go through the main things before we ship.","Share the results before releasing.","Is there anything about login that could go wrong once it's live?"],"Check if login is ready to go live."],"l2":["What is the biggest risk in shipping login right now?"],"l3":["Is there anything about login that could break once it's live?"]}
+
+Item type contract (absolute — semantic content does not override this):
+  ${typeContract}
+
+Now embed the feature noun into the following adapted options:
 ${inputJson}
 
 Response — return JSON only, no explanation, no markdown fencing:
