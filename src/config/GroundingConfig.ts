@@ -1,16 +1,15 @@
 /**
  * Feature word grounding configuration for option text generation.
  *
- * When enabled, the option generation LLM prompt receives a slice of the
- * user's most recent session prompts and is instructed to embed at most
- * `maxWords` feature-specific words (e.g. "recurring invoices", "login page")
- * naturally into each option text.
+ * When enabled, Pass 2 (feature noun embedding) receives the most recent
+ * session prompts and embeds at most `maxWords` feature-specific words
+ * (e.g. "recurring invoices", "login page") into the Pass 1 adapted option text.
  *
  * All three knobs are developer-facing — change here and rebuild to take effect.
  * No CLI command or DB config key is needed.
  */
 export const GroundingConfig = {
-  /** Master switch. false = exact current behaviour, zero prompt change. */
+  /** Master switch. false = Pass 2 (feature noun embedding) is skipped entirely; Pass 1 (vocabulary adaptation) still runs. */
   enabled:      true,
 
   /**
