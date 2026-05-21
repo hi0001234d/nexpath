@@ -441,9 +441,11 @@ export function validateGeneratedOptions(
 /**
  * Generate personalised option text for the decision session.
  *
+ * Runs vocabulary adaptation then feature noun embedding.
  * On validation failure, retries up to OPTION_GEN_MAX_RETRIES times — each retry
  * appends the specific rejection error to the conversation so the LLM can self-correct.
- * Returns null only after all attempts are exhausted; caller falls back to static options.
+ * Returns null only after all adaptation attempts are exhausted; caller falls back to static options.
+ * If the embedding step exhausts retries or throws, returns the adapted output as-is.
  * Never throws.
  */
 export async function generateOptionList(
@@ -454,14 +456,74 @@ export async function generateOptionList(
   context?: OptionGenContext,
   client?:  OpenAI,
 ): Promise<GeneratedOptions | null> {
-  try {
-    const openai  = client ?? new OpenAI();
-    const prompt  = buildAdaptationPrompt(content, profile, language, history);
+  const openai = client ?? new OpenAI();
 
+  // ── Pass 1: vocabulary adaptation ─────────────────────────────────────────────
+  let pass1Output: GeneratedOptions | null = null;
+
+  try {
+    const prompt = buildAdaptationPrompt(content, profile, language, history);
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
       { role: 'user', content: prompt },
     ];
+    let lastRaw   = '';
+    let lastError = '';
 
+    for (let attempt = 0; attempt <= OPTION_GEN_MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        messages.push({ role: 'assistant', content: lastRaw });
+        messages.push({
+          role:    'user',
+          content: `Your response was rejected. Error: ${lastError} Fix only this issue and re-generate the complete JSON.`,
+        });
+      }
+
+      const response = await openai.chat.completions.create(
+        {
+          model:           OPTION_GEN_MODEL,
+          messages,
+          temperature:     OPTION_GEN_TEMP,
+          max_tokens:      OPTION_GEN_MAX_TOKENS,
+          response_format: { type: 'json_object' },
+        },
+        { timeout: 12_000 },
+      );
+
+      const raw    = response.choices[0]?.message?.content ?? '';
+      const result = validateWithError(raw, content);
+
+      if ('options' in result) {
+        pass1Output = result.options;
+        break;
+      }
+
+      lastRaw   = raw;
+      lastError = result.error;
+      logger.debug('option_gen_pass1_validate_fail', { pass: 1, attempt, error: result.error, raw: raw.slice(0, 200) });
+    }
+
+    if (pass1Output === null) {
+      logger.debug('option_gen_pass1_retries_failed', { lastError });
+      return null;
+    }
+  } catch (err) {
+    logger.debug('option_gen_error', { error: String(err) });
+    return null;
+  }
+
+  if (!pass1Output) return null;
+
+  // ── Pass 2: feature noun embedding ────────────────────────────────────────────
+  if (!GroundingConfig.enabled) {
+    logger.debug('option_gen_pass2_skipped');
+    return pass1Output;
+  }
+
+  try {
+    const prompt = buildEmbeddingPrompt(pass1Output, history, context);
+    const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
+      { role: 'user', content: prompt },
+    ];
     let lastRaw   = '';
     let lastError = '';
 
@@ -492,13 +554,15 @@ export async function generateOptionList(
 
       lastRaw   = raw;
       lastError = result.error;
-      logger.debug('option_gen_validate_fail', { attempt, error: result.error, raw: raw.slice(0, 200) });
+      logger.debug('option_gen_pass2_validate_fail', { pass: 2, attempt, error: result.error, raw: raw.slice(0, 200) });
     }
 
-    logger.debug('option_gen_all_retries_failed', { lastError });
-    return null;
+    logger.debug('option_gen_pass2_retries_failed', { lastError });
+    logger.debug('option_gen_pass2_fallback');
+    return pass1Output;
   } catch (err) {
     logger.debug('option_gen_error', { error: String(err) });
-    return null;
+    logger.debug('option_gen_pass2_fallback');
+    return pass1Output;
   }
 }

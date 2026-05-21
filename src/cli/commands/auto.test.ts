@@ -1172,16 +1172,11 @@ describe('runAuto — generated options wiring', () => {
     vi.restoreAllMocks();
   });
 
-  /**
-   * Build a mock OpenAI client that supports parallel pinch + options calls.
-   * Both pinch and options calls use gpt-4o-mini; we can't rely on call order
-   * with Promise.all, so this mock always returns a usable pinch label from
-   * any call after Stage 2, letting the option response be driven separately.
-   */
   function makeParallelMockOpenAI(
     stage2Response: object,
     pinchText = 'Hold up.',
     optionResponse: string | null = null,
+    pass1Response: string | null = null,
   ): OpenAI {
     let callCount = 0;
     return {
@@ -1194,8 +1189,13 @@ describe('runAuto — generated options wiring', () => {
                 choices: [{ message: { content: JSON.stringify(stage2Response) } }],
               });
             }
-            // calls 2 and 3 are pinch + options in parallel
-            if (optionResponse && callCount === 3) {
+            // call 2: generatePinchLabel; call 3: generateOptionList Pass 1; call 4: generateOptionList Pass 2
+            if (pass1Response && callCount === 3) {
+              return Promise.resolve({
+                choices: [{ message: { content: pass1Response } }],
+              });
+            }
+            if (optionResponse && callCount === 4) {
               return Promise.resolve({
                 choices: [{ message: { content: optionResponse } }],
               });
@@ -1217,22 +1217,26 @@ describe('runAuto — generated options wiring', () => {
       signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 0, cooldownUntil: 100,
     });
 
-    // Provide a valid option response matching TASK_REVIEW counts
-    const optResponse = JSON.stringify({
+    const pass1Response = JSON.stringify({
       l1: TASK_REVIEW.L1.map((o) => `[adapted] ${o}`),
       l2: TASK_REVIEW.L2.map((o) => `[adapted] ${o}`),
       l3: TASK_REVIEW.L3.map((o) => `[adapted] ${o}`),
     });
+    const optResponse = JSON.stringify({
+      l1: TASK_REVIEW.L1.map((o) => `[grounded] ${o}`),
+      l2: TASK_REVIEW.L2.map((o) => `[grounded] ${o}`),
+      l3: TASK_REVIEW.L3.map((o) => `[grounded] ${o}`),
+    });
 
-    const openai = makeParallelMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.', optResponse);
+    const openai = makeParallelMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.', optResponse, pass1Response);
     const result = await runAuto(makeInput({ projectRoot: '/test/gen-opts' }), store, openai);
 
     if (result.outcome === 'pending') {
       const advisory = getPendingAdvisory(store, '/test/gen-opts');
       expect(advisory).not.toBeNull();
-      // generatedL1/L2/L3 may be populated or null depending on which API call
-      // returned the option response — what we assert is the advisory was stored
       expect(advisory?.status).toBe('pending');
+      expect(advisory?.generatedL1).not.toBeNull();
+      expect(advisory?.generatedL1?.[0]).toContain('[grounded]');
     }
   });
 

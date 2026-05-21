@@ -443,17 +443,21 @@ describe('generateOptionList', () => {
   it('calls the API with the generated prompt', async () => {
     const client = makeClient(validResponse());
     await generateOptionList(TASK_REVIEW, makeProfile(), 'en', [makePrompt('test prompt')], undefined, client);
-    expect((client.chat.completions.create as ReturnType<typeof vi.fn>)).toHaveBeenCalledOnce();
-    const callArg = (client.chat.completions.create as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(callArg.model).toBe('gpt-4o-mini');
-    expect(callArg.messages[0].content).toContain('test prompt');
+    const create = client.chat.completions.create as ReturnType<typeof vi.fn>;
+    expect(create).toHaveBeenCalledTimes(2);
+    const pass1Arg = create.mock.calls[0][0];
+    expect(pass1Arg.model).toBe('gpt-4o-mini');
+    expect(pass1Arg.messages[0].content).toContain('test prompt');
+    const pass2Arg = create.mock.calls[1][0];
+    expect(pass2Arg.model).toBe('gpt-4o-mini');
   });
 
   it('calls the API with timeout 12000', async () => {
     const client = makeClient(validResponse());
     await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
-    const timeoutArg = (client.chat.completions.create as ReturnType<typeof vi.fn>).mock.calls[0][1];
-    expect(timeoutArg).toEqual({ timeout: 12_000 });
+    const create = client.chat.completions.create as ReturnType<typeof vi.fn>;
+    expect(create.mock.calls[0][1]).toEqual({ timeout: 12_000 });
+    expect(create.mock.calls[1][1]).toEqual({ timeout: 12_000 });
   });
 });
 
@@ -509,16 +513,16 @@ describe('generateOptionList — retry on validation failure', () => {
   it('succeeds on second attempt when first response fails validation', async () => {
     const bad  = JSON.stringify({ l1: ['only one'], l2: ['x'], l3: ['z'] });
     const good = validResponse();
-    const client = makeRetryClient([bad, good]);
+    const client = makeRetryClient([bad, good, validResponse()]);
     const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
     expect(result).not.toBeNull();
-    expect((client.chat.completions.create as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(2);
+    expect((client.chat.completions.create as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(3);
   });
 
   it('retry message contains the specific rejection error and failed response', async () => {
     const bad  = JSON.stringify({ l1: ['only one'], l2: TASK_REVIEW.L2.map(o => o), l3: TASK_REVIEW.L3.map(o => o) });
     const good = validResponse();
-    const client = makeRetryClient([bad, good]);
+    const client = makeRetryClient([bad, good, validResponse()]);
     await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
     const create   = client.chat.completions.create as ReturnType<typeof vi.fn>;
     const retryArg = create.mock.calls[1][0] as { messages: Array<{ role: string; content: string }> };
@@ -541,7 +545,7 @@ describe('generateOptionList — retry on validation failure', () => {
   it('uses json_object response format on every attempt', async () => {
     const bad    = JSON.stringify({ l1: ['only one'], l2: ['x'], l3: ['z'] });
     const good   = validResponse();
-    const client = makeRetryClient([bad, good]);
+    const client = makeRetryClient([bad, good, validResponse()]);
     await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
     const create = client.chat.completions.create as ReturnType<typeof vi.fn>;
     for (const call of create.mock.calls) {
@@ -555,6 +559,48 @@ describe('generateOptionList — retry on validation failure', () => {
     const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
     expect(result).toBeNull();
     expect(create).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── generateOptionList — Pass 2 fallback behavior ────────────────────────────
+
+describe('generateOptionList — Pass 2 fallback behavior', () => {
+  it('returns Pass 1 output when Pass 2 exhausts all retries', async () => {
+    const bad = JSON.stringify({ l1: ['only one'], l2: ['x'], l3: ['z'] });
+    const client = makeRetryClient([validResponse(), ...Array(OPTION_GEN_MAX_RETRIES + 1).fill(bad)]);
+    const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
+    expect(result).not.toBeNull();
+    expect(result?.l1).toHaveLength(TASK_REVIEW.L1.length);
+  });
+
+  it('returns Pass 1 output when Pass 2 API throws', async () => {
+    const pass1Good = validResponse();
+    let callCount = 0;
+    const create = vi.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve({ choices: [{ message: { content: pass1Good } }] });
+      }
+      return Promise.reject(new Error('Pass 2 API error'));
+    });
+    const client = { chat: { completions: { create } } } as unknown as import('openai').default;
+    const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
+    expect(result).not.toBeNull();
+    expect(result?.l1).toHaveLength(TASK_REVIEW.L1.length);
+  });
+
+  it('GroundingConfig.enabled = false — skips Pass 2, returns Pass 1 output, only 1 API call', async () => {
+    const config = GroundingConfig as unknown as { enabled: boolean };
+    const saved = config.enabled;
+    config.enabled = false;
+    try {
+      const client = makeClient(validResponse());
+      const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, [], undefined, client);
+      expect(result).not.toBeNull();
+      expect((client.chat.completions.create as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1);
+    } finally {
+      config.enabled = saved;
+    }
   });
 });
 
@@ -615,7 +661,7 @@ describe('buildEmbeddingPrompt — feature word grounding', () => {
   it('includes stage_transition advisory context block when context provided', () => {
     const context: OptionGenContext = {
       flagType:              'stage_transition',
-      currentStage:          'testing',
+      currentStage:          'review_testing',
       prevStage:             'implementation',
       promptsInCurrentStage: 5,
     };
