@@ -583,6 +583,128 @@ export const ABSENCE_ITERATION_PLANNING_BEGINNER: DecisionContent = {
   ],
 };
 
+// ── Sub-7 — beginner content sets ─────────────────────────────────────────────
+
+export const ABSENCE_SCOPE_CREEP_BEGINNER: DecisionContent = {
+  question:      'Scope expanding — still on original plan?',
+  pinchFallback: 'Scope check?',
+  L1: [
+    '1. Look at what was just built and make a list of everything it does now. 2. Compare that list to what you originally planned to build. 3. Share anything that wasn\'t in the original plan with me before we continue.',
+    'Go through this feature and check — did anything extra get added that wasn\'t part of the original plan? Share what you find with me before we keep going.',
+  ],
+  L2: [
+    'Is there anything in this feature that you didn\'t originally plan to build? Tell me what it is and we\'ll decide what to do with it.',
+  ],
+  L3: [
+    'Can you name one thing in this feature that ended up there but wasn\'t part of the original plan?',
+  ],
+};
+
+export const ABSENCE_CONTEXT_LOSS_BEGINNER: DecisionContent = {
+  question:      'Long session — context recapped?',
+  pinchFallback: 'Context recap?',
+  L1: [
+    '1. Think about everything we\'ve done with what was just built this session. 2. Write down what\'s working and what still needs to be done. 3. Share that with me before we keep going — it\'ll help us stay on track.',
+    'Take a moment and catch up on this project — what have we built so far, what choices did we make, and what\'s next? Share your summary with me before we continue.',
+  ],
+  L2: [
+    'Can you tell me where this feature is right now in your own words — what\'s done and what still needs to happen?',
+  ],
+  L3: [
+    'What\'s one thing you want to make sure we don\'t forget about where this project is right now?',
+  ],
+};
+
+export const ABSENCE_API_DESIGN_REVIEW_BEGINNER: DecisionContent = {
+  question:      'API being built — design reviewed?',
+  pinchFallback: 'API design?',
+  L1: [
+    '1. Look at what was just built and check whether it could break anything that\'s already using this API. 2. List any changes to how it works — what it expects and what it sends back. 3. Share your list with me before we continue.',
+    'Go through this feature\'s API and check — could anything about how it works change after other code starts depending on it? Share what you find with me before we move on.',
+  ],
+  L2: [
+    'Does what was just built change the API in a way that might break something that\'s already using it? Tell me what changed and we\'ll figure out if it\'s a problem.',
+  ],
+  L3: [
+    'What\'s one thing about how this feature\'s API works that might need to change later — and could that cause a problem for anything depending on it?',
+  ],
+};
+
+export const ABSENCE_ACCESSIBILITY_BEGINNER: DecisionContent = {
+  question:      'UI being built — accessibility checked?',
+  pinchFallback: 'Accessibility?',
+  L1: [
+    '1. Go through what was just built and check that every button and link has a clear label describing what it does. 2. Try tabbing through the whole feature using only the keyboard — no mouse. 3. Share what you find with me before we continue.',
+    'Think about someone who can\'t see the screen trying to use this feature — would a screen reader be able to tell them what everything does? Go through it and share what you notice with me before we move on.',
+  ],
+  L2: [
+    'Can you go through this feature and find one thing that someone with a disability might struggle to use — and tell me what it is?',
+  ],
+  L3: [
+    'Is there anything in what was just built that someone might have trouble using if they couldn\'t use a mouse or couldn\'t see the screen clearly?',
+  ],
+};
+
+export const ABSENCE_ENV_AND_SECRETS_BEGINNER: DecisionContent = {
+  question:      'Credentials in use — secrets management reviewed?',
+  pinchFallback: 'Secrets setup?',
+  L1: [
+    '1. Go through what was just built and check — are any passwords, API keys, or other secrets written directly in the code? 2. If they are, those need to be moved to a separate `.env` file. 3. Share what you find with me before we continue.',
+    'Check whether this feature has a `.env.example` file that lists every secret or config value it needs to run — without the real values. Share what you find with me before we move on.',
+  ],
+  L2: [
+    'Is there a password, API key, or any other secret in what was just built that\'s written directly into the code? Tell me what it is and we\'ll figure out how to move it somewhere safe.',
+  ],
+  L3: [
+    'What\'s one secret or password this feature uses — and where is it stored right now?',
+  ],
+};
+
+export const ABSENCE_DATA_VALIDATION_BEGINNER: DecisionContent = {
+  question:      'Accepting input — data validation in place?',
+  pinchFallback: 'Input validation?',
+  L1: [
+    '1. Think about what happens in this feature if someone sends the wrong data — a missing field, a number where text is expected, or something completely unexpected. 2. Try sending some bad data and see what happens. 3. Share what you find with me before we continue.',
+    'Go through what was just built and check — is there anything checking that the data coming in is actually in the right format before the app tries to use it? Share what you find with me before we move on.',
+  ],
+  L2: [
+    'What happens in this feature if someone sends a missing or wrong value — does it give a clear error message, or does it just break? Try it and tell me what you see.',
+  ],
+  L3: [
+    'What\'s one piece of data this feature accepts that isn\'t being checked before it gets used?',
+  ],
+};
+
+export const ABSENCE_CI_PIPELINE_BEGINNER: DecisionContent = {
+  question:      'Moving toward release — CI pipeline configured?',
+  pinchFallback: 'CI pipeline?',
+  L1: [
+    '1. Check whether this project has anything set up to run the tests automatically whenever code is pushed. 2. If not, this is a good time to set that up so mistakes get caught before they reach the final code. 3. Share what you find with me before we continue.',
+    'Go through what happens when code gets pushed to this feature — do the tests run automatically, or does someone have to remember to run them by hand? Share what you find with me before we move on.',
+  ],
+  L2: [
+    'Does this project have something that automatically runs the tests whenever code is pushed — and does it stop bad code from getting merged if the tests fail?',
+  ],
+  L3: [
+    'Is there anything that runs automatically when new code is added to this project — like the tests? Tell me what happens and we\'ll figure out if anything is missing.',
+  ],
+};
+
+export const ABSENCE_RATE_LIMITING_BEGINNER: DecisionContent = {
+  question:      'API endpoint built — rate limiting designed?',
+  pinchFallback: 'Rate limiting?',
+  L1: [
+    '1. Think about what would happen if someone sent a huge number of requests to this feature very quickly. 2. Check whether the app has any limit on how many times it can be called in a short period. 3. Share what you find with me before we continue.',
+    'Go through what was just built and check — if someone calls this API endpoint hundreds of times in a row, does the app handle that, or would it start having problems? Share what you find with me before we move on.',
+  ],
+  L2: [
+    'Does this feature have any kind of limit on how many times someone can call it in a short period — and what happens if they go over that limit?',
+  ],
+  L3: [
+    'What\'s one way someone could use this feature too much — and is there anything currently stopping that from happening?',
+  ],
+};
+
 export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> = {
   test_creation:         ABSENCE_TEST_CREATION_BEGINNER,
   regression_check:      ABSENCE_REGRESSION_CHECK_BEGINNER,
@@ -615,6 +737,14 @@ export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> 
   task_definition_of_done: ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER,
   user_feedback_review:    ABSENCE_USER_FEEDBACK_REVIEW_BEGINNER,
   iteration_planning:      ABSENCE_ITERATION_PLANNING_BEGINNER,
+  scope_creep:             ABSENCE_SCOPE_CREEP_BEGINNER,
+  context_loss:            ABSENCE_CONTEXT_LOSS_BEGINNER,
+  api_design_review:       ABSENCE_API_DESIGN_REVIEW_BEGINNER,
+  accessibility:           ABSENCE_ACCESSIBILITY_BEGINNER,
+  environment_and_secrets: ABSENCE_ENV_AND_SECRETS_BEGINNER,
+  data_validation:         ABSENCE_DATA_VALIDATION_BEGINNER,
+  ci_pipeline:             ABSENCE_CI_PIPELINE_BEGINNER,
+  rate_limiting:           ABSENCE_RATE_LIMITING_BEGINNER,
 };
 
 export const TRANSITION_CONTENT_BEGINNER: Partial<Record<Stage, DecisionContent>> = {

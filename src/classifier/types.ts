@@ -162,4 +162,6 @@ export interface SignalDefinition {
   vibeKeywords?: string[];
   /** Number of prompts in confirmed stage before checking absence. */
   absenceThreshold: number; // 15–20 per research
+  /** Project types for which this signal is relevant. undefined = all project types. */
+  relevantProjectTypes?: string[];
 }
