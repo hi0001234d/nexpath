@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
-  buildOptionPrompt,
+  buildAdaptationPrompt,
   validateGeneratedOptions,
   generateOptionList,
   OPTION_GEN_MAX_RETRIES,
@@ -59,85 +59,85 @@ function validResponse(content = TASK_REVIEW): string {
   });
 }
 
-// ── buildOptionPrompt — profile adaptation ────────────────────────────────────
+// ── buildAdaptationPrompt — profile adaptation ───────────────────────────────
 
-describe('buildOptionPrompt — profile adaptation', () => {
+describe('buildAdaptationPrompt — profile adaptation', () => {
   it('includes nature and mood in prompt when profile is present', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, []);
     expect(prompt).toContain('nature=hardcore_pro');
     expect(prompt).toContain('mood=focused');
     expect(prompt).toContain('depth=high');
   });
 
   it('uses neutral style when profile is undefined', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, undefined, undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, undefined, undefined, []);
     expect(prompt).toContain('not yet computed');
     expect(prompt).toContain('Neutral professional tone');
   });
 
   it('includes beginner style for beginner nature', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile({ nature: 'beginner', depth: 'low' }), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile({ nature: 'beginner', depth: 'low' }), undefined, []);
     expect(prompt).toContain('Plain English');
   });
 
   it('includes casual technical style for cool_geek nature', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile({ nature: 'cool_geek' }), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile({ nature: 'cool_geek' }), undefined, []);
     expect(prompt).toContain('Casual technical');
   });
 
   it('depth=low overrides cool_geek nature — plain English wins', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile({ nature: 'cool_geek', depth: 'low' }), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile({ nature: 'cool_geek', depth: 'low' }), undefined, []);
     expect(prompt).toContain('Plain English');
     expect(prompt).not.toContain('Casual technical');
   });
 
   it('cool_geek with depth=medium keeps casual technical style', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile({ nature: 'cool_geek', depth: 'medium' }), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile({ nature: 'cool_geek', depth: 'medium' }), undefined, []);
     expect(prompt).toContain('Casual technical');
   });
 
   it('cool_geek with depth=high keeps casual technical style — nature wins over depth=high', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile({ nature: 'cool_geek', depth: 'high' }), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile({ nature: 'cool_geek', depth: 'high' }), undefined, []);
     expect(prompt).toContain('Casual technical');
   });
 
   it('includes empathetic tone for frustrated mood', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile({ mood: 'frustrated' }), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile({ mood: 'frustrated' }), undefined, []);
     expect(prompt).toContain('Empathetic');
   });
 
   it('includes ultra-concise tone for rushed mood', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile({ mood: 'rushed' }), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile({ mood: 'rushed' }), undefined, []);
     expect(prompt).toContain('Ultra-concise');
   });
 
   it('includes language note when language is non-English', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), 'fr', []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), 'fr', []);
     expect(prompt).toContain('fr-speaking developer');
   });
 
   it('does not include language note when language is en', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), 'en', []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), 'en', []);
     expect(prompt).not.toContain('fr-speaking');
     expect(prompt).not.toContain('Language:');
   });
 });
 
-// ── buildOptionPrompt — precision/playfulness ordinal labels in context line ───
+// ── buildAdaptationPrompt — precision/playfulness ordinal labels in context line
 
-describe('buildOptionPrompt — ordinal labels in profile context line', () => {
+describe('buildAdaptationPrompt — ordinal labels in profile context line', () => {
   it('includes precisionOrdinal label alongside numeric score', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, []);
     expect(prompt).toContain('precision=high (8/10)');
   });
 
   it('includes playfulnessOrdinal label alongside numeric score', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, []);
     expect(prompt).toContain('playfulness=low (3/10)');
   });
 
   it('reflects very_high ordinal label correctly', () => {
-    const prompt = buildOptionPrompt(
+    const prompt = buildAdaptationPrompt(
       TASK_REVIEW,
       makeProfile({ precisionOrdinal: 'very_high', precisionScore: 9 }),
       undefined, [],
@@ -146,7 +146,7 @@ describe('buildOptionPrompt — ordinal labels in profile context line', () => {
   });
 
   it('reflects medium ordinal label correctly', () => {
-    const prompt = buildOptionPrompt(
+    const prompt = buildAdaptationPrompt(
       TASK_REVIEW,
       makeProfile({ playfulnessOrdinal: 'medium', playfulnessScore: 5 }),
       undefined, [],
@@ -155,30 +155,30 @@ describe('buildOptionPrompt — ordinal labels in profile context line', () => {
   });
 
   it('numeric scores are still present — not replaced by ordinal labels', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, []);
     expect(prompt).toContain('8/10');
     expect(prompt).toContain('3/10');
   });
 
   it('ordinal labels absent when profile is undefined', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, undefined, undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, undefined, undefined, []);
     expect(prompt).not.toContain('precision=');
     expect(prompt).not.toContain('playfulness=');
   });
 });
 
-// ── buildOptionPrompt — static options appear verbatim ────────────────────────
+// ── buildAdaptationPrompt — static options appear verbatim ───────────────────
 
-describe('buildOptionPrompt — static options in prompt', () => {
+describe('buildAdaptationPrompt — static options in prompt', () => {
   it('includes each L1 option text in the prompt', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, []);
     for (const opt of TASK_REVIEW.L1) {
       expect(prompt).toContain(opt.slice(0, 40)); // first 40 chars to avoid wrapping issues
     }
   });
 
   it('includes serialised options JSON and count enforcement rules in prompt', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, []);
     expect(prompt).toContain('"l1"');
     expect(prompt).toContain('"l2"');
     expect(prompt).toContain('"l3"');
@@ -191,23 +191,23 @@ describe('buildOptionPrompt — static options in prompt', () => {
       makePrompt('add password reset flow', 1),
       makePrompt('write the login handler', 2),
     ];
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, history);
     expect(prompt).toContain('write the login handler');
     expect(prompt).toContain('add password reset flow');
   });
 });
 
-// ── buildOptionPrompt — project grounding ────────────────────────────────────
+// ── buildAdaptationPrompt — project grounding ────────────────────────────────
 
-describe('buildOptionPrompt — project grounding', () => {
+describe('buildAdaptationPrompt — project grounding', () => {
   it('excludes spec options when no spec signals in history', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, []);
     expect(prompt).toContain('EXCLUDE any option that references a spec');
   });
 
   it('hedges spec options when partial spec signals present', () => {
     const history = [makePrompt('write the requirements for auth'), makePrompt('now code the login')];
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, history);
     expect(prompt).toContain('if you have written requirements for this');
   });
 
@@ -217,7 +217,7 @@ describe('buildOptionPrompt — project grounding', () => {
       makePrompt('add the acceptance criteria to the spec'),
       makePrompt('review the requirements doc and update it'),
     ];
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, history);
     // At >60% confidence, no exclusion or hedge line should appear
     expect(prompt).not.toContain('EXCLUDE any option that references a spec');
     expect(prompt).not.toContain('if you have written requirements');
@@ -228,19 +228,19 @@ describe('buildOptionPrompt — project grounding', () => {
       makePrompt('write the vitest unit tests for the auth module'),
       makePrompt('run the tests — they all pass'),
     ];
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, history);
     expect(prompt).toContain('Unit tests are likely written');
   });
 
   it('advances e2e options when e2e signals present', () => {
     const history = [makePrompt('set up playwright for e2e testing')];
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, history);
     expect(prompt).toContain('E2E tests appear to be in progress');
   });
 
   it('advances task breakdown options when task signals present', () => {
     const history = [makePrompt('break this into tasks and create a checklist')];
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, history);
     expect(prompt).toContain('A task breakdown likely exists');
   });
 
@@ -251,7 +251,7 @@ describe('buildOptionPrompt — project grounding', () => {
       makePrompt('now let\'s work on the settings page', 2), // boundary
       makePrompt('add a dropdown for timezone', 3),
     ];
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, history);
     // Signals before the boundary should not count — unit test confidence should reset
     // The prompt should NOT say unit tests are written
     expect(prompt).not.toContain('Unit tests are likely written');
@@ -456,125 +456,39 @@ describe('generateOptionList', () => {
   });
 });
 
-// ── buildOptionPrompt — feature word grounding ────────────────────────────────
+// ── buildAdaptationPrompt — Pass 1 semantics ─────────────────────────────────
 
-describe('buildOptionPrompt — feature word grounding', () => {
-  it('includes grounding section with last promptWindow prompts when enabled', () => {
-    const history = [
-      makePrompt('out-prompt-0', 0),
-      makePrompt('out-prompt-1', 1),
-      makePrompt('out-prompt-2', 2),
-      ...Array.from({ length: GroundingConfig.promptWindow }, (_, i) => makePrompt(`prompt-text-${i}`, i + 3)),
-    ];
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
-    expect(prompt).toContain('Feature word grounding');
-    // Last promptWindow entries must appear in the grounding block
-    for (let i = 0; i < GroundingConfig.promptWindow; i++) {
-      expect(prompt).toContain(`prompt-text-${i}`);
-    }
-    // Entries outside the window must not appear in the grounding block
-    const groundingBlock = prompt.slice(prompt.indexOf('Feature word grounding'));
-    expect(groundingBlock).not.toContain('out-prompt-0');
-    expect(groundingBlock).not.toContain('out-prompt-1');
-    expect(groundingBlock).not.toContain('out-prompt-2');
+describe('buildAdaptationPrompt — Pass 1 semantics', () => {
+  it('prompt contains VOCABULARY ADAPTATION ONLY directive', () => {
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    expect(prompt).toContain('VOCABULARY ADAPTATION ONLY');
   });
 
-  it('omits grounding section when GroundingConfig.enabled is false', () => {
-    (GroundingConfig as Record<string, unknown>)['enabled'] = false;
-    try {
-      const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, [
-        makePrompt('build the login page', 0),
-      ]);
-      expect(prompt).not.toContain('Feature word grounding');
-      expect(prompt).toContain('Last 3 developer prompts');
-    } finally {
-      (GroundingConfig as Record<string, unknown>)['enabled'] = true;
-    }
+  it('prompt contains artifact completion context label', () => {
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    expect(prompt).toContain('Artifact completion context (adjustments based on detected artifacts)');
   });
 
-  it('grounding instruction lists broad replacement targets beyond just "what was just built"', () => {
+  it('prompt never contains feature grounding section', () => {
     const history = [makePrompt('build the login page', 0)];
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
-    const groundingBlock = prompt.slice(prompt.indexOf('Feature word grounding'));
-    expect(groundingBlock).toContain('this project');
-    expect(groundingBlock).toContain('this feature');
-    expect(groundingBlock).toContain('what was just built');
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, history);
+    expect(prompt).not.toContain('Feature word grounding');
   });
 
-  it('grounding instruction embeds maxWords word limit from GroundingConfig', () => {
-    const history = [makePrompt('build the login page', 0)];
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
-    expect(prompt).toContain(`embed at most ${GroundingConfig.maxWords} word(s)`);
+  it('prompt does not include Example 4 grounding example', () => {
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    expect(prompt).not.toContain('Example 4');
   });
 
-  it('grounding section contains exactly promptWindow entries, not all history', () => {
+  it('default no-artifact text does not reference vocabulary-only adaptation', () => {
+    // Spec capped at 60 suppresses all grounding rules → lines=[] → default text fires
     const history = [
-      makePrompt('out-feat-0', 0),
-      makePrompt('out-feat-1', 1),
-      makePrompt('out-feat-2', 2),
-      ...Array.from({ length: GroundingConfig.promptWindow }, (_, i) => makePrompt(`feat-${i}`, i + 3)),
+      makePrompt('write the prd for this feature', 0),
+      makePrompt('add the acceptance criteria to the spec', 1),
     ];
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
-    const groundingBlock = prompt.slice(prompt.indexOf('Feature word grounding'));
-    // Last promptWindow entries must appear in grounding block
-    for (let i = 0; i < GroundingConfig.promptWindow; i++) {
-      expect(groundingBlock).toContain(`feat-${i}`);
-    }
-    // Earlier entries (outside the window) must not appear
-    expect(groundingBlock).not.toContain('out-feat-0');
-    expect(groundingBlock).not.toContain('out-feat-1');
-    expect(groundingBlock).not.toContain('out-feat-2');
-  });
-
-  it('stage_transition context adds informational advisory block with stage names', () => {
-    const ctx: OptionGenContext = {
-      flagType:              'stage_transition',
-      currentStage:          'review_testing',
-      prevStage:             'implementation',
-      promptsInCurrentStage: 1,
-    };
-    const history = [
-      makePrompt('build the login page', 0),
-      makePrompt('add the logout button', 1),
-      makePrompt('add e2e tests for the login page', 2),
-    ];
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history, ctx);
-    const groundingBlock = prompt.slice(prompt.indexOf('Feature word grounding'));
-    expect(groundingBlock).toContain('stage_transition');
-    expect(groundingBlock).toContain('implementation');
-    expect(groundingBlock).toContain('review_testing');
-    expect(groundingBlock).toContain('review what was completed before moving on');
-    expect(groundingBlock).not.toContain('[TRIGGER]');
-    // All prompts still numbered [1]–[N]; extraction pinned to last prompt only
-    expect(groundingBlock).toContain('[1] build the login page');
-    expect(groundingBlock).toContain('last prompt listed only');
-  });
-
-  it('absence context adds informational advisory block with flag name and action sentence', () => {
-    const ctx: OptionGenContext = {
-      flagType:              'absence:no_spec',
-      currentStage:          'implementation',
-      promptsInCurrentStage: 8,
-    };
-    const history = [makePrompt('build the dashboard', 0)];
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history, ctx);
-    const groundingBlock = prompt.slice(prompt.indexOf('Feature word grounding'));
-    expect(groundingBlock).toContain('absence advisory');
-    expect(groundingBlock).toContain('no_spec');
-    expect(groundingBlock).toContain('8 prompt');
-    expect(groundingBlock).toContain('address this quality gap before moving forward');
-    expect(groundingBlock).not.toContain('[TRIGGER]');
-    expect(groundingBlock).toContain('last prompt listed only');
-  });
-
-  it('no context — all recent prompts appear as numbered items, no advisory block', () => {
-    const history = [makePrompt('step-A', 0), makePrompt('step-B', 1)];
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, history);
-    const groundingBlock = prompt.slice(prompt.indexOf('Feature word grounding'));
-    expect(groundingBlock).toContain('[1] step-A');
-    expect(groundingBlock).toContain('[2] step-B');
-    expect(groundingBlock).not.toContain('[TRIGGER]');
-    expect(groundingBlock).not.toContain('Advisory context');
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, history);
+    expect(prompt).toContain('No completed artifacts detected — no artifact-specific substitutions needed');
+    expect(prompt).not.toContain('use the options as-is, only adapt vocabulary');
   });
 });
 
@@ -643,16 +557,16 @@ describe('generateOptionList — retry on validation failure', () => {
   });
 });
 
-// ── buildOptionPrompt — type contract ─────────────────────────────────────────
+// ── buildAdaptationPrompt — type contract ────────────────────────────────────
 
-describe('buildOptionPrompt — type contract', () => {
+describe('buildAdaptationPrompt — type contract', () => {
   it('includes type contract section in prompt', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, []);
     expect(prompt).toContain('Item type contract (absolute');
   });
 
   it('all-string content → all STRING labels', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW, makeProfile(), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, []);
     // TASK_REVIEW: L1×3 plain strings, L2×2 plain strings, L3×1 plain string
     expect(prompt).toContain('l1: [STRING, STRING, STRING]');
     expect(prompt).toContain('l2: [STRING, STRING]');
@@ -660,13 +574,13 @@ describe('buildOptionPrompt — type contract', () => {
   });
 
   it('mixed content (ARRAY + STRING in L1) → correct per-position labels', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW_BEGINNER, makeProfile(), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW_BEGINNER, makeProfile(), undefined, []);
     // TASK_REVIEW_BEGINNER.L1[0] has \n (3 steps), L1[1] is a plain string
     expect(prompt).toContain('l1: [ARRAY(3), STRING]');
   });
 
   it('type contract appears immediately before the input JSON block', () => {
-    const prompt = buildOptionPrompt(TASK_REVIEW_BEGINNER, makeProfile(), undefined, []);
+    const prompt = buildAdaptationPrompt(TASK_REVIEW_BEGINNER, makeProfile(), undefined, []);
     const contractIdx = prompt.indexOf('Item type contract');
     const inputIdx    = prompt.indexOf('Now rewrite the following input');
     expect(contractIdx).toBeGreaterThan(-1);

@@ -3,7 +3,6 @@ import type { UserProfile, PromptRecord, Stage } from '../classifier/types.js';
 import type { FlagType } from '../classifier/Stage2Trigger.js';
 import type { DecisionContent } from './options.js';
 import { logger } from '../logger.js';
-import { GroundingConfig } from '../config/GroundingConfig.js';
 
 /**
  * Dynamic option text generator.
@@ -116,7 +115,7 @@ function buildGroundingLines(conf: ArtifactConfidence): string {
     lines.push('A task breakdown likely exists. Replace any option that says "break this into tasks" with a review or validation step: "review your task list before starting implementation".');
   }
 
-  return lines.length > 0 ? lines.join('\n  ') : 'No completed artifacts detected — use the options as-is, only adapt vocabulary.';
+  return lines.length > 0 ? lines.join('\n  ') : 'No completed artifacts detected — no artifact-specific substitutions needed.';
 }
 
 // ── Style / tone helpers ───────────────────────────────────────────────────────
@@ -193,12 +192,11 @@ appears in an option, leave that option unchanged.`;
 
 // ── CO-STAR prompt ─────────────────────────────────────────────────────────────
 
-export function buildOptionPrompt(
+export function buildAdaptationPrompt(
   content:  DecisionContent,
   profile:  UserProfile | undefined,
   language: string | undefined,
   history:  PromptRecord[],
-  context?: OptionGenContext,
 ): string {
   const conf         = scoreArtifacts(history);
   const grounding    = buildGroundingLines(conf);
@@ -210,11 +208,6 @@ export function buildOptionPrompt(
 
   // Vocab calibration — always use last 3 (same as before)
   const last3 = history.slice(-3).map((p, i) => `[${i + 1}] ${p.text}`).join('\n');
-
-  // Feature word grounding — recent window for current-feature context
-  const groundingLines = GroundingConfig.enabled
-    ? buildFeatureGroundingSection(history, GroundingConfig.promptWindow, GroundingConfig.maxWords, context)
-    : '';
 
   // Multi-line options (steps separated by \n) are serialised as sub-arrays so the LLM
   // never needs to preserve \n inside a string — it just keeps the array structure.
@@ -242,11 +235,11 @@ export function buildOptionPrompt(
     - Unit tests: ${conf.unitTests}%
     - E2E tests: ${conf.e2eTests}%
     - Task breakdown: ${conf.taskBreakdown}%
-  Grounding rules based on above confidence:
+  Artifact completion context (adjustments based on detected artifacts):
   ${grounding}${langNote}
 
 Objective:
-  Rewrite the vocabulary of each advisory option to match this developer's profile and the grounding rules above.
+  Rewrite the vocabulary of each advisory option to match this developer's profile and the artifact adjustments above. VOCABULARY ADAPTATION ONLY — do not embed project-specific feature nouns.
   CRITICAL RULES:
     - Do NOT change the meaning, intent, or action of any option.
     - Do NOT add, remove, or reorder options.
@@ -254,10 +247,6 @@ Objective:
     - If an input item is a STRING → output must be a STRING.
     - If an input item is an ARRAY → output must be an ARRAY of the SAME length. Each element is one step — rewrite its vocabulary only.
     - Each option or step must remain a complete instruction ready to send to an AI agent.
-    - Feature grounding (apply when the section below identifies a feature term): replace
-      the first matching phrase in each option ("what was just built", "what was just made",
-      "what was just created", "this project", "this feature") with the specific feature noun.
-      Replace one occurrence per option only. See Example 4 below.
 
 Style: ${styleLine}
 
@@ -267,7 +256,6 @@ Audience: A developer who is moving fast with an AI coding agent. Options are pr
 
 Last 3 developer prompts (for vocabulary calibration — do not quote them in output):
 ${last3 || '(none yet)'}
-${groundingLines}
 
 Schema examples — each shows input → output. Follow this structure exactly:
 
@@ -282,10 +270,6 @@ Output: {"l1":["Run all the tests now.","Quick check first."],"l2":["Run just th
 Example 3 — mixed: some items are step arrays, some are plain strings:
 Input:  {"l1":[["1. Describe what changed.","2. Confirm it works as expected."],"One-line summary of what changed."],"l2":["Detail each changed part.","High-level only."],"l3":["Just the summary."]}
 Output: {"l1":[["1. Say what you changed in plain words.","2. Tell me it's working now."],"Short — what just happened?"],"l2":["Walk me through each changed part.","Just the big picture."],"l3":["Quick summary only."]}
-
-Example 4 — feature word grounding ("recurring invoice feature" replaces "this project" in a planning option):
-Input:  {"l1":["Write a PRD for this project: define the problem, target user, core features with acceptance criteria, and what is out of scope.","Define the problem and success criteria first: who is this project for and what problem does it solve?"],"l2":["Write a one-paragraph scope statement for this project."],"l3":["List the 3 most important acceptance criteria for this project."]}
-Output: {"l1":["Write a PRD for the recurring invoice feature: define the problem, target user, core features with acceptance criteria, and what is out of scope.","Define the problem and success criteria first: who is the recurring invoice feature for and what problem does it solve?"],"l2":["Write a one-paragraph scope statement for the recurring invoice feature."],"l3":["List the 3 most important acceptance criteria for the recurring invoice feature."]}
 
 Item type contract (absolute — semantic content does not override this):
   ${typeContract}
@@ -390,7 +374,7 @@ export async function generateOptionList(
 ): Promise<GeneratedOptions | null> {
   try {
     const openai  = client ?? new OpenAI();
-    const prompt  = buildOptionPrompt(content, profile, language, history, context);
+    const prompt  = buildAdaptationPrompt(content, profile, language, history);
 
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
       { role: 'user', content: prompt },
