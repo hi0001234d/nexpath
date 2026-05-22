@@ -49,8 +49,6 @@ import { emitKeypressEvents } from 'node:readline';
 import { tmpdir } from 'node:os';
 
 const opts    = JSON.parse(readFileSync('${optFileFwd}', 'utf8'));
-const TIMEOUT = Symbol('timeout');
-
 const _dbg = tmpdir() + '/nexpath-render-debug.txt';
 const _log = (m) => appendFileSync(_dbg, m + '\\n', 'utf8');
 _log('=== ' + new Date().toISOString() + ' ===');
@@ -137,32 +135,26 @@ process.stdin.on('keypress', (ch, key) => {
 
 let picked;
 do {
-  picked = await Promise.race([
-    select({ message: opts.message, options: _selOptions, maxItems: _maxItems }),
-    new Promise((r) => setTimeout(() => r(TIMEOUT), 60_000)),
-  ]);
+  picked = await select({ message: opts.message, options: _selOptions, maxItems: _maxItems });
 } while (typeof picked === 'string' && picked.startsWith(opts.separatorPrefix));
 
 process.stdout.write = _ow;
 _log('done: writes=' + _wc + ' nlTotal=' + _nlTotal);
 
-if (!isCancel(picked) && picked !== TIMEOUT && typeof picked === 'string'
+if (!isCancel(picked) && typeof picked === 'string'
     && picked !== opts.skipNow && picked !== opts.showSimpler) {
 
   process.stdout.write('\\n\\x1b[2;3m  \\u21b5 hit enter to send directly to Claude\\x1b[0m\\n\\n');
 
-  const action = await Promise.race([
-    select({
-      message: 'What would you like to do?',
-      options: [
-        { value: 'send',      label: 'Send to Claude now' },
-        { value: 'clipboard', label: 'Copy to clipboard \\u2014 edit before sending' },
-      ],
-    }),
-    new Promise((r) => setTimeout(() => r(TIMEOUT), 60_000)),
-  ]);
+  const action = await select({
+    message: 'What would you like to do?',
+    options: [
+      { value: 'send',      label: 'Send to Claude now' },
+      { value: 'clipboard', label: 'Copy to clipboard \\u2014 edit before sending' },
+    ],
+  });
 
-  if (!isCancel(action) && action !== TIMEOUT && typeof action === 'string') {
+  if (!isCancel(action) && typeof action === 'string') {
     if (action === 'send') {
       writeFileSync('${resultFileFwd}', picked, 'utf8');
     } else {
@@ -174,7 +166,7 @@ if (!isCancel(picked) && picked !== TIMEOUT && typeof picked === 'string'
       writeFileSync('${resultFileFwd}', '__CLIP__', 'utf8');
     }
   }
-} else if (!isCancel(picked) && picked !== TIMEOUT && typeof picked === 'string') {
+} else if (!isCancel(picked) && typeof picked === 'string') {
   writeFileSync('${resultFileFwd}', picked, 'utf8');
 }
 
@@ -186,21 +178,17 @@ function buildFreqMjsScript(clackUrl: string, resultFileFwd: string): string {
   return `import { select, isCancel } from '${clackUrl}';
 import { writeFileSync } from 'node:fs';
 
-const TIMEOUT = Symbol('timeout');
-const picked = await Promise.race([
-  select({
-    message: 'Advisory frequency',
-    options: [
-      { value: 'every_event',      label: 'Every qualifying event (default)' },
-      { value: 'major_only',       label: 'Major transitions only (stage changes)' },
-      { value: 'once_per_session', label: 'Once per coding session' },
-      { value: 'off',              label: 'Off \\u2014 disable all advisories' },
-    ],
-  }),
-  new Promise((r) => setTimeout(() => r(TIMEOUT), 60_000)),
-]);
+const picked = await select({
+  message: 'Advisory frequency',
+  options: [
+    { value: 'every_event',      label: 'Every qualifying event (default)' },
+    { value: 'major_only',       label: 'Major transitions only (stage changes)' },
+    { value: 'once_per_session', label: 'Once per coding session' },
+    { value: 'off',              label: 'Off \\u2014 disable all advisories' },
+  ],
+});
 
-if (!isCancel(picked) && picked !== TIMEOUT && typeof picked === 'string') {
+if (!isCancel(picked) && typeof picked === 'string') {
   writeFileSync('${resultFileFwd}', \`__FREQ__:\${picked}\`, 'utf8');
 }
 

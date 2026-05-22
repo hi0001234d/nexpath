@@ -85,7 +85,7 @@ describe('createTtySelectFn — Windows (win32)', () => {
     expect(typeof result).toBe('symbol');
   });
 
-  it('resolves with Symbol on 60s timeout (no result file written)', async () => {
+  it('resolves with Symbol when window exits without selection (no result file written)', async () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({ status: 0 });
     const result = await createTtySelectFn()!(makeOpts());
     expect(typeof result).toBe('symbol');
@@ -138,7 +138,7 @@ describe('createTtySelectFn — Windows (win32)', () => {
     expect(parsed.options[0].label).toContain('\x1b[32m');
   });
 
-  it('.mjs script imports @clack/prompts ESM entry (.mjs not .cjs) and uses Promise.race', async () => {
+  it('.mjs script imports @clack/prompts ESM entry (.mjs not .cjs) and awaits select directly', async () => {
     let capturedScript = '';
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
       if (existsSync(SCRIPT_FILE)) capturedScript = readFileSync(SCRIPT_FILE, 'utf8');
@@ -147,9 +147,9 @@ describe('createTtySelectFn — Windows (win32)', () => {
     // Must point to the ESM entry — CJS entry breaks named imports in .mjs context
     expect(capturedScript).toContain('index.mjs');
     expect(capturedScript).not.toContain('index.cjs');
-    expect(capturedScript).toContain('Promise.race');
-    expect(capturedScript).toContain('60_000');
-    expect(capturedScript).toContain('select(');
+    expect(capturedScript).not.toContain('Promise.race');
+    expect(capturedScript).not.toContain('60_000');
+    expect(capturedScript).toContain('await select(');
     expect(capturedScript).toContain('isCancel(');
   });
 
@@ -562,7 +562,7 @@ describe('createTtySelectFn — Linux new-window path', () => {
     expect(existsSync(SCRIPT_FILE)).toBe(false);
   });
 
-  it('resolves with Symbol when no result file (timeout/cancel)', async () => {
+  it('resolves with Symbol when no result file (cancel/close)', async () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
       gnomeTerminalMock(() => ({ status: 0 })),
     );
@@ -687,7 +687,7 @@ describe('createTtySelectFn — macOS (darwin)', () => {
     expect(result).toBe('option-a-value');
   });
 
-  it('resolves with Symbol when no result file (timeout/cancel)', async () => {
+  it('resolves with Symbol when no result file (cancel/close)', async () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({ status: 0 });
     const result = await createTtySelectFn()!(makeOpts());
     expect(typeof result).toBe('symbol');
@@ -839,10 +839,10 @@ describe('Regression: .mjs script content is platform-consistent', () => {
 
     // Both must contain the same core UI elements
     for (const script of [linuxScript, macScript]) {
-      expect(script).toContain('select(');
+      expect(script).toContain('await select(');
       expect(script).toContain('isCancel(');
-      expect(script).toContain('Promise.race');
-      expect(script).toContain('60_000');
+      expect(script).not.toContain('Promise.race');
+      expect(script).not.toContain('60_000');
       expect(script).toContain('__NEXPATH_OPT_OUT__');
       expect(script).toContain('__FREQ_MENU_PENDING__');
       expect(script).toContain('emitKeypressEvents');
