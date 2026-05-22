@@ -109,4 +109,66 @@ describe('uninstallAction — telemetry config cleanup', () => {
       })).resolves.toBeUndefined();
     } finally { cleanup(); }
   });
+
+  it('--yes mode → both flags still cleared (telemetry cleanup runs unconditionally)', async () => {
+    const { dir, cleanup } = tmpDirAgents();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const dbPath = join(dir, 'uninstall-yes.db');
+    const confirmFn = vi.fn<() => Promise<boolean>>();
+    try {
+      // Seed prior install state.
+      const seed = await openStore(dbPath);
+      setConfig(seed, 'telemetry.enabled',      'true');
+      setConfig(seed, 'telemetry_sync_enabled', 'true');
+      closeStore(seed);
+
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await uninstallAction({
+        paths,
+        execFn: () => {},
+        apiKeyConfirmFn: confirmFn,
+        yes: true,
+        dbPath,
+      });
+
+      // --yes bypasses the API key prompt entirely.
+      expect(confirmFn).not.toHaveBeenCalled();
+
+      const store = await openStore(dbPath);
+      expect(getConfig(store.db, 'telemetry.enabled')).toBe('false');
+      expect(getConfig(store.db, 'telemetry_sync_enabled')).toBe('false');
+      closeStore(store);
+    } finally { cleanup(); }
+  });
+
+  it('clears telemetry flags even when the API key is also being removed (full flow)', async () => {
+    vi.mocked(resolver.getKeySource).mockResolvedValueOnce('keychain');
+    const { dir, cleanup } = tmpDirAgents();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const dbPath = join(dir, 'uninstall-full-flow.db');
+    try {
+      // Seed prior install state — both flags 'true'.
+      const seed = await openStore(dbPath);
+      setConfig(seed, 'telemetry.enabled',      'true');
+      setConfig(seed, 'telemetry_sync_enabled', 'true');
+      closeStore(seed);
+
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await uninstallAction({
+        paths,
+        execFn: () => {},
+        apiKeyConfirmFn: async () => true,  // user confirms API key removal
+        dbPath,
+      });
+
+      // API key removal happened.
+      expect(resolver.removeApiKey).toHaveBeenCalledTimes(1);
+
+      // AND telemetry flags also cleared in the same run.
+      const store = await openStore(dbPath);
+      expect(getConfig(store.db, 'telemetry.enabled')).toBe('false');
+      expect(getConfig(store.db, 'telemetry_sync_enabled')).toBe('false');
+      closeStore(store);
+    } finally { cleanup(); }
+  });
 });
