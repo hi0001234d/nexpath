@@ -2,7 +2,7 @@ import { select, isCancel } from '@clack/prompts';
 import type { Stage, UserProfile } from '../classifier/types.js';
 import type { FlagType } from '../classifier/Stage2Trigger.js';
 import type { Store } from '../store/db.js';
-import { insertSkippedSession } from '../store/skipped-sessions.js';
+import { insertSkippedSession, getSkippedSessions } from '../store/skipped-sessions.js';
 import { incrementDecisionSessionCount } from '../store/projects.js';
 import { setConfig } from '../store/config.js';
 import {
@@ -14,6 +14,7 @@ import {
 } from './options.js';
 import type { GeneratedOptions } from './OptionGenerator.js';
 import { writeTelemetry } from '../telemetry/index.js';
+import { type RecentPromptMetadata } from '../telemetry/recent-prompts.js';
 
 /**
  * Decision session terminal UI (per decision-session-ux-research.md).
@@ -92,6 +93,8 @@ export interface DecisionSessionInput {
   generatedOptions?:    GeneratedOptions;
   /** User profile — used to route beginner/cool_geek to BEGINNER content blocks. */
   profile?:             UserProfile | null;
+  /** Last-5 prompt metadata for the `decision_session_started` telemetry event (Item B). */
+  recentPrompts?:       RecentPromptMetadata[];
 }
 
 /**
@@ -167,6 +170,7 @@ export async function runLevel(
   input:     DecisionSessionInput,
   level:     1 | 2 | 3,
   selectFn:  SelectFn,
+  store?:    Store,
 ): Promise<'skip' | 'next' | 'clipboard_only' | string> {
   const content  = resolveDecisionContent(input.stage, input.flagType, input.profile);
   const gen      = input.generatedOptions;
@@ -210,7 +214,7 @@ export async function runLevel(
   writeTelemetry(input.projectRoot, 'level_rendered', {
     level,
     optionCount: clackOptions.filter(o => !o.value.startsWith(OPTION_SEPARATOR)).length,
-  });
+  }, store);
 
   if (process.env['NEXPATH_SIM'] === '1') {
     const first = clackOptions.find(o => !o.value.startsWith(OPTION_SEPARATOR));
@@ -225,28 +229,53 @@ export async function runLevel(
     await new Promise<void>(r => setTimeout(r, 400));
     writeTelemetry(input.projectRoot, 'decision_session_sim_dismissed', {
       level, autoSelectedText: label.slice(0, 120),
-    });
+    }, store);
     return value as string;
   }
 
   const result = await selectFn({ message, options: clackOptions });
 
+  // Item A: 5 context fields from input (no lookups) + Item I: skip count from store.
+  // Snapshot once; reused across whichever dismissal branch fires.
+  const dismissPayloadBase = {
+    flagType:           input.flagType,
+    stage:              input.stage,
+    pinchLabel:         input.pinchLabel,
+    sessionId:          input.sessionId,
+    promptCount:        input.promptCount,
+    skipCountInProject: store
+      ? getSkippedSessions(store, input.projectRoot).length
+      : null,
+  };
+
   if (isCancel(result) || typeof result === 'symbol') {
-    writeTelemetry(input.projectRoot, 'decision_session_dismissed', { level, reason: 'cancel' });
+    writeTelemetry(input.projectRoot, 'decision_session_dismissed', {
+      level,
+      reason: 'cancel',
+      ...dismissPayloadBase,
+    }, store);
     return 'skip';
   }
   if (typeof result === 'string' && result.startsWith(OPTION_SEPARATOR)) {
-    writeTelemetry(input.projectRoot, 'decision_session_dismissed', { level, reason: 'skip' });
+    writeTelemetry(input.projectRoot, 'decision_session_dismissed', {
+      level,
+      reason: 'skip',
+      ...dismissPayloadBase,
+    }, store);
     return 'skip';
   }
   if (result === CLIPBOARD_ONLY) return 'clipboard_only';
   if (result === SKIP_NOW) {
-    writeTelemetry(input.projectRoot, 'decision_session_dismissed', { level, reason: 'skip' });
+    writeTelemetry(input.projectRoot, 'decision_session_dismissed', {
+      level,
+      reason: 'skip',
+      ...dismissPayloadBase,
+    }, store);
     return 'skip';
   }
   if (result === SHOW_SIMPLER) return 'next';
 
-  writeTelemetry(input.projectRoot, 'option_selected', { level, selectedText: (result as string).slice(0, 120) });
+  writeTelemetry(input.projectRoot, 'option_selected', { level, selectedText: (result as string).slice(0, 120) }, store);
   return result as string;
 }
 
@@ -274,16 +303,20 @@ export async function runDecisionSession(
   }
 
   writeTelemetry(input.projectRoot, 'decision_session_started', {
-    flagType:   input.flagType,
-    stage:      input.stage,
-    pinchLabel: input.pinchLabel,
-    sessionId:  input.sessionId,
-  });
+    flagType:                      input.flagType,
+    stage:                         input.stage,
+    pinchLabel:                    input.pinchLabel,
+    sessionId:                     input.sessionId,
+    // Item J — project counter, populated by the call site (stop.ts).
+    decisionSessionCountInProject: input.decisionSessionCount ?? 0,
+    // Item B — last-5 prompt metadata, populated by the call site.
+    recentPrompts:                 input.recentPrompts ?? [],
+  }, store);
 
   let level: 1 | 2 | 3 = 1;
 
   while (true) {
-    const levelResult = await runLevel(input, level, selectFn);
+    const levelResult = await runLevel(input, level, selectFn, store);
 
     // Windows sentinel: Ctrl+X opt-out — write config and skip (no skipped_sessions entry)
     if (levelResult === OPT_OUT_SENTINEL) {

@@ -14,6 +14,7 @@ import { logger, initLogger } from '../../logger.js';
 import type { LogLevel } from '../../logger.js';
 import { writeHookStats } from '../../store/hook-stats.js';
 import { writeTelemetry } from '../../telemetry/index.js';
+import { recentPromptMetadata } from '../../telemetry/recent-prompts.js';
 import { readStdin } from './auto.js';
 
 /**
@@ -78,7 +79,7 @@ export async function runStop(
     const detected = detectLanguage(recentPrompts.map((p) => p.text), currentDetected);
     setDetectedLanguage(store, payload.cwd, detected);
     logger.debug('stop_lang_detected', { cwd: payload.cwd, detected: detected ?? null });
-    writeTelemetry(payload.cwd, 'language_detected', { detectedLanguage: detected ?? null });
+    writeTelemetry(payload.cwd, 'language_detected', { detectedLanguage: detected ?? null }, store);
   }
 
   // 1.7. Read decision_session_count for help-line gating in the decision session UI
@@ -88,7 +89,7 @@ export async function runStop(
   const advisory = getPendingAdvisory(store, payload.cwd);
   if (!advisory) {
     logger.debug('stop_no_pending', { cwd: payload.cwd });
-    writeTelemetry(payload.cwd, 'stop_no_pending');
+    writeTelemetry(payload.cwd, 'stop_no_pending', undefined, store);
     return { outcome: 'no_pending' };
   }
 
@@ -137,7 +138,7 @@ export async function runStop(
     flagType:         advisory.flagType,
     stage:            advisory.stage,
     generatedOptions: !!(advisory.generatedL1 && advisory.generatedL2 && advisory.generatedL3),
-  });
+  }, store);
 
   const dsResult = await runDecisionSession(
     {
@@ -150,6 +151,8 @@ export async function runStop(
       decisionSessionCount,
       generatedOptions,
       profile:              mgr.current.profile,
+      // Phase 4 — Item B: last-5 prompt metadata for decision_session_started.
+      recentPrompts:        recentPromptMetadata(mgr.current.promptHistory),
     },
     store,
     effectiveSelectFn,

@@ -439,6 +439,7 @@ describe('store — config', () => {
     expect(getConfig(store.db, 'prompt_capture_enabled')).toBe('true');
     expect(getConfig(store.db, 'prompt_store_max_per_project')).toBe('500');
     expect(getConfig(store.db, 'prompt_store_max_db_mb')).toBe('100');
+    expect(getConfig(store.db, 'telemetry.enabled')).toBe('true');
   });
 
   it('getConfig returns undefined for unknown non-default keys', () => {
@@ -462,12 +463,45 @@ describe('store — config', () => {
     expect(all['prompt_capture_enabled']).toBe('false');       // overridden
     expect(all['prompt_store_max_per_project']).toBe('500');   // still default
     expect(all['prompt_store_max_db_mb']).toBe('100');         // still default
+    expect(all['telemetry.enabled']).toBe('true');             // still default
   });
 
   it('getAllConfig includes stored custom keys', () => {
     setConfig(store, 'language_override', 'es');
     const all = getAllConfig(store.db);
     expect(all['language_override']).toBe('es');
+  });
+
+  it('telemetry_sync_endpoint and telemetry_sync_api_key have built-in defaults', () => {
+    const all = getAllConfig(store.db);
+    expect(all['telemetry_sync_endpoint']).toBe('https://us.i.posthog.com/capture/');
+    expect(all['telemetry_sync_api_key']).toMatch(/^phc_/);
+  });
+
+  it('getConfig returns the telemetry_sync_endpoint default on a fresh store', () => {
+    expect(getConfig(store.db, 'telemetry_sync_endpoint')).toBe('https://us.i.posthog.com/capture/');
+  });
+
+  it('getConfig returns the telemetry_sync_api_key default on a fresh store', () => {
+    const v = getConfig(store.db, 'telemetry_sync_api_key');
+    expect(v).toMatch(/^phc_/);
+    expect(v!.length).toBeGreaterThan(20);
+  });
+
+  it('isConfigSet returns false for telemetry_sync defaults (they are fallbacks, not stored)', () => {
+    expect(isConfigSet(store.db, 'telemetry_sync_endpoint')).toBe(false);
+    expect(isConfigSet(store.db, 'telemetry_sync_api_key')).toBe(false);
+    expect(getConfig(store.db, 'telemetry_sync_endpoint')).toBeDefined();
+    expect(getConfig(store.db, 'telemetry_sync_api_key')).toBeDefined();
+  });
+
+  it('setConfig overrides the telemetry_sync defaults (user-supplied values win)', () => {
+    setConfig(store, 'telemetry_sync_endpoint', 'https://eu.example/capture/');
+    setConfig(store, 'telemetry_sync_api_key',  'phc_custom_user_token');
+    expect(getConfig(store.db, 'telemetry_sync_endpoint')).toBe('https://eu.example/capture/');
+    expect(getConfig(store.db, 'telemetry_sync_api_key')).toBe('phc_custom_user_token');
+    expect(isConfigSet(store.db, 'telemetry_sync_endpoint')).toBe(true);
+    expect(isConfigSet(store.db, 'telemetry_sync_api_key')).toBe(true);
   });
 
   // ── isConfigSet ──────────────────────────────────────────────────────────────

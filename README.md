@@ -132,31 +132,65 @@ npm install
 npm run build
 npm link
 
-# Register with your coding agent and verify
-nexpath install --yes
+# Run the interactive installer
+nexpath install
+
+# Verify
 nexpath status
 ```
 
-### Environment Variables
+The installer walks through three steps:
 
-set it per project using a `.env` file:
+1. **OpenAI API Key** — Enter your key once. It is stored securely in your OS keychain
+   (macOS Keychain on macOS, Secret Service on Linux, Credential Manager on Windows) with an
+   encrypted-file fallback at `~/.nexpath/config.json` for systems without a keychain.
+
+2. **Telemetry consent** — Choose whether anonymous usage events leave your machine. Defaults
+   to enabled. You can change this anytime with `nexpath config set telemetry.enabled false`.
+
+3. **Agent registration** — Auto-registers the advisory hook with any detected AI coding
+   agents on your system.
+
+For non-interactive setups (CI, scripted installs):
 
 ```bash
-cd /path/to/your-project
-echo 'OPENAI_API_KEY=sk-your-key-here' > .env
-claude
+nexpath install --yes
 ```
 
-> This will directly start Claude Code using your project environment.
+`--yes` skips the API key and telemetry prompts (assumes "no API key change, telemetry on")
+and auto-confirms agent registration.
+
+### API Key Resolution Order
+
+Nexpath looks for your OpenAI API key in this order, using the first valid source:
+
+1. `process.env.OPENAI_API_KEY` — shell environment / CI
+2. Project `.env` file (`OPENAI_API_KEY=sk-...`)
+3. OS keychain (service `nexpath`, account `openai_api_key`)
+4. Fallback file at `~/.nexpath/config.json` (mode 0600)
 
 Without an API key, Nexpath still functions — it falls back to static pinch labels and skips
 LLM cross-confirmation. The local classifier and decision session UI work fully offline.
 
-To uninstall:
+### Managing Your API Key
+
+| Command | Purpose |
+|---|---|
+| `nexpath config set-api-key` | Prompt for a new key and store it in the keychain (or fallback file) |
+| `nexpath config rotate-api-key` | Replace the existing key (errors if none stored; asks confirmation before overwrite) |
+| `nexpath config show-key-source` | Print which layer is supplying the key: `env`, `dotenv`, `keychain`, `file`, or `none` |
+| `nexpath config remove-api-key` | Clear the stored key from the keychain and the fallback file |
+
+### Uninstalling
 
 ```bash
-nexpath uninstall
+nexpath uninstall          # interactive — prompts before removing the API key
+nexpath uninstall --yes    # auto-removes the API key without prompting
 ```
+
+Removes the MCP registration from all detected agents and offers to clear the stored API key.
+Local prompt history at `~/.nexpath/prompt-store.db` is retained — delete it explicitly with
+`nexpath store delete`.
 
 ---
 
@@ -193,8 +227,10 @@ detected stage).
 - **Automatic secret redaction** — API keys (`sk-*`, `ghp_*`, `ghu_*`), bearer tokens, and
   PEM blocks are automatically stripped from prompts before storage. If a prompt contains
   sensitive credentials, they never reach the database.
-- **First-run disclosure** — on the very first prompt capture, Nexpath prints a privacy banner
-  explaining exactly what it stores and how to opt out
+- **Install-time consent** — During `nexpath install`, telemetry is presented as a separate
+  consent step (defaults to enabled). Local prompt capture and remote telemetry are independent;
+  you can disable either at any time via `nexpath store disable` or
+  `nexpath config set telemetry.enabled false`.
 
 ### Opting Out and Data Control
 
@@ -208,6 +244,53 @@ nexpath store prune --older-than 30d
 # Delete all stored prompts permanently
 nexpath store delete -y
 ```
+
+---
+
+## Troubleshooting
+
+### Headless Linux (no keychain backend)
+
+If you run Nexpath on a Linux box without a desktop session (servers, containers, WSL without
+keyring), the OS keychain is unavailable. Nexpath transparently falls back to an
+encrypted-mode-0600 file at `~/.nexpath/config.json`. No manual setup needed.
+
+```bash
+nexpath config show-key-source   # → file (fallback active)
+```
+
+### Rotating Your API Key
+
+```bash
+nexpath config rotate-api-key
+```
+
+Requires a key to already be present. The command shows where the existing key lives, asks
+for an explicit confirmation, then prompts for the new key. Cancel either prompt to keep the
+existing key untouched.
+
+### Where Is My API Key Stored?
+
+| Platform | Default location | Inspect with |
+|---|---|---|
+| macOS | Keychain | Keychain Access.app → search "nexpath" |
+| Linux | Secret Service (libsecret) | `secret-tool lookup service nexpath account openai_api_key` |
+| Windows | Credential Manager | Control Panel → Credential Manager → Web Credentials |
+| Fallback (any OS) | `~/.nexpath/config.json` (mode 0600) | `cat ~/.nexpath/config.json` |
+
+Use `nexpath config show-key-source` to confirm which layer is currently active.
+
+### Diagnostic Logs
+
+Nexpath writes events to `~/.nexpath/nexpath.log`. Tail recent activity with:
+
+```bash
+nexpath log --tail 100
+nexpath log --level error
+```
+
+Telemetry events are written to `~/.nexpath/telemetry.jsonl`. Use
+`nexpath config set telemetry.enabled false` to disable.
 
 ---
 

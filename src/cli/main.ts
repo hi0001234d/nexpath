@@ -1,6 +1,14 @@
 import { Command } from 'commander';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../store/db.js';
-import { configGetAction, configSetAction, configUnsetAction } from './commands/config.js';
+import {
+  configGetAction,
+  configSetAction,
+  configUnsetAction,
+  configSetApiKeyAction,
+  configRotateApiKeyAction,
+  configShowKeySourceAction,
+  configRemoveApiKeyAction,
+} from './commands/config.js';
 import { runMigrations } from '../store/schema.js';
 import { logAction } from './commands/log.js';
 import { storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAction } from './commands/store.js';
@@ -10,6 +18,14 @@ import { registerAutoCommand } from './commands/auto.js';
 import { registerStopCommand } from './commands/stop.js';
 import { registerOptimizeCommand } from './commands/optimize.js';
 import { registerStatusCommand } from './commands/status.js';
+import {
+  telemetrySyncStatusAction,
+  telemetrySyncEnableAction,
+  telemetrySyncDisableAction,
+  telemetrySyncResetCursorAction,
+  telemetrySyncRunAction,
+  telemetrySyncPingAction,
+} from './commands/telemetry-sync.js';
 
 export function createProgram(): Command {
   const program = new Command();
@@ -23,8 +39,8 @@ export function createProgram(): Command {
 
   program
     .command('install')
-    .description('Register nexpath-serve MCP server with all detected AI coding agents')
-    .option('-y, --yes', 'Skip confirmation prompt')
+    .description('Interactive 3-step setup: OpenAI API key → telemetry consent → agent registration')
+    .option('-y, --yes', 'Non-interactive mode: skip the API key and telemetry prompts and auto-confirm agent registration')
     .option('--db <path>', 'Path to the SQLite database file')
     .action(async (opts: { yes?: boolean; db?: string }) => {
       await installAction(opts, { dbPath: opts.db ?? DEFAULT_DB_PATH });
@@ -32,9 +48,12 @@ export function createProgram(): Command {
 
   program
     .command('uninstall')
-    .description('Remove nexpath-serve MCP registration from all agents')
-    .action(async () => {
-      await uninstallAction();
+    .description('Remove nexpath-serve MCP registration from all agents (and stored API key)')
+    .option('-y, --yes', 'Skip confirmation prompt for API key removal (assumes yes)')
+    .action(async (opts: { yes?: boolean }) => {
+      const uninstallOpts: { yes?: boolean } = {};
+      if (opts.yes) uninstallOpts.yes = true;
+      await uninstallAction(uninstallOpts);
     });
 
   program
@@ -98,6 +117,34 @@ export function createProgram(): Command {
       await configUnsetAction(key, opts.db);
     });
 
+  configCmd
+    .command('set-api-key')
+    .description('Prompt for an OpenAI API key and store it securely (keychain → fallback file)')
+    .action(async () => {
+      await configSetApiKeyAction();
+    });
+
+  configCmd
+    .command('rotate-api-key')
+    .description('Replace the stored OpenAI API key (errors if no key is currently stored)')
+    .action(async () => {
+      await configRotateApiKeyAction();
+    });
+
+  configCmd
+    .command('show-key-source')
+    .description('Print which layer is supplying the OpenAI API key (env / dotenv / keychain / file / none)')
+    .action(async () => {
+      await configShowKeySourceAction();
+    });
+
+  configCmd
+    .command('remove-api-key')
+    .description('Remove the stored OpenAI API key from both the keychain and the fallback file')
+    .action(async () => {
+      await configRemoveApiKeyAction();
+    });
+
   // ── Store command ─────────────────────────────────────────────────────────────
 
   const storeCmd = program
@@ -138,6 +185,59 @@ export function createProgram(): Command {
     .option('--db <path>', 'Path to the SQLite database file')
     .action(async (opts: { olderThan?: string; project?: string; db?: string }) => {
       await storePruneAction(opts, opts.db);
+    });
+
+  // ── Telemetry sync command ────────────────────────────────────────────────────
+
+  const telemetrySyncCmd = program
+    .command('telemetry-sync')
+    .description('Manage the telemetry sync module');
+
+  telemetrySyncCmd
+    .command('status')
+    .description('Show telemetry sync state, cursor position, and config')
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (opts: { db?: string }) => {
+      await telemetrySyncStatusAction(opts.db ? { dbPath: opts.db } : {});
+    });
+
+  telemetrySyncCmd
+    .command('run')
+    .description('Force one sync attempt now (bypasses random window — debug only)')
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (opts: { db?: string }) => {
+      await telemetrySyncRunAction(opts.db ? { dbPath: opts.db } : {});
+    });
+
+  telemetrySyncCmd
+    .command('enable')
+    .description('Set telemetry_sync_enabled = true')
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (opts: { db?: string }) => {
+      await telemetrySyncEnableAction(opts.db ? { dbPath: opts.db } : {});
+    });
+
+  telemetrySyncCmd
+    .command('disable')
+    .description('Set telemetry_sync_enabled = false (in-flight syncs finish; no new ones fire)')
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (opts: { db?: string }) => {
+      await telemetrySyncDisableAction(opts.db ? { dbPath: opts.db } : {});
+    });
+
+  telemetrySyncCmd
+    .command('reset-cursor')
+    .description('Skip backlog: jump cursor to current end-of-file')
+    .action(async () => {
+      await telemetrySyncResetCursorAction();
+    });
+
+  telemetrySyncCmd
+    .command('ping')
+    .description('Smoke-test: send one event to verify network + api_key reachability')
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (opts: { db?: string }) => {
+      await telemetrySyncPingAction(opts.db ? { dbPath: opts.db } : {});
     });
 
   // ── DB command ────────────────────────────────────────────────────────────────

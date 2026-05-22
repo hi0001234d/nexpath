@@ -3110,6 +3110,7 @@ describe('runDecisionSession — telemetry: decision_session_started', () => {
         pinchLabel: 'Hold up.',
         sessionId:  'session-test',
       }),
+      undefined,
     );
   });
 
@@ -3119,6 +3120,65 @@ describe('runDecisionSession — telemetry: decision_session_started', () => {
       '/test/project',
       'decision_session_started',
       expect.any(Object),
+      undefined,
+    );
+  });
+
+  // ── Phase 4 — decision_session_started enriched payload (Items B + J) ──────
+
+  it('decision_session_started carries decisionSessionCountInProject from input', async () => {
+    await runDecisionSession(
+      makeInput({ decisionSessionCount: 7 }),
+      undefined,
+      mockSelect(SKIP_NOW),
+    );
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_started',
+      expect.objectContaining({ decisionSessionCountInProject: 7 }),
+      undefined,
+    );
+  });
+
+  it('decision_session_started defaults decisionSessionCountInProject to 0 when input is 0', async () => {
+    await runDecisionSession(
+      makeInput({ decisionSessionCount: 0 }),
+      undefined,
+      mockSelect(SKIP_NOW),
+    );
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_started',
+      expect.objectContaining({ decisionSessionCountInProject: 0 }),
+      undefined,
+    );
+  });
+
+  it('decision_session_started carries recentPrompts from input when provided', async () => {
+    const recentPrompts = [
+      { index: 1, classifiedStage: 'planning',       confidence: 0.7, capturedAt: 100 },
+      { index: 2, classifiedStage: 'implementation', confidence: 0.9, capturedAt: 200 },
+    ];
+    await runDecisionSession(
+      makeInput({ recentPrompts }),
+      undefined,
+      mockSelect(SKIP_NOW),
+    );
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_started',
+      expect.objectContaining({ recentPrompts }),
+      undefined,
+    );
+  });
+
+  it('decision_session_started defaults recentPrompts to [] when input is undefined', async () => {
+    await runDecisionSession(makeInput(), undefined, mockSelect(SKIP_NOW));
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_started',
+      expect.objectContaining({ recentPrompts: [] }),
+      undefined,
     );
   });
 });
@@ -3149,6 +3209,7 @@ describe('runLevel — NEXPATH_SIM=1 support', () => {
         level: 1,
         autoSelectedText: expect.any(String),
       }),
+      undefined,
     );
   }, 2000);
 
@@ -3156,6 +3217,142 @@ describe('runLevel — NEXPATH_SIM=1 support', () => {
     const selectFn = mockSelect(SKIP_NOW);
     await runLevel(makeInput(), 1, selectFn);
     expect(selectFn).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── runLevel — Phase 3 enriched decision_session_dismissed payload ────────────
+
+describe('runLevel — telemetry: decision_session_dismissed enriched payload (Phase 3)', () => {
+  beforeEach(() => { vi.mocked(writeTelemetry).mockClear(); });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  // Common assertion helper — the 6 context fields land verbatim from `input`.
+  const expectRichDismissPayload = (reason: 'cancel' | 'skip', level: 1 | 2 | 3) =>
+    expect.objectContaining({
+      level,
+      reason,
+      flagType:    'stage_transition',
+      stage:       'implementation',
+      pinchLabel:  'Hold up.',
+      sessionId:   'session-test',
+      promptCount: 20,
+    });
+
+  it('emits 6 context fields when user cancels (Ctrl+C) at Level 1', async () => {
+    await runLevel(makeInput(), 1, mockCancel());
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_dismissed',
+      expectRichDismissPayload('cancel', 1),
+      undefined,
+    );
+  });
+
+  it('emits 6 context fields when user clicks SKIP_NOW at Level 2', async () => {
+    await runLevel(makeInput(), 2, mockSelect(SKIP_NOW));
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_dismissed',
+      expectRichDismissPayload('skip', 2),
+      undefined,
+    );
+  });
+
+  it('emits 6 context fields when user clicks a blank separator at Level 3', async () => {
+    // Separator values look like __nexpath_sep__<n> — runLevel treats those as skip.
+    await runLevel(makeInput(), 3, mockSelect(`${OPTION_SEPARATOR}0`));
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_dismissed',
+      expectRichDismissPayload('skip', 3),
+      undefined,
+    );
+  });
+
+  it('skipCountInProject reflects real DB state when store is provided', async () => {
+    const store = await openStore(':memory:');
+    try {
+      // Seed 3 prior skips for this project so the next dismissal observes count=3.
+      const { insertSkippedSession } = await import('../store/skipped-sessions.js');
+      for (let i = 0; i < 3; i++) {
+        insertSkippedSession(store, {
+          projectRoot:          '/proj/skip-count',
+          sessionId:            `prior-${i}`,
+          flagType:             'absence:test_creation',
+          stage:                'implementation',
+          levelReached:         1,
+          skippedAtPromptCount: 5 + i,
+        });
+      }
+
+      vi.mocked(writeTelemetry).mockClear();
+      await runLevel(
+        makeInput({ projectRoot: '/proj/skip-count' }),
+        1,
+        mockSelect(SKIP_NOW),
+        store,
+      );
+
+      expect(writeTelemetry).toHaveBeenCalledWith(
+        '/proj/skip-count',
+        'decision_session_dismissed',
+        expect.objectContaining({ skipCountInProject: 3 }),
+        store,
+      );
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('skipCountInProject is null when no store is provided (graceful degradation)', async () => {
+    await runLevel(makeInput(), 1, mockSelect(SKIP_NOW));
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_dismissed',
+      expect.objectContaining({ skipCountInProject: null }),
+      undefined,
+    );
+  });
+
+  it('runDecisionSession plumbs store through runLevel — full chain delivers rich payload', async () => {
+    // End-to-end guard: if a future refactor accidentally drops `store` from
+    // the runLevel() call inside runDecisionSession, this test catches it
+    // even though both runLevel and runDecisionSession individually still work.
+    const store = await openStore(':memory:');
+    try {
+      const { insertSkippedSession } = await import('../store/skipped-sessions.js');
+      for (let i = 0; i < 2; i++) {
+        insertSkippedSession(store, {
+          projectRoot:          '/proj/plumb',
+          sessionId:            `prior-${i}`,
+          flagType:             'absence:test_creation',
+          stage:                'implementation',
+          levelReached:         1,
+          skippedAtPromptCount: 5 + i,
+        });
+      }
+
+      vi.mocked(writeTelemetry).mockClear();
+      await runDecisionSession(
+        makeInput({ projectRoot: '/proj/plumb' }),
+        store,
+        mockSelect(SKIP_NOW),
+      );
+
+      expect(writeTelemetry).toHaveBeenCalledWith(
+        '/proj/plumb',
+        'decision_session_dismissed',
+        expect.objectContaining({
+          level:              1,
+          reason:             'skip',
+          flagType:           'stage_transition',
+          skipCountInProject: 2,
+        }),
+        store,
+      );
+    } finally {
+      store.db.close();
+    }
   });
 });
 

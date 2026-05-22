@@ -21,22 +21,30 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { openStore, closeStore } from '../store/index.js';
 import { TOOLS } from './tools.js';
+import { createDefaultScheduler } from '../telemetry/TelemetrySyncScheduler.js';
 
 // ── Open prompt store ─────────────────────────────────────────────────────────
 
 const store = await openStore();
 process.stderr.write(`[nexpath-serve] store opened\n`);
 
+// ── Telemetry sync scheduler ──────────────────────────────────────────────────
+
+const scheduler = createDefaultScheduler(store);
+scheduler.start();
+
 // ── Shutdown handlers ─────────────────────────────────────────────────────────
 
 process.stdin.on('end', () => {
   process.stderr.write('[nexpath-serve] stdin closed — shutting down\n');
+  scheduler.stop();
   closeStore(store);
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
   process.stderr.write('[nexpath-serve] SIGTERM received — shutting down\n');
+  scheduler.stop();
   closeStore(store);
   process.exit(0);
 });

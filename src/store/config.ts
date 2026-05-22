@@ -7,6 +7,9 @@ export const DEFAULT_CONFIG: Record<string, string> = {
   prompt_store_max_per_project: '500',
   prompt_store_max_db_mb: '100',
   log_level: 'info',
+  'telemetry.enabled': 'true',
+  telemetry_sync_endpoint: 'https://us.i.posthog.com/capture/',
+  telemetry_sync_api_key:  'phc_mBETUUXjX2MLDCBpHmRoVMqHmRF2dUpnuByqVGw5qej9',
 };
 
 /** Returns true only if the key has been explicitly written to the config table. */

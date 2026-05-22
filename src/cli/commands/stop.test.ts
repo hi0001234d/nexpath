@@ -5,6 +5,10 @@ vi.mock('../../telemetry/index.js', () => ({
   TELEMETRY_PATH: '/mock/telemetry.jsonl',
 }));
 
+vi.mock('../../telemetry/recent-prompts.js', () => ({
+  recentPromptMetadata: vi.fn().mockReturnValue([]),
+}));
+
 import { openStore } from '../../store/db.js';
 import type { Store } from '../../store/db.js';
 import { runStop } from './stop.js';
@@ -19,6 +23,7 @@ import { insertPrompt } from '../../store/prompts.js';
 import { upsertProject, getProject } from '../../store/projects.js';
 import { LANG_DETECT_INTERVAL } from '../../classifier/LanguageDetector.js';
 import { writeTelemetry } from '../../telemetry/index.js';
+import { recentPromptMetadata } from '../../telemetry/recent-prompts.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -506,7 +511,7 @@ describe('runStop — telemetry events', () => {
 
   it('emits stop_no_pending when no advisory is queued', async () => {
     await runStop(makePayload(), store);
-    expect(writeTelemetry).toHaveBeenCalledWith('/test/project', 'stop_no_pending');
+    expect(writeTelemetry).toHaveBeenCalledWith('/test/project', 'stop_no_pending', undefined, expect.anything());
   });
 
   it('does not emit stop_no_pending when an advisory is present', async () => {
@@ -527,6 +532,7 @@ describe('runStop — telemetry events', () => {
         stage:            'implementation',
         generatedOptions: false,
       }),
+      expect.anything(),
     );
   });
 
@@ -547,6 +553,7 @@ describe('runStop — telemetry events', () => {
       '/test/project',
       'stop_advisory_shown',
       expect.objectContaining({ generatedOptions: true }),
+      expect.anything(),
     );
   });
 
@@ -561,6 +568,7 @@ describe('runStop — telemetry events', () => {
       '/test/project',
       'language_detected',
       expect.objectContaining({ detectedLanguage: expect.anything() }),
+      expect.anything(),
     );
   });
 
@@ -572,5 +580,28 @@ describe('runStop — telemetry events', () => {
     await runStop(makePayload(), store);
     const calls = vi.mocked(writeTelemetry).mock.calls;
     expect(calls.some(([, evt]) => evt === 'language_detected')).toBe(false);
+  });
+
+  // ── Phase 4 — stop.ts plumbs recentPrompts into runDecisionSession input ────
+
+  it('decision_session_started carries recentPrompts populated from session state', async () => {
+    // Sentinel return — if stop.ts drops the `recentPrompts` line in its
+    // runDecisionSession input, the helper is never called and/or the
+    // payload defaults to []. Either way, this assertion fails.
+    const sentinel = [
+      { index: 99, classifiedStage: 'planning' as const, confidence: 0.5, capturedAt: 100 },
+    ];
+    vi.mocked(recentPromptMetadata).mockReturnValueOnce(sentinel);
+
+    upsertPendingAdvisory(store, makeAdvisory());
+    await runStop(makePayload(), store, mockSelect(SKIP_NOW));
+
+    expect(recentPromptMetadata).toHaveBeenCalledTimes(1);
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_started',
+      expect.objectContaining({ recentPrompts: sentinel }),
+      expect.anything(),
+    );
   });
 });

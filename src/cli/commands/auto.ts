@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { readFileSync, existsSync } from 'node:fs';
-import { join, basename } from 'node:path';
-import { config as loadDotenv } from 'dotenv';
+import { basename, join } from 'node:path';
+import { resolveOpenAIKey, getKeySource } from '../../config/ApiKeyResolver.js';
 import type { Store } from '../../store/db.js';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
 import { classifyPrompt } from '../../classifier/PromptClassifier.js';
@@ -27,6 +27,7 @@ import { writeHookStats } from '../../store/hook-stats.js';
 import { upsertPendingAdvisory } from '../../store/pending-advisories.js';
 import { insertSkippedSession } from '../../store/skipped-sessions.js';
 import { writeTelemetry } from '../../telemetry/index.js';
+import { recentPromptMetadata } from '../../telemetry/recent-prompts.js';
 
 /**
  * nexpath auto — orchestration command (per decision-session-ux-research.md).
@@ -138,12 +139,12 @@ export async function runAuto(
   const mgr = SessionStateManager.load(store, input.projectRoot);
   const prevStage: Stage = mgr.current.currentStage;
   logger.debug('session_loaded', { promptCount: mgr.current.promptCount, stage: prevStage, project: input.projectRoot });
-  writeTelemetry(input.projectRoot, 'prompt_received', { promptCount: mgr.current.promptCount });
+  writeTelemetry(input.projectRoot, 'prompt_received', { promptCount: mgr.current.promptCount }, store);
 
   // ── 2. Stage 1 classifier ────────────────────────────────────────────────────
   const classification = await classifyPrompt(input.promptText);
   logger.debug('stage1_result', { classified: classification.stage, confidence: classification.confidence });
-  writeTelemetry(input.projectRoot, 'prompt_classified', { stage: classification.stage, confidence: classification.confidence });
+  writeTelemetry(input.projectRoot, 'prompt_classified', { stage: classification.stage, confidence: classification.confidence }, store);
 
   // ── 2.5. LLM profile classification — async, before processPrompt ────────────
   if (isProfileStale(mgr.current.profile, mgr.current.promptCount) &&
@@ -163,7 +164,7 @@ export async function runAuto(
       precisionOrdinal:   updatedProfile.precisionOrdinal,
       playfulnessOrdinal: updatedProfile.playfulnessOrdinal,
       computedAt:         updatedProfile.computedAt,
-    });
+    }, store);
   }
 
   // ── 3. Process prompt → updates state (stage, history, counters) ─────────────
@@ -192,11 +193,11 @@ export async function runAuto(
     newFlagsCount:   newFlags.length,
     totalFlagsCount: mgr.current.absenceFlags.length,
     flagKeys:        newFlags.map((f) => f.signalKey),
-  });
+  }, store);
 
   // ── 4.5. Minimum prompt guard ────────────────────────────────────────────────
   if (mgr.current.promptCount < MIN_PROMPTS_BEFORE_ADVISORY) {
-    writeTelemetry(input.projectRoot, 'advisory_min_prompts_blocked', { promptCount: mgr.current.promptCount, minRequired: MIN_PROMPTS_BEFORE_ADVISORY });
+    writeTelemetry(input.projectRoot, 'advisory_min_prompts_blocked', { promptCount: mgr.current.promptCount, minRequired: MIN_PROMPTS_BEFORE_ADVISORY }, store);
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'min_prompts_not_reached' });
     return { outcome: 'no_action' };
   }
@@ -210,7 +211,7 @@ export async function runAuto(
   logger.debug('should_fire', { flagType: flagType ?? null });
 
   if (!flagType) {
-    writeTelemetry(input.projectRoot, 'pipeline_no_action', { reason: 'no_flag' });
+    writeTelemetry(input.projectRoot, 'pipeline_no_action', { reason: 'no_flag' }, store);
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'no_flag' });
     return { outcome: 'no_action' };
   }
@@ -220,7 +221,7 @@ export async function runAuto(
   const alreadyFired = mgr.hasFiredDecisionSession(firedKey);
   logger.debug('dedup', { firedKey, alreadyFired });
   if (alreadyFired) {
-    writeTelemetry(input.projectRoot, 'advisory_dedup_blocked', { firedKey });
+    writeTelemetry(input.projectRoot, 'advisory_dedup_blocked', { firedKey }, store);
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'already_fired', firedKey });
     return { outcome: 'no_action' };
   }
@@ -232,17 +233,17 @@ export async function runAuto(
     'every_event';
 
   if (freq === 'off') {
-    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType });
+    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType }, store);
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_off' });
     return { outcome: 'no_action' };
   }
   if (freq === 'major_only' && flagType !== 'stage_transition') {
-    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType });
+    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType }, store);
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_major_only', flagType });
     return { outcome: 'no_action' };
   }
   if (freq === 'once_per_session' && mgr.current.firedDecisionSessions.length > 0) {
-    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType });
+    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType }, store);
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_once_per_session' });
     return { outcome: 'no_action' };
   }
@@ -254,7 +255,7 @@ export async function runAuto(
       promptCount:       mgr.current.promptCount,
       lastAdvisoryAt:    lastAdvisory,
       cooldownRemaining: POST_ADVISORY_COOLDOWN - (mgr.current.promptCount - lastAdvisory),
-    });
+    }, store);
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'post_advisory_cooldown', promptsSinceLast: mgr.current.promptCount - lastAdvisory });
     return { outcome: 'no_action' };
   }
@@ -274,7 +275,7 @@ export async function runAuto(
       levelReached:         0,
       skippedAtPromptCount: mgr.current.promptCount,
     });
-    writeTelemetry(input.projectRoot, 'advisory_cap_blocked', { advisoryCount, advisoryCap });
+    writeTelemetry(input.projectRoot, 'advisory_cap_blocked', { advisoryCount, advisoryCap }, store);
     logger.info('pipeline_outcome', {
       outcome: 'no_action',
       reason:  'session_cap_reached',
@@ -296,16 +297,16 @@ export async function runAuto(
   try {
     stage2Output = await runStage2(stage2Input, openai);
     logger.debug('stage2_result', { fire: stage2Output.fire_decision_session, confidence: stage2Output.stage_confidence, reason: stage2Output.reason });
-    writeTelemetry(input.projectRoot, 'stage2_evaluated', { flagType, confirmed: stage2Output.fire_decision_session });
+    writeTelemetry(input.projectRoot, 'stage2_evaluated', { flagType, confirmed: stage2Output.fire_decision_session }, store);
   } catch (err) {
     logger.warn('stage2_error', { ...extractApiError(err, 'openai'), stage: mgr.current.currentStage });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'stage2_error' });
-    writeTelemetry(input.projectRoot, 'pipeline_no_action', { reason: 'stage2_error' });
+    writeTelemetry(input.projectRoot, 'pipeline_no_action', { reason: 'stage2_error' }, store);
     return { outcome: 'no_action' };
   }
 
   if (!stage2Output.fire_decision_session) {
-    writeTelemetry(input.projectRoot, 'pipeline_no_action', { reason: 'stage2_declined' });
+    writeTelemetry(input.projectRoot, 'pipeline_no_action', { reason: 'stage2_declined' }, store);
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'stage2_declined', stage2Confidence: stage2Output.stage_confidence });
     return { outcome: 'no_action' };
   }
@@ -359,7 +360,17 @@ export async function runAuto(
     generatedL2: generatedOptions?.l2,
     generatedL3: generatedOptions?.l3,
   });
-  writeTelemetry(input.projectRoot, 'pipeline_advisory_pending', { flagType, stage: mgr.current.currentStage, pinchLabel });
+  writeTelemetry(input.projectRoot, 'pipeline_advisory_pending', {
+    flagType,
+    stage:                         mgr.current.currentStage,
+    pinchLabel,
+    // Item H — session-scoped advisory counter (from session state).
+    advisoryCountInSession:        mgr.current.advisoryCount ?? 0,
+    // Item J — project-scoped decision-session counter (from projects table).
+    decisionSessionCountInProject: getProject(store, input.projectRoot)?.decisionSessionCount ?? 0,
+    // Item B — last-5 prompt metadata, PII-safe (no text).
+    recentPrompts:                 recentPromptMetadata(mgr.current.promptHistory),
+  }, store);
   mgr.markAdvisoryFired(store);
 
   logger.info('pipeline_outcome', { outcome: 'pending', pinchLabel });
@@ -431,25 +442,39 @@ export function registerAutoCommand(program: import('commander').Command): void 
         process.exit(1);
       }
 
-      // Load project .env so OPENAI_API_KEY is available for Stage 2 calls.
-      // Uses override:true so the project key always wins over any ambient env var.
-      const envPath = join(opts.project, '.env');
-      loadDotenv({ path: envPath, override: true });
+      // Resolve OPENAI_API_KEY through the 4-layer chain (env → project .env →
+      // OS keychain → 0600 fallback file). The resolver promotes the first
+      // valid hit into process.env so downstream OpenAI() constructors pick it
+      // up transparently. Order shift from the prior dotenv-with-override
+      // behaviour: a pre-set env var now WINS over project .env.
+      await resolveOpenAIKey(opts.project);
 
       const store = await openStore(opts.db);
       // Initialise logger — level from config key, then NEXPATH_LOG_LEVEL env var
       const logLevel = getConfig(store.db, 'log_level') as LogLevel | undefined;
       initLogger('auto', logLevel);
 
-      // Diagnostic: log env resolution details so CWD mismatches are visible in the log
-      // instead of silently producing a missing-credentials error in Stage 2.
+      // Diagnostic: log the source layer that produced the key so a missing
+      // key (Stage-2 failure) can be traced to the actual fallback chain.
+      const keySource = await getKeySource(opts.project);
+      const keyFound  = !!process.env['OPENAI_API_KEY'];
       logger.debug('env_load', {
-        cwd:      process.cwd(),
-        project:  opts.project,
-        envPath,
-        envExists: existsSync(envPath),
-        keyFound:  !!process.env['OPENAI_API_KEY'],
+        cwd:       process.cwd(),
+        project:   opts.project,
+        keySource,
+        keyFound,
       });
+
+      // Surface a single visible warn line when no source produced a key. We
+      // do NOT exit here — Stage-1-only hook calls (prompt capture, blocking
+      // gates, low-confidence classifications) don't need the key and should
+      // still run. Stage-2 paths surface a richer OpenAI error if they fire.
+      if (!keyFound) {
+        logger.warn('openai_api_key_missing', {
+          project:    opts.project,
+          actionable: 'Set OPENAI_API_KEY in the shell, in the project\'s .env file, or via the OS keychain — Stage 2 calls will fail until a key is configured.',
+        });
+      }
 
       try {
         const result = await runAuto(
