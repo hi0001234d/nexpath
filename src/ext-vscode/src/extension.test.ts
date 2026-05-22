@@ -454,6 +454,58 @@ describe('activate', () => {
     expect(() => opts.onError(watcherErr)).not.toThrow();
     expect(errorSpy).toHaveBeenCalledWith('[nexpath] watcher error:', watcherErr);
   });
+
+  // ── Pipeline logger wiring (B1.4 follow-up — spawn errors in Output) ──────
+  // chat-pipeline.ts catches spawnAuto / spawnStop failures and forwards them
+  // to its `logger.error`. extension.ts must wire a logger that writes to
+  // BOTH console.error AND the Nexpath OutputChannel (via the local `log`
+  // helper). Otherwise IPC errors only surface in Developer Tools Console,
+  // invisible to end users. Verified live during B1.4 (nexpath binary moved
+  // aside → spawnAuto ENOENT → silent before this fix, surfaces in Output
+  // after this fix).
+
+  it('wires a logger into createChatEventHandler that writes spawn errors to the Output channel', async () => {
+    mockShowOnboarding.mockResolvedValueOnce(undefined);
+    mockDetectHost.mockReturnValueOnce('cursor');
+    mockWorkspaceStorageDir.mockReturnValueOnce('/fake/ws');
+    mockEnumerateStateVscdbPaths.mockReturnValueOnce(['/fake/ws/a/state.vscdb']);
+    await activate(makeCtx(true) as never);
+    const handlerDeps = mockCreateChatEventHandler.mock.calls[0]![0] as {
+      logger?: { error: (msg: string, err: unknown) => void };
+    };
+    expect(handlerDeps.logger).toBeDefined();
+    expect(typeof handlerDeps.logger!.error).toBe('function');
+
+    // Calling the wired logger.error should reach console.error (existing
+    // path) and also call `log()` which writes to console.log (which the
+    // OutputChannel mock will also receive via appendLine in production).
+    const enoent = Object.assign(new Error('spawn nexpath ENOENT'), {
+      code: 'ENOENT',
+    });
+    handlerDeps.logger!.error('[nexpath] spawnAuto failed:', enoent);
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[nexpath] spawnAuto failed:',
+      enoent,
+    );
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining('spawn nexpath ENOENT'),
+    );
+  });
+
+  it('wired logger.error formats non-Error rejection values cleanly', async () => {
+    mockShowOnboarding.mockResolvedValueOnce(undefined);
+    mockDetectHost.mockReturnValueOnce('cursor');
+    mockWorkspaceStorageDir.mockReturnValueOnce('/fake/ws');
+    mockEnumerateStateVscdbPaths.mockReturnValueOnce(['/fake/ws/a/state.vscdb']);
+    await activate(makeCtx(true) as never);
+    const handlerDeps = mockCreateChatEventHandler.mock.calls[0]![0] as {
+      logger?: { error: (msg: string, err: unknown) => void };
+    };
+    handlerDeps.logger!.error('[nexpath] spawnStop failed:', 'plain string err');
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining('plain string err'),
+    );
+  });
 });
 
 describe('deactivate', () => {

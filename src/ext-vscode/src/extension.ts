@@ -157,6 +157,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     spawnStop: (sid) => spawnStop(sid, { cwd: workspaceCwd }),
     publishPayload: (payload) => viewProvider?.publishPayload(payload),
     composeSessionId: (event) => `${workspaceCwd}|${event.rawSessionId}`,
+    // Wire IPC failures (e.g. nexpath binary not on PATH → ENOENT) into
+    // the Nexpath OutputChannel so they surface to the user. Default logger
+    // only writes to console.error which is invisible outside Developer
+    // Tools. Both destinations are kept so existing test assertions on
+    // console.error continue to pass.
+    logger: {
+      error: (msg: string, err: unknown) => {
+        const detail = err instanceof Error ? err.message : String(err);
+        log(`${msg} ${detail}`);
+        console.error(msg, err);
+      },
+    },
   });
 
   watcher = createChatHistoryWatcher({
