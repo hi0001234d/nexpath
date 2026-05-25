@@ -6,6 +6,30 @@ import { confirm, isCancel } from '@clack/prompts';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
 import { isConfigSet, setConfig } from '../../store/config.js';
 
+// Side-effect import: registers all coding-agent adapters with the in-process
+// registry. Must precede any getAdapter() call in installAction below.
+import '../../agents/index.js';
+import { getAdapter } from '../../agents/registry.js';
+import type { HookAdapter } from '../../agents/types.js';
+// Internal use + backward-compat re-export of the Claude Code hook helpers
+// (moved to src/agents/adapters/claude-code.ts in M1 Branch 2 — v0.1.3/m1/claude-code-refactor).
+import {
+  getClaudeSettingsPath,
+  buildHookCommand,
+  buildStopHookCommand,
+  buildHookEntry,
+  writeHookEntry,
+  removeHookEntry,
+} from '../../agents/adapters/claude-code.js';
+export {
+  getClaudeSettingsPath,
+  buildHookCommand,
+  buildStopHookCommand,
+  buildHookEntry,
+  writeHookEntry,
+  removeHookEntry,
+};
+
 export const MCP_SERVER_NAME = 'nexpath-prompt-store';
 
 // ── Config entry builders (pure — no I/O) ─────────────────────────────────────
@@ -205,145 +229,10 @@ export function removeOpenCodeEntry(filePath: string): boolean {
 }
 
 // ── Claude Code hook helpers ──────────────────────────────────────────────────
-
-/** Path to the user-level Claude Code settings file (where hooks are configured). */
-export function getClaudeSettingsPath(home: string): string {
-  return join(home, '.claude', 'settings.json');
-}
-
-/**
- * Build the shell command string for the UserPromptSubmit hook.
- *
- * Uses `node` explicitly with the absolute path to the running CLI so the hook
- * works regardless of whether nexpath is globally installed or run from a local
- * build (PATH is not required).
- *
- * Forward slashes are used throughout so the value is safe in PowerShell and cmd
- * on Windows as well as bash/zsh on Unix.
- */
-export function buildHookCommand(home: string, platform = process.platform): string {
-  const cliPath = resolve(process.argv[1]).replace(/\\/g, '/');
-  const dbPath  = join(home, '.nexpath', 'prompt-store.db').replace(/\\/g, '/');
-  return `node "${cliPath}" auto --db "${dbPath}"`;
-}
-
-/** Build the shell command string for the Stop hook. */
-export function buildStopHookCommand(home: string, platform = process.platform): string {
-  const cliPath = resolve(process.argv[1]).replace(/\\/g, '/');
-  const dbPath  = join(home, '.nexpath', 'prompt-store.db').replace(/\\/g, '/');
-  return `node "${cliPath}" stop --db "${dbPath}"`;
-}
-
-/**
- * Build the UserPromptSubmit + Stop hook entry objects.
- *
- * The `_nexpath_hook: true` field is the reliable deduplication and removal
- * marker — it survives path changes across reinstalls, unlike scanning the
- * command string.
- *
- * No `timeout` field is set so Claude Code uses its default (600 s), which is
- * required for hooks that block for UI interaction (the decision session).
- */
-export function buildHookEntry(home: string, platform = process.platform): Record<string, unknown> {
-  return {
-    UserPromptSubmit: [
-      {
-        _nexpath_hook: true,
-        matcher:       '',
-        hooks: [
-          {
-            type:    'command',
-            command: buildHookCommand(home, platform),
-          },
-        ],
-      },
-    ],
-    Stop: [
-      {
-        _nexpath_hook: true,
-        matcher:       '',
-        hooks: [
-          {
-            type:    'command',
-            command: buildStopHookCommand(home, platform),
-          },
-        ],
-      },
-    ],
-  };
-}
-
-/**
- * Write the nexpath UserPromptSubmit and Stop hooks into ~/.claude/settings.json.
- *
- * Uses a read-filter-append pattern so existing hooks written by other tools are
- * preserved.  Any prior nexpath hook group (identified by `_nexpath_hook: true`)
- * is removed before appending the fresh entry, making this operation idempotent.
- */
-export function writeHookEntry(filePath: string, home: string, platform = process.platform): void {
-  const data  = readJsonSafe(filePath);
-  const hooks = (data.hooks as Record<string, unknown> | undefined) ?? {};
-  const entry = buildHookEntry(home, platform);
-
-  // UserPromptSubmit
-  const existingUPS = (hooks.UserPromptSubmit as Array<Record<string, unknown>> | undefined) ?? [];
-  hooks.UserPromptSubmit = [
-    ...existingUPS.filter((g) => !g._nexpath_hook),
-    ...(entry.UserPromptSubmit as unknown[]),
-  ];
-
-  // Stop
-  const existingStop = (hooks.Stop as Array<Record<string, unknown>> | undefined) ?? [];
-  hooks.Stop = [
-    ...existingStop.filter((g) => !g._nexpath_hook),
-    ...(entry.Stop as unknown[]),
-  ];
-
-  data.hooks = hooks;
-  writeJson(filePath, data);
-}
-
-/**
- * Remove the nexpath UserPromptSubmit and Stop hooks from ~/.claude/settings.json.
- *
- * Identifies nexpath-written hook groups by the `_nexpath_hook: true` field.
- * Returns false if the file does not exist or no nexpath hooks were found.
- */
-export function removeHookEntry(filePath: string): boolean {
-  if (!existsSync(filePath)) return false;
-  const data  = readJsonSafe(filePath);
-  const hooks = data.hooks as Record<string, unknown> | undefined;
-  if (!hooks) return false;
-
-  let removed = false;
-
-  // UserPromptSubmit
-  const upsGroups = hooks.UserPromptSubmit as Array<Record<string, unknown>> | undefined;
-  if (upsGroups) {
-    const filtered = upsGroups.filter((g) => !g._nexpath_hook);
-    if (filtered.length < upsGroups.length) {
-      removed = true;
-      if (filtered.length === 0) delete hooks.UserPromptSubmit;
-      else hooks.UserPromptSubmit = filtered;
-    }
-  }
-
-  // Stop
-  const stopGroups = hooks.Stop as Array<Record<string, unknown>> | undefined;
-  if (stopGroups) {
-    const filtered = stopGroups.filter((g) => !g._nexpath_hook);
-    if (filtered.length < stopGroups.length) {
-      removed = true;
-      if (filtered.length === 0) delete hooks.Stop;
-      else hooks.Stop = filtered;
-    }
-  }
-
-  if (!removed) return false;
-  data.hooks = hooks;
-  writeJson(filePath, data);
-  return true;
-}
+// Function definitions moved to src/agents/adapters/claude-code.ts in M1 Branch 2
+// (v0.1.3/m1/claude-code-refactor). Bodies are byte-identical to what lived
+// here before; the import + re-export at the top of this file preserves the
+// existing public API so callers importing from './install.js' are unaffected.
 
 // ── Claude Code CLI helpers ───────────────────────────────────────────────────
 
@@ -450,11 +339,17 @@ export async function installAction(
           }
         }
         // Register the advisory pipeline hook (separate from MCP — different file)
-        try {
-          writeHookEntry(paths.claudeSettings, homedir(), isWin ? 'win32' : process.platform);
-          console.log(`\u2713 ${'Claude Code'.padEnd(12)} \u2014 advisory hook written to ${paths.claudeSettings}`);
-        } catch (err) {
-          console.log(`\u26a0 ${'Claude Code'.padEnd(12)} \u2014 hook write failed: ${(err as Error).message}`);
+        const claudeAdapter = getAdapter('claude-code') as HookAdapter | undefined;
+        if (claudeAdapter) {
+          await claudeAdapter.install({
+            home:         homedir(),
+            cwd:          process.cwd(),
+            yes:          !!opts.yes,
+            dbPath,
+            // Pass paths.claudeSettings so tests that inject a custom paths
+            // object still control the target file independently of homedir().
+            settingsPath: paths.claudeSettings,
+          });
         }
       } else if (REGISTER_MCP_SERVER) {
         if (agent.type === 'cline') {
