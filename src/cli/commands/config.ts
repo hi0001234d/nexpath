@@ -12,7 +12,15 @@ export async function configGetAction(key: string, dbPath = DEFAULT_DB_PATH): Pr
   }
 }
 
+const VALID_ROLES = ['founder', 'indie_hacker', 'pm'] as const;
+
 export async function configSetAction(key: string, value: string, dbPath = DEFAULT_DB_PATH): Promise<void> {
+  if (key === 'role' || key.startsWith('role:')) {
+    if (value !== '' && !(VALID_ROLES as readonly string[]).includes(value)) {
+      console.error(`Invalid role "${value}". Valid values: ${VALID_ROLES.join(', ')}`);
+      process.exit(1);
+    }
+  }
   const store = await openStore(dbPath);
   setConfig(store, key, value);
   closeStore(store);

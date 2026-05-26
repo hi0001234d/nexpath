@@ -178,6 +178,12 @@ export async function runAuto(
     });
   }
 
+  // ── 2.7. Inject configured role into profile ────────────────────────────────
+  const currentProfileForRole = mgr.current.profile;
+  if (currentProfileForRole !== null) {
+    mgr.setProfile({ ...currentProfileForRole, role: configuredRole });
+  }
+
   // ── 3. Process prompt → updates state (stage, history, counters) ─────────────
   mgr.processPrompt(store, input.promptText, classification, Date.now(), freqConfig.minStageChangeConfidence);
   logger.debug('after_process', { stage: mgr.current.currentStage, stageConfidence: mgr.current.stageConfidence });
@@ -196,7 +202,6 @@ export async function runAuto(
     mgr.current.profile,
     projectType,
     freqConfig.signalAbsenceThresholdMultiplier,
-    configuredRole,
   );
   for (const flag of newFlags) {
     mgr.addAbsenceFlag(store, flag);

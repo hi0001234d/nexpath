@@ -1,4 +1,4 @@
-import type { SessionState, AbsenceFlag, UserProfile, UserRole } from './types.js';
+import type { SessionState, AbsenceFlag, UserProfile } from './types.js';
 import { SIGNAL_MAP } from './signals.js';
 import { STAGE_CONFIRM_THRESHOLD } from './SessionStateManager.js';
 
@@ -51,7 +51,6 @@ export function detectAbsenceFlags(
   profile?:            UserProfile | null,
   projectType?:        string,
   thresholdMultiplier = 1.0,
-  configuredRole?:     UserRole | null,
 ): AbsenceFlag[] {
   const { currentStage, stageConfidence, promptsInCurrentStage, promptCount } = state;
 
@@ -77,8 +76,8 @@ export function detectAbsenceFlags(
     // Nature gate — Dim1 signals: fire only when profile.nature matches
     if (sig.nature && sig.nature !== profile?.nature) continue;
 
-    // Role gate — Dim2 signals: fire only when configuredRole matches
-    if (sig.role && sig.role !== configuredRole) continue;
+    // Role gate — Dim2 signals: fire only when profile.role matches
+    if (sig.role && sig.role !== profile?.role) continue;
 
     // Gate 3 — per-signal threshold with profile multiplier and global frequency multiplier
     const effectiveThreshold = Math.max(5, Math.ceil(sig.absenceThreshold * profileMultiplier * thresholdMultiplier));

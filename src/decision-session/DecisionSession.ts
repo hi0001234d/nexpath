@@ -61,7 +61,7 @@ const MOD_KEY = process.platform === 'darwin' ? 'Cmd' : 'Ctrl';
 
 const HELP_LABEL =
   `${ITALIC_DIM}  don't need nexpath here?  press ${RESET}${ITALIC_AMBER}${MOD_KEY}+X${RESET}${ITALIC_DIM} to disable for this project` +
-  `  ·  press ${RESET}${ITALIC_AMBER}${MOD_KEY}+T${RESET}${ITALIC_DIM} to adjust frequency${RESET}`;
+  `  ·  press ${RESET}${ITALIC_AMBER}${MOD_KEY}+T${RESET}${ITALIC_DIM} to adjust frequency or configure role${RESET}`;
 
 export function formatPinchLabel(label: string): string {
   return `${BOLD_CYAN}${label}${RESET}`;
@@ -294,6 +294,12 @@ export async function runDecisionSession(
     if (typeof levelResult === 'string' && levelResult.startsWith('__FREQ__:')) {
       const newFreq = levelResult.slice('__FREQ__:'.length);
       if (store) setConfig(store, `advisory_frequency:${input.projectRoot}`, newFreq);
+      return { outcome: 'skipped' };
+    }
+    // Role selection via Ctrl+T → frequency menu → Configure role… — write config and skip
+    if (typeof levelResult === 'string' && levelResult.startsWith('__ROLE__:')) {
+      const roleValue = levelResult.slice('__ROLE__:'.length);
+      if (store) setConfig(store, `role:${input.projectRoot}`, roleValue === 'clear' ? '' : roleValue);
       return { outcome: 'skipped' };
     }
 

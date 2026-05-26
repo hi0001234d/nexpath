@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { matchKeywords } from './KeywordMatcher.js';
 import { classifyWithTFIDF, resetTFIDFModel } from './TFIDFClassifier.js';
 import { createEmbeddingClassifier } from './EmbeddingClassifier.js';
@@ -2107,6 +2107,168 @@ describe('AbsenceDetector', () => {
     expect(detectAbsenceFlags(makeImpl(15), null, 'cli').map((f) => f.signalKey)).toContain('scope_creep');
     expect(detectAbsenceFlags(makeImpl(15), null, 'mobile').map((f) => f.signalKey)).toContain('scope_creep');
     expect(detectAbsenceFlags(makeImpl(15), null, 'library').map((f) => f.signalKey)).toContain('scope_creep');
+  });
+
+  // ── Nature gate (Dim1) ────────────────────────────────────────────────────
+
+  const TEST_NATURE_SIG: import('./types.js').SignalDefinition = {
+    key: '__test_nature_beginner__',
+    description: 'Test signal: fires only for beginner nature',
+    expectedStages: ['implementation'],
+    detectionKeywords: ['__never_matches_xyz__'],
+    absenceThreshold: 10,
+    nature: 'beginner',
+  };
+
+  beforeEach(() => { SIGNAL_MAP.set(TEST_NATURE_SIG.key, TEST_NATURE_SIG); });
+  afterEach(()  => { SIGNAL_MAP.delete(TEST_NATURE_SIG.key); });
+
+  const withNatureCounter = () => ({
+    ...initialSignalCounters(),
+    [TEST_NATURE_SIG.key]: { present: false, lastSeenAt: null as null, windowsSinceLastSeen: 0 },
+  });
+
+  it('nature gate: Dim1 signal does NOT fire when profile.nature differs', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
+      currentStage:          'implementation',
+      signalCounters:        withNatureCounter(),
+    });
+    const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
+      precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const,
+      mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1 };
+    const keys = detectAbsenceFlags(state, profile).map((f) => f.signalKey);
+    expect(keys).not.toContain(TEST_NATURE_SIG.key);
+  });
+
+  it('nature gate: Dim1 signal fires when profile.nature matches', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
+      currentStage:          'implementation',
+      signalCounters:        withNatureCounter(),
+    });
+    const profile = { nature: 'beginner' as const, precisionScore: 1, playfulnessScore: 1,
+      precisionOrdinal: 'low' as const, playfulnessOrdinal: 'low' as const,
+      mood: 'casual' as const, depth: 'low' as const, depthScore: 1, computedAt: 1 };
+    const keys = detectAbsenceFlags(state, profile).map((f) => f.signalKey);
+    expect(keys).toContain(TEST_NATURE_SIG.key);
+  });
+
+  it('nature gate: Dim1 signal does NOT fire when profile is null', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
+      currentStage:          'implementation',
+      signalCounters:        withNatureCounter(),
+    });
+    const keys = detectAbsenceFlags(state, null).map((f) => f.signalKey);
+    expect(keys).not.toContain(TEST_NATURE_SIG.key);
+  });
+
+  // ── Role gate (Dim2) ──────────────────────────────────────────────────────
+
+  const TEST_ROLE_SIG: import('./types.js').SignalDefinition = {
+    key: '__test_role_founder__',
+    description: 'Test signal: fires only for founder role',
+    expectedStages: ['implementation'],
+    detectionKeywords: ['__never_matches_xyz__'],
+    absenceThreshold: 10,
+    role: 'founder',
+  };
+
+  beforeEach(() => { SIGNAL_MAP.set(TEST_ROLE_SIG.key, TEST_ROLE_SIG); });
+  afterEach(()  => { SIGNAL_MAP.delete(TEST_ROLE_SIG.key); });
+
+  const withRoleCounter = () => ({
+    ...initialSignalCounters(),
+    [TEST_ROLE_SIG.key]: { present: false, lastSeenAt: null as null, windowsSinceLastSeen: 0 },
+  });
+
+  it('role gate: Dim2 signal does NOT fire when profile.role differs', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
+      currentStage:          'implementation',
+      signalCounters:        withRoleCounter(),
+    });
+    const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
+      precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const,
+      mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1,
+      role: 'pm' as const };
+    const keys = detectAbsenceFlags(state, profile).map((f) => f.signalKey);
+    expect(keys).not.toContain(TEST_ROLE_SIG.key);
+  });
+
+  it('role gate: Dim2 signal fires when profile.role matches', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
+      currentStage:          'implementation',
+      signalCounters:        withRoleCounter(),
+    });
+    const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
+      precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const,
+      mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1,
+      role: 'founder' as const };
+    const keys = detectAbsenceFlags(state, profile).map((f) => f.signalKey);
+    expect(keys).toContain(TEST_ROLE_SIG.key);
+  });
+
+  it('role gate: Dim2 signal does NOT fire when profile.role is null', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
+      currentStage:          'implementation',
+      signalCounters:        withRoleCounter(),
+    });
+    const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
+      precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const,
+      mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1,
+      role: null };
+    const keys = detectAbsenceFlags(state, profile).map((f) => f.signalKey);
+    expect(keys).not.toContain(TEST_ROLE_SIG.key);
+  });
+
+  // ── thresholdMultiplier ───────────────────────────────────────────────────
+
+  it('thresholdMultiplier=0.5: signal with absenceThreshold=20 fires at ceil(20*0.5)=10 prompts', () => {
+    // Without multiplier: needs 20 prompts. With 0.5: needs ceil(20*0.5)=10.
+    const makeImpl = (pInStage: number) => makeState({
+      stageConfidence: 0.85, promptsInCurrentStage: pInStage, promptCount: pInStage,
+      currentStage: 'implementation', signalCounters: initialSignalCounters(),
+    });
+    const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
+      precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const,
+      mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1 };
+    // At 9 prompts with multiplier 0.5: 9 < 10 → no fire
+    const keys9 = detectAbsenceFlags(makeImpl(9), profile, undefined, 0.5).map((f) => f.signalKey);
+    expect(keys9).not.toContain('context_loss'); // context_loss has absenceThreshold=30; 30*0.5=15 > 9
+    // At 10 prompts with multiplier 0.5: context_loss still needs 15; use test_creation (threshold=15): 15*0.5=8 → fires at 8
+    // Let's verify test_creation (absenceThreshold=15) fires at ceil(15*0.5)=8 prompts
+    const keys8 = detectAbsenceFlags(makeImpl(8), profile, undefined, 0.5).map((f) => f.signalKey);
+    expect(keys8).toContain('test_creation');
+  });
+
+  it('thresholdMultiplier=0.5: signal does NOT fire below the halved threshold', () => {
+    // test_creation absenceThreshold=15; with multiplier 0.5: needs ceil(15*0.5)=8
+    // At 7 prompts: 7 < 8 → no fire
+    const state = makeState({
+      stageConfidence: 0.85, promptsInCurrentStage: 7, promptCount: 7,
+      currentStage: 'implementation', signalCounters: initialSignalCounters(),
+    });
+    const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
+      precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const,
+      mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1 };
+    const keys = detectAbsenceFlags(state, profile, undefined, 0.5).map((f) => f.signalKey);
+    expect(keys).not.toContain('test_creation');
   });
 });
 

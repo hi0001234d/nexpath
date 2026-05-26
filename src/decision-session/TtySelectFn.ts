@@ -182,11 +182,38 @@ const picked = await select({
     { value: 'major_only',       label: 'Major transitions only (stage changes)' },
     { value: 'once_per_session', label: 'Once per coding session' },
     { value: 'off',              label: 'Off \\u2014 disable all advisories' },
+    { value: '__role_menu__',    label: 'Configure role\\u2026' },
   ],
 });
 
 if (!isCancel(picked) && typeof picked === 'string') {
-  writeFileSync('${resultFileFwd}', \`__FREQ__:\${picked}\`, 'utf8');
+  if (picked === '__role_menu__') {
+    writeFileSync('${resultFileFwd}', '__ROLE_MENU_PENDING__', 'utf8');
+  } else {
+    writeFileSync('${resultFileFwd}', \`__FREQ__:\${picked}\`, 'utf8');
+  }
+}
+
+process.exit(0);
+`;
+}
+
+function buildRoleMjsScript(clackUrl: string, resultFileFwd: string): string {
+  return `import { select, isCancel } from '${clackUrl}';
+import { writeFileSync } from 'node:fs';
+
+const picked = await select({
+  message: 'Project role',
+  options: [
+    { value: 'founder',      label: 'Founder \\u2014 building your own product' },
+    { value: 'indie_hacker', label: 'Indie hacker \\u2014 shipping solo' },
+    { value: 'pm',           label: 'PM \\u2014 product management focus' },
+    { value: 'clear',        label: 'Clear role (use universal signals only)' },
+  ],
+});
+
+if (!isCancel(picked) && typeof picked === 'string') {
+  writeFileSync('${resultFileFwd}', \`__ROLE__:\${picked}\`, 'utf8');
 }
 
 process.exit(0);
@@ -263,7 +290,8 @@ function buildWindowsNewWindowSelectFn(_store?: Store, _projectRoot?: string): S
       //   '__CLIP__'               → user chose "Copy to clipboard" (clip.exe already called)
       //   '__NEXPATH_OPT_OUT__'    → user pressed Ctrl+X; runDecisionSession writes config
       //   '__FREQ_MENU_PENDING__'  → user pressed Ctrl+T; spawn a second freq-selection window
-      //   '__FREQ__:<value>'       → freq picked in second window; runDecisionSession writes config
+      //   '__FREQ__:<value>'       → freq picked in freq window; runDecisionSession writes config
+      //   '__ROLE__:<value>'       → role picked in role window; runDecisionSession writes config
       //   any other non-empty      → selected prompt text (send to Claude path)
       //   (absent / empty)         → cancelled / timed out
       let result: string | symbol = Symbol('cancelled');
@@ -286,12 +314,34 @@ function buildWindowsNewWindowSelectFn(_store?: Store, _projectRoot?: string): S
           );
           if (existsSync(freqResultFile)) {
             const freqRaw = readFileSync(freqResultFile, 'utf8').trim();
-            if (freqRaw.startsWith('__FREQ__:')) result = freqRaw;
+            if (freqRaw.startsWith('__FREQ__:')) {
+              result = freqRaw;
+            } else if (freqRaw === '__ROLE_MENU_PENDING__') {
+              const roleId         = randomUUID();
+              const roleResultFile = join(tmpdir(), `nexpath-role-res-${roleId}.txt`);
+              const roleScriptFile = join(tmpdir(), `nexpath-role-sel-${roleId}.mjs`);
+              const roleResultFwd  = roleResultFile.replace(/\\/g, '/');
+              writeFileSync(roleScriptFile, buildRoleMjsScript(clackUrl, roleResultFwd), 'utf8');
+              spawnSync(
+                'cmd.exe',
+                ['/c', 'start', '/WAIT', ROLE_WINDOW_TITLE, 'node', roleScriptFile],
+                { stdio: 'ignore' },
+              );
+              if (existsSync(roleResultFile)) {
+                const roleRaw = readFileSync(roleResultFile, 'utf8').trim();
+                if (roleRaw.startsWith('__ROLE__:')) result = roleRaw;
+              }
+              for (const f of [roleScriptFile, roleResultFile]) {
+                try { unlinkSync(f); } catch { /* ignore */ }
+              }
+            }
           }
           for (const f of [freqScriptFile, freqResultFile]) {
             try { unlinkSync(f); } catch { /* ignore */ }
           }
         } else if (raw.startsWith('__FREQ__:')) {
+          result = raw;
+        } else if (raw.startsWith('__ROLE__:')) {
           result = raw;
         } else if (raw.length > 0) {
           result = raw;
@@ -407,6 +457,7 @@ const LINUX_CLIPBOARD_CMDS: ClipboardCmd[] = [
 
 const WINDOW_TITLE = 'Nexpath \u2014 Action Required';
 const FREQ_WINDOW_TITLE = 'Nexpath \u2014 Frequency';
+const ROLE_WINDOW_TITLE = 'Nexpath \u2014 Role';
 
 function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): SelectFn | null {
   const terminal = detectLinuxTerminal();
@@ -458,12 +509,30 @@ function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): Selec
           spawnSync(terminal.cmd, terminal.args(FREQ_WINDOW_TITLE, freqScriptFile), { stdio: 'ignore' });
           if (existsSync(freqResultFile)) {
             const freqRaw = readFileSync(freqResultFile, 'utf8').trim();
-            if (freqRaw.startsWith('__FREQ__:')) result = freqRaw;
+            if (freqRaw.startsWith('__FREQ__:')) {
+              result = freqRaw;
+            } else if (freqRaw === '__ROLE_MENU_PENDING__') {
+              const roleId         = randomUUID();
+              const roleResultFile = join(tmpdir(), `nexpath-role-res-${roleId}.txt`);
+              const roleScriptFile = join(tmpdir(), `nexpath-role-sel-${roleId}.mjs`);
+              const roleResultFwd  = roleResultFile.replace(/\\/g, '/');
+              writeFileSync(roleScriptFile, buildRoleMjsScript(clackUrl, roleResultFwd), 'utf8');
+              spawnSync(terminal.cmd, terminal.args(ROLE_WINDOW_TITLE, roleScriptFile), { stdio: 'ignore' });
+              if (existsSync(roleResultFile)) {
+                const roleRaw = readFileSync(roleResultFile, 'utf8').trim();
+                if (roleRaw.startsWith('__ROLE__:')) result = roleRaw;
+              }
+              for (const f of [roleScriptFile, roleResultFile]) {
+                try { unlinkSync(f); } catch { /* ignore */ }
+              }
+            }
           }
           for (const f of [freqScriptFile, freqResultFile]) {
             try { unlinkSync(f); } catch { /* ignore */ }
           }
         } else if (raw.startsWith('__FREQ__:')) {
+          result = raw;
+        } else if (raw.startsWith('__ROLE__:')) {
           result = raw;
         } else if (raw.length > 0) {
           result = raw;
@@ -564,12 +633,30 @@ function buildMacNewWindowSelectFn(_store?: Store, _projectRoot?: string): Selec
           spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${freqScriptFile}`)], { stdio: 'ignore' });
           if (existsSync(freqResultFile)) {
             const freqRaw = readFileSync(freqResultFile, 'utf8').trim();
-            if (freqRaw.startsWith('__FREQ__:')) result = freqRaw;
+            if (freqRaw.startsWith('__FREQ__:')) {
+              result = freqRaw;
+            } else if (freqRaw === '__ROLE_MENU_PENDING__') {
+              const roleId         = randomUUID();
+              const roleResultFile = join(tmpdir(), `nexpath-role-res-${roleId}.txt`);
+              const roleScriptFile = join(tmpdir(), `nexpath-role-sel-${roleId}.mjs`);
+              const roleResultFwd  = roleResultFile.replace(/\\/g, '/');
+              writeFileSync(roleScriptFile, buildRoleMjsScript(clackUrl, roleResultFwd), 'utf8');
+              spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${roleScriptFile}`)], { stdio: 'ignore' });
+              if (existsSync(roleResultFile)) {
+                const roleRaw = readFileSync(roleResultFile, 'utf8').trim();
+                if (roleRaw.startsWith('__ROLE__:')) result = roleRaw;
+              }
+              for (const f of [roleScriptFile, roleResultFile]) {
+                try { unlinkSync(f); } catch { /* ignore */ }
+              }
+            }
           }
           for (const f of [freqScriptFile, freqResultFile]) {
             try { unlinkSync(f); } catch { /* ignore */ }
           }
         } else if (raw.startsWith('__FREQ__:')) {
+          result = raw;
+        } else if (raw.startsWith('__ROLE__:')) {
           result = raw;
         } else if (raw.length > 0) {
           result = raw;
@@ -634,6 +721,52 @@ function copyToClipboardUnix(text: string): void {
   }
 }
 
+function runRoleSubMenu(
+  streams:     TtyStreams,
+  iface:       rl.Interface,
+  store:       Store | undefined,
+  projectRoot: string | undefined,
+  cleanup:     (value: string | symbol) => void,
+): void {
+  const roleOptions = [
+    { num: 1, value: 'founder',      label: 'Founder — building your own product' },
+    { num: 2, value: 'indie_hacker', label: 'Indie hacker — shipping solo' },
+    { num: 3, value: 'pm',           label: 'PM — product management focus' },
+    { num: 4, value: 'clear',        label: 'Clear role (use universal signals only)' },
+  ];
+  const menuLines = [
+    pc.cyan('│'),
+    `${pc.cyan('◆')}  ${pc.bold('Project role')}`,
+    ...roleOptions.map((o) => `${pc.cyan('│')}  ${pc.green(`${o.num})`)} ${o.label}`),
+    pc.cyan('│'),
+  ];
+  streams.output.write(menuLines.join('\n') + '\n');
+  streams.output.write(`${pc.cyan('└')}  Select (1-4): `);
+
+  iface.once('line', (answer) => {
+    const num = parseInt(answer.trim(), 10);
+    const choice = roleOptions.find((o) => o.num === num);
+    if (choice && store && projectRoot) {
+      if (choice.value === 'clear') {
+        setConfig(store, `role:${projectRoot}`, '');
+        streams.output.write(
+          `${pc.cyan('│')}  ${pc.dim('Role cleared.')}
+${pc.cyan('│')}
+`,
+        );
+      } else {
+        setConfig(store, `role:${projectRoot}`, choice.value);
+        streams.output.write(
+          `${pc.cyan('│')}  ${pc.dim(`Role set to: ${choice.label}`)}
+${pc.cyan('│')}
+`,
+        );
+      }
+    }
+    cleanup(SKIP_NOW);
+  });
+}
+
 function runFrequencySubMenu(
   streams:     TtyStreams,
   iface:       rl.Interface,
@@ -645,7 +778,8 @@ function runFrequencySubMenu(
     { num: 1, value: 'every_event',      label: 'Every qualifying event (default)' },
     { num: 2, value: 'major_only',       label: 'Major transitions only (stage changes)' },
     { num: 3, value: 'once_per_session', label: 'Once per coding session' },
-    { num: 4, value: 'off',              label: 'Off \u2014 disable all advisories' },
+    { num: 4, value: 'off',              label: 'Off — disable all advisories' },
+    { num: 5, value: 'role_menu',        label: 'Configure role…' },
   ];
   const menuLines = [
     pc.cyan('│'),
@@ -654,21 +788,28 @@ function runFrequencySubMenu(
     pc.cyan('│'),
   ];
   streams.output.write(menuLines.join('\n') + '\n');
-  streams.output.write(`${pc.cyan('└')}  Select (1-4): `);
+  streams.output.write(`${pc.cyan('└')}  Select (1-5): `);
 
   iface.once('line', (answer) => {
     const num = parseInt(answer.trim(), 10);
     const choice = freqOptions.find((o) => o.num === num);
-    if (choice && store && projectRoot) {
-      setConfig(store, `advisory_frequency:${projectRoot}`, choice.value);
-      streams.output.write(
-        `${pc.cyan('│')}  ${pc.dim(`Frequency set to: ${choice.label}`)}\n${pc.cyan('│')}\n`,
-      );
+    if (choice) {
+      if (choice.value === 'role_menu') {
+        runRoleSubMenu(streams, iface, store, projectRoot, cleanup);
+        return;
+      }
+      if (store && projectRoot) {
+        setConfig(store, `advisory_frequency:${projectRoot}`, choice.value);
+        streams.output.write(
+          `${pc.cyan('│')}  ${pc.dim(`Frequency set to: ${choice.label}`)}
+${pc.cyan('│')}
+`,
+        );
+      }
     }
     cleanup(SKIP_NOW);
   });
 }
-
 type UnixMenuOption = { value: string; label: string };
 
 export function buildUnixMenuLines(

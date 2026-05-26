@@ -105,12 +105,6 @@ export interface SessionState {
    * Optional for backward compatibility with existing persisted state — read as 0 when absent.
    */
   advisoryCount?: number;
-  /**
-   * Explicit role set via `nexpath config set role <value>`.
-   * Unlocks Dim2 (role-based) signals. null = no role configured (Dim2 signals inactive).
-   * Optional for backward compatibility with existing persisted state — read as null when absent.
-   */
-  configuredRole?: UserRole | null;
 }
 
 // ── User nature / mood / depth (item 9) ───────────────────────────────────────
@@ -154,6 +148,8 @@ export interface UserProfile {
   depthScore: number;
   /** promptCount when this profile was computed (for stickiness tracking by caller). */
   computedAt: number;
+  /** Configured project role — injected from store config; null = no role configured (Dim2 signals inactive). */
+  role?: UserRole | null;
 }
 
 // ── Role ──────────────────────────────────────────────────────────────────────
