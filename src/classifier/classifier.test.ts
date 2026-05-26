@@ -1442,6 +1442,28 @@ describe('detectSignals', () => {
     expect(counters['spec_before_code'].present).toBe(false);
     expect(counters['spec_before_code'].lastSeenAt).toBeNull();
   });
+
+  // ── §15 overlap audit — regression + co-fire guards ──────────────────────────
+
+  it('"according to the spec" does NOT fire spec_before_code', () => {
+    expect(detectSignals('according to the spec')).not.toContain('spec_before_code');
+  });
+
+  it('"per the requirements" does NOT fire spec_before_code', () => {
+    expect(detectSignals('per the requirements')).not.toContain('spec_before_code');
+  });
+
+  it('co-fires feature_scope_before_build + spec_acceptance_check on "acceptance criteria for this"', () => {
+    const signals = detectSignals('acceptance criteria for this feature');
+    expect(signals).toContain('feature_scope_before_build');
+    expect(signals).toContain('spec_acceptance_check');
+  });
+
+  it('co-fires implementation_checkpoint + test_creation via vibe on shared vibe keywords', () => {
+    const signals = detectSignals('does this actually work? try this out and make sure it works');
+    expect(signals).toContain('implementation_checkpoint');
+    expect(signals).toContain('test_creation');
+  });
 });
 
 // ── SessionStateManager ────────────────────────────────────────────────────────
