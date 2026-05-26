@@ -137,3 +137,45 @@ describe('configSetAction', () => {
     cleanup();
   });
 });
+
+describe('configSetAction — role validation', () => {
+  it('accepts a valid role value and stores it', async () => {
+    const { path, cleanup } = await tempDb();
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await configSetAction('role', 'founder', path);
+    expect(spy.mock.calls[0][0]).toBe('role = founder');
+    cleanup();
+  });
+
+  it('rejects an invalid role value with console.error and process.exit(1)', async () => {
+    const { path, cleanup } = await tempDb();
+    const errSpy  = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('process.exit called');
+    }) as (code?: number) => never);
+    await expect(configSetAction('role', 'developer', path)).rejects.toThrow('process.exit called');
+    expect(errSpy.mock.calls[0][0]).toContain('Invalid role "developer"');
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    cleanup();
+  });
+
+  it('accepts empty string for role key (clears role)', async () => {
+    const { path, cleanup } = await tempDb();
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await configSetAction('role', '', path);
+    expect(spy.mock.calls[0][0]).toBe('role = ');
+    cleanup();
+  });
+
+  it('validates project-scoped role key and rejects invalid value', async () => {
+    const { path, cleanup } = await tempDb();
+    const errSpy  = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('process.exit called');
+    }) as (code?: number) => never);
+    await expect(configSetAction('role:/some/project', 'developer', path)).rejects.toThrow('process.exit called');
+    expect(errSpy.mock.calls[0][0]).toContain('Invalid role "developer"');
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    cleanup();
+  });
+});
