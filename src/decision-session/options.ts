@@ -1880,7 +1880,7 @@ const ABSENCE_PERFORMANCE_AWARENESS_CASUAL: DecisionContent = {
 
 // ── Phase 5 D10 — hardcore_pro cluster 1 (FORMAL register) ───────────────────
 
-const ABSENCE_DECISION_RECORD_ABSENCE: DecisionContent = {
+const ABSENCE_DECISION_RECORD_ABSENCE_FORMAL: DecisionContent = {
   question:      'Significant decision made — decision record written?',
   pinchFallback: 'Record the decision.',
   L1: [
@@ -1897,7 +1897,7 @@ const ABSENCE_DECISION_RECORD_ABSENCE: DecisionContent = {
   ],
 };
 
-const ABSENCE_OVER_ENGINEERING_CHECK: DecisionContent = {
+const ABSENCE_OVER_ENGINEERING_CHECK_FORMAL: DecisionContent = {
   question:      'Complex implementation — is the complexity justified?',
   pinchFallback: 'Complexity justified?',
   L1: [
@@ -1914,7 +1914,7 @@ const ABSENCE_OVER_ENGINEERING_CHECK: DecisionContent = {
   ],
 };
 
-const ABSENCE_PAIR_REVIEW_ABSENCE: DecisionContent = {
+const ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL: DecisionContent = {
   question:      'High-risk change — reviewed by a second engineer?',
   pinchFallback: 'Pair review gap.',
   L1: [
@@ -1933,7 +1933,7 @@ const ABSENCE_PAIR_REVIEW_ABSENCE: DecisionContent = {
 
 // ── Phase 5 D11 — hardcore_pro cluster 2 (FORMAL register) ───────────────────
 
-const ABSENCE_OBSERVABILITY_FIRST: DecisionContent = {
+const ABSENCE_OBSERVABILITY_FIRST_FORMAL: DecisionContent = {
   question:      'Feature built — will production failures be observable?',
   pinchFallback: 'Observability gap.',
   L1: [
@@ -1950,7 +1950,7 @@ const ABSENCE_OBSERVABILITY_FIRST: DecisionContent = {
   ],
 };
 
-const ABSENCE_FAILURE_MODE_ANALYSIS: DecisionContent = {
+const ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL: DecisionContent = {
   question:      'Implementation complete — failure modes analyzed?',
   pinchFallback: 'Failure modes.',
   L1: [
@@ -1967,7 +1967,7 @@ const ABSENCE_FAILURE_MODE_ANALYSIS: DecisionContent = {
   ],
 };
 
-const ABSENCE_CONTRACT_TESTING_GAP: DecisionContent = {
+const ABSENCE_CONTRACT_TESTING_GAP_FORMAL: DecisionContent = {
   question:      'Service integration built — contract tested?',
   pinchFallback: 'Contract test gap.',
   L1: [
@@ -1986,7 +1986,7 @@ const ABSENCE_CONTRACT_TESTING_GAP: DecisionContent = {
 
 // ── Phase 5 D12 — hardcore_pro clusters 3+4 (FORMAL register) ────────────────
 
-const ABSENCE_CAPACITY_PLANNING_GAP: DecisionContent = {
+const ABSENCE_CAPACITY_PLANNING_GAP_FORMAL: DecisionContent = {
   question:      'Scalable feature — capacity plan written?',
   pinchFallback: 'Capacity plan.',
   L1: [
@@ -2003,7 +2003,7 @@ const ABSENCE_CAPACITY_PLANNING_GAP: DecisionContent = {
   ],
 };
 
-const ABSENCE_SECURITY_THREAT_MODELING: DecisionContent = {
+const ABSENCE_SECURITY_THREAT_MODELING_FORMAL: DecisionContent = {
   question:      'Security-sensitive feature — threat model reviewed?',
   pinchFallback: 'Threat model.',
   L1: [
@@ -2020,7 +2020,7 @@ const ABSENCE_SECURITY_THREAT_MODELING: DecisionContent = {
   ],
 };
 
-const ABSENCE_DATABASE_MIGRATION_SAFETY: DecisionContent = {
+const ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL: DecisionContent = {
   question:      'DB migration written — safe to run in production?',
   pinchFallback: 'Migration safety.',
   L1: [
@@ -2037,7 +2037,7 @@ const ABSENCE_DATABASE_MIGRATION_SAFETY: DecisionContent = {
   ],
 };
 
-const ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE: DecisionContent = {
+const ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL: DecisionContent = {
   question:      'Ready to ship — deployment strategy defined?',
   pinchFallback: 'Deploy strategy.',
   L1: [
@@ -2054,7 +2054,7 @@ const ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE: DecisionContent = {
   ],
 };
 
-const ABSENCE_OPERATIONAL_RUNBOOK_GAP: DecisionContent = {
+const ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL: DecisionContent = {
   question:      'Going to production — runbook written?',
   pinchFallback: 'Runbook gap.',
   L1: [
@@ -2071,7 +2071,7 @@ const ABSENCE_OPERATIONAL_RUNBOOK_GAP: DecisionContent = {
   ],
 };
 
-const ABSENCE_SLO_DEFINITION_GAP: DecisionContent = {
+const ABSENCE_SLO_DEFINITION_GAP_FORMAL: DecisionContent = {
   question:      'Feature shipping — SLOs defined?',
   pinchFallback: 'SLO gap.',
   L1: [
@@ -2139,18 +2139,18 @@ const ABSENCE_CONTENT: Partial<Record<string, DecisionContent>> = {
   implementation_checkpoint:     ABSENCE_IMPLEMENTATION_CHECKPOINT,
   spec_before_code:              ABSENCE_SPEC_BEFORE_CODE,
   incremental_build:             ABSENCE_INCREMENTAL_BUILD,
-  decision_record_absence:       ABSENCE_DECISION_RECORD_ABSENCE,
-  over_engineering_check:        ABSENCE_OVER_ENGINEERING_CHECK,
-  pair_review_absence:           ABSENCE_PAIR_REVIEW_ABSENCE,
-  observability_first:           ABSENCE_OBSERVABILITY_FIRST,
-  failure_mode_analysis:         ABSENCE_FAILURE_MODE_ANALYSIS,
-  contract_testing_gap:          ABSENCE_CONTRACT_TESTING_GAP,
-  capacity_planning_gap:         ABSENCE_CAPACITY_PLANNING_GAP,
-  security_threat_modeling:      ABSENCE_SECURITY_THREAT_MODELING,
-  database_migration_safety:     ABSENCE_DATABASE_MIGRATION_SAFETY,
-  deployment_strategy_absence:   ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE,
-  operational_runbook_gap:       ABSENCE_OPERATIONAL_RUNBOOK_GAP,
-  slo_definition_gap:            ABSENCE_SLO_DEFINITION_GAP,
+  decision_record_absence:       ABSENCE_DECISION_RECORD_ABSENCE_FORMAL,
+  over_engineering_check:        ABSENCE_OVER_ENGINEERING_CHECK_FORMAL,
+  pair_review_absence:           ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL,
+  observability_first:           ABSENCE_OBSERVABILITY_FIRST_FORMAL,
+  failure_mode_analysis:         ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL,
+  contract_testing_gap:          ABSENCE_CONTRACT_TESTING_GAP_FORMAL,
+  capacity_planning_gap:         ABSENCE_CAPACITY_PLANNING_GAP_FORMAL,
+  security_threat_modeling:      ABSENCE_SECURITY_THREAT_MODELING_FORMAL,
+  database_migration_safety:     ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL,
+  deployment_strategy_absence:   ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL,
+  operational_runbook_gap:       ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL,
+  slo_definition_gap:            ABSENCE_SLO_DEFINITION_GAP_FORMAL,
 };
 
 const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
@@ -2448,16 +2448,16 @@ export {
   ABSENCE_BACKWARDS_COMPAT_CHECK_CASUAL,
   ABSENCE_SELF_REVIEW_HABIT_CASUAL,
   ABSENCE_PERFORMANCE_AWARENESS_CASUAL,
-  ABSENCE_DECISION_RECORD_ABSENCE,
-  ABSENCE_OVER_ENGINEERING_CHECK,
-  ABSENCE_PAIR_REVIEW_ABSENCE,
-  ABSENCE_OBSERVABILITY_FIRST,
-  ABSENCE_FAILURE_MODE_ANALYSIS,
-  ABSENCE_CONTRACT_TESTING_GAP,
-  ABSENCE_CAPACITY_PLANNING_GAP,
-  ABSENCE_SECURITY_THREAT_MODELING,
-  ABSENCE_DATABASE_MIGRATION_SAFETY,
-  ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE,
-  ABSENCE_OPERATIONAL_RUNBOOK_GAP,
-  ABSENCE_SLO_DEFINITION_GAP,
+  ABSENCE_DECISION_RECORD_ABSENCE_FORMAL,
+  ABSENCE_OVER_ENGINEERING_CHECK_FORMAL,
+  ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL,
+  ABSENCE_OBSERVABILITY_FIRST_FORMAL,
+  ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL,
+  ABSENCE_CONTRACT_TESTING_GAP_FORMAL,
+  ABSENCE_CAPACITY_PLANNING_GAP_FORMAL,
+  ABSENCE_SECURITY_THREAT_MODELING_FORMAL,
+  ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL,
+  ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL,
+  ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL,
+  ABSENCE_SLO_DEFINITION_GAP_FORMAL,
 };

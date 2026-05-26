@@ -624,6 +624,7 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     detectionKeywords: [
       'let me test this small piece', 'verify one thing at a time',
       'incremental build', 'build and verify step by step',
+      'one small piece at a time',
     ],
     vibeKeywords: [
       'does each part work', 'test as we go', 'one step at a time then check',
@@ -639,7 +640,7 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'understand the error before fixing', 'what does this error mean',
     ],
     vibeKeywords: [
-      'why is this happening', 'explain this error',
+      'what does this error mean', 'why is this happening', 'explain this error',
     ],
     absenceThreshold: 6,
     nature: 'beginner',
@@ -679,7 +680,7 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     description: 'Specifying a clear requirement before prompting for implementation',
     expectedStages: ['implementation'],
     detectionKeywords: [
-      'the requirement is', 'specifically what i need is',
+      'the requirement is', 'specifically what i need is', 'acceptance criteria',
       'the expected behavior is', 'success looks like',
     ],
     vibeKeywords: [
@@ -696,6 +697,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'i understand what this code does', 'reviewing the generated code',
       'walking through this code', 'this code works because',
     ],
+    vibeKeywords: [
+      'i see what this does', 'i get what this code is doing',
+      'makes sense what this does', 'so this part does',
+    ],
     absenceThreshold: 7,
     nature: 'beginner',
   },
@@ -706,6 +711,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     detectionKeywords: [
       'i observed that', 'the actual behavior is', 'expected vs actual',
       'what i see is', 'the error message says',
+    ],
+    vibeKeywords: [
+      'i see an error that says', 'when i run it i get',
+      'getting this error', 'the screen shows',
     ],
     absenceThreshold: 5,
     nature: 'beginner',
@@ -719,7 +728,7 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'let me recap what we did', 'i now know how to',
     ],
     vibeKeywords: [
-      'okay so now i understand', 'makes sense now', 'so basically',
+      'okay so now i understand', 'got it', 'makes sense now', 'so basically',
     ],
     absenceThreshold: 15,
     nature: 'beginner',
@@ -731,8 +740,12 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     description: 'Choosing the simplest solution before adding unnecessary complexity',
     expectedStages: ['implementation'],
     detectionKeywords: [
-      'simplest solution here', 'easiest way to do this',
+      'simplest solution here', 'what\'s the easiest way to do this',
       'do i need all this complexity', 'is there a simpler approach',
+    ],
+    vibeKeywords: [
+      'do i need all this', 'seems too complicated',
+      'is this too much', 'can we keep it simpler',
     ],
     absenceThreshold: 6,
     nature: 'beginner',
@@ -745,6 +758,9 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'one thing at a time', 'let\'s focus on just this part',
       'separate these concerns', 'do this step only',
     ],
+    vibeKeywords: [
+      'just this one thing', 'only this for now', 'let\'s just do this part',
+    ],
     absenceThreshold: 4,
     nature: 'beginner',
   },
@@ -756,6 +772,9 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'i committed before changing', 'i can revert this if needed',
       'git stash', 'i\'ll check this into git first', 'backup this working state',
     ],
+    vibeKeywords: [
+      'let me commit first', 'i\'ll save my progress', 'before i change this', 'can i undo this',
+    ],
     absenceThreshold: 10,
     nature: 'beginner',
   },
@@ -765,7 +784,7 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     expectedStages: ['implementation'],
     detectionKeywords: [
       'explain how this works', 'how does this piece connect to',
-      'i want to understand this', 'i want to understand what we built',
+      'i want to understand this', 'walk me through what we built',
     ],
     vibeKeywords: [
       'how does this work', 'what does this do', 'explain this',
@@ -783,6 +802,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'finishing this feature before starting the next',
       'this feature is done and tested', 'completed and verified before moving on',
     ],
+    vibeKeywords: [
+      'is this feature done', 'let me finish this first',
+      'this is complete now', 'make sure this is done before',
+    ],
     absenceThreshold: 5,
     nature: 'cool_geek',
   },
@@ -793,6 +816,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     detectionKeywords: [
       'this is fully complete', 'shipped this feature',
       'ready to use', 'end-to-end working',
+    ],
+    vibeKeywords: [
+      'almost done with this', 'let me finish this',
+      'just need to wrap this up', 'getting this done before moving on',
     ],
     absenceThreshold: 8,
     nature: 'cool_geek',
@@ -805,6 +832,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'core functionality is working first', 'polish after function is done',
       'visual improvements after it works', 'functional before aesthetic',
     ],
+    vibeKeywords: [
+      'get it working first', 'make sure the core works',
+      'test the main flow first', 'function before styling',
+    ],
     absenceThreshold: 5,
     nature: 'cool_geek',
   },
@@ -815,6 +846,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     detectionKeywords: [
       'is this mvp scope', 'minimum needed to test this', 'mvp boundary check',
       'core hypothesis still being tested', 'this is beyond mvp',
+    ],
+    vibeKeywords: [
+      'do we need this for mvp', 'is this in scope',
+      'minimum needed for this', 'can we add this later',
     ],
     absenceThreshold: 5,
     nature: 'cool_geek',
@@ -829,6 +864,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'the spec for this idea is', 'how this fits into the product',
       'what this feature does and doesn\'t do', 'boundaries of this idea',
     ],
+    vibeKeywords: [
+      'how would this actually work', 'what does this feature need to do',
+      'how does this fit with the rest', 'let me think through this idea',
+    ],
     absenceThreshold: 4,
     nature: 'cool_geek',
   },
@@ -840,6 +879,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'production-ready', 'real data connected', 'handles edge cases',
       'error states working', 'this is demo vs production',
     ],
+    vibeKeywords: [
+      'this needs to work with real data', 'remove the hardcoded values',
+      'this is just a demo for now', 'make sure it handles real errors',
+    ],
     absenceThreshold: 6,
     nature: 'cool_geek',
   },
@@ -850,6 +893,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     detectionKeywords: [
       'full user journey for this', 'what does the user experience end to end',
       'empty state for this', 'error state for this', 'first time user sees this',
+    ],
+    vibeKeywords: [
+      'what does the user see when', 'what happens if the user tries',
+      'from the user\'s perspective', 'what happens when there\'s nothing there',
     ],
     absenceThreshold: 6,
     nature: 'cool_geek',
@@ -864,6 +911,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'this was a spike to learn', 'cleaning up the exploration code',
       'extracting the useful part from the experiment', 'production version of this',
     ],
+    vibeKeywords: [
+      'just exploring here', 'not adding this to production yet',
+      'proof of concept for now', 'throwaway code to learn',
+    ],
     absenceThreshold: 7,
     nature: 'cool_geek',
   },
@@ -874,6 +925,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     detectionKeywords: [
       'need this library for', 'this solves the specific problem of',
       'evaluated alternatives before adding', 'maintenance burden considered',
+    ],
+    vibeKeywords: [
+      'do we need this library', 'what does this solve that we can\'t do already',
+      'is this dependency worth it', 'what\'s the maintenance cost of this',
     ],
     absenceThreshold: 8,
     nature: 'cool_geek',
@@ -886,6 +941,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'debugging this before starting over', 'root cause before restart',
       'fix the current approach', 'what specifically went wrong',
     ],
+    vibeKeywords: [
+      'let me figure out what went wrong', 'what exactly is broken here',
+      'before we rewrite let\'s see what\'s actually failing', 'let me understand the error first',
+    ],
     absenceThreshold: 5,
     nature: 'cool_geek',
   },
@@ -896,6 +955,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     detectionKeywords: [
       'this serves the core product', 'this is the core feature',
       'prioritizing core value', 'the main feature first',
+    ],
+    vibeKeywords: [
+      'what actually matters here', 'back to what we need',
+      'focus on the main thing', 'is this really needed',
     ],
     absenceThreshold: 10,
     nature: 'cool_geek',
@@ -910,6 +973,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'documenting this function', 'inline comment for this logic',
       'docstring for this', 'commenting why this works this way',
     ],
+    vibeKeywords: [
+      'let me add a comment here', 'explaining what this does',
+      'added a note for this', 'comment on why this works',
+    ],
     absenceThreshold: 10,
     nature: 'pro_geek_soul',
   },
@@ -918,11 +985,12 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     description: 'Explicitly tagging shortcuts and workarounds as technical debt',
     expectedStages: ['implementation'],
     detectionKeywords: [
+      'todo: clean this up', 'fixme: proper implementation needed',
       'noting this as tech debt', 'temporary workaround, needs refactor',
     ],
     vibeKeywords: [
-      'quick and dirty', 'good enough for now', 'workaround for now',
-      'hacky solution', 'fix later',
+      'todo here to clean this up', 'noting this as a shortcut',
+      'will need to revisit this', 'marking this as temporary',
     ],
     absenceThreshold: 8,
     nature: 'pro_geek_soul',
@@ -935,6 +1003,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'edge case test', 'boundary value test', 'error path test',
       'null input test', 'concurrent access test', 'negative test case',
     ],
+    vibeKeywords: [
+      'test the edge cases', 'what if the input is empty',
+      'test the failure case', 'test when this breaks',
+    ],
     absenceThreshold: 10,
     nature: 'pro_geek_soul',
   },
@@ -945,6 +1017,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     detectionKeywords: [
       'note on why this architecture', 'decision record for this',
       'commenting the architectural rationale', 'why this pattern was chosen',
+    ],
+    vibeKeywords: [
+      'documenting why we chose this', 'note on this decision',
+      'explaining the architecture here', 'adding a comment on the pattern choice',
     ],
     absenceThreshold: 12,
     nature: 'pro_geek_soul',
@@ -959,6 +1035,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'checked maintenance status', 'evaluated alternatives to',
       'license is compatible', 'bundle size impact of', 'last release date',
     ],
+    vibeKeywords: [
+      'checking if this is maintained', 'what\'s the license on this',
+      'are there alternatives to this', 'what\'s the bundle size impact',
+    ],
     absenceThreshold: 8,
     nature: 'pro_geek_soul',
   },
@@ -967,8 +1047,12 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     description: 'Reviewing security considerations for features touching user data or auth',
     expectedStages: ['implementation'],
     detectionKeywords: [
-      'security consideration for this', 'owasp check',
+      'security consideration for this', 'owasp check', 'input validation added',
       'authorization check', 'injection prevention',
+    ],
+    vibeKeywords: [
+      'input validation for this', 'making sure this is secure',
+      'check the permissions here', 'sanitize this input',
     ],
     absenceThreshold: 10,
     nature: 'pro_geek_soul',
@@ -981,6 +1065,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'api contract defined', 'request schema is', 'response schema is',
       'error response format', 'defining the interface before implementing',
     ],
+    vibeKeywords: [
+      'what should this endpoint return', 'defining the interface first',
+      'what does this api accept', 'let me define what this returns',
+    ],
     absenceThreshold: 6,
     nature: 'pro_geek_soul',
   },
@@ -989,10 +1077,12 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     description: 'Explicitly handling error paths for every non-trivial operation',
     expectedStages: ['implementation'],
     detectionKeywords: [
-      'error state handled', 'fallback for when this errors', 'error case covered',
+      'error state handled', 'what happens when this fails', 'error boundary',
+      'fallback for when this errors', 'error case covered',
     ],
     vibeKeywords: [
-      'what happens when this fails', 'error boundary',
+      'handle the error case', 'what if this doesn\'t work',
+      'need to handle when this breaks', 'add error handling for this',
     ],
     absenceThreshold: 8,
     nature: 'pro_geek_soul',
@@ -1007,6 +1097,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'refactored this before adding', 'cleaned up first',
       'extracted this into', 'simplified before extending',
     ],
+    vibeKeywords: [
+      'cleaning this up before continuing', 'refactoring this first',
+      'extracting this into a helper', 'simplifying this before adding',
+    ],
     absenceThreshold: 12,
     nature: 'pro_geek_soul',
   },
@@ -1017,6 +1111,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     detectionKeywords: [
       'callers of this updated', 'backwards compatible change',
       'versioning this change', 'existing consumers checked',
+    ],
+    vibeKeywords: [
+      'checking what uses this', 'making sure this is backwards compatible',
+      'what else calls this', 'do existing callers need updating',
     ],
     absenceThreshold: 8,
     nature: 'pro_geek_soul',
@@ -1029,6 +1127,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'reviewing what we wrote', 'reading through the implementation',
       'checking the diff', 'does this all make sense together',
     ],
+    vibeKeywords: [
+      'read through this', 'let me check what we built',
+      'looking back at this', 'does this make sense',
+    ],
     absenceThreshold: 15,
     nature: 'pro_geek_soul',
   },
@@ -1038,10 +1140,11 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     expectedStages: ['implementation'],
     detectionKeywords: [
       'performance impact of this', 'n+1 query check',
-      'pagination added', 'lazy load this',
+      'pagination added', 'memo/cache this', 'lazy load this',
     ],
     vibeKeywords: [
-      'fetch all the data', 'load everything', 'get all records',
+      'checking the performance here', 'is this going to be slow',
+      'thinking about the query performance', 'watching the query count',
     ],
     absenceThreshold: 12,
     nature: 'pro_geek_soul',
@@ -1056,6 +1159,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'adr for this', 'recording the decision', 'context and consequences',
       'why this over alternatives', 'decision record',
     ],
+    vibeKeywords: [
+      'documenting this decision', 'noting the rationale here',
+      'recording why this choice', 'writing up the context',
+    ],
     absenceThreshold: 10,
     nature: 'hardcore_pro',
   },
@@ -1067,6 +1174,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'this is needed now', 'yagni check', 'current requirements require',
       'building this because we need it today',
     ],
+    vibeKeywords: [
+      'do we actually need this now', 'is this required today',
+      'only what\'s needed for now', 'not adding that until we need it',
+    ],
     absenceThreshold: 8,
     nature: 'hardcore_pro',
   },
@@ -1077,6 +1188,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     detectionKeywords: [
       'getting this reviewed', 'pair programming this',
       'review plan for this', 'diff review before merge',
+    ],
+    vibeKeywords: [
+      'getting eyes on this', 'pairing on this',
+      'plan to review before merging', 'someone to review this',
     ],
     absenceThreshold: 15,
     nature: 'hardcore_pro',
@@ -1091,6 +1206,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'observability for this', 'logging added', 'metrics instrumented',
       'tracing span added', 'alert for this',
     ],
+    vibeKeywords: [
+      'adding logging for this', 'metrics for this feature',
+      'tracing this operation', 'alerting on this',
+    ],
     absenceThreshold: 10,
     nature: 'hardcore_pro',
   },
@@ -1099,11 +1218,12 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     description: 'Enumerating failure modes for each dependency before finalising design',
     expectedStages: ['implementation'],
     detectionKeywords: [
-      'failure mode for this', 'circuit breaker for',
+      'failure mode for this', 'what happens when x fails', 'circuit breaker for',
       'fallback when', 'resilience for this',
     ],
     vibeKeywords: [
-      'what happens when x fails',
+      'what if this service is down', 'handling when this fails',
+      'fallback if this dependency fails', 'what\'s the timeout here',
     ],
     absenceThreshold: 8,
     nature: 'hardcore_pro',
@@ -1115,6 +1235,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     detectionKeywords: [
       'contract test for this', 'pact test', 'consumer-driven contract',
       'integration contract verified',
+    ],
+    vibeKeywords: [
+      'verifying the contract here', 'checking the api contract',
+      'testing the service boundary', 'consumer-driven test for this',
     ],
     absenceThreshold: 12,
     nature: 'hardcore_pro',
@@ -1129,6 +1253,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'capacity estimate for this', 'load this will add',
       'storage growth projection', 'rps estimate', 'resource utilization',
     ],
+    vibeKeywords: [
+      'estimating the load here', 'how much traffic will this handle',
+      'storage cost of this feature', 'scaling considerations for this',
+    ],
     absenceThreshold: 10,
     nature: 'hardcore_pro',
   },
@@ -1139,6 +1267,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     detectionKeywords: [
       'threat model for this', 'stride analysis',
       'attack surface review', 'privilege escalation considered', 'security design review',
+    ],
+    vibeKeywords: [
+      'what\'s the attack surface here', 'security design for this',
+      'potential vulnerabilities here', 'stride check for this',
     ],
     absenceThreshold: 8,
     nature: 'hardcore_pro',
@@ -1151,6 +1283,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'backwards compatible migration', 'expand-migrate-contract',
       'phased migration', 'rollback migration', 'migration safety review',
     ],
+    vibeKeywords: [
+      'phasing this migration', 'checking migration rollback',
+      'is this migration backwards compatible', 'safe to deploy this migration',
+    ],
     absenceThreshold: 6,
     nature: 'hardcore_pro',
   },
@@ -1159,7 +1295,12 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     description: 'Defining a deployment strategy (feature flag, canary, blue-green) before shipping',
     expectedStages: ['release'],
     detectionKeywords: [
-      'feature flag for this', 'canary deployment', 'blue-green deployment', 'staged rollout',
+      'feature flag for this', 'canary deployment', 'rollback plan',
+      'blue-green deployment', 'staged rollout',
+    ],
+    vibeKeywords: [
+      'deployment strategy for this', 'rollback plan for this release',
+      'canary this release', 'feature flagging this',
     ],
     absenceThreshold: 6,
     nature: 'hardcore_pro',
@@ -1172,6 +1313,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'runbook for this', 'operational documentation',
       'how to debug this in production', 'on-call guide for',
     ],
+    vibeKeywords: [
+      'operational notes for this', 'how to debug this when it breaks',
+      'on-call notes for this', 'runbook content for this',
+    ],
     absenceThreshold: 8,
     nature: 'hardcore_pro',
   },
@@ -1182,6 +1327,10 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     detectionKeywords: [
       'slo for this', 'availability target', 'latency target',
       'error rate budget', 'reliability target',
+    ],
+    vibeKeywords: [
+      'what\'s the uptime target', 'defining the slo here',
+      'acceptable error rate for this', 'latency expectation for this',
     ],
     absenceThreshold: 10,
     nature: 'hardcore_pro',

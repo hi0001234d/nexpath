@@ -116,18 +116,18 @@ import {
   ABSENCE_BACKWARDS_COMPAT_CHECK_CASUAL,
   ABSENCE_SELF_REVIEW_HABIT_CASUAL,
   ABSENCE_PERFORMANCE_AWARENESS_CASUAL,
-  ABSENCE_DECISION_RECORD_ABSENCE,
-  ABSENCE_OVER_ENGINEERING_CHECK,
-  ABSENCE_PAIR_REVIEW_ABSENCE,
-  ABSENCE_OBSERVABILITY_FIRST,
-  ABSENCE_FAILURE_MODE_ANALYSIS,
-  ABSENCE_CONTRACT_TESTING_GAP,
-  ABSENCE_CAPACITY_PLANNING_GAP,
-  ABSENCE_SECURITY_THREAT_MODELING,
-  ABSENCE_DATABASE_MIGRATION_SAFETY,
-  ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE,
-  ABSENCE_OPERATIONAL_RUNBOOK_GAP,
-  ABSENCE_SLO_DEFINITION_GAP,
+  ABSENCE_DECISION_RECORD_ABSENCE_FORMAL,
+  ABSENCE_OVER_ENGINEERING_CHECK_FORMAL,
+  ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL,
+  ABSENCE_OBSERVABILITY_FIRST_FORMAL,
+  ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL,
+  ABSENCE_CONTRACT_TESTING_GAP_FORMAL,
+  ABSENCE_CAPACITY_PLANNING_GAP_FORMAL,
+  ABSENCE_SECURITY_THREAT_MODELING_FORMAL,
+  ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL,
+  ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL,
+  ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL,
+  ABSENCE_SLO_DEFINITION_GAP_FORMAL,
 } from './options.js';
 import {
   ABSENCE_CONTENT_BEGINNER,
@@ -4378,124 +4378,124 @@ describe('resolveDecisionContent — Stream B universal signals', () => {
 
   // ── Phase 5 D10-D12 — hardcore_pro signal routing ─────────────────────────────
 
-  it('absence:decision_record_absence, hardcore_pro → ABSENCE_DECISION_RECORD_ABSENCE (formal)', () => {
-    expect(resolveDecisionContent('implementation', 'absence:decision_record_absence', makeProfile('hardcore_pro'))).toBe(ABSENCE_DECISION_RECORD_ABSENCE);
+  it('absence:decision_record_absence, hardcore_pro → ABSENCE_DECISION_RECORD_ABSENCE_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:decision_record_absence', makeProfile('hardcore_pro'))).toBe(ABSENCE_DECISION_RECORD_ABSENCE_FORMAL);
   });
 
-  it('ABSENCE_DECISION_RECORD_ABSENCE has 3 L1, 2 L2, 1 L3 options', () => {
-    expect(ABSENCE_DECISION_RECORD_ABSENCE.L1).toHaveLength(3);
-    expect(ABSENCE_DECISION_RECORD_ABSENCE.L2).toHaveLength(2);
-    expect(ABSENCE_DECISION_RECORD_ABSENCE.L3).toHaveLength(1);
+  it('ABSENCE_DECISION_RECORD_ABSENCE_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DECISION_RECORD_ABSENCE_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_DECISION_RECORD_ABSENCE_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_DECISION_RECORD_ABSENCE_FORMAL.L3).toHaveLength(1);
   });
 
-  it('absence:over_engineering_check, hardcore_pro → ABSENCE_OVER_ENGINEERING_CHECK (formal)', () => {
-    expect(resolveDecisionContent('implementation', 'absence:over_engineering_check', makeProfile('hardcore_pro'))).toBe(ABSENCE_OVER_ENGINEERING_CHECK);
+  it('absence:over_engineering_check, hardcore_pro → ABSENCE_OVER_ENGINEERING_CHECK_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:over_engineering_check', makeProfile('hardcore_pro'))).toBe(ABSENCE_OVER_ENGINEERING_CHECK_FORMAL);
   });
 
-  it('ABSENCE_OVER_ENGINEERING_CHECK has 3 L1, 2 L2, 1 L3 options', () => {
-    expect(ABSENCE_OVER_ENGINEERING_CHECK.L1).toHaveLength(3);
-    expect(ABSENCE_OVER_ENGINEERING_CHECK.L2).toHaveLength(2);
-    expect(ABSENCE_OVER_ENGINEERING_CHECK.L3).toHaveLength(1);
+  it('ABSENCE_OVER_ENGINEERING_CHECK_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_OVER_ENGINEERING_CHECK_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_OVER_ENGINEERING_CHECK_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_OVER_ENGINEERING_CHECK_FORMAL.L3).toHaveLength(1);
   });
 
-  it('absence:pair_review_absence, hardcore_pro → ABSENCE_PAIR_REVIEW_ABSENCE (formal)', () => {
-    expect(resolveDecisionContent('implementation', 'absence:pair_review_absence', makeProfile('hardcore_pro'))).toBe(ABSENCE_PAIR_REVIEW_ABSENCE);
+  it('absence:pair_review_absence, hardcore_pro → ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:pair_review_absence', makeProfile('hardcore_pro'))).toBe(ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL);
   });
 
-  it('ABSENCE_PAIR_REVIEW_ABSENCE has 3 L1, 2 L2, 1 L3 options', () => {
-    expect(ABSENCE_PAIR_REVIEW_ABSENCE.L1).toHaveLength(3);
-    expect(ABSENCE_PAIR_REVIEW_ABSENCE.L2).toHaveLength(2);
-    expect(ABSENCE_PAIR_REVIEW_ABSENCE.L3).toHaveLength(1);
+  it('ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL.L3).toHaveLength(1);
   });
 
-  it('absence:observability_first, hardcore_pro → ABSENCE_OBSERVABILITY_FIRST (formal)', () => {
-    expect(resolveDecisionContent('implementation', 'absence:observability_first', makeProfile('hardcore_pro'))).toBe(ABSENCE_OBSERVABILITY_FIRST);
+  it('absence:observability_first, hardcore_pro → ABSENCE_OBSERVABILITY_FIRST_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:observability_first', makeProfile('hardcore_pro'))).toBe(ABSENCE_OBSERVABILITY_FIRST_FORMAL);
   });
 
-  it('ABSENCE_OBSERVABILITY_FIRST has 3 L1, 2 L2, 1 L3 options', () => {
-    expect(ABSENCE_OBSERVABILITY_FIRST.L1).toHaveLength(3);
-    expect(ABSENCE_OBSERVABILITY_FIRST.L2).toHaveLength(2);
-    expect(ABSENCE_OBSERVABILITY_FIRST.L3).toHaveLength(1);
+  it('ABSENCE_OBSERVABILITY_FIRST_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_OBSERVABILITY_FIRST_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_OBSERVABILITY_FIRST_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_OBSERVABILITY_FIRST_FORMAL.L3).toHaveLength(1);
   });
 
-  it('absence:failure_mode_analysis, hardcore_pro → ABSENCE_FAILURE_MODE_ANALYSIS (formal)', () => {
-    expect(resolveDecisionContent('implementation', 'absence:failure_mode_analysis', makeProfile('hardcore_pro'))).toBe(ABSENCE_FAILURE_MODE_ANALYSIS);
+  it('absence:failure_mode_analysis, hardcore_pro → ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:failure_mode_analysis', makeProfile('hardcore_pro'))).toBe(ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL);
   });
 
-  it('ABSENCE_FAILURE_MODE_ANALYSIS has 3 L1, 2 L2, 1 L3 options', () => {
-    expect(ABSENCE_FAILURE_MODE_ANALYSIS.L1).toHaveLength(3);
-    expect(ABSENCE_FAILURE_MODE_ANALYSIS.L2).toHaveLength(2);
-    expect(ABSENCE_FAILURE_MODE_ANALYSIS.L3).toHaveLength(1);
+  it('ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL.L3).toHaveLength(1);
   });
 
-  it('absence:contract_testing_gap, hardcore_pro → ABSENCE_CONTRACT_TESTING_GAP (formal)', () => {
-    expect(resolveDecisionContent('review_testing', 'absence:contract_testing_gap', makeProfile('hardcore_pro'))).toBe(ABSENCE_CONTRACT_TESTING_GAP);
+  it('absence:contract_testing_gap, hardcore_pro → ABSENCE_CONTRACT_TESTING_GAP_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('review_testing', 'absence:contract_testing_gap', makeProfile('hardcore_pro'))).toBe(ABSENCE_CONTRACT_TESTING_GAP_FORMAL);
   });
 
-  it('ABSENCE_CONTRACT_TESTING_GAP has 3 L1, 2 L2, 1 L3 options', () => {
-    expect(ABSENCE_CONTRACT_TESTING_GAP.L1).toHaveLength(3);
-    expect(ABSENCE_CONTRACT_TESTING_GAP.L2).toHaveLength(2);
-    expect(ABSENCE_CONTRACT_TESTING_GAP.L3).toHaveLength(1);
+  it('ABSENCE_CONTRACT_TESTING_GAP_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CONTRACT_TESTING_GAP_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_CONTRACT_TESTING_GAP_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_CONTRACT_TESTING_GAP_FORMAL.L3).toHaveLength(1);
   });
 
-  it('absence:capacity_planning_gap, hardcore_pro → ABSENCE_CAPACITY_PLANNING_GAP (formal)', () => {
-    expect(resolveDecisionContent('implementation', 'absence:capacity_planning_gap', makeProfile('hardcore_pro'))).toBe(ABSENCE_CAPACITY_PLANNING_GAP);
+  it('absence:capacity_planning_gap, hardcore_pro → ABSENCE_CAPACITY_PLANNING_GAP_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:capacity_planning_gap', makeProfile('hardcore_pro'))).toBe(ABSENCE_CAPACITY_PLANNING_GAP_FORMAL);
   });
 
-  it('ABSENCE_CAPACITY_PLANNING_GAP has 3 L1, 2 L2, 1 L3 options', () => {
-    expect(ABSENCE_CAPACITY_PLANNING_GAP.L1).toHaveLength(3);
-    expect(ABSENCE_CAPACITY_PLANNING_GAP.L2).toHaveLength(2);
-    expect(ABSENCE_CAPACITY_PLANNING_GAP.L3).toHaveLength(1);
+  it('ABSENCE_CAPACITY_PLANNING_GAP_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CAPACITY_PLANNING_GAP_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_CAPACITY_PLANNING_GAP_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_CAPACITY_PLANNING_GAP_FORMAL.L3).toHaveLength(1);
   });
 
-  it('absence:security_threat_modeling, hardcore_pro → ABSENCE_SECURITY_THREAT_MODELING (formal)', () => {
-    expect(resolveDecisionContent('implementation', 'absence:security_threat_modeling', makeProfile('hardcore_pro'))).toBe(ABSENCE_SECURITY_THREAT_MODELING);
+  it('absence:security_threat_modeling, hardcore_pro → ABSENCE_SECURITY_THREAT_MODELING_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:security_threat_modeling', makeProfile('hardcore_pro'))).toBe(ABSENCE_SECURITY_THREAT_MODELING_FORMAL);
   });
 
-  it('ABSENCE_SECURITY_THREAT_MODELING has 3 L1, 2 L2, 1 L3 options', () => {
-    expect(ABSENCE_SECURITY_THREAT_MODELING.L1).toHaveLength(3);
-    expect(ABSENCE_SECURITY_THREAT_MODELING.L2).toHaveLength(2);
-    expect(ABSENCE_SECURITY_THREAT_MODELING.L3).toHaveLength(1);
+  it('ABSENCE_SECURITY_THREAT_MODELING_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SECURITY_THREAT_MODELING_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_SECURITY_THREAT_MODELING_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_SECURITY_THREAT_MODELING_FORMAL.L3).toHaveLength(1);
   });
 
-  it('absence:database_migration_safety, hardcore_pro → ABSENCE_DATABASE_MIGRATION_SAFETY (formal)', () => {
-    expect(resolveDecisionContent('implementation', 'absence:database_migration_safety', makeProfile('hardcore_pro'))).toBe(ABSENCE_DATABASE_MIGRATION_SAFETY);
+  it('absence:database_migration_safety, hardcore_pro → ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:database_migration_safety', makeProfile('hardcore_pro'))).toBe(ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL);
   });
 
-  it('ABSENCE_DATABASE_MIGRATION_SAFETY has 3 L1, 2 L2, 1 L3 options', () => {
-    expect(ABSENCE_DATABASE_MIGRATION_SAFETY.L1).toHaveLength(3);
-    expect(ABSENCE_DATABASE_MIGRATION_SAFETY.L2).toHaveLength(2);
-    expect(ABSENCE_DATABASE_MIGRATION_SAFETY.L3).toHaveLength(1);
+  it('ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL.L3).toHaveLength(1);
   });
 
-  it('absence:deployment_strategy_absence, hardcore_pro → ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE (formal)', () => {
-    expect(resolveDecisionContent('release', 'absence:deployment_strategy_absence', makeProfile('hardcore_pro'))).toBe(ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE);
+  it('absence:deployment_strategy_absence, hardcore_pro → ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('release', 'absence:deployment_strategy_absence', makeProfile('hardcore_pro'))).toBe(ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL);
   });
 
-  it('ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE has 3 L1, 2 L2, 1 L3 options', () => {
-    expect(ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE.L1).toHaveLength(3);
-    expect(ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE.L2).toHaveLength(2);
-    expect(ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE.L3).toHaveLength(1);
+  it('ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL.L3).toHaveLength(1);
   });
 
-  it('absence:operational_runbook_gap, hardcore_pro → ABSENCE_OPERATIONAL_RUNBOOK_GAP (formal)', () => {
-    expect(resolveDecisionContent('release', 'absence:operational_runbook_gap', makeProfile('hardcore_pro'))).toBe(ABSENCE_OPERATIONAL_RUNBOOK_GAP);
+  it('absence:operational_runbook_gap, hardcore_pro → ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('release', 'absence:operational_runbook_gap', makeProfile('hardcore_pro'))).toBe(ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL);
   });
 
-  it('ABSENCE_OPERATIONAL_RUNBOOK_GAP has 3 L1, 2 L2, 1 L3 options', () => {
-    expect(ABSENCE_OPERATIONAL_RUNBOOK_GAP.L1).toHaveLength(3);
-    expect(ABSENCE_OPERATIONAL_RUNBOOK_GAP.L2).toHaveLength(2);
-    expect(ABSENCE_OPERATIONAL_RUNBOOK_GAP.L3).toHaveLength(1);
+  it('ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL.L3).toHaveLength(1);
   });
 
-  it('absence:slo_definition_gap, hardcore_pro → ABSENCE_SLO_DEFINITION_GAP (formal)', () => {
-    expect(resolveDecisionContent('implementation', 'absence:slo_definition_gap', makeProfile('hardcore_pro'))).toBe(ABSENCE_SLO_DEFINITION_GAP);
+  it('absence:slo_definition_gap, hardcore_pro → ABSENCE_SLO_DEFINITION_GAP_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:slo_definition_gap', makeProfile('hardcore_pro'))).toBe(ABSENCE_SLO_DEFINITION_GAP_FORMAL);
   });
 
-  it('ABSENCE_SLO_DEFINITION_GAP has 3 L1, 2 L2, 1 L3 options', () => {
-    expect(ABSENCE_SLO_DEFINITION_GAP.L1).toHaveLength(3);
-    expect(ABSENCE_SLO_DEFINITION_GAP.L2).toHaveLength(2);
-    expect(ABSENCE_SLO_DEFINITION_GAP.L3).toHaveLength(1);
+  it('ABSENCE_SLO_DEFINITION_GAP_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SLO_DEFINITION_GAP_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_SLO_DEFINITION_GAP_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_SLO_DEFINITION_GAP_FORMAL.L3).toHaveLength(1);
   });
 
   it('ABSENCE_CONTENT_BEGINNER contains all 23 Phase 5 D1-D6 keys', () => {

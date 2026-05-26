@@ -1599,6 +1599,14 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('single_responsibility_prompting')).toBe(true);
   });
 
+  it('single_responsibility_prompting: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('just this one thing for now, only this for now please')).toContain('single_responsibility_prompting');
+  });
+
+  it('single_responsibility_prompting: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('just this one thing')).not.toContain('single_responsibility_prompting');
+  });
+
   it('detects "i can revert this if needed" → rollback_awareness', () => {
     expect(detectSignals('i can revert this if needed since we committed earlier')).toContain('rollback_awareness');
   });
@@ -1613,8 +1621,16 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('rollback_awareness')).toBe(true);
   });
 
-  it('detects "i want to understand what we built" → build_vs_understand_ratio', () => {
-    expect(detectSignals('i want to understand what we built before we add more to it')).toContain('build_vs_understand_ratio');
+  it('rollback_awareness: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('let me commit first before i change this so i have a checkpoint')).toContain('rollback_awareness');
+  });
+
+  it('rollback_awareness: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('let me commit first')).not.toContain('rollback_awareness');
+  });
+
+  it('detects "walk me through what we built" → build_vs_understand_ratio', () => {
+    expect(detectSignals('walk me through what we built so far before adding more')).toContain('build_vs_understand_ratio');
   });
 
   it('build_vs_understand_ratio has nature "beginner", absenceThreshold 12', () => {
@@ -1643,6 +1659,14 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('feature_completion_check')).toBe(true);
   });
 
+  it('feature_completion_check: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('is this feature done? let me finish this first before moving on')).toContain('feature_completion_check');
+  });
+
+  it('feature_completion_check: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('is this feature done')).not.toContain('feature_completion_check');
+  });
+
   it('detects "end-to-end working" → finishing_line_awareness', () => {
     expect(detectSignals('end-to-end working now from login to dashboard')).toContain('finishing_line_awareness');
   });
@@ -1655,6 +1679,14 @@ describe('detectSignals', () => {
 
   it('SIGNAL_MAP contains finishing_line_awareness', () => {
     expect(SIGNAL_MAP.has('finishing_line_awareness')).toBe(true);
+  });
+
+  it('finishing_line_awareness: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('almost done with this, just need to wrap this up before anything else')).toContain('finishing_line_awareness');
+  });
+
+  it('finishing_line_awareness: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('almost done with this')).not.toContain('finishing_line_awareness');
   });
 
   it('detects "core functionality is working first" → polish_vs_function', () => {
@@ -1671,6 +1703,14 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('polish_vs_function')).toBe(true);
   });
 
+  it('polish_vs_function: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('get it working first, make sure the core works before any styling')).toContain('polish_vs_function');
+  });
+
+  it('polish_vs_function: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('get it working first')).not.toContain('polish_vs_function');
+  });
+
   it('detects "is this mvp scope" → mvp_scope_discipline', () => {
     expect(detectSignals('is this mvp scope or can we defer it')).toContain('mvp_scope_discipline');
   });
@@ -1683,6 +1723,14 @@ describe('detectSignals', () => {
 
   it('SIGNAL_MAP contains mvp_scope_discipline', () => {
     expect(SIGNAL_MAP.has('mvp_scope_discipline')).toBe(true);
+  });
+
+  it('mvp_scope_discipline: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('do we need this for mvp? is this in scope for the first version?')).toContain('mvp_scope_discipline');
+  });
+
+  it('mvp_scope_discipline: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('do we need this for mvp')).not.toContain('mvp_scope_discipline');
   });
 
   // ── Phase 5 D5 — cool_geek cluster 2 ─────────────────────────────────────────
@@ -1701,6 +1749,14 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('idea_to_spec_bridge')).toBe(true);
   });
 
+  it('idea_to_spec_bridge: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('how would this actually work? let me think through this idea before building')).toContain('idea_to_spec_bridge');
+  });
+
+  it('idea_to_spec_bridge: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('how would this actually work')).not.toContain('idea_to_spec_bridge');
+  });
+
   it('detects "production-ready" → demo_vs_product', () => {
     expect(detectSignals('this needs to be production-ready before we ship')).toContain('demo_vs_product');
   });
@@ -1715,6 +1771,14 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('demo_vs_product')).toBe(true);
   });
 
+  it('demo_vs_product: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('this needs to work with real data, remove the hardcoded values before shipping')).toContain('demo_vs_product');
+  });
+
+  it('demo_vs_product: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('this needs to work with real data')).not.toContain('demo_vs_product');
+  });
+
   it('detects "full user journey for this" → user_journey_check', () => {
     expect(detectSignals('let me think through the full user journey for this feature')).toContain('user_journey_check');
   });
@@ -1727,6 +1791,14 @@ describe('detectSignals', () => {
 
   it('SIGNAL_MAP contains user_journey_check', () => {
     expect(SIGNAL_MAP.has('user_journey_check')).toBe(true);
+  });
+
+  it('user_journey_check: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what does the user see when there\'s no data, what happens when there\'s nothing there')).toContain('user_journey_check');
+  });
+
+  it('user_journey_check: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what does the user see when the page loads')).not.toContain('user_journey_check');
   });
 
   // ── Phase 5 D6 — cool_geek cluster 3 ─────────────────────────────────────────
@@ -1745,6 +1817,14 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('technical_spike_treatment')).toBe(true);
   });
 
+  it('technical_spike_treatment: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('just exploring here, this is throwaway code to learn the API')).toContain('technical_spike_treatment');
+  });
+
+  it('technical_spike_treatment: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('just exploring here')).not.toContain('technical_spike_treatment');
+  });
+
   it('detects "evaluated alternatives before adding" → dependency_adventure', () => {
     expect(detectSignals('evaluated alternatives before adding this library and nothing else fit')).toContain('dependency_adventure');
   });
@@ -1757,6 +1837,14 @@ describe('detectSignals', () => {
 
   it('SIGNAL_MAP contains dependency_adventure', () => {
     expect(SIGNAL_MAP.has('dependency_adventure')).toBe(true);
+  });
+
+  it('dependency_adventure: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('do we need this library? is this dependency worth it for what we get?')).toContain('dependency_adventure');
+  });
+
+  it('dependency_adventure: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('do we need this library')).not.toContain('dependency_adventure');
   });
 
   it('detects "debugging this before starting over" → restart_impulse_check', () => {
@@ -1773,6 +1861,14 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('restart_impulse_check')).toBe(true);
   });
 
+  it('restart_impulse_check: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('let me figure out what went wrong, what exactly is broken here before we rewrite')).toContain('restart_impulse_check');
+  });
+
+  it('restart_impulse_check: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('let me figure out what went wrong')).not.toContain('restart_impulse_check');
+  });
+
   it('detects "this serves the core product" → creative_vs_core_ratio', () => {
     expect(detectSignals('this serves the core product by letting users do the main thing faster')).toContain('creative_vs_core_ratio');
   });
@@ -1785,6 +1881,14 @@ describe('detectSignals', () => {
 
   it('SIGNAL_MAP contains creative_vs_core_ratio', () => {
     expect(SIGNAL_MAP.has('creative_vs_core_ratio')).toBe(true);
+  });
+
+  it('creative_vs_core_ratio: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what actually matters here? focus on the main thing before extras')).toContain('creative_vs_core_ratio');
+  });
+
+  it('creative_vs_core_ratio: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what actually matters here')).not.toContain('creative_vs_core_ratio');
   });
 
   // ── Phase 5 D7 — pro_geek_soul cluster 1 ─────────────────────────────────────
@@ -1803,6 +1907,14 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('code_documentation_gap')).toBe(true);
   });
 
+  it('code_documentation_gap: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('let me add a comment here, explaining what this does for future readers')).toContain('code_documentation_gap');
+  });
+
+  it('code_documentation_gap: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('let me add a comment here')).not.toContain('code_documentation_gap');
+  });
+
   it('detects "noting this as tech debt" → technical_debt_acknowledgment', () => {
     expect(detectSignals('noting this as tech debt — the proper solution would use a queue')).toContain('technical_debt_acknowledgment');
   });
@@ -1815,6 +1927,18 @@ describe('detectSignals', () => {
 
   it('SIGNAL_MAP contains technical_debt_acknowledgment', () => {
     expect(SIGNAL_MAP.has('technical_debt_acknowledgment')).toBe(true);
+  });
+
+  it('technical_debt_acknowledgment: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('todo here to clean this up, will need to revisit this before release')).toContain('technical_debt_acknowledgment');
+  });
+
+  it('technical_debt_acknowledgment: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('will need to revisit this')).not.toContain('technical_debt_acknowledgment');
+  });
+
+  it('technical_debt_acknowledgment detects new detection keyword "todo: clean this up"', () => {
+    expect(detectSignals('TODO: clean this up — this is a workaround for the rate limit')).toContain('technical_debt_acknowledgment');
   });
 
   it('detects "edge case test" → test_depth_check', () => {
@@ -1832,6 +1956,14 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('test_depth_check')).toBe(true);
   });
 
+  it('test_depth_check: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('test the edge cases, what if the input is empty or null')).toContain('test_depth_check');
+  });
+
+  it('test_depth_check: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('test the edge cases')).not.toContain('test_depth_check');
+  });
+
   it('detects "why this pattern was chosen" → architecture_note_absence', () => {
     expect(detectSignals('adding a comment explaining why this pattern was chosen over alternatives')).toContain('architecture_note_absence');
   });
@@ -1844,6 +1976,14 @@ describe('detectSignals', () => {
 
   it('SIGNAL_MAP contains architecture_note_absence', () => {
     expect(SIGNAL_MAP.has('architecture_note_absence')).toBe(true);
+  });
+
+  it('architecture_note_absence: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('documenting why we chose this approach, note on this decision for the team')).toContain('architecture_note_absence');
+  });
+
+  it('architecture_note_absence: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('note on this decision')).not.toContain('architecture_note_absence');
   });
 
   // ── Phase 5 D8 — pro_geek_soul cluster 2 ─────────────────────────────────────
@@ -1862,6 +2002,14 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('dependency_audit_gap')).toBe(true);
   });
 
+  it('dependency_audit_gap: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('checking if this is maintained, what\'s the license on this before we add it')).toContain('dependency_audit_gap');
+  });
+
+  it('dependency_audit_gap: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('checking if this is maintained')).not.toContain('dependency_audit_gap');
+  });
+
   it('detects "owasp check" → security_review_gap', () => {
     expect(detectSignals('running owasp check on this endpoint before merging')).toContain('security_review_gap');
   });
@@ -1874,6 +2022,18 @@ describe('detectSignals', () => {
 
   it('SIGNAL_MAP contains security_review_gap', () => {
     expect(SIGNAL_MAP.has('security_review_gap')).toBe(true);
+  });
+
+  it('security_review_gap: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('input validation for this endpoint, making sure this is secure before merge')).toContain('security_review_gap');
+  });
+
+  it('security_review_gap: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('input validation for this')).not.toContain('security_review_gap');
+  });
+
+  it('security_review_gap detects new detection keyword "input validation added"', () => {
+    expect(detectSignals('input validation added for all user-supplied fields')).toContain('security_review_gap');
   });
 
   it('detects "api contract defined" → api_contract_definition', () => {
@@ -1890,6 +2050,14 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('api_contract_definition')).toBe(true);
   });
 
+  it('api_contract_definition: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what should this endpoint return, let me define what this returns before implementing')).toContain('api_contract_definition');
+  });
+
+  it('api_contract_definition: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what should this endpoint return')).not.toContain('api_contract_definition');
+  });
+
   it('detects "error state handled" → error_handling_coverage', () => {
     expect(detectSignals('error state handled — network failure returns a user-visible message')).toContain('error_handling_coverage');
   });
@@ -1902,6 +2070,18 @@ describe('detectSignals', () => {
 
   it('SIGNAL_MAP contains error_handling_coverage', () => {
     expect(SIGNAL_MAP.has('error_handling_coverage')).toBe(true);
+  });
+
+  it('error_handling_coverage: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('handle the error case here, what if this doesn\'t work in production')).toContain('error_handling_coverage');
+  });
+
+  it('error_handling_coverage: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('handle the error case')).not.toContain('error_handling_coverage');
+  });
+
+  it('error_handling_coverage detects moved detection keywords "what happens when this fails" and "error boundary"', () => {
+    expect(detectSignals('what happens when this fails — we need an error boundary here')).toContain('error_handling_coverage');
   });
 
   // ── Phase 5 D9 — pro_geek_soul cluster 3 ─────────────────────────────────────
@@ -1920,6 +2100,14 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('refactoring_checkpoint')).toBe(true);
   });
 
+  it('refactoring_checkpoint: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('cleaning this up before continuing, refactoring this first then we add the feature')).toContain('refactoring_checkpoint');
+  });
+
+  it('refactoring_checkpoint: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('cleaning this up before continuing')).not.toContain('refactoring_checkpoint');
+  });
+
   it('detects "backwards compatible change" → backwards_compatibility_check', () => {
     expect(detectSignals('backwards compatible change — existing callers see the same interface')).toContain('backwards_compatibility_check');
   });
@@ -1932,6 +2120,14 @@ describe('detectSignals', () => {
 
   it('SIGNAL_MAP contains backwards_compatibility_check', () => {
     expect(SIGNAL_MAP.has('backwards_compatibility_check')).toBe(true);
+  });
+
+  it('backwards_compatibility_check: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('checking what uses this function, what else calls this before we rename it')).toContain('backwards_compatibility_check');
+  });
+
+  it('backwards_compatibility_check: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('checking what uses this')).not.toContain('backwards_compatibility_check');
   });
 
   it('detects "checking the diff" → self_review_habit', () => {
@@ -1948,6 +2144,14 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('self_review_habit')).toBe(true);
   });
 
+  it('self_review_habit: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('read through this before committing, let me check what we built end to end')).toContain('self_review_habit');
+  });
+
+  it('self_review_habit: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('read through this')).not.toContain('self_review_habit');
+  });
+
   it('detects "n+1 query check" → performance_awareness', () => {
     expect(detectSignals('running n+1 query check on this endpoint before shipping')).toContain('performance_awareness');
   });
@@ -1960,6 +2164,18 @@ describe('detectSignals', () => {
 
   it('SIGNAL_MAP contains performance_awareness', () => {
     expect(SIGNAL_MAP.has('performance_awareness')).toBe(true);
+  });
+
+  it('performance_awareness: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('checking the performance here, is this going to be slow with large datasets')).toContain('performance_awareness');
+  });
+
+  it('performance_awareness: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('checking the performance here')).not.toContain('performance_awareness');
+  });
+
+  it('performance_awareness detects new detection keyword "memo/cache this"', () => {
+    expect(detectSignals('memo/cache this component to avoid expensive re-renders')).toContain('performance_awareness');
   });
 
   // ── Phase 5 D10 — hardcore_pro cluster 1 ─────────────────────────────────────
@@ -1978,6 +2194,13 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('decision_record_absence')).toBe(true);
   });
 
+  it('decision_record_absence: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('documenting this decision, noting the rationale here for the team')).toContain('decision_record_absence');
+  });
+  it('decision_record_absence: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('documenting this decision for the team')).not.toContain('decision_record_absence');
+  });
+
   it('detects "yagni check" → over_engineering_check', () => {
     expect(detectSignals('yagni check — do we actually need this abstraction today')).toContain('over_engineering_check');
   });
@@ -1992,6 +2215,13 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('over_engineering_check')).toBe(true);
   });
 
+  it('over_engineering_check: 2 vibe keywords detect signal', () => {
+    expect(detectSignals("do we actually need this now — only what's needed for now")).toContain('over_engineering_check');
+  });
+  it('over_engineering_check: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('do we actually need this now')).not.toContain('over_engineering_check');
+  });
+
   it('detects "diff review before merge" → pair_review_absence', () => {
     expect(detectSignals('diff review before merge — want a second set of eyes on the auth path')).toContain('pair_review_absence');
   });
@@ -2004,6 +2234,13 @@ describe('detectSignals', () => {
 
   it('SIGNAL_MAP contains pair_review_absence', () => {
     expect(SIGNAL_MAP.has('pair_review_absence')).toBe(true);
+  });
+
+  it('pair_review_absence: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('getting eyes on this before merging — pairing on this change')).toContain('pair_review_absence');
+  });
+  it('pair_review_absence: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('getting eyes on this before merging')).not.toContain('pair_review_absence');
   });
 
   // ── Phase 5 D11 — hardcore_pro cluster 2 ─────────────────────────────────────
@@ -2022,6 +2259,13 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('observability_first')).toBe(true);
   });
 
+  it('observability_first: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('adding logging for this endpoint and metrics for this feature')).toContain('observability_first');
+  });
+  it('observability_first: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('adding logging for this endpoint')).not.toContain('observability_first');
+  });
+
   it('detects "circuit breaker for" → failure_mode_analysis', () => {
     expect(detectSignals('adding a circuit breaker for the payment provider call')).toContain('failure_mode_analysis');
   });
@@ -2034,6 +2278,16 @@ describe('detectSignals', () => {
 
   it('SIGNAL_MAP contains failure_mode_analysis', () => {
     expect(SIGNAL_MAP.has('failure_mode_analysis')).toBe(true);
+  });
+
+  it('failure_mode_analysis detects moved detection keyword "what happens when x fails"', () => {
+    expect(detectSignals('what happens when x fails — need to think this through')).toContain('failure_mode_analysis');
+  });
+  it('failure_mode_analysis: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what if this service is down — handling when this fails gracefully')).toContain('failure_mode_analysis');
+  });
+  it('failure_mode_analysis: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what if this service is down')).not.toContain('failure_mode_analysis');
   });
 
   it('detects "consumer-driven contract" → contract_testing_gap', () => {
@@ -2049,6 +2303,13 @@ describe('detectSignals', () => {
 
   it('SIGNAL_MAP contains contract_testing_gap', () => {
     expect(SIGNAL_MAP.has('contract_testing_gap')).toBe(true);
+  });
+
+  it('contract_testing_gap: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('verifying the contract here — checking the api contract for this service')).toContain('contract_testing_gap');
+  });
+  it('contract_testing_gap: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('verifying the contract here')).not.toContain('contract_testing_gap');
   });
 
   // ── Phase 5 D12 — hardcore_pro clusters 3+4 ──────────────────────────────────
@@ -2067,6 +2328,13 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('capacity_planning_gap')).toBe(true);
   });
 
+  it('capacity_planning_gap: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('estimating the load here — how much traffic will this handle')).toContain('capacity_planning_gap');
+  });
+  it('capacity_planning_gap: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('estimating the load here')).not.toContain('capacity_planning_gap');
+  });
+
   it('detects "stride analysis" → security_threat_modeling', () => {
     expect(detectSignals('running a stride analysis on this before we finalise the auth design')).toContain('security_threat_modeling');
   });
@@ -2081,6 +2349,13 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('security_threat_modeling')).toBe(true);
   });
 
+  it('security_threat_modeling: 2 vibe keywords detect signal', () => {
+    expect(detectSignals("what's the attack surface here — potential vulnerabilities here to review")).toContain('security_threat_modeling');
+  });
+  it('security_threat_modeling: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals("what's the attack surface here")).not.toContain('security_threat_modeling');
+  });
+
   it('detects "expand-migrate-contract" → database_migration_safety', () => {
     expect(detectSignals('using expand-migrate-contract to keep this migration backwards compatible')).toContain('database_migration_safety');
   });
@@ -2093,6 +2368,13 @@ describe('detectSignals', () => {
 
   it('SIGNAL_MAP contains database_migration_safety', () => {
     expect(SIGNAL_MAP.has('database_migration_safety')).toBe(true);
+  });
+
+  it('database_migration_safety: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('phasing this migration — is this migration backwards compatible')).toContain('database_migration_safety');
+  });
+  it('database_migration_safety: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('phasing this migration carefully')).not.toContain('database_migration_safety');
   });
 
   it('detects "canary deployment" → deployment_strategy_absence', () => {
@@ -2110,6 +2392,16 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('deployment_strategy_absence')).toBe(true);
   });
 
+  it('deployment_strategy_absence detects new detection keyword "rollback plan"', () => {
+    expect(detectSignals('rollback plan in place before we ship this')).toContain('deployment_strategy_absence');
+  });
+  it('deployment_strategy_absence: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('deployment strategy for this feature — canary this release to 5%')).toContain('deployment_strategy_absence');
+  });
+  it('deployment_strategy_absence: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('deployment strategy for this feature')).not.toContain('deployment_strategy_absence');
+  });
+
   it('detects "runbook for this" → operational_runbook_gap', () => {
     expect(detectSignals('writing the runbook for this service before we go live')).toContain('operational_runbook_gap');
   });
@@ -2125,6 +2417,13 @@ describe('detectSignals', () => {
     expect(SIGNAL_MAP.has('operational_runbook_gap')).toBe(true);
   });
 
+  it('operational_runbook_gap: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('operational notes for this service and on-call notes for this')).toContain('operational_runbook_gap');
+  });
+  it('operational_runbook_gap: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('operational notes for this service')).not.toContain('operational_runbook_gap');
+  });
+
   it('detects "error rate budget" → slo_definition_gap', () => {
     expect(detectSignals('defining an error rate budget of 0.1% before this ships')).toContain('slo_definition_gap');
   });
@@ -2137,6 +2436,13 @@ describe('detectSignals', () => {
 
   it('SIGNAL_MAP contains slo_definition_gap', () => {
     expect(SIGNAL_MAP.has('slo_definition_gap')).toBe(true);
+  });
+
+  it('slo_definition_gap: 2 vibe keywords detect signal', () => {
+    expect(detectSignals("what's the uptime target — acceptable error rate for this service")).toContain('slo_definition_gap');
+  });
+  it('slo_definition_gap: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals("what's the uptime target for this")).not.toContain('slo_definition_gap');
   });
 
   // ── §15 overlap audit — regression + co-fire guards ──────────────────────────
