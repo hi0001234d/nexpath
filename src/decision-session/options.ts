@@ -1392,6 +1392,57 @@ const ABSENCE_RATE_LIMITING: DecisionContent = {
   ],
 };
 
+const ABSENCE_FEATURE_SCOPE: DecisionContent = {
+  question:      'Feature started — Definition of Ready confirmed?',
+  pinchFallback: 'Scope this first.',
+  L1: [
+    'Define the scope and acceptance criteria for this feature before implementation continues: what is the feature doing, what are the explicit out-of-scope items, and what conditions must be true for the feature to be accepted as done? This is the Definition of Ready for sprint planning.',
+    'Write a feature specification before proceeding: intended behaviour, input/output contract, acceptance criteria (at least 3 scenarios covering happy path and key edge cases), and explicit scope boundaries. Implementation without this is a Definition of Ready violation.',
+    'Cross-confirm the feature scope: given what has been built so far in this session, is there a written definition of what the feature does and how it will be accepted? If not, define it now — spec the behaviour before writing more code.',
+  ],
+  L2: [
+    'State the acceptance criteria for this feature: what specific conditions must be true for this feature to be considered complete and ready for review?',
+    'Define the scope boundary: what does this feature do, and what is explicitly deferred or out of scope? One paragraph before continuing implementation.',
+  ],
+  L3: [
+    'What are the acceptance criteria for this feature? List them before adding more code.',
+  ],
+};
+
+const ABSENCE_IMPLEMENTATION_CHECKPOINT: DecisionContent = {
+  question:      'Implementation continued — current state verified?',
+  pinchFallback: 'Verify first.',
+  L1: [
+    'Run an implementation checkpoint before continuing: verify the last unit of work is in a passing state — either by running the relevant tests or by manually tracing the main path through the recently added code. Per TDD Red-Green-Refactor practice, only continue building once the current state is green.',
+    'Apply the TDD feedback loop to the last change: does what was just built satisfy its stated requirement? Trace the code path, run the tests if they exist, and confirm the current state is working before layering the next change on top of it.',
+    'Checkpoint the implementation before proceeding: what is the current state — working, broken, or untested? Identify the specific condition that confirms this unit of work is done and verify it now.',
+  ],
+  L2: [
+    'Before the next implementation step — does the current build pass? Run existing tests or manually verify the most recent change against its requirements.',
+    'What was the last thing built, and is it verified to work? Run the tests or do a quick manual trace before continuing.',
+  ],
+  L3: [
+    'Verify the last change works before adding the next one — run tests or manually confirm the current build is functional.',
+  ],
+};
+
+const ABSENCE_SPEC_BEFORE_CODE: DecisionContent = {
+  question:      'Implementation started — behaviour specified first?',
+  pinchFallback: 'Spec before code.',
+  L1: [
+    'Write a behaviour specification before continuing implementation: using BDD Given/When/Then format, define at least the primary scenario — Given [context], When [action], Then [expected outcome]. Per spec-driven development practice, the specification is the source of truth; code is the verification.',
+    "Define the acceptance criteria for what is being built before writing more code: what specific behaviour must be true for this implementation to be considered correct? Per Dan North's BDD principle: 'a story's behaviour is simply its acceptance criteria' — write them before you implement.",
+    'Apply spec-first discipline to the current implementation unit: write the expected behaviour (inputs, process, outputs, error cases) before continuing. This is the boundary between planning and execution — the spec defines the target, implementation verifies against it.',
+  ],
+  L2: [
+    'Write the Given/When/Then scenario for what is being built before adding more code: what context, what action, and what expected outcome?',
+    'Define the expected behaviour of this implementation unit before continuing: what must be true for this to be considered correct?',
+  ],
+  L3: [
+    'Write one Given/When/Then scenario for what is being built before the next implementation step.',
+  ],
+};
+
 // ── Sub-7 — casual content sets ───────────────────────────────────────────────
 
 const ABSENCE_SCOPE_CREEP_CASUAL: DecisionContent = {
@@ -1530,6 +1581,57 @@ const ABSENCE_RATE_LIMITING_CASUAL: DecisionContent = {
   ],
 };
 
+const ABSENCE_FEATURE_SCOPE_CASUAL: DecisionContent = {
+  question:      'Started building — is scope defined?',
+  pinchFallback: 'What\'s in scope?',
+  L1: [
+    'Before going further — write a quick scope statement for this feature: what it does, what it doesn\'t do, and what done looks like. One paragraph is enough. This prevents mid-build scope drift.',
+    'Quick scope check: what exactly is this feature supposed to do, and what would confirm it\'s working correctly? Define the boundaries before continuing — it saves rework.',
+    'Write a one-sentence definition of done for this feature before the next prompt. What needs to be true for this to be \'finished\' — not perfect, just done?',
+  ],
+  L2: [
+    'What are the 2-3 things this feature must do to be considered complete? List them before continuing.',
+    'Scope check: what is this feature doing, and what is it explicitly NOT doing? Quick answer before next step.',
+  ],
+  L3: [
+    'What does \'done\' look like for this feature? One sentence before continuing.',
+  ],
+};
+
+const ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL: DecisionContent = {
+  question:      'Kept building — is the last change verified?',
+  pinchFallback: 'Checkpoint.',
+  L1: [
+    'Quick checkpoint before continuing — does what was last built actually work end to end? Try running it or walk through the main path manually. If it\'s broken, fix it now before the next change makes the bug harder to locate.',
+    'Smoke test the last change before adding more: what\'s the simplest way to verify it works right now? Run it or try the main path and report what you get.',
+    'Before moving to the next feature — does everything built so far still work? Quick manual check: try the main flow and flag anything that looks off.',
+  ],
+  L2: [
+    'Does the last change work? Run it or try it manually before continuing — one quick verification before the next prompt.',
+    'Checkpoint: what\'s the most recent thing that was built, and does it actually work? Verify before adding anything else.',
+  ],
+  L3: [
+    'Does what was last built work? Quick try before the next step.',
+  ],
+};
+
+const ABSENCE_SPEC_BEFORE_CODE_CASUAL: DecisionContent = {
+  question:      'Building this — behaviour defined first?',
+  pinchFallback: 'Spec it first.',
+  L1: [
+    'Before writing more code — write a quick behaviour spec: what inputs does this take, what should it do, and what output or side effect should it produce? One paragraph is enough. Spec before code avoids building the wrong thing.',
+    'Define the expected behaviour before implementing: given X (the context), when Y (the trigger), then Z (the outcome). Even one sentence of Given/When/Then saves more time than it takes to write.',
+    'Quick spec before continuing: what is this code supposed to DO? Not how — what. Describe the behaviour in plain terms, then implement against that description.',
+  ],
+  L2: [
+    'What should this do? Describe the expected behaviour in one or two sentences before writing the implementation.',
+    'Spec this out before coding it: what\'s the input, what happens, what\'s the expected output? Quick answer first.',
+  ],
+  L3: [
+    'What is this supposed to do? One sentence spec before the next prompt.',
+  ],
+};
+
 // ── Content resolution ─────────────────────────────────────────────────────────
 
 /**
@@ -1577,6 +1679,9 @@ const ABSENCE_CONTENT: Partial<Record<string, DecisionContent>> = {
   data_validation:         ABSENCE_DATA_VALIDATION,
   ci_pipeline:             ABSENCE_CI_PIPELINE,
   rate_limiting:           ABSENCE_RATE_LIMITING,
+  feature_scope_before_build:    ABSENCE_FEATURE_SCOPE,
+  implementation_checkpoint:     ABSENCE_IMPLEMENTATION_CHECKPOINT,
+  spec_before_code:              ABSENCE_SPEC_BEFORE_CODE,
 };
 
 const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
@@ -1619,6 +1724,9 @@ const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
   data_validation:         ABSENCE_DATA_VALIDATION_CASUAL,
   ci_pipeline:             ABSENCE_CI_PIPELINE_CASUAL,
   rate_limiting:           ABSENCE_RATE_LIMITING_CASUAL,
+  feature_scope_before_build:    ABSENCE_FEATURE_SCOPE_CASUAL,
+  implementation_checkpoint:     ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL,
+  spec_before_code:              ABSENCE_SPEC_BEFORE_CODE_CASUAL,
 };
 
 /**
@@ -1838,4 +1946,10 @@ export {
   ABSENCE_CI_PIPELINE_CASUAL,
   ABSENCE_RATE_LIMITING,
   ABSENCE_RATE_LIMITING_CASUAL,
+  ABSENCE_FEATURE_SCOPE,
+  ABSENCE_FEATURE_SCOPE_CASUAL,
+  ABSENCE_IMPLEMENTATION_CHECKPOINT,
+  ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL,
+  ABSENCE_SPEC_BEFORE_CODE,
+  ABSENCE_SPEC_BEFORE_CODE_CASUAL,
 };

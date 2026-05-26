@@ -705,6 +705,51 @@ export const ABSENCE_RATE_LIMITING_BEGINNER: DecisionContent = {
   ],
 };
 
+export const ABSENCE_FEATURE_SCOPE_BEGINNER: DecisionContent = {
+  question:      'Building this — what should it actually do?',
+  pinchFallback: 'Scope first.',
+  L1: [
+    '1. Before we keep going — help me describe in plain words what this part of the app should do and what \'finished\' looks like for it.\n2. Share that back with me so we\'re both on the same page.\n3. Then tell me: is there anything about what I want that is still unclear to you?',
+    'Help me write one sentence about what we\'re building right now and how I\'d know it\'s done — then share it with me before continuing.',
+  ],
+  L2: [
+    'What is the one thing this part of the app is supposed to do — and how will I know when it\'s working the way I want? Share your answer with me first.',
+  ],
+  L3: [
+    'In plain words — what exactly are we building here and how will we know it\'s done?',
+  ],
+};
+
+export const ABSENCE_IMPLEMENTATION_CHECKPOINT_BEGINNER: DecisionContent = {
+  question:      'Built something new — does it actually work?',
+  pinchFallback: 'Quick check.',
+  L1: [
+    '1. Before adding anything else — can you quickly try out what was just built?\n2. Tell me: does it do what we expected, or is something not working yet?\n3. If something\'s off, let\'s fix it before we keep going — it\'s easier to catch now than after more code is added on top.',
+    'Try what was just built and share what happens — does it work the way we want it to? One quick test before we continue building.',
+  ],
+  L2: [
+    'Does what was just built actually work? Try it and tell me what you see before we add anything else.',
+  ],
+  L3: [
+    'Does this work yet? Quick check before we keep building.',
+  ],
+};
+
+export const ABSENCE_SPEC_BEFORE_CODE_BEGINNER: DecisionContent = {
+  question:      'Coding this — what\'s it supposed to do?',
+  pinchFallback: 'Spec first.',
+  L1: [
+    '1. Before we write more code — describe in plain words what this is supposed to do.\n2. What should happen when it works correctly? Share that with me first.\n3. Then we\'ll write it — having that clear makes the code much simpler.',
+    'Tell me what you want this to do — in plain English, step by step — before we start coding it. What happens when it works? Share that first.',
+  ],
+  L2: [
+    'What should this do and how will I know it\'s working? Describe it in plain words before we write the code.',
+  ],
+  L3: [
+    'In plain words — what should this do? Tell me before we start coding.',
+  ],
+};
+
 export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> = {
   test_creation:         ABSENCE_TEST_CREATION_BEGINNER,
   regression_check:      ABSENCE_REGRESSION_CHECK_BEGINNER,
@@ -745,6 +790,9 @@ export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> 
   data_validation:         ABSENCE_DATA_VALIDATION_BEGINNER,
   ci_pipeline:             ABSENCE_CI_PIPELINE_BEGINNER,
   rate_limiting:           ABSENCE_RATE_LIMITING_BEGINNER,
+  feature_scope_before_build:    ABSENCE_FEATURE_SCOPE_BEGINNER,
+  implementation_checkpoint:     ABSENCE_IMPLEMENTATION_CHECKPOINT_BEGINNER,
+  spec_before_code:              ABSENCE_SPEC_BEFORE_CODE_BEGINNER,
 };
 
 export const TRANSITION_CONTENT_BEGINNER: Partial<Record<Stage, DecisionContent>> = {

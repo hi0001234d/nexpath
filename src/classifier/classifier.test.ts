@@ -574,9 +574,9 @@ describe('detectSignals', () => {
     expect(counters['behaviour_testing'].lastSeenAt).toBeNull();
   });
 
-  it('initialSignalCounters covers exactly 39 signals', () => {
+  it('initialSignalCounters covers exactly 42 signals', () => {
     const counters = initialSignalCounters();
-    expect(Object.keys(counters)).toHaveLength(39);
+    expect(Object.keys(counters)).toHaveLength(42);
   });
 
   // ── vibeKeywords — 0.5-weight detection ──────────────────────────────────────
@@ -1313,6 +1313,135 @@ describe('detectSignals', () => {
   it("'rate limit' does NOT fire rate_limiting (that's security_check)", () => {
     expect(detectSignals('we should add rate limit to this endpoint')).not.toContain('rate_limiting');
   });
+
+  // ── feature_scope_before_build (R01) ──────────────────────────────────────────
+
+  it('detects "define the scope" → feature_scope_before_build', () => {
+    expect(detectSignals('let me define the scope of this feature before we start')).toContain('feature_scope_before_build');
+  });
+
+  it('detects "acceptance criteria for this" → feature_scope_before_build', () => {
+    expect(detectSignals('what are the acceptance criteria for this feature')).toContain('feature_scope_before_build');
+  });
+
+  it('detects "let me spec this feature" → feature_scope_before_build', () => {
+    expect(detectSignals('let me spec this feature before we code anything')).toContain('feature_scope_before_build');
+  });
+
+  it('feature_scope_before_build: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what are we actually building here and what exactly should this do')).toContain('feature_scope_before_build');
+  });
+
+  it('feature_scope_before_build: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what are we actually building here')).not.toContain('feature_scope_before_build');
+  });
+
+  it('feature_scope_before_build has absenceThreshold of 3', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'feature_scope_before_build');
+    expect(sig?.absenceThreshold).toBe(3);
+  });
+
+  it("feature_scope_before_build expectedStages is ['implementation']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'feature_scope_before_build');
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains feature_scope_before_build', () => {
+    expect(SIGNAL_MAP.has('feature_scope_before_build')).toBe(true);
+  });
+
+  it('initialSignalCounters contains feature_scope_before_build and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('feature_scope_before_build' in counters).toBe(true);
+    expect(counters['feature_scope_before_build'].present).toBe(false);
+    expect(counters['feature_scope_before_build'].lastSeenAt).toBeNull();
+  });
+
+  // ── implementation_checkpoint (R02) ───────────────────────────────────────────
+
+  it('detects "smoke test this" → implementation_checkpoint', () => {
+    expect(detectSignals('let me smoke test this before continuing')).toContain('implementation_checkpoint');
+  });
+
+  it('detects "verify this works before continuing" → implementation_checkpoint', () => {
+    expect(detectSignals('verify this works before continuing with the next step')).toContain('implementation_checkpoint');
+  });
+
+  it('detects "quick check before moving on" → implementation_checkpoint', () => {
+    expect(detectSignals('quick check before moving on to the next feature')).toContain('implementation_checkpoint');
+  });
+
+  it('implementation_checkpoint: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('does this actually work? try this out and see')).toContain('implementation_checkpoint');
+  });
+
+  it('implementation_checkpoint: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('does this actually work')).not.toContain('implementation_checkpoint');
+  });
+
+  it('implementation_checkpoint has absenceThreshold of 4', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'implementation_checkpoint');
+    expect(sig?.absenceThreshold).toBe(4);
+  });
+
+  it("implementation_checkpoint expectedStages is ['implementation']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'implementation_checkpoint');
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains implementation_checkpoint', () => {
+    expect(SIGNAL_MAP.has('implementation_checkpoint')).toBe(true);
+  });
+
+  it('initialSignalCounters contains implementation_checkpoint and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('implementation_checkpoint' in counters).toBe(true);
+    expect(counters['implementation_checkpoint'].present).toBe(false);
+    expect(counters['implementation_checkpoint'].lastSeenAt).toBeNull();
+  });
+
+  // ── spec_before_code (R03) ────────────────────────────────────────────────────
+
+  it('detects "spec this out first" → spec_before_code', () => {
+    expect(detectSignals('let me spec this out first before writing any code')).toContain('spec_before_code');
+  });
+
+  it('detects "write the behavior first" → spec_before_code', () => {
+    expect(detectSignals('write the behavior first then we will implement it')).toContain('spec_before_code');
+  });
+
+  it('detects "behavior spec for this" → spec_before_code', () => {
+    expect(detectSignals('I need a behavior spec for this before we build it')).toContain('spec_before_code');
+  });
+
+  it('spec_before_code: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what should this do exactly, what is this supposed to do')).toContain('spec_before_code');
+  });
+
+  it('spec_before_code: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what should this do exactly')).not.toContain('spec_before_code');
+  });
+
+  it('spec_before_code has absenceThreshold of 3', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'spec_before_code');
+    expect(sig?.absenceThreshold).toBe(3);
+  });
+
+  it("spec_before_code expectedStages is ['implementation']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'spec_before_code');
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains spec_before_code', () => {
+    expect(SIGNAL_MAP.has('spec_before_code')).toBe(true);
+  });
+
+  it('initialSignalCounters contains spec_before_code and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('spec_before_code' in counters).toBe(true);
+    expect(counters['spec_before_code'].present).toBe(false);
+    expect(counters['spec_before_code'].lastSeenAt).toBeNull();
+  });
 });
 
 // ── SessionStateManager ────────────────────────────────────────────────────────
@@ -1667,14 +1796,14 @@ describe('AbsenceDetector', () => {
     expect(detectAbsenceFlags(state)).toHaveLength(0);
   });
 
-  it('returns no flags when below Gate 3 effectiveMinPrompts (no profile → threshold=10)', () => {
-    // no profile → effectiveMinPrompts=10; promptsInCurrentStage=9 < 10 → Gate 3 blocks
+  it('test_creation not flagged below its threshold (no profile, promptsInCurrentStage=9, threshold=15)', () => {
+    // test_creation threshold=15; effectiveThreshold=15; 9 < 15 → Gate 3 blocks test_creation
     const state = makeState({
       stageConfidence:       0.85,
       promptsInCurrentStage: 9,
       currentStage:          'implementation',
     });
-    expect(detectAbsenceFlags(state)).toHaveLength(0);
+    expect(detectAbsenceFlags(state).map((f) => f.signalKey)).not.toContain('test_creation');
   });
 
   it('raises a flag when all conditions are met and signal never seen', () => {
@@ -1759,15 +1888,15 @@ describe('AbsenceDetector', () => {
     expect(flags.map((f) => f.signalKey)).toContain('test_creation');
   });
 
-  it('passes Gate 2 at exactly 5 prompts but Gate 3 blocks without profile (effectiveMinPrompts=10)', () => {
-    // Gate 2 (promptsInCurrentStage ≥ 5) passes, but Gate 3 (≥10 for no profile) still blocks
+  it('Gate 3 blocks test_creation at promptsInCurrentStage=5 (threshold=15, effective=15 > 5)', () => {
+    // Gate 3 per-signal threshold still blocks high-threshold signals at 5 prompts
     const state2 = makeState({
       stageConfidence:       0.85,
       promptsInCurrentStage: 5,
       currentStage:          'implementation',
       signalCounters:        initialSignalCounters(),
     });
-    expect(detectAbsenceFlags(state2)).toHaveLength(0); // Gate 3 blocks (5 < 10)
+    expect(detectAbsenceFlags(state2).map((f) => f.signalKey)).not.toContain('test_creation');
     // Confirm signals fire when both the gate and the signal threshold are met
     const state3 = makeState({
       stageConfidence:       0.85,
@@ -1899,7 +2028,7 @@ describe('AbsenceDetector', () => {
     expect(detectAbsenceFlags(state, profile)).toHaveLength(0);
   });
 
-  it('hardcore_pro profile: promptsInCurrentStage=6 fires no signals (pro-threshold for implementation=15)', () => {
+  it('hardcore_pro profile: test_creation not flagged at promptsInCurrentStage=6 (threshold=15)', () => {
     const state = makeState({
       stageConfidence:       0.85,
       promptsInCurrentStage: 6,
@@ -1910,7 +2039,7 @@ describe('AbsenceDetector', () => {
     const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
       precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const,
       mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1 };
-    expect(detectAbsenceFlags(state, profile)).toHaveLength(0);
+    expect(detectAbsenceFlags(state, profile).map((f) => f.signalKey)).not.toContain('test_creation');
   });
 
   it('hardcore_pro profile: promptsInCurrentStage=15 fires signals (pro×min-threshold=15)', () => {
@@ -1928,7 +2057,7 @@ describe('AbsenceDetector', () => {
     expect(flags.length).toBeGreaterThan(0);
   });
 
-  it('profile=null: no signals at promptsInCurrentStage=9 (pro-threshold for implementation=15)', () => {
+  it('profile=null: test_creation not flagged at promptsInCurrentStage=9 (threshold=15)', () => {
     const state = makeState({
       stageConfidence:       0.85,
       promptsInCurrentStage: 9,
@@ -1936,7 +2065,7 @@ describe('AbsenceDetector', () => {
       currentStage:          'implementation',
       signalCounters:        initialSignalCounters(),
     });
-    expect(detectAbsenceFlags(state, null)).toHaveLength(0);
+    expect(detectAbsenceFlags(state, null).map((f) => f.signalKey)).not.toContain('test_creation');
   });
 
   // ── Per-signal threshold — context_loss (absenceThreshold=30) ─────────────
