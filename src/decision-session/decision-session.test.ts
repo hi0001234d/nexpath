@@ -102,6 +102,32 @@ import {
   ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL,
   ABSENCE_SPEC_BEFORE_CODE,
   ABSENCE_SPEC_BEFORE_CODE_CASUAL,
+  ABSENCE_INCREMENTAL_BUILD,
+  ABSENCE_INCREMENTAL_BUILD_CASUAL,
+  ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL,
+  ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL,
+  ABSENCE_TEST_DEPTH_CHECK_CASUAL,
+  ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL,
+  ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL,
+  ABSENCE_SECURITY_REVIEW_GAP_CASUAL,
+  ABSENCE_API_CONTRACT_DEFINITION_CASUAL,
+  ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL,
+  ABSENCE_REFACTORING_CHECKPOINT_CASUAL,
+  ABSENCE_BACKWARDS_COMPAT_CHECK_CASUAL,
+  ABSENCE_SELF_REVIEW_HABIT_CASUAL,
+  ABSENCE_PERFORMANCE_AWARENESS_CASUAL,
+  ABSENCE_DECISION_RECORD_ABSENCE,
+  ABSENCE_OVER_ENGINEERING_CHECK,
+  ABSENCE_PAIR_REVIEW_ABSENCE,
+  ABSENCE_OBSERVABILITY_FIRST,
+  ABSENCE_FAILURE_MODE_ANALYSIS,
+  ABSENCE_CONTRACT_TESTING_GAP,
+  ABSENCE_CAPACITY_PLANNING_GAP,
+  ABSENCE_SECURITY_THREAT_MODELING,
+  ABSENCE_DATABASE_MIGRATION_SAFETY,
+  ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE,
+  ABSENCE_OPERATIONAL_RUNBOOK_GAP,
+  ABSENCE_SLO_DEFINITION_GAP,
 } from './options.js';
 import {
   ABSENCE_CONTENT_BEGINNER,
@@ -148,6 +174,29 @@ import {
   ABSENCE_FEATURE_SCOPE_BEGINNER,
   ABSENCE_IMPLEMENTATION_CHECKPOINT_BEGINNER,
   ABSENCE_SPEC_BEFORE_CODE_BEGINNER,
+  ABSENCE_INCREMENTAL_BUILD_BEGINNER,
+  ABSENCE_ERROR_UNDERSTANDING_BEGINNER,
+  ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER,
+  ABSENCE_OUTPUT_VERIFICATION_BEGINNER,
+  ABSENCE_REQUIREMENT_CLARITY_BEGINNER,
+  ABSENCE_COPY_PASTE_AWARENESS_BEGINNER,
+  ABSENCE_DEBUGGING_OBSERVATION_BEGINNER,
+  ABSENCE_LEARNING_CONSOLIDATION_BEGINNER,
+  ABSENCE_SIMPLE_SOLUTION_BEGINNER,
+  ABSENCE_SINGLE_RESPONSIBILITY_BEGINNER,
+  ABSENCE_ROLLBACK_AWARENESS_BEGINNER,
+  ABSENCE_BUILD_VS_UNDERSTAND_BEGINNER,
+  ABSENCE_FEATURE_COMPLETION_CHECK_CASUAL,
+  ABSENCE_FINISHING_LINE_AWARENESS_CASUAL,
+  ABSENCE_POLISH_VS_FUNCTION_CASUAL,
+  ABSENCE_MVP_SCOPE_DISCIPLINE_CASUAL,
+  ABSENCE_IDEA_TO_SPEC_BRIDGE_CASUAL,
+  ABSENCE_DEMO_VS_PRODUCT_CASUAL,
+  ABSENCE_USER_JOURNEY_CHECK_CASUAL,
+  ABSENCE_TECHNICAL_SPIKE_CASUAL,
+  ABSENCE_DEPENDENCY_ADVENTURE_CASUAL,
+  ABSENCE_RESTART_IMPULSE_CASUAL,
+  ABSENCE_CREATIVE_VS_CORE_CASUAL,
 } from './options-beginner.js';
 import type { UserProfile } from '../classifier/types.js';
 import {
@@ -3842,6 +3891,627 @@ describe('resolveDecisionContent — Stream B universal signals', () => {
     expect('feature_scope_before_build' in ABSENCE_CONTENT_BEGINNER).toBe(true);
     expect('implementation_checkpoint' in ABSENCE_CONTENT_BEGINNER).toBe(true);
     expect('spec_before_code' in ABSENCE_CONTENT_BEGINNER).toBe(true);
+  });
+
+  // ── Phase 5 D1 — incremental_build routing (universal) ───────────────────────
+
+  it('absence:incremental_build, no profile → ABSENCE_INCREMENTAL_BUILD_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:incremental_build');
+    expect(content).toBe(ABSENCE_INCREMENTAL_BUILD_CASUAL);
+  });
+
+  it('absence:incremental_build, pro_geek_soul → ABSENCE_INCREMENTAL_BUILD_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:incremental_build', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_INCREMENTAL_BUILD_CASUAL);
+  });
+
+  it('absence:incremental_build, hardcore_pro → ABSENCE_INCREMENTAL_BUILD (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:incremental_build', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_INCREMENTAL_BUILD);
+  });
+
+  it('absence:incremental_build, beginner → ABSENCE_INCREMENTAL_BUILD_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:incremental_build', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_INCREMENTAL_BUILD_BEGINNER);
+  });
+
+  it('absence:incremental_build, cool_geek → ABSENCE_INCREMENTAL_BUILD_BEGINNER (isVibe routing)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:incremental_build', makeProfile('cool_geek'));
+    expect(content).toBe(ABSENCE_INCREMENTAL_BUILD_BEGINNER);
+  });
+
+  it('ABSENCE_INCREMENTAL_BUILD has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_INCREMENTAL_BUILD.L1).toHaveLength(3);
+    expect(ABSENCE_INCREMENTAL_BUILD.L2).toHaveLength(2);
+    expect(ABSENCE_INCREMENTAL_BUILD.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_INCREMENTAL_BUILD_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_INCREMENTAL_BUILD_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_INCREMENTAL_BUILD_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_INCREMENTAL_BUILD_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_INCREMENTAL_BUILD_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_INCREMENTAL_BUILD_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_INCREMENTAL_BUILD_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_INCREMENTAL_BUILD_BEGINNER.L3).toHaveLength(1);
+  });
+
+  // ── Phase 5 D1-D3 — beginner signal routing ───────────────────────────────────
+
+  it('absence:error_understanding, beginner → ABSENCE_ERROR_UNDERSTANDING_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:error_understanding', makeProfile('beginner'))).toBe(ABSENCE_ERROR_UNDERSTANDING_BEGINNER);
+  });
+
+  it('absence:error_understanding, cool_geek → ABSENCE_ERROR_UNDERSTANDING_BEGINNER (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:error_understanding', makeProfile('cool_geek'))).toBe(ABSENCE_ERROR_UNDERSTANDING_BEGINNER);
+  });
+
+  it('ABSENCE_ERROR_UNDERSTANDING_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_ERROR_UNDERSTANDING_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_ERROR_UNDERSTANDING_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_ERROR_UNDERSTANDING_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:documentation_before_ask, beginner → ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:documentation_before_ask', makeProfile('beginner'))).toBe(ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER);
+  });
+
+  it('absence:documentation_before_ask, cool_geek → ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:documentation_before_ask', makeProfile('cool_geek'))).toBe(ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER);
+  });
+
+  it('ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:output_verification, beginner → ABSENCE_OUTPUT_VERIFICATION_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:output_verification', makeProfile('beginner'))).toBe(ABSENCE_OUTPUT_VERIFICATION_BEGINNER);
+  });
+
+  it('absence:output_verification, cool_geek → ABSENCE_OUTPUT_VERIFICATION_BEGINNER (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:output_verification', makeProfile('cool_geek'))).toBe(ABSENCE_OUTPUT_VERIFICATION_BEGINNER);
+  });
+
+  it('ABSENCE_OUTPUT_VERIFICATION_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_OUTPUT_VERIFICATION_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_OUTPUT_VERIFICATION_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_OUTPUT_VERIFICATION_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:requirement_clarity_before_ask, beginner → ABSENCE_REQUIREMENT_CLARITY_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:requirement_clarity_before_ask', makeProfile('beginner'))).toBe(ABSENCE_REQUIREMENT_CLARITY_BEGINNER);
+  });
+
+  it('absence:requirement_clarity_before_ask, cool_geek → ABSENCE_REQUIREMENT_CLARITY_BEGINNER (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:requirement_clarity_before_ask', makeProfile('cool_geek'))).toBe(ABSENCE_REQUIREMENT_CLARITY_BEGINNER);
+  });
+
+  it('ABSENCE_REQUIREMENT_CLARITY_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_REQUIREMENT_CLARITY_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_REQUIREMENT_CLARITY_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_REQUIREMENT_CLARITY_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:copy_paste_awareness, beginner → ABSENCE_COPY_PASTE_AWARENESS_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:copy_paste_awareness', makeProfile('beginner'))).toBe(ABSENCE_COPY_PASTE_AWARENESS_BEGINNER);
+  });
+
+  it('absence:copy_paste_awareness, cool_geek → ABSENCE_COPY_PASTE_AWARENESS_BEGINNER (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:copy_paste_awareness', makeProfile('cool_geek'))).toBe(ABSENCE_COPY_PASTE_AWARENESS_BEGINNER);
+  });
+
+  it('ABSENCE_COPY_PASTE_AWARENESS_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_COPY_PASTE_AWARENESS_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_COPY_PASTE_AWARENESS_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_COPY_PASTE_AWARENESS_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:debugging_observation_gap, beginner → ABSENCE_DEBUGGING_OBSERVATION_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:debugging_observation_gap', makeProfile('beginner'))).toBe(ABSENCE_DEBUGGING_OBSERVATION_BEGINNER);
+  });
+
+  it('absence:debugging_observation_gap, cool_geek → ABSENCE_DEBUGGING_OBSERVATION_BEGINNER (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:debugging_observation_gap', makeProfile('cool_geek'))).toBe(ABSENCE_DEBUGGING_OBSERVATION_BEGINNER);
+  });
+
+  it('ABSENCE_DEBUGGING_OBSERVATION_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEBUGGING_OBSERVATION_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_DEBUGGING_OBSERVATION_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_DEBUGGING_OBSERVATION_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:learning_consolidation, beginner → ABSENCE_LEARNING_CONSOLIDATION_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:learning_consolidation', makeProfile('beginner'))).toBe(ABSENCE_LEARNING_CONSOLIDATION_BEGINNER);
+  });
+
+  it('absence:learning_consolidation, cool_geek → ABSENCE_LEARNING_CONSOLIDATION_BEGINNER (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:learning_consolidation', makeProfile('cool_geek'))).toBe(ABSENCE_LEARNING_CONSOLIDATION_BEGINNER);
+  });
+
+  it('ABSENCE_LEARNING_CONSOLIDATION_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_LEARNING_CONSOLIDATION_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_LEARNING_CONSOLIDATION_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_LEARNING_CONSOLIDATION_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:simple_solution_first, beginner → ABSENCE_SIMPLE_SOLUTION_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:simple_solution_first', makeProfile('beginner'))).toBe(ABSENCE_SIMPLE_SOLUTION_BEGINNER);
+  });
+
+  it('absence:simple_solution_first, cool_geek → ABSENCE_SIMPLE_SOLUTION_BEGINNER (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:simple_solution_first', makeProfile('cool_geek'))).toBe(ABSENCE_SIMPLE_SOLUTION_BEGINNER);
+  });
+
+  it('ABSENCE_SIMPLE_SOLUTION_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_SIMPLE_SOLUTION_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_SIMPLE_SOLUTION_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_SIMPLE_SOLUTION_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:single_responsibility_prompting, beginner → ABSENCE_SINGLE_RESPONSIBILITY_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:single_responsibility_prompting', makeProfile('beginner'))).toBe(ABSENCE_SINGLE_RESPONSIBILITY_BEGINNER);
+  });
+
+  it('absence:single_responsibility_prompting, cool_geek → ABSENCE_SINGLE_RESPONSIBILITY_BEGINNER (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:single_responsibility_prompting', makeProfile('cool_geek'))).toBe(ABSENCE_SINGLE_RESPONSIBILITY_BEGINNER);
+  });
+
+  it('ABSENCE_SINGLE_RESPONSIBILITY_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_SINGLE_RESPONSIBILITY_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_SINGLE_RESPONSIBILITY_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_SINGLE_RESPONSIBILITY_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:rollback_awareness, beginner → ABSENCE_ROLLBACK_AWARENESS_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:rollback_awareness', makeProfile('beginner'))).toBe(ABSENCE_ROLLBACK_AWARENESS_BEGINNER);
+  });
+
+  it('absence:rollback_awareness, cool_geek → ABSENCE_ROLLBACK_AWARENESS_BEGINNER (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:rollback_awareness', makeProfile('cool_geek'))).toBe(ABSENCE_ROLLBACK_AWARENESS_BEGINNER);
+  });
+
+  it('ABSENCE_ROLLBACK_AWARENESS_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_ROLLBACK_AWARENESS_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_ROLLBACK_AWARENESS_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_ROLLBACK_AWARENESS_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:build_vs_understand_ratio, beginner → ABSENCE_BUILD_VS_UNDERSTAND_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:build_vs_understand_ratio', makeProfile('beginner'))).toBe(ABSENCE_BUILD_VS_UNDERSTAND_BEGINNER);
+  });
+
+  it('absence:build_vs_understand_ratio, cool_geek → ABSENCE_BUILD_VS_UNDERSTAND_BEGINNER (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:build_vs_understand_ratio', makeProfile('cool_geek'))).toBe(ABSENCE_BUILD_VS_UNDERSTAND_BEGINNER);
+  });
+
+  it('ABSENCE_BUILD_VS_UNDERSTAND_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_BUILD_VS_UNDERSTAND_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_BUILD_VS_UNDERSTAND_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_BUILD_VS_UNDERSTAND_BEGINNER.L3).toHaveLength(1);
+  });
+
+  // ── Phase 5 D4-D6 — cool_geek signal routing (isVibe → BEGINNER map) ─────────
+
+  it('absence:feature_completion_check, cool_geek → ABSENCE_FEATURE_COMPLETION_CHECK_CASUAL (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:feature_completion_check', makeProfile('cool_geek'))).toBe(ABSENCE_FEATURE_COMPLETION_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_FEATURE_COMPLETION_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_FEATURE_COMPLETION_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_FEATURE_COMPLETION_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_FEATURE_COMPLETION_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:finishing_line_awareness, cool_geek → ABSENCE_FINISHING_LINE_AWARENESS_CASUAL (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:finishing_line_awareness', makeProfile('cool_geek'))).toBe(ABSENCE_FINISHING_LINE_AWARENESS_CASUAL);
+  });
+
+  it('ABSENCE_FINISHING_LINE_AWARENESS_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_FINISHING_LINE_AWARENESS_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_FINISHING_LINE_AWARENESS_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_FINISHING_LINE_AWARENESS_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:polish_vs_function, cool_geek → ABSENCE_POLISH_VS_FUNCTION_CASUAL (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:polish_vs_function', makeProfile('cool_geek'))).toBe(ABSENCE_POLISH_VS_FUNCTION_CASUAL);
+  });
+
+  it('ABSENCE_POLISH_VS_FUNCTION_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_POLISH_VS_FUNCTION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_POLISH_VS_FUNCTION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_POLISH_VS_FUNCTION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:mvp_scope_discipline, cool_geek → ABSENCE_MVP_SCOPE_DISCIPLINE_CASUAL (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:mvp_scope_discipline', makeProfile('cool_geek'))).toBe(ABSENCE_MVP_SCOPE_DISCIPLINE_CASUAL);
+  });
+
+  it('ABSENCE_MVP_SCOPE_DISCIPLINE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_MVP_SCOPE_DISCIPLINE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_MVP_SCOPE_DISCIPLINE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_MVP_SCOPE_DISCIPLINE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:idea_to_spec_bridge, cool_geek → ABSENCE_IDEA_TO_SPEC_BRIDGE_CASUAL (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:idea_to_spec_bridge', makeProfile('cool_geek'))).toBe(ABSENCE_IDEA_TO_SPEC_BRIDGE_CASUAL);
+  });
+
+  it('ABSENCE_IDEA_TO_SPEC_BRIDGE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_IDEA_TO_SPEC_BRIDGE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_IDEA_TO_SPEC_BRIDGE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_IDEA_TO_SPEC_BRIDGE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:demo_vs_product, cool_geek → ABSENCE_DEMO_VS_PRODUCT_CASUAL (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:demo_vs_product', makeProfile('cool_geek'))).toBe(ABSENCE_DEMO_VS_PRODUCT_CASUAL);
+  });
+
+  it('ABSENCE_DEMO_VS_PRODUCT_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEMO_VS_PRODUCT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_DEMO_VS_PRODUCT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_DEMO_VS_PRODUCT_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:user_journey_check, cool_geek → ABSENCE_USER_JOURNEY_CHECK_CASUAL (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:user_journey_check', makeProfile('cool_geek'))).toBe(ABSENCE_USER_JOURNEY_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_USER_JOURNEY_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_USER_JOURNEY_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_USER_JOURNEY_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_USER_JOURNEY_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:technical_spike_treatment, cool_geek → ABSENCE_TECHNICAL_SPIKE_CASUAL (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:technical_spike_treatment', makeProfile('cool_geek'))).toBe(ABSENCE_TECHNICAL_SPIKE_CASUAL);
+  });
+
+  it('ABSENCE_TECHNICAL_SPIKE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TECHNICAL_SPIKE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_TECHNICAL_SPIKE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_TECHNICAL_SPIKE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:dependency_adventure, cool_geek → ABSENCE_DEPENDENCY_ADVENTURE_CASUAL (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:dependency_adventure', makeProfile('cool_geek'))).toBe(ABSENCE_DEPENDENCY_ADVENTURE_CASUAL);
+  });
+
+  it('ABSENCE_DEPENDENCY_ADVENTURE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEPENDENCY_ADVENTURE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_DEPENDENCY_ADVENTURE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_DEPENDENCY_ADVENTURE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:restart_impulse_check, cool_geek → ABSENCE_RESTART_IMPULSE_CASUAL (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:restart_impulse_check', makeProfile('cool_geek'))).toBe(ABSENCE_RESTART_IMPULSE_CASUAL);
+  });
+
+  it('ABSENCE_RESTART_IMPULSE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_RESTART_IMPULSE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_RESTART_IMPULSE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_RESTART_IMPULSE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:creative_vs_core_ratio, cool_geek → ABSENCE_CREATIVE_VS_CORE_CASUAL (isVibe)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:creative_vs_core_ratio', makeProfile('cool_geek'))).toBe(ABSENCE_CREATIVE_VS_CORE_CASUAL);
+  });
+
+  it('ABSENCE_CREATIVE_VS_CORE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CREATIVE_VS_CORE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_CREATIVE_VS_CORE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_CREATIVE_VS_CORE_CASUAL.L3).toHaveLength(1);
+  });
+
+  // ── Phase 5 D7-D9 — pro_geek_soul signal routing ─────────────────────────────
+
+  it('absence:code_documentation_gap, no profile → ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:code_documentation_gap')).toBe(ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL);
+  });
+
+  it('absence:code_documentation_gap, pro_geek_soul → ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:code_documentation_gap', makeProfile('pro_geek_soul'))).toBe(ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL);
+  });
+
+  it('ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:technical_debt_acknowledgment, no profile → ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:technical_debt_acknowledgment')).toBe(ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL);
+  });
+
+  it('absence:technical_debt_acknowledgment, pro_geek_soul → ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:technical_debt_acknowledgment', makeProfile('pro_geek_soul'))).toBe(ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL);
+  });
+
+  it('ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:test_depth_check, no profile → ABSENCE_TEST_DEPTH_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('review_testing', 'absence:test_depth_check')).toBe(ABSENCE_TEST_DEPTH_CHECK_CASUAL);
+  });
+
+  it('absence:test_depth_check, pro_geek_soul → ABSENCE_TEST_DEPTH_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('review_testing', 'absence:test_depth_check', makeProfile('pro_geek_soul'))).toBe(ABSENCE_TEST_DEPTH_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_TEST_DEPTH_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TEST_DEPTH_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_TEST_DEPTH_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_TEST_DEPTH_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:architecture_note_absence, no profile → ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:architecture_note_absence')).toBe(ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL);
+  });
+
+  it('absence:architecture_note_absence, pro_geek_soul → ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:architecture_note_absence', makeProfile('pro_geek_soul'))).toBe(ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL);
+  });
+
+  it('ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:dependency_audit_gap, no profile → ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:dependency_audit_gap')).toBe(ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL);
+  });
+
+  it('absence:dependency_audit_gap, pro_geek_soul → ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:dependency_audit_gap', makeProfile('pro_geek_soul'))).toBe(ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL);
+  });
+
+  it('ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:security_review_gap, no profile → ABSENCE_SECURITY_REVIEW_GAP_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:security_review_gap')).toBe(ABSENCE_SECURITY_REVIEW_GAP_CASUAL);
+  });
+
+  it('absence:security_review_gap, pro_geek_soul → ABSENCE_SECURITY_REVIEW_GAP_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:security_review_gap', makeProfile('pro_geek_soul'))).toBe(ABSENCE_SECURITY_REVIEW_GAP_CASUAL);
+  });
+
+  it('ABSENCE_SECURITY_REVIEW_GAP_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SECURITY_REVIEW_GAP_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SECURITY_REVIEW_GAP_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SECURITY_REVIEW_GAP_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:api_contract_definition, no profile → ABSENCE_API_CONTRACT_DEFINITION_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:api_contract_definition')).toBe(ABSENCE_API_CONTRACT_DEFINITION_CASUAL);
+  });
+
+  it('absence:api_contract_definition, pro_geek_soul → ABSENCE_API_CONTRACT_DEFINITION_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:api_contract_definition', makeProfile('pro_geek_soul'))).toBe(ABSENCE_API_CONTRACT_DEFINITION_CASUAL);
+  });
+
+  it('ABSENCE_API_CONTRACT_DEFINITION_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_API_CONTRACT_DEFINITION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_API_CONTRACT_DEFINITION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_API_CONTRACT_DEFINITION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:error_handling_coverage, no profile → ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:error_handling_coverage')).toBe(ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL);
+  });
+
+  it('absence:error_handling_coverage, pro_geek_soul → ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:error_handling_coverage', makeProfile('pro_geek_soul'))).toBe(ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL);
+  });
+
+  it('ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:refactoring_checkpoint, no profile → ABSENCE_REFACTORING_CHECKPOINT_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:refactoring_checkpoint')).toBe(ABSENCE_REFACTORING_CHECKPOINT_CASUAL);
+  });
+
+  it('absence:refactoring_checkpoint, pro_geek_soul → ABSENCE_REFACTORING_CHECKPOINT_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:refactoring_checkpoint', makeProfile('pro_geek_soul'))).toBe(ABSENCE_REFACTORING_CHECKPOINT_CASUAL);
+  });
+
+  it('ABSENCE_REFACTORING_CHECKPOINT_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_REFACTORING_CHECKPOINT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_REFACTORING_CHECKPOINT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_REFACTORING_CHECKPOINT_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:backwards_compatibility_check, no profile → ABSENCE_BACKWARDS_COMPAT_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:backwards_compatibility_check')).toBe(ABSENCE_BACKWARDS_COMPAT_CHECK_CASUAL);
+  });
+
+  it('absence:backwards_compatibility_check, pro_geek_soul → ABSENCE_BACKWARDS_COMPAT_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:backwards_compatibility_check', makeProfile('pro_geek_soul'))).toBe(ABSENCE_BACKWARDS_COMPAT_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_BACKWARDS_COMPAT_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_BACKWARDS_COMPAT_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_BACKWARDS_COMPAT_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_BACKWARDS_COMPAT_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:self_review_habit, no profile → ABSENCE_SELF_REVIEW_HABIT_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:self_review_habit')).toBe(ABSENCE_SELF_REVIEW_HABIT_CASUAL);
+  });
+
+  it('absence:self_review_habit, pro_geek_soul → ABSENCE_SELF_REVIEW_HABIT_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:self_review_habit', makeProfile('pro_geek_soul'))).toBe(ABSENCE_SELF_REVIEW_HABIT_CASUAL);
+  });
+
+  it('ABSENCE_SELF_REVIEW_HABIT_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SELF_REVIEW_HABIT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SELF_REVIEW_HABIT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SELF_REVIEW_HABIT_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:performance_awareness, no profile → ABSENCE_PERFORMANCE_AWARENESS_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:performance_awareness')).toBe(ABSENCE_PERFORMANCE_AWARENESS_CASUAL);
+  });
+
+  it('absence:performance_awareness, pro_geek_soul → ABSENCE_PERFORMANCE_AWARENESS_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:performance_awareness', makeProfile('pro_geek_soul'))).toBe(ABSENCE_PERFORMANCE_AWARENESS_CASUAL);
+  });
+
+  it('ABSENCE_PERFORMANCE_AWARENESS_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_PERFORMANCE_AWARENESS_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_PERFORMANCE_AWARENESS_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_PERFORMANCE_AWARENESS_CASUAL.L3).toHaveLength(1);
+  });
+
+  // ── Phase 5 D10-D12 — hardcore_pro signal routing ─────────────────────────────
+
+  it('absence:decision_record_absence, hardcore_pro → ABSENCE_DECISION_RECORD_ABSENCE (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:decision_record_absence', makeProfile('hardcore_pro'))).toBe(ABSENCE_DECISION_RECORD_ABSENCE);
+  });
+
+  it('ABSENCE_DECISION_RECORD_ABSENCE has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DECISION_RECORD_ABSENCE.L1).toHaveLength(3);
+    expect(ABSENCE_DECISION_RECORD_ABSENCE.L2).toHaveLength(2);
+    expect(ABSENCE_DECISION_RECORD_ABSENCE.L3).toHaveLength(1);
+  });
+
+  it('absence:over_engineering_check, hardcore_pro → ABSENCE_OVER_ENGINEERING_CHECK (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:over_engineering_check', makeProfile('hardcore_pro'))).toBe(ABSENCE_OVER_ENGINEERING_CHECK);
+  });
+
+  it('ABSENCE_OVER_ENGINEERING_CHECK has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_OVER_ENGINEERING_CHECK.L1).toHaveLength(3);
+    expect(ABSENCE_OVER_ENGINEERING_CHECK.L2).toHaveLength(2);
+    expect(ABSENCE_OVER_ENGINEERING_CHECK.L3).toHaveLength(1);
+  });
+
+  it('absence:pair_review_absence, hardcore_pro → ABSENCE_PAIR_REVIEW_ABSENCE (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:pair_review_absence', makeProfile('hardcore_pro'))).toBe(ABSENCE_PAIR_REVIEW_ABSENCE);
+  });
+
+  it('ABSENCE_PAIR_REVIEW_ABSENCE has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_PAIR_REVIEW_ABSENCE.L1).toHaveLength(3);
+    expect(ABSENCE_PAIR_REVIEW_ABSENCE.L2).toHaveLength(2);
+    expect(ABSENCE_PAIR_REVIEW_ABSENCE.L3).toHaveLength(1);
+  });
+
+  it('absence:observability_first, hardcore_pro → ABSENCE_OBSERVABILITY_FIRST (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:observability_first', makeProfile('hardcore_pro'))).toBe(ABSENCE_OBSERVABILITY_FIRST);
+  });
+
+  it('ABSENCE_OBSERVABILITY_FIRST has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_OBSERVABILITY_FIRST.L1).toHaveLength(3);
+    expect(ABSENCE_OBSERVABILITY_FIRST.L2).toHaveLength(2);
+    expect(ABSENCE_OBSERVABILITY_FIRST.L3).toHaveLength(1);
+  });
+
+  it('absence:failure_mode_analysis, hardcore_pro → ABSENCE_FAILURE_MODE_ANALYSIS (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:failure_mode_analysis', makeProfile('hardcore_pro'))).toBe(ABSENCE_FAILURE_MODE_ANALYSIS);
+  });
+
+  it('ABSENCE_FAILURE_MODE_ANALYSIS has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_FAILURE_MODE_ANALYSIS.L1).toHaveLength(3);
+    expect(ABSENCE_FAILURE_MODE_ANALYSIS.L2).toHaveLength(2);
+    expect(ABSENCE_FAILURE_MODE_ANALYSIS.L3).toHaveLength(1);
+  });
+
+  it('absence:contract_testing_gap, hardcore_pro → ABSENCE_CONTRACT_TESTING_GAP (formal)', () => {
+    expect(resolveDecisionContent('review_testing', 'absence:contract_testing_gap', makeProfile('hardcore_pro'))).toBe(ABSENCE_CONTRACT_TESTING_GAP);
+  });
+
+  it('ABSENCE_CONTRACT_TESTING_GAP has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CONTRACT_TESTING_GAP.L1).toHaveLength(3);
+    expect(ABSENCE_CONTRACT_TESTING_GAP.L2).toHaveLength(2);
+    expect(ABSENCE_CONTRACT_TESTING_GAP.L3).toHaveLength(1);
+  });
+
+  it('absence:capacity_planning_gap, hardcore_pro → ABSENCE_CAPACITY_PLANNING_GAP (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:capacity_planning_gap', makeProfile('hardcore_pro'))).toBe(ABSENCE_CAPACITY_PLANNING_GAP);
+  });
+
+  it('ABSENCE_CAPACITY_PLANNING_GAP has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CAPACITY_PLANNING_GAP.L1).toHaveLength(3);
+    expect(ABSENCE_CAPACITY_PLANNING_GAP.L2).toHaveLength(2);
+    expect(ABSENCE_CAPACITY_PLANNING_GAP.L3).toHaveLength(1);
+  });
+
+  it('absence:security_threat_modeling, hardcore_pro → ABSENCE_SECURITY_THREAT_MODELING (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:security_threat_modeling', makeProfile('hardcore_pro'))).toBe(ABSENCE_SECURITY_THREAT_MODELING);
+  });
+
+  it('ABSENCE_SECURITY_THREAT_MODELING has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SECURITY_THREAT_MODELING.L1).toHaveLength(3);
+    expect(ABSENCE_SECURITY_THREAT_MODELING.L2).toHaveLength(2);
+    expect(ABSENCE_SECURITY_THREAT_MODELING.L3).toHaveLength(1);
+  });
+
+  it('absence:database_migration_safety, hardcore_pro → ABSENCE_DATABASE_MIGRATION_SAFETY (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:database_migration_safety', makeProfile('hardcore_pro'))).toBe(ABSENCE_DATABASE_MIGRATION_SAFETY);
+  });
+
+  it('ABSENCE_DATABASE_MIGRATION_SAFETY has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DATABASE_MIGRATION_SAFETY.L1).toHaveLength(3);
+    expect(ABSENCE_DATABASE_MIGRATION_SAFETY.L2).toHaveLength(2);
+    expect(ABSENCE_DATABASE_MIGRATION_SAFETY.L3).toHaveLength(1);
+  });
+
+  it('absence:deployment_strategy_absence, hardcore_pro → ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE (formal)', () => {
+    expect(resolveDecisionContent('release', 'absence:deployment_strategy_absence', makeProfile('hardcore_pro'))).toBe(ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE);
+  });
+
+  it('ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE.L1).toHaveLength(3);
+    expect(ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE.L2).toHaveLength(2);
+    expect(ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE.L3).toHaveLength(1);
+  });
+
+  it('absence:operational_runbook_gap, hardcore_pro → ABSENCE_OPERATIONAL_RUNBOOK_GAP (formal)', () => {
+    expect(resolveDecisionContent('release', 'absence:operational_runbook_gap', makeProfile('hardcore_pro'))).toBe(ABSENCE_OPERATIONAL_RUNBOOK_GAP);
+  });
+
+  it('ABSENCE_OPERATIONAL_RUNBOOK_GAP has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_OPERATIONAL_RUNBOOK_GAP.L1).toHaveLength(3);
+    expect(ABSENCE_OPERATIONAL_RUNBOOK_GAP.L2).toHaveLength(2);
+    expect(ABSENCE_OPERATIONAL_RUNBOOK_GAP.L3).toHaveLength(1);
+  });
+
+  it('absence:slo_definition_gap, hardcore_pro → ABSENCE_SLO_DEFINITION_GAP (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:slo_definition_gap', makeProfile('hardcore_pro'))).toBe(ABSENCE_SLO_DEFINITION_GAP);
+  });
+
+  it('ABSENCE_SLO_DEFINITION_GAP has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SLO_DEFINITION_GAP.L1).toHaveLength(3);
+    expect(ABSENCE_SLO_DEFINITION_GAP.L2).toHaveLength(2);
+    expect(ABSENCE_SLO_DEFINITION_GAP.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CONTENT_BEGINNER contains all 23 Phase 5 D1-D6 keys', () => {
+    const expected = [
+      'incremental_build', 'error_understanding', 'documentation_before_ask',
+      'output_verification', 'requirement_clarity_before_ask', 'copy_paste_awareness',
+      'debugging_observation_gap', 'learning_consolidation', 'simple_solution_first',
+      'single_responsibility_prompting', 'rollback_awareness', 'build_vs_understand_ratio',
+      'feature_completion_check', 'finishing_line_awareness', 'polish_vs_function',
+      'mvp_scope_discipline', 'idea_to_spec_bridge', 'demo_vs_product',
+      'user_journey_check', 'technical_spike_treatment', 'dependency_adventure',
+      'restart_impulse_check', 'creative_vs_core_ratio',
+    ];
+    for (const key of expected) {
+      expect(key in ABSENCE_CONTENT_BEGINNER).toBe(true);
+    }
   });
 });
 

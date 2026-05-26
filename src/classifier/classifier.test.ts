@@ -574,9 +574,9 @@ describe('detectSignals', () => {
     expect(counters['behaviour_testing'].lastSeenAt).toBeNull();
   });
 
-  it('initialSignalCounters covers exactly 42 signals', () => {
+  it('initialSignalCounters covers exactly 89 signals', () => {
     const counters = initialSignalCounters();
-    expect(Object.keys(counters)).toHaveLength(42);
+    expect(Object.keys(counters)).toHaveLength(89);
   });
 
   // ── vibeKeywords — 0.5-weight detection ──────────────────────────────────────
@@ -1441,6 +1441,702 @@ describe('detectSignals', () => {
     expect('spec_before_code' in counters).toBe(true);
     expect(counters['spec_before_code'].present).toBe(false);
     expect(counters['spec_before_code'].lastSeenAt).toBeNull();
+  });
+
+  // ── Phase 5 D1 — incremental_build ───────────────────────────────────────────
+
+  it('detects "incremental build" → incremental_build', () => {
+    expect(detectSignals('incremental build is the right approach here')).toContain('incremental_build');
+  });
+
+  it('detects "build and verify step by step" → incremental_build', () => {
+    expect(detectSignals('build and verify step by step before adding more')).toContain('incremental_build');
+  });
+
+  it('incremental_build has no nature field (universal)', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'incremental_build');
+    expect(sig?.nature).toBeUndefined();
+  });
+
+  it('incremental_build has absenceThreshold 5, expectedStages [implementation]', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'incremental_build');
+    expect(sig?.absenceThreshold).toBe(5);
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains incremental_build', () => {
+    expect(SIGNAL_MAP.has('incremental_build')).toBe(true);
+  });
+
+  it('detects "root cause of this error" → error_understanding', () => {
+    expect(detectSignals('let me find the root cause of this error before fixing it')).toContain('error_understanding');
+  });
+
+  it('error_understanding has nature "beginner", absenceThreshold 6', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'error_understanding');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(6);
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains error_understanding', () => {
+    expect(SIGNAL_MAP.has('error_understanding')).toBe(true);
+  });
+
+  it('detects "i checked the docs and" → documentation_before_ask', () => {
+    expect(detectSignals('i checked the docs and it says to use this pattern')).toContain('documentation_before_ask');
+  });
+
+  it('documentation_before_ask has nature "beginner", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'documentation_before_ask');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains documentation_before_ask', () => {
+    expect(SIGNAL_MAP.has('documentation_before_ask')).toBe(true);
+  });
+
+  it('detects "i ran this and it works" → output_verification', () => {
+    expect(detectSignals('i ran this and it works the way we expected')).toContain('output_verification');
+  });
+
+  it('output_verification has nature "beginner", absenceThreshold 5', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'output_verification');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(5);
+  });
+
+  it('SIGNAL_MAP contains output_verification', () => {
+    expect(SIGNAL_MAP.has('output_verification')).toBe(true);
+  });
+
+  // ── Phase 5 D2 — beginner cluster 2 ──────────────────────────────────────────
+
+  it('detects "the requirement is" → requirement_clarity_before_ask', () => {
+    expect(detectSignals('the requirement is that it saves on every keystroke')).toContain('requirement_clarity_before_ask');
+  });
+
+  it('requirement_clarity_before_ask has nature "beginner", absenceThreshold 4', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'requirement_clarity_before_ask');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(4);
+  });
+
+  it('SIGNAL_MAP contains requirement_clarity_before_ask', () => {
+    expect(SIGNAL_MAP.has('requirement_clarity_before_ask')).toBe(true);
+  });
+
+  it('detects "i understand what this code does" → copy_paste_awareness', () => {
+    expect(detectSignals('i understand what this code does — the hook runs on mount and clears on unmount')).toContain('copy_paste_awareness');
+  });
+
+  it('copy_paste_awareness has nature "beginner", absenceThreshold 7', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'copy_paste_awareness');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(7);
+  });
+
+  it('SIGNAL_MAP contains copy_paste_awareness', () => {
+    expect(SIGNAL_MAP.has('copy_paste_awareness')).toBe(true);
+  });
+
+  it('detects "expected vs actual" → debugging_observation_gap', () => {
+    expect(detectSignals('the expected vs actual here is confusing me')).toContain('debugging_observation_gap');
+  });
+
+  it('debugging_observation_gap has nature "beginner", absenceThreshold 5', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'debugging_observation_gap');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(5);
+  });
+
+  it('SIGNAL_MAP contains debugging_observation_gap', () => {
+    expect(SIGNAL_MAP.has('debugging_observation_gap')).toBe(true);
+  });
+
+  it('detects "so to summarize what i learned" → learning_consolidation', () => {
+    expect(detectSignals('so to summarize what i learned, the useEffect runs after render')).toContain('learning_consolidation');
+  });
+
+  it('learning_consolidation has nature "beginner", absenceThreshold 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'learning_consolidation');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it('SIGNAL_MAP contains learning_consolidation', () => {
+    expect(SIGNAL_MAP.has('learning_consolidation')).toBe(true);
+  });
+
+  // ── Phase 5 D3 — beginner cluster 3 ──────────────────────────────────────────
+
+  it('detects "simplest solution here" → simple_solution_first', () => {
+    expect(detectSignals('what is the simplest solution here that would actually work')).toContain('simple_solution_first');
+  });
+
+  it('simple_solution_first has nature "beginner", absenceThreshold 6', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'simple_solution_first');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(6);
+  });
+
+  it('SIGNAL_MAP contains simple_solution_first', () => {
+    expect(SIGNAL_MAP.has('simple_solution_first')).toBe(true);
+  });
+
+  it('detects "one thing at a time" → single_responsibility_prompting', () => {
+    expect(detectSignals('one thing at a time — let us do the form first')).toContain('single_responsibility_prompting');
+  });
+
+  it('single_responsibility_prompting has nature "beginner", absenceThreshold 4', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'single_responsibility_prompting');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(4);
+  });
+
+  it('SIGNAL_MAP contains single_responsibility_prompting', () => {
+    expect(SIGNAL_MAP.has('single_responsibility_prompting')).toBe(true);
+  });
+
+  it('detects "i can revert this if needed" → rollback_awareness', () => {
+    expect(detectSignals('i can revert this if needed since we committed earlier')).toContain('rollback_awareness');
+  });
+
+  it('rollback_awareness has nature "beginner", absenceThreshold 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'rollback_awareness');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it('SIGNAL_MAP contains rollback_awareness', () => {
+    expect(SIGNAL_MAP.has('rollback_awareness')).toBe(true);
+  });
+
+  it('detects "i want to understand what we built" → build_vs_understand_ratio', () => {
+    expect(detectSignals('i want to understand what we built before we add more to it')).toContain('build_vs_understand_ratio');
+  });
+
+  it('build_vs_understand_ratio has nature "beginner", absenceThreshold 12', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'build_vs_understand_ratio');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(12);
+  });
+
+  it('SIGNAL_MAP contains build_vs_understand_ratio', () => {
+    expect(SIGNAL_MAP.has('build_vs_understand_ratio')).toBe(true);
+  });
+
+  // ── Phase 5 D4 — cool_geek cluster 1 ─────────────────────────────────────────
+
+  it('detects "this feature is done and tested" → feature_completion_check', () => {
+    expect(detectSignals('this feature is done and tested — ready to move on')).toContain('feature_completion_check');
+  });
+
+  it('feature_completion_check has nature "cool_geek", absenceThreshold 5', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'feature_completion_check');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(5);
+  });
+
+  it('SIGNAL_MAP contains feature_completion_check', () => {
+    expect(SIGNAL_MAP.has('feature_completion_check')).toBe(true);
+  });
+
+  it('detects "end-to-end working" → finishing_line_awareness', () => {
+    expect(detectSignals('end-to-end working now from login to dashboard')).toContain('finishing_line_awareness');
+  });
+
+  it('finishing_line_awareness has nature "cool_geek", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'finishing_line_awareness');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains finishing_line_awareness', () => {
+    expect(SIGNAL_MAP.has('finishing_line_awareness')).toBe(true);
+  });
+
+  it('detects "core functionality is working first" → polish_vs_function', () => {
+    expect(detectSignals('core functionality is working first before we style anything')).toContain('polish_vs_function');
+  });
+
+  it('polish_vs_function has nature "cool_geek", absenceThreshold 5', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'polish_vs_function');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(5);
+  });
+
+  it('SIGNAL_MAP contains polish_vs_function', () => {
+    expect(SIGNAL_MAP.has('polish_vs_function')).toBe(true);
+  });
+
+  it('detects "is this mvp scope" → mvp_scope_discipline', () => {
+    expect(detectSignals('is this mvp scope or can we defer it')).toContain('mvp_scope_discipline');
+  });
+
+  it('mvp_scope_discipline has nature "cool_geek", absenceThreshold 5', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'mvp_scope_discipline');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(5);
+  });
+
+  it('SIGNAL_MAP contains mvp_scope_discipline', () => {
+    expect(SIGNAL_MAP.has('mvp_scope_discipline')).toBe(true);
+  });
+
+  // ── Phase 5 D5 — cool_geek cluster 2 ─────────────────────────────────────────
+
+  it('detects "boundaries of this idea" → idea_to_spec_bridge', () => {
+    expect(detectSignals('let me define the boundaries of this idea before we build')).toContain('idea_to_spec_bridge');
+  });
+
+  it('idea_to_spec_bridge has nature "cool_geek", absenceThreshold 4', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'idea_to_spec_bridge');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(4);
+  });
+
+  it('SIGNAL_MAP contains idea_to_spec_bridge', () => {
+    expect(SIGNAL_MAP.has('idea_to_spec_bridge')).toBe(true);
+  });
+
+  it('detects "production-ready" → demo_vs_product', () => {
+    expect(detectSignals('this needs to be production-ready before we ship')).toContain('demo_vs_product');
+  });
+
+  it('demo_vs_product has nature "cool_geek", absenceThreshold 6', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'demo_vs_product');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(6);
+  });
+
+  it('SIGNAL_MAP contains demo_vs_product', () => {
+    expect(SIGNAL_MAP.has('demo_vs_product')).toBe(true);
+  });
+
+  it('detects "full user journey for this" → user_journey_check', () => {
+    expect(detectSignals('let me think through the full user journey for this feature')).toContain('user_journey_check');
+  });
+
+  it('user_journey_check has nature "cool_geek", absenceThreshold 6', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'user_journey_check');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(6);
+  });
+
+  it('SIGNAL_MAP contains user_journey_check', () => {
+    expect(SIGNAL_MAP.has('user_journey_check')).toBe(true);
+  });
+
+  // ── Phase 5 D6 — cool_geek cluster 3 ─────────────────────────────────────────
+
+  it('detects "this was a spike to learn" → technical_spike_treatment', () => {
+    expect(detectSignals('this was a spike to learn if the approach was feasible')).toContain('technical_spike_treatment');
+  });
+
+  it('technical_spike_treatment has nature "cool_geek", absenceThreshold 7', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'technical_spike_treatment');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(7);
+  });
+
+  it('SIGNAL_MAP contains technical_spike_treatment', () => {
+    expect(SIGNAL_MAP.has('technical_spike_treatment')).toBe(true);
+  });
+
+  it('detects "evaluated alternatives before adding" → dependency_adventure', () => {
+    expect(detectSignals('evaluated alternatives before adding this library and nothing else fit')).toContain('dependency_adventure');
+  });
+
+  it('dependency_adventure has nature "cool_geek", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'dependency_adventure');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains dependency_adventure', () => {
+    expect(SIGNAL_MAP.has('dependency_adventure')).toBe(true);
+  });
+
+  it('detects "debugging this before starting over" → restart_impulse_check', () => {
+    expect(detectSignals('debugging this before starting over to understand what went wrong')).toContain('restart_impulse_check');
+  });
+
+  it('restart_impulse_check has nature "cool_geek", absenceThreshold 5', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'restart_impulse_check');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(5);
+  });
+
+  it('SIGNAL_MAP contains restart_impulse_check', () => {
+    expect(SIGNAL_MAP.has('restart_impulse_check')).toBe(true);
+  });
+
+  it('detects "this serves the core product" → creative_vs_core_ratio', () => {
+    expect(detectSignals('this serves the core product by letting users do the main thing faster')).toContain('creative_vs_core_ratio');
+  });
+
+  it('creative_vs_core_ratio has nature "cool_geek", absenceThreshold 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'creative_vs_core_ratio');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it('SIGNAL_MAP contains creative_vs_core_ratio', () => {
+    expect(SIGNAL_MAP.has('creative_vs_core_ratio')).toBe(true);
+  });
+
+  // ── Phase 5 D7 — pro_geek_soul cluster 1 ─────────────────────────────────────
+
+  it('detects "docstring for this" → code_documentation_gap', () => {
+    expect(detectSignals('adding a docstring for this function to explain the invariant')).toContain('code_documentation_gap');
+  });
+
+  it('code_documentation_gap has nature "pro_geek_soul", absenceThreshold 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'code_documentation_gap');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it('SIGNAL_MAP contains code_documentation_gap', () => {
+    expect(SIGNAL_MAP.has('code_documentation_gap')).toBe(true);
+  });
+
+  it('detects "noting this as tech debt" → technical_debt_acknowledgment', () => {
+    expect(detectSignals('noting this as tech debt — the proper solution would use a queue')).toContain('technical_debt_acknowledgment');
+  });
+
+  it('technical_debt_acknowledgment has nature "pro_geek_soul", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'technical_debt_acknowledgment');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains technical_debt_acknowledgment', () => {
+    expect(SIGNAL_MAP.has('technical_debt_acknowledgment')).toBe(true);
+  });
+
+  it('detects "edge case test" → test_depth_check', () => {
+    expect(detectSignals('adding an edge case test for the zero-item list state')).toContain('test_depth_check');
+  });
+
+  it('test_depth_check has nature "pro_geek_soul", absenceThreshold 10, stage review_testing', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'test_depth_check');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(10);
+    expect(sig?.expectedStages).toEqual(['review_testing']);
+  });
+
+  it('SIGNAL_MAP contains test_depth_check', () => {
+    expect(SIGNAL_MAP.has('test_depth_check')).toBe(true);
+  });
+
+  it('detects "why this pattern was chosen" → architecture_note_absence', () => {
+    expect(detectSignals('adding a comment explaining why this pattern was chosen over alternatives')).toContain('architecture_note_absence');
+  });
+
+  it('architecture_note_absence has nature "pro_geek_soul", absenceThreshold 12', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'architecture_note_absence');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(12);
+  });
+
+  it('SIGNAL_MAP contains architecture_note_absence', () => {
+    expect(SIGNAL_MAP.has('architecture_note_absence')).toBe(true);
+  });
+
+  // ── Phase 5 D8 — pro_geek_soul cluster 2 ─────────────────────────────────────
+
+  it('detects "checked maintenance status" → dependency_audit_gap', () => {
+    expect(detectSignals('checked maintenance status and last commit was 3 months ago')).toContain('dependency_audit_gap');
+  });
+
+  it('dependency_audit_gap has nature "pro_geek_soul", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'dependency_audit_gap');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains dependency_audit_gap', () => {
+    expect(SIGNAL_MAP.has('dependency_audit_gap')).toBe(true);
+  });
+
+  it('detects "owasp check" → security_review_gap', () => {
+    expect(detectSignals('running owasp check on this endpoint before merging')).toContain('security_review_gap');
+  });
+
+  it('security_review_gap has nature "pro_geek_soul", absenceThreshold 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'security_review_gap');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it('SIGNAL_MAP contains security_review_gap', () => {
+    expect(SIGNAL_MAP.has('security_review_gap')).toBe(true);
+  });
+
+  it('detects "api contract defined" → api_contract_definition', () => {
+    expect(detectSignals('api contract defined — POST /users returns 201 with id and createdAt')).toContain('api_contract_definition');
+  });
+
+  it('api_contract_definition has nature "pro_geek_soul", absenceThreshold 6', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'api_contract_definition');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(6);
+  });
+
+  it('SIGNAL_MAP contains api_contract_definition', () => {
+    expect(SIGNAL_MAP.has('api_contract_definition')).toBe(true);
+  });
+
+  it('detects "error state handled" → error_handling_coverage', () => {
+    expect(detectSignals('error state handled — network failure returns a user-visible message')).toContain('error_handling_coverage');
+  });
+
+  it('error_handling_coverage has nature "pro_geek_soul", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'error_handling_coverage');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains error_handling_coverage', () => {
+    expect(SIGNAL_MAP.has('error_handling_coverage')).toBe(true);
+  });
+
+  // ── Phase 5 D9 — pro_geek_soul cluster 3 ─────────────────────────────────────
+
+  it('detects "refactored this before adding" → refactoring_checkpoint', () => {
+    expect(detectSignals('refactored this before adding the next feature to keep it clean')).toContain('refactoring_checkpoint');
+  });
+
+  it('refactoring_checkpoint has nature "pro_geek_soul", absenceThreshold 12', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'refactoring_checkpoint');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(12);
+  });
+
+  it('SIGNAL_MAP contains refactoring_checkpoint', () => {
+    expect(SIGNAL_MAP.has('refactoring_checkpoint')).toBe(true);
+  });
+
+  it('detects "backwards compatible change" → backwards_compatibility_check', () => {
+    expect(detectSignals('backwards compatible change — existing callers see the same interface')).toContain('backwards_compatibility_check');
+  });
+
+  it('backwards_compatibility_check has nature "pro_geek_soul", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'backwards_compatibility_check');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains backwards_compatibility_check', () => {
+    expect(SIGNAL_MAP.has('backwards_compatibility_check')).toBe(true);
+  });
+
+  it('detects "checking the diff" → self_review_habit', () => {
+    expect(detectSignals('checking the diff before committing to make sure nothing extra got in')).toContain('self_review_habit');
+  });
+
+  it('self_review_habit has nature "pro_geek_soul", absenceThreshold 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'self_review_habit');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it('SIGNAL_MAP contains self_review_habit', () => {
+    expect(SIGNAL_MAP.has('self_review_habit')).toBe(true);
+  });
+
+  it('detects "n+1 query check" → performance_awareness', () => {
+    expect(detectSignals('running n+1 query check on this endpoint before shipping')).toContain('performance_awareness');
+  });
+
+  it('performance_awareness has nature "pro_geek_soul", absenceThreshold 12', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'performance_awareness');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(12);
+  });
+
+  it('SIGNAL_MAP contains performance_awareness', () => {
+    expect(SIGNAL_MAP.has('performance_awareness')).toBe(true);
+  });
+
+  // ── Phase 5 D10 — hardcore_pro cluster 1 ─────────────────────────────────────
+
+  it('detects "adr for this" → decision_record_absence', () => {
+    expect(detectSignals('writing an adr for this choice between REST and GraphQL')).toContain('decision_record_absence');
+  });
+
+  it('decision_record_absence has nature "hardcore_pro", absenceThreshold 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'decision_record_absence');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it('SIGNAL_MAP contains decision_record_absence', () => {
+    expect(SIGNAL_MAP.has('decision_record_absence')).toBe(true);
+  });
+
+  it('detects "yagni check" → over_engineering_check', () => {
+    expect(detectSignals('yagni check — do we actually need this abstraction today')).toContain('over_engineering_check');
+  });
+
+  it('over_engineering_check has nature "hardcore_pro", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'over_engineering_check');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains over_engineering_check', () => {
+    expect(SIGNAL_MAP.has('over_engineering_check')).toBe(true);
+  });
+
+  it('detects "diff review before merge" → pair_review_absence', () => {
+    expect(detectSignals('diff review before merge — want a second set of eyes on the auth path')).toContain('pair_review_absence');
+  });
+
+  it('pair_review_absence has nature "hardcore_pro", absenceThreshold 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'pair_review_absence');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it('SIGNAL_MAP contains pair_review_absence', () => {
+    expect(SIGNAL_MAP.has('pair_review_absence')).toBe(true);
+  });
+
+  // ── Phase 5 D11 — hardcore_pro cluster 2 ─────────────────────────────────────
+
+  it('detects "metrics instrumented" → observability_first', () => {
+    expect(detectSignals('metrics instrumented for request count and latency on this endpoint')).toContain('observability_first');
+  });
+
+  it('observability_first has nature "hardcore_pro", absenceThreshold 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'observability_first');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it('SIGNAL_MAP contains observability_first', () => {
+    expect(SIGNAL_MAP.has('observability_first')).toBe(true);
+  });
+
+  it('detects "circuit breaker for" → failure_mode_analysis', () => {
+    expect(detectSignals('adding a circuit breaker for the payment provider call')).toContain('failure_mode_analysis');
+  });
+
+  it('failure_mode_analysis has nature "hardcore_pro", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'failure_mode_analysis');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains failure_mode_analysis', () => {
+    expect(SIGNAL_MAP.has('failure_mode_analysis')).toBe(true);
+  });
+
+  it('detects "consumer-driven contract" → contract_testing_gap', () => {
+    expect(detectSignals('setting up a consumer-driven contract test for this integration')).toContain('contract_testing_gap');
+  });
+
+  it('contract_testing_gap has nature "hardcore_pro", absenceThreshold 12, stage review_testing', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'contract_testing_gap');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(12);
+    expect(sig?.expectedStages).toEqual(['review_testing']);
+  });
+
+  it('SIGNAL_MAP contains contract_testing_gap', () => {
+    expect(SIGNAL_MAP.has('contract_testing_gap')).toBe(true);
+  });
+
+  // ── Phase 5 D12 — hardcore_pro clusters 3+4 ──────────────────────────────────
+
+  it('detects "rps estimate" → capacity_planning_gap', () => {
+    expect(detectSignals('running an rps estimate to see where the current design breaks')).toContain('capacity_planning_gap');
+  });
+
+  it('capacity_planning_gap has nature "hardcore_pro", absenceThreshold 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'capacity_planning_gap');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it('SIGNAL_MAP contains capacity_planning_gap', () => {
+    expect(SIGNAL_MAP.has('capacity_planning_gap')).toBe(true);
+  });
+
+  it('detects "stride analysis" → security_threat_modeling', () => {
+    expect(detectSignals('running a stride analysis on this before we finalise the auth design')).toContain('security_threat_modeling');
+  });
+
+  it('security_threat_modeling has nature "hardcore_pro", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'security_threat_modeling');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains security_threat_modeling', () => {
+    expect(SIGNAL_MAP.has('security_threat_modeling')).toBe(true);
+  });
+
+  it('detects "expand-migrate-contract" → database_migration_safety', () => {
+    expect(detectSignals('using expand-migrate-contract to keep this migration backwards compatible')).toContain('database_migration_safety');
+  });
+
+  it('database_migration_safety has nature "hardcore_pro", absenceThreshold 6', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'database_migration_safety');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(6);
+  });
+
+  it('SIGNAL_MAP contains database_migration_safety', () => {
+    expect(SIGNAL_MAP.has('database_migration_safety')).toBe(true);
+  });
+
+  it('detects "canary deployment" → deployment_strategy_absence', () => {
+    expect(detectSignals('using canary deployment to ship this to 5% of users first')).toContain('deployment_strategy_absence');
+  });
+
+  it('deployment_strategy_absence has nature "hardcore_pro", absenceThreshold 6, stage release', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'deployment_strategy_absence');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(6);
+    expect(sig?.expectedStages).toEqual(['release']);
+  });
+
+  it('SIGNAL_MAP contains deployment_strategy_absence', () => {
+    expect(SIGNAL_MAP.has('deployment_strategy_absence')).toBe(true);
+  });
+
+  it('detects "runbook for this" → operational_runbook_gap', () => {
+    expect(detectSignals('writing the runbook for this service before we go live')).toContain('operational_runbook_gap');
+  });
+
+  it('operational_runbook_gap has nature "hardcore_pro", absenceThreshold 8, stage release', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'operational_runbook_gap');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(8);
+    expect(sig?.expectedStages).toEqual(['release']);
+  });
+
+  it('SIGNAL_MAP contains operational_runbook_gap', () => {
+    expect(SIGNAL_MAP.has('operational_runbook_gap')).toBe(true);
+  });
+
+  it('detects "error rate budget" → slo_definition_gap', () => {
+    expect(detectSignals('defining an error rate budget of 0.1% before this ships')).toContain('slo_definition_gap');
+  });
+
+  it('slo_definition_gap has nature "hardcore_pro", absenceThreshold 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'slo_definition_gap');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it('SIGNAL_MAP contains slo_definition_gap', () => {
+    expect(SIGNAL_MAP.has('slo_definition_gap')).toBe(true);
   });
 
   // ── §15 overlap audit — regression + co-fire guards ──────────────────────────

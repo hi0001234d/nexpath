@@ -1632,6 +1632,462 @@ const ABSENCE_SPEC_BEFORE_CODE_CASUAL: DecisionContent = {
   ],
 };
 
+// ── Phase 5 D1 — incremental_build (CASUAL + FORMAL registers) ────────────────
+
+const ABSENCE_INCREMENTAL_BUILD_CASUAL: DecisionContent = {
+  question:      'Building incrementally — verifying between steps?',
+  pinchFallback: 'Verify between steps.',
+  L1: [
+    'Between each change — stop and verify what was just built actually works before adding the next layer. Debugging compound changes is harder than debugging one change at a time.',
+    'Before moving to the next part of the implementation — try what was just built. If it\'s broken, fix it now. Layering changes on top of a broken base will cost more time than the verification takes.',
+    'What\'s the last thing that was built, and has it been verified as working? If not, verify before adding more. Incremental verification is faster than debugging a pile of changes at once.',
+  ],
+  L2: [
+    'Has what was just built been tested before continuing? Quick verification now is faster than debugging later.',
+    'Is each piece being verified as done before the next is added, or are multiple changes being stacked before any are checked?',
+  ],
+  L3: [
+    'Is what was last built working and verified before adding the next change?',
+  ],
+};
+
+const ABSENCE_INCREMENTAL_BUILD: DecisionContent = {
+  question:      'Incremental build — is each step verified before the next?',
+  pinchFallback: 'Verify before proceeding.',
+  L1: [
+    'Review the build cadence: is each incremental change being verified before the next is added? Compounding unverified changes increases debugging complexity — verify at each increment.',
+    'Audit the current state: what was the last change made, and has it been confirmed working? If not, verify before continuing — a clean failing test is faster to diagnose than multiple layered failures.',
+    'Check whether the implementation is proceeding incrementally with verification gates, or whether multiple changes are being stacked without intermediate confirmation. The latter increases rework risk significantly.',
+  ],
+  L2: [
+    'Is each increment being verified before the next change is added? Identify the last unverified change and confirm it before proceeding.',
+    'What is the current state of the build? Which pieces have been verified as working and which have not?',
+  ],
+  L3: [
+    'Has the most recent change been verified as working before the next one is introduced?',
+  ],
+};
+
+// ── Phase 5 D7 — pro_geek_soul cluster 1 (CASUAL register) ───────────────────
+
+const ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL: DecisionContent = {
+  question:      'Built it — are the non-obvious parts documented?',
+  pinchFallback: 'Docs gap.',
+  L1: [
+    'Look at what was just built and find the parts that are non-obvious — the hidden invariant, the "why this approach", the constraint that only makes sense if you know the external system. Are those documented?',
+    'Walk through what was just built from the perspective of someone who joins the team next month. What would they have to figure out the hard way? Document those things now.',
+    'Identify the decisions embedded in what was just built that can\'t be inferred from the code alone — the ones that look arbitrary to a future reader. Add a comment for each that explains the why, not the what.',
+  ],
+  L2: [
+    'What\'s the most non-obvious part of what was just built — the part that would take the longest for a new team member to understand without asking? Is it documented?',
+    'Is there anything in what was just built that documents the tradeoffs or constraints behind key decisions, or just the implementation?',
+  ],
+  L3: [
+    'Is there anything in what was just built that carries a hidden assumption or constraint that should be documented?',
+  ],
+};
+
+const ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL: DecisionContent = {
+  question:      'Technical debt introduced — has it been flagged?',
+  pinchFallback: 'Flag the debt.',
+  L1: [
+    'Look at what was just built — is there anything that was done the quick way instead of the right way? Name it explicitly and add a TODO that describes the proper solution, so future-you knows exactly what needs to be fixed.',
+    'Check for shortcuts taken in what was just built: workarounds, hardcoded values, skipped edge cases, or deliberate simplifications. Each one is debt. Flag it with a comment and estimated impact.',
+    'Technical debt that\'s acknowledged is manageable; debt that\'s invisible accumulates silently. Scan what was just built for anything that would surprise the person who maintains this in six months, and flag it explicitly.',
+  ],
+  L2: [
+    'Is there anything in what was just built that was done the quick way for now but should be revisited? Flag it with a comment before moving on.',
+    'What shortcuts or compromises were made in what was just built? Make them visible — unlabelled debt is the most dangerous kind.',
+  ],
+  L3: [
+    'Is there any technical debt in what was just built that should be flagged before moving on?',
+  ],
+};
+
+const ABSENCE_TEST_DEPTH_CHECK_CASUAL: DecisionContent = {
+  question:      'Tests written — are they testing the right things?',
+  pinchFallback: 'Test depth check.',
+  L1: [
+    'Review the tests that were just written: are they covering behaviour (what the code is supposed to do) or just implementation (that it ran without throwing)? Tests should fail when the behaviour is wrong, not just when the code crashes.',
+    'Look at the test suite for what was just built — are there edge cases, boundary conditions, and failure paths being tested, or only the happy path? Identify the most likely failure that the current tests wouldn\'t catch.',
+    'Check what the tests prove: if someone subtly changed the logic in what was just built, would the tests catch it? If the answer is "probably not", what cases are missing?',
+  ],
+  L2: [
+    'What behavior would need to change in what was just built for the tests to fail? If the answer is "a lot", the tests might not be providing useful coverage.',
+    'Are there edge cases or failure paths in what was just built that aren\'t covered by the current tests?',
+  ],
+  L3: [
+    'Do the tests for what was just built cover edge cases and failure paths, or just the happy path?',
+  ],
+};
+
+const ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL: DecisionContent = {
+  question:      'Architecture decision made — is it recorded?',
+  pinchFallback: 'Record the call.',
+  L1: [
+    'A significant architectural decision was made in what was just built. Record it: what options were considered, what was chosen, and why? The reasoning is more valuable than the decision — document both.',
+    'Look at what was just built for embedded design decisions: the choice of pattern, the data model shape, the external boundary drawn. These are architecture decisions. Are they recorded anywhere with their rationale?',
+    'Architecture decisions become invisible as time passes — the code shows what was chosen, not why. Document the most significant call in what was just built: what were the alternatives, what were the tradeoffs, what made this the right choice?',
+  ],
+  L2: [
+    'What was the most significant architectural choice in what was just built? Is the reasoning behind it recorded anywhere?',
+    'Is there a decision embedded in what was just built that a future developer might reverse without realising it was deliberate? Document the constraint.',
+  ],
+  L3: [
+    'Is there an architecture-level decision in what was just built that should be documented along with the reasoning?',
+  ],
+};
+
+// ── Phase 5 D8 — pro_geek_soul cluster 2 (CASUAL register) ───────────────────
+
+const ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL: DecisionContent = {
+  question:      'New dependency added — has it been audited?',
+  pinchFallback: 'Audit the dependency.',
+  L1: [
+    'Before committing this dependency — audit it: when was it last updated, who maintains it, how many open issues does it have, and does its licence match what the project can use? A quick check now is cheaper than replacing it later.',
+    'Look at what was just added to the dependencies — is it actively maintained, does it have a track record, and is there a lighter alternative already in the project? Dependencies carry ongoing cost; audit before accepting them.',
+    'Check the dependency addition against three criteria: (1) is it the smallest thing that solves the problem, (2) is it well-maintained with recent activity, (3) is there no reasonable alternative already in the project? If any fail, reconsider.',
+  ],
+  L2: [
+    'Is the dependency that was just added actively maintained and appropriate for this use case? What\'s the fallback if it goes unmaintained?',
+    'What would it take to remove this dependency if it caused a problem? The harder the answer, the more important the audit before adding it.',
+  ],
+  L3: [
+    'Has the new dependency been audited for maintenance status and licence compatibility?',
+  ],
+};
+
+const ABSENCE_SECURITY_REVIEW_GAP_CASUAL: DecisionContent = {
+  question:      'Security-sensitive code — reviewed for risks?',
+  pinchFallback: 'Security review gap.',
+  L1: [
+    'The code that was just built handles user data, authentication, or external input — review it for security: is user input validated and sanitised, are errors surfacing internal state, are secrets handled through environment variables only?',
+    'Walk through what was just built as an attacker: what can be sent to this code, what can be manipulated, what assumptions are made that could be violated by a malicious input? Name the riskiest surface.',
+    'Check what was just built against the basics: SQL injection (if applicable), XSS, CSRF, improper authorisation checks, hardcoded credentials, and exposure of stack traces to clients. Are any of these applicable here?',
+  ],
+  L2: [
+    'What\'s the most security-sensitive part of what was just built — the place where a mistake would have the biggest impact? Has it been reviewed explicitly?',
+    'Is user input being validated and sanitised before use in what was just built? What about error messages — do they expose internal details?',
+  ],
+  L3: [
+    'Has what was just built been reviewed for basic security risks — input validation, error exposure, credential handling?',
+  ],
+};
+
+const ABSENCE_API_CONTRACT_DEFINITION_CASUAL: DecisionContent = {
+  question:      'Building an API endpoint — is the contract defined?',
+  pinchFallback: 'Define the contract.',
+  L1: [
+    'Before building this API endpoint further — document the contract: request schema, response schema, error codes, and any authentication requirements. The contract is what consumers depend on — define it before building against it.',
+    'Is there a defined contract for the API that was just built — not just "it works" but: what are the valid inputs, what are the guaranteed outputs, what errors are possible, and what\'s the versioning story? Define that first.',
+    'Review what was just built against API contract requirements: are input types validated, are error responses structured consistently, are success responses shaped consistently? A well-defined contract enables independent development on both sides.',
+  ],
+  L2: [
+    'What is the exact shape of the request and response for what was just built? Is that contract documented and enforced?',
+    'How does what was just built handle malformed input — what\'s the error response, and is it consistent with the rest of the API?',
+  ],
+  L3: [
+    'Is the API contract for what was just built defined — request schema, response schema, and error format?',
+  ],
+};
+
+const ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL: DecisionContent = {
+  question:      'Feature built — are error cases handled?',
+  pinchFallback: 'Error coverage gap.',
+  L1: [
+    'Walk through what was just built and list every place a failure could occur: external API calls, database operations, file I/O, user input parsing. Is each one handled, or does the failure propagate silently?',
+    'Check what was just built for unhandled failure paths: what happens when the external dependency is down, when input is malformed, when the database returns an unexpected result? Each unhandled path is a production incident waiting to happen.',
+    'Review the error handling in what was just built: are failures caught at the right level, are errors logged with enough context to diagnose in production, and is the user shown a meaningful response or a raw exception?',
+  ],
+  L2: [
+    'What happens when what was just built fails? Walk the error path: is it caught, logged, and surfaced appropriately?',
+    'Is there any failure mode in what was just built that would result in a silent error, a crash, or a confusing user-facing message?',
+  ],
+  L3: [
+    'Are the error paths in what was just built handled — or would a failure result in an unhandled exception?',
+  ],
+};
+
+// ── Phase 5 D9 — pro_geek_soul cluster 3 (CASUAL register) ───────────────────
+
+const ABSENCE_REFACTORING_CHECKPOINT_CASUAL: DecisionContent = {
+  question:      'Extended implementation — anything worth refactoring now?',
+  pinchFallback: 'Refactor check.',
+  L1: [
+    'Look at what was built in this session as a whole — is there anything that\'s grown messy, duplicated, or harder to read than it started? Flag the worst offender and decide whether to clean it up now or log it as acknowledged debt.',
+    'Check what was just built for code that\'s drifted from the original design: abstractions that no longer fit their usage, names that no longer match the behaviour, or logic that\'s been copy-pasted where a shared function would be cleaner.',
+    'Walk through the implementation and find the thing that would be hardest to change when the next feature arrives. That\'s the thing most worth refactoring now — while the context is fresh.',
+  ],
+  L2: [
+    'What\'s the messiest part of what was just built? Is it worth a quick cleanup now, or is the mess small enough to flag and defer?',
+    'Is there anything duplicated or inconsistent in what was just built that would compound if left as-is?',
+  ],
+  L3: [
+    'Is there anything in what was just built that should be cleaned up before moving on?',
+  ],
+};
+
+const ABSENCE_BACKWARDS_COMPAT_CHECK_CASUAL: DecisionContent = {
+  question:      'Changed the interface — is it backwards compatible?',
+  pinchFallback: 'Compat check.',
+  L1: [
+    'Check what was changed in this feature against anything that consumes it: API endpoints, exported functions, data schema. Did anything change that existing callers depend on? If yes, what\'s the migration or compatibility story?',
+    'Walk through what was modified and identify any change that would break existing consumers if they haven\'t updated their code: renamed fields, removed parameters, changed response shapes. Each one needs an explicit decision — break it or maintain compatibility?',
+    'Review the changes in what was just built for backwards compatibility: are changes additive, or do they require callers to update? If they require updates — is that intentional, and has it been flagged as a breaking change?',
+  ],
+  L2: [
+    'Does anything in what was just built change the interface in a way that would break existing callers? If yes, is that intentional?',
+    'What was the interface before and what is it now? Is the delta backwards compatible, or is this a breaking change?',
+  ],
+  L3: [
+    'Is what was just changed backwards compatible with existing callers, or does it introduce a breaking change?',
+  ],
+};
+
+const ABSENCE_SELF_REVIEW_HABIT_CASUAL: DecisionContent = {
+  question:      'About to commit — has the diff been self-reviewed?',
+  pinchFallback: 'Self-review first.',
+  L1: [
+    'Before committing — run git diff and read every change. Look for debug code, commented-out sections, leftover TODOs that shouldn\'t go in, and any changes that are larger in scope than what was intended.',
+    'Self-review the diff before sending: what was intended to change vs. what actually changed? Are there any unintended changes, any debug lines, any scope creep in the diff?',
+    'Read the diff as if you\'re reviewing someone else\'s work. Look for: is the change scoped correctly, is the commit message accurate, is there anything that shouldn\'t be there? Catch it now before someone else does.',
+  ],
+  L2: [
+    'Have the changes been self-reviewed before committing? Check the diff for unintended changes, debug code, or scope that shouldn\'t be in this commit.',
+    'Is the diff for this commit exactly what was intended — no more, no less?',
+  ],
+  L3: [
+    'Has the diff been reviewed before committing — checking for unintended changes or debug code?',
+  ],
+};
+
+const ABSENCE_PERFORMANCE_AWARENESS_CASUAL: DecisionContent = {
+  question:      'Feature built — any obvious performance concerns?',
+  pinchFallback: 'Performance check.',
+  L1: [
+    'Look at what was just built for obvious performance issues: N+1 queries, synchronous blocking operations, large payloads being serialised unnecessarily, or operations that scale linearly where a constant-time alternative exists. Flag anything that will be a problem at 10× the current load.',
+    'Think through the load characteristics of what was just built: what\'s the most expensive operation, what happens to that cost as the dataset grows, and is there a caching or indexing opportunity that should be considered now?',
+    'Check what was just built for performance anti-patterns: unbounded queries, missing indexes on foreign keys, repeated work that could be memoised, or synchronous calls that block a thread unnecessarily. Spot these now while the code is fresh.',
+  ],
+  L2: [
+    'What\'s the most expensive operation in what was just built, and does it scale acceptably as load grows?',
+    'Are there any obvious performance anti-patterns in what was just built — N+1 queries, missing indexes, or synchronous blocking operations?',
+  ],
+  L3: [
+    'Is there anything in what was just built that would have obvious performance issues under real load?',
+  ],
+};
+
+// ── Phase 5 D10 — hardcore_pro cluster 1 (FORMAL register) ───────────────────
+
+const ABSENCE_DECISION_RECORD_ABSENCE: DecisionContent = {
+  question:      'Significant decision made — decision record written?',
+  pinchFallback: 'Record the decision.',
+  L1: [
+    'A significant design decision was embedded in what was just built. Write an ADR: document the context, the options considered, the decision made, and the consequences — including the tradeoffs accepted. The reasoning is what matters; the code only records the choice.',
+    'Review what was just built for architecture decisions that lack a decision record: the choice of data model, the service boundary drawn, the pattern selected. Each significant call should have a written record of the alternatives considered and the rationale for the selection.',
+    'Audit the decisions embedded in what was just built: which ones would a future team member be most likely to reverse without understanding the original constraints? Those are the decisions that require a record — document the constraint, the alternatives, and the reasoning.',
+  ],
+  L2: [
+    'What was the most consequential design decision in what was just built, and is it documented with sufficient context for a future team member to understand why it was made?',
+    'Is there a decision record for the architectural choices in what was just built, or only the implementation?',
+  ],
+  L3: [
+    'Is there an architecture decision in what was just built that requires a written record of the rationale before moving on?',
+  ],
+};
+
+const ABSENCE_OVER_ENGINEERING_CHECK: DecisionContent = {
+  question:      'Complex implementation — is the complexity justified?',
+  pinchFallback: 'Complexity justified?',
+  L1: [
+    'Review what was just built for unjustified complexity: abstractions that exist for anticipated rather than actual requirements, generalisation that complicates the simple case, or indirection layers that add cognitive overhead without providing flexibility that is actually needed now.',
+    'Apply the simplicity check: what is the simplest implementation that satisfies the current requirements? Compare it to what was just built. Each layer of complexity above that floor requires explicit justification — identify them and confirm each is necessary.',
+    'Audit what was just built for over-engineering signals: interfaces with one implementation, factories for objects that don\'t need to vary, configuration for options that are never changed, or event systems for synchronous workflows. Each is a complexity cost paid in advance for uncertain future benefit.',
+  ],
+  L2: [
+    'What is the complexity that was introduced in what was just built, and what specific current requirement does it serve? If the answer is "anticipated future requirements", that is a red flag.',
+    'Is every abstraction in what was just built grounded in a current requirement, or were any added speculatively for anticipated flexibility?',
+  ],
+  L3: [
+    'Is there complexity in what was just built that is not justified by a current requirement?',
+  ],
+};
+
+const ABSENCE_PAIR_REVIEW_ABSENCE: DecisionContent = {
+  question:      'High-risk change — reviewed by a second engineer?',
+  pinchFallback: 'Pair review gap.',
+  L1: [
+    'What was just built is consequential enough to warrant a second set of eyes before it lands. Who should review this, and what specific aspects are highest risk — the ones where a mistake would not surface until production?',
+    'Identify the highest-risk elements of what was just built: the changes to shared state, the security-sensitive paths, the schema changes, the concurrent logic. These are the things that benefit most from a second reviewer before they are committed.',
+    'Before this change goes in — who else has context on this area of the codebase? A review by someone familiar with this component is more valuable than a general review. Identify the right reviewer and flag the highest-risk areas for their attention.',
+  ],
+  L2: [
+    'Has what was just built been reviewed by another engineer, or is it going straight in? For changes of this complexity, what is the case for or against a review before commit?',
+    'What are the two or three things in what was just built that a second reviewer should look at most carefully?',
+  ],
+  L3: [
+    'Is what was just built high-risk enough to warrant a second engineer\'s review before it is committed?',
+  ],
+};
+
+// ── Phase 5 D11 — hardcore_pro cluster 2 (FORMAL register) ───────────────────
+
+const ABSENCE_OBSERVABILITY_FIRST: DecisionContent = {
+  question:      'Feature built — will production failures be observable?',
+  pinchFallback: 'Observability gap.',
+  L1: [
+    'Audit what was just built for observability coverage: what structured log events, metrics, and traces are emitted? If this feature fails silently in production at 3am, what will the on-call engineer see? Define what "observable" means for this feature and verify it is in place.',
+    'Review what was just built against production observability requirements: what SLI would you define, what metric tracks it, and what alert condition would trigger before the failure propagates to users? If these are not wired, they need to be before this ships.',
+    'Check what was just built for the three pillars of observability: (1) structured logging at key events with request and correlation IDs, (2) metrics for the operations that could degrade, (3) tracing across service boundaries if applicable. Which are in place and which are missing?',
+  ],
+  L2: [
+    'If what was just built degraded silently in production — no exceptions thrown, just wrong results — what would detect it? Is that detection in place?',
+    'What structured logs, metrics, and alerts exist for what was just built? Are they sufficient to detect and diagnose a production incident without SSH access?',
+  ],
+  L3: [
+    'Is what was just built sufficiently observable that a production failure could be detected and diagnosed without access to the host?',
+  ],
+};
+
+const ABSENCE_FAILURE_MODE_ANALYSIS: DecisionContent = {
+  question:      'Implementation complete — failure modes analyzed?',
+  pinchFallback: 'Failure modes.',
+  L1: [
+    'Walk through what was just built and enumerate the failure modes: what external dependencies can be down, what inputs can be malformed, what concurrent conditions can occur, what state can become inconsistent? For each, is there a handling strategy, a timeout, a circuit breaker, or a degraded-mode fallback?',
+    'Apply fault injection thinking to what was just built: what happens when the database is slow, the external API returns a 500, the queue is backed up, or the memory limit is hit? Is each failure mode an immediate crash, a silent bad result, a detected error, or a graceful degradation? All four need to be intentional.',
+    'Identify the failure modes in what was just built that are most likely to affect users: the external dependency failure, the timeout, the malformed-input path. For each, confirm there is an explicit handling strategy — not just an implicit assumption that it won\'t happen.',
+  ],
+  L2: [
+    'What are the two or three most likely ways what was just built could fail in production, and what is the current handling strategy for each?',
+    'Is there any failure mode in what was just built that would result in silent data corruption or incorrect state, as opposed to an explicit error?',
+  ],
+  L3: [
+    'Have the failure modes of what was just built been analyzed — specifically the external dependency failures and malformed input paths?',
+  ],
+};
+
+const ABSENCE_CONTRACT_TESTING_GAP: DecisionContent = {
+  question:      'Service integration built — contract tested?',
+  pinchFallback: 'Contract test gap.',
+  L1: [
+    'What was just built integrates with another service. Verify that the contract is tested — not just that the integration works in the current environment, but that both sides agree on the schema and can detect breaking changes independently. Is a consumer-driven contract test in place?',
+    'Audit the integration that was just built: are the request and response schemas validated at runtime, is there a contract test that would fail before a deployment if the provider changed incompatibly, and is the contract version tracked explicitly?',
+    'Review what was just built for integration contract coverage: what happens when the provider changes the response shape, drops a field, or changes a status code? Is there a test that would catch that before it reaches production?',
+  ],
+  L2: [
+    'Is the contract for the integration in what was just built tested — meaning a provider-side schema change would be detected before it reaches production?',
+    'What would happen if the service that what was just built depends on changed its response format? Would it fail loudly at contract test time, or silently in production?',
+  ],
+  L3: [
+    'Is the integration contract for what was just built tested — not just that it works today, but that it would detect breaking changes in the provider?',
+  ],
+};
+
+// ── Phase 5 D12 — hardcore_pro clusters 3+4 (FORMAL register) ────────────────
+
+const ABSENCE_CAPACITY_PLANNING_GAP: DecisionContent = {
+  question:      'Scalable feature — capacity plan written?',
+  pinchFallback: 'Capacity plan.',
+  L1: [
+    'What was just built introduces a resource-intensive operation or a data store that will grow over time. Document the capacity plan: what is the current load, what is the growth projection, at what scale do the current decisions break down, and what is the mitigation strategy for when they do?',
+    'Audit what was just built for capacity assumptions: what database growth is expected, what query performance degrades at what row count, what throughput is the service designed to handle, and what happens when those limits are exceeded? Write down the assumptions before they become invisible.',
+    'Review the data and compute footprint of what was just built: what grows indefinitely, what will need pagination, partitioning, or archival, and at what scale does a redesign become necessary? Identify the first capacity cliff and the plan for reaching it safely.',
+  ],
+  L2: [
+    'What is the expected scale of what was just built — data volume, request volume, growth rate — and at what point do the current architectural decisions start to break down?',
+    'Has a capacity plan been written for what was just built, or are growth assumptions implicit in the current design?',
+  ],
+  L3: [
+    'Is there a capacity plan for what was just built — documenting the current scale assumptions and the point at which they would need to be revisited?',
+  ],
+};
+
+const ABSENCE_SECURITY_THREAT_MODELING: DecisionContent = {
+  question:      'Security-sensitive feature — threat model reviewed?',
+  pinchFallback: 'Threat model.',
+  L1: [
+    'What was just built handles sensitive data or authentication. Conduct a threat model: identify the trust boundaries, enumerate the threats at each boundary (spoofing, tampering, repudiation, information disclosure, denial of service, elevation of privilege), and confirm a mitigation exists for each applicable threat.',
+    'Review what was just built using the STRIDE framework: what can be spoofed, what can be tampered with, what lacks a non-repudiation mechanism, what data could be disclosed inappropriately, what could be used to cause denial of service, and what could allow privilege escalation? Document the findings.',
+    'Audit what was just built for the highest-impact security risks: is the authentication surface complete, are all privileged operations authorisation-gated, is sensitive data encrypted at rest and in transit, and are audit logs written for operations that require non-repudiation?',
+  ],
+  L2: [
+    'What is the highest-impact security risk in what was just built, and is there an explicit mitigation for it?',
+    'Has a threat model been reviewed for what was just built — covering the trust boundaries and the threats at each one?',
+  ],
+  L3: [
+    'Has a threat model been reviewed for what was just built to identify and mitigate the highest-impact security risks?',
+  ],
+};
+
+const ABSENCE_DATABASE_MIGRATION_SAFETY: DecisionContent = {
+  question:      'DB migration written — safe to run in production?',
+  pinchFallback: 'Migration safety.',
+  L1: [
+    'Review the database migration that was just written against production safety criteria: is it reversible (does it have a down migration), does it run without a full table lock on large tables, is it tested against a production-scale dataset, and has the rollback procedure been documented?',
+    'Audit the migration for production risk: does it add a NOT NULL column without a default (will fail on a non-empty table), does it rename a column in use by running application code, or does it drop anything that might be needed for rollback? Each of these requires a multi-phase deployment strategy.',
+    'Check the migration against the deployment sequence: can the current application code run against both the pre- and post-migration schema? If not, the migration requires a coordinated cutover — document the deployment steps explicitly.',
+  ],
+  L2: [
+    'Is the migration reversible, and has the rollback procedure been defined? What happens if the migration needs to be rolled back mid-deployment?',
+    'Does the migration require a table lock on a large table, or will it run safely online? Has it been tested against a production-scale data volume?',
+  ],
+  L3: [
+    'Has the database migration been reviewed for production safety — reversibility, table lock risk, and deployment sequence compatibility?',
+  ],
+};
+
+const ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE: DecisionContent = {
+  question:      'Ready to ship — deployment strategy defined?',
+  pinchFallback: 'Deploy strategy.',
+  L1: [
+    'Before shipping what was just built — document the deployment strategy: is this a rolling deploy, a blue-green, a canary, or a feature-flag ramp? Each has different rollback characteristics. Define which applies here and what the rollback procedure is if the deploy goes wrong.',
+    'Review what was just built against its deployment requirements: does it require a database migration to run first, does it require coordinated deployment of multiple services, does it have backward-compatibility requirements during rollout? Document the correct deployment sequence.',
+    'Audit the release plan for what was just built: what is the deployment order, what is the health check that confirms a successful deploy, what is the rollback trigger, and how long is the observation window before the deploy is considered stable?',
+  ],
+  L2: [
+    'What is the deployment strategy for what was just built — specifically the rollback procedure if something goes wrong after deploy?',
+    'Are there any sequencing requirements for deploying what was just built — migrations that must run first, services that must be deployed in a specific order?',
+  ],
+  L3: [
+    'Is the deployment strategy for what was just built defined — including the rollback procedure and any deployment sequencing requirements?',
+  ],
+};
+
+const ABSENCE_OPERATIONAL_RUNBOOK_GAP: DecisionContent = {
+  question:      'Going to production — runbook written?',
+  pinchFallback: 'Runbook gap.',
+  L1: [
+    'Before what was just built goes to production — write the operational runbook entry: what does this feature do, what are the most likely operational failure modes, how does an on-call engineer diagnose each one, and what are the remediation steps? Write it now while the context is fresh.',
+    'Audit the operational readiness of what was just built: is there runbook documentation for the failure modes that are most likely to page someone, do those runbooks include the relevant dashboards to check, the logs to query, and the remediation steps to follow?',
+    'Review what was just built from an on-call perspective: if this feature is the source of an incident at 3am, what does the responding engineer need to know? That knowledge needs to be in a runbook — not in the head of the engineer who built it.',
+  ],
+  L2: [
+    'Is there a runbook entry for what was just built that would allow an on-call engineer unfamiliar with this feature to diagnose and remediate the most likely failure modes?',
+    'What are the operational procedures for what was just built — not the happy path, but the degraded-mode, rollback, and incident-response procedures?',
+  ],
+  L3: [
+    'Is there operational runbook documentation for what was just built — covering the most likely failure scenarios an on-call engineer would face?',
+  ],
+};
+
+const ABSENCE_SLO_DEFINITION_GAP: DecisionContent = {
+  question:      'Feature shipping — SLOs defined?',
+  pinchFallback: 'SLO gap.',
+  L1: [
+    'Before what was just built ships — define the SLOs: what is the availability target, what is the acceptable latency at the p95 and p99, and what is the error rate budget? Without defined SLOs, there is no objective signal for when the feature is degraded versus within normal operating parameters.',
+    'Review what was just built against SLO requirements: what SLIs would you define for this feature, what is the current baseline for each, and what threshold constitutes a degradation that warrants an alert? Document the SLOs before the feature ships.',
+    'Audit what was just built for SLO coverage: has an availability target been defined, has a latency budget been set, has an error rate threshold been established? These need to exist before the feature ships — without them, there is no agreed standard for what "working" means.',
+  ],
+  L2: [
+    'What are the SLOs for what was just built — availability, latency, and error rate? If they have not been defined, define them before shipping.',
+    'Is there an agreed-upon definition of "this feature is working" in terms of measurable SLOs, or is the health of this feature currently subjective?',
+  ],
+  L3: [
+    'Have SLOs been defined for what was just built — measurable targets for availability, latency, and error rate — before it ships?',
+  ],
+};
+
 // ── Content resolution ─────────────────────────────────────────────────────────
 
 /**
@@ -1682,6 +2138,19 @@ const ABSENCE_CONTENT: Partial<Record<string, DecisionContent>> = {
   feature_scope_before_build:    ABSENCE_FEATURE_SCOPE,
   implementation_checkpoint:     ABSENCE_IMPLEMENTATION_CHECKPOINT,
   spec_before_code:              ABSENCE_SPEC_BEFORE_CODE,
+  incremental_build:             ABSENCE_INCREMENTAL_BUILD,
+  decision_record_absence:       ABSENCE_DECISION_RECORD_ABSENCE,
+  over_engineering_check:        ABSENCE_OVER_ENGINEERING_CHECK,
+  pair_review_absence:           ABSENCE_PAIR_REVIEW_ABSENCE,
+  observability_first:           ABSENCE_OBSERVABILITY_FIRST,
+  failure_mode_analysis:         ABSENCE_FAILURE_MODE_ANALYSIS,
+  contract_testing_gap:          ABSENCE_CONTRACT_TESTING_GAP,
+  capacity_planning_gap:         ABSENCE_CAPACITY_PLANNING_GAP,
+  security_threat_modeling:      ABSENCE_SECURITY_THREAT_MODELING,
+  database_migration_safety:     ABSENCE_DATABASE_MIGRATION_SAFETY,
+  deployment_strategy_absence:   ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE,
+  operational_runbook_gap:       ABSENCE_OPERATIONAL_RUNBOOK_GAP,
+  slo_definition_gap:            ABSENCE_SLO_DEFINITION_GAP,
 };
 
 const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
@@ -1727,6 +2196,19 @@ const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
   feature_scope_before_build:    ABSENCE_FEATURE_SCOPE_CASUAL,
   implementation_checkpoint:     ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL,
   spec_before_code:              ABSENCE_SPEC_BEFORE_CODE_CASUAL,
+  incremental_build:             ABSENCE_INCREMENTAL_BUILD_CASUAL,
+  code_documentation_gap:        ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL,
+  technical_debt_acknowledgment: ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL,
+  test_depth_check:              ABSENCE_TEST_DEPTH_CHECK_CASUAL,
+  architecture_note_absence:     ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL,
+  dependency_audit_gap:          ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL,
+  security_review_gap:           ABSENCE_SECURITY_REVIEW_GAP_CASUAL,
+  api_contract_definition:       ABSENCE_API_CONTRACT_DEFINITION_CASUAL,
+  error_handling_coverage:       ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL,
+  refactoring_checkpoint:        ABSENCE_REFACTORING_CHECKPOINT_CASUAL,
+  backwards_compatibility_check: ABSENCE_BACKWARDS_COMPAT_CHECK_CASUAL,
+  self_review_habit:             ABSENCE_SELF_REVIEW_HABIT_CASUAL,
+  performance_awareness:         ABSENCE_PERFORMANCE_AWARENESS_CASUAL,
 };
 
 /**
@@ -1952,4 +2434,30 @@ export {
   ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL,
   ABSENCE_SPEC_BEFORE_CODE,
   ABSENCE_SPEC_BEFORE_CODE_CASUAL,
+  ABSENCE_INCREMENTAL_BUILD,
+  ABSENCE_INCREMENTAL_BUILD_CASUAL,
+  ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL,
+  ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL,
+  ABSENCE_TEST_DEPTH_CHECK_CASUAL,
+  ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL,
+  ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL,
+  ABSENCE_SECURITY_REVIEW_GAP_CASUAL,
+  ABSENCE_API_CONTRACT_DEFINITION_CASUAL,
+  ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL,
+  ABSENCE_REFACTORING_CHECKPOINT_CASUAL,
+  ABSENCE_BACKWARDS_COMPAT_CHECK_CASUAL,
+  ABSENCE_SELF_REVIEW_HABIT_CASUAL,
+  ABSENCE_PERFORMANCE_AWARENESS_CASUAL,
+  ABSENCE_DECISION_RECORD_ABSENCE,
+  ABSENCE_OVER_ENGINEERING_CHECK,
+  ABSENCE_PAIR_REVIEW_ABSENCE,
+  ABSENCE_OBSERVABILITY_FIRST,
+  ABSENCE_FAILURE_MODE_ANALYSIS,
+  ABSENCE_CONTRACT_TESTING_GAP,
+  ABSENCE_CAPACITY_PLANNING_GAP,
+  ABSENCE_SECURITY_THREAT_MODELING,
+  ABSENCE_DATABASE_MIGRATION_SAFETY,
+  ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE,
+  ABSENCE_OPERATIONAL_RUNBOOK_GAP,
+  ABSENCE_SLO_DEFINITION_GAP,
 };

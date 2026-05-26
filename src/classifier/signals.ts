@@ -615,6 +615,577 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     ],
     absenceThreshold: 3,
   },
+
+  // ── Phase 5 D1 — beginner cluster 1 (R04) ────────────────────────────────────
+  {
+    key: 'incremental_build',
+    description: 'Building incrementally — verifying each small piece before adding the next',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'let me test this small piece', 'verify one thing at a time',
+      'incremental build', 'build and verify step by step',
+    ],
+    vibeKeywords: [
+      'does each part work', 'test as we go', 'one step at a time then check',
+    ],
+    absenceThreshold: 5,
+  },
+  {
+    key: 'error_understanding',
+    description: 'Understanding root cause of an error before applying a fix',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'root cause of this error', 'why did this error happen',
+      'understand the error before fixing', 'what does this error mean',
+    ],
+    vibeKeywords: [
+      'why is this happening', 'explain this error',
+    ],
+    absenceThreshold: 6,
+    nature: 'beginner',
+  },
+  {
+    key: 'documentation_before_ask',
+    description: 'Consulting primary documentation before asking the agent for help',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'i checked the docs and', 'per the documentation', 'docs say',
+      'reading the api reference', 'the readme says',
+    ],
+    vibeKeywords: [
+      'what does the docs say', 'let me look this up', 'checking docs first',
+    ],
+    absenceThreshold: 8,
+    nature: 'beginner',
+  },
+  {
+    key: 'output_verification',
+    description: 'Manually verifying AI-generated output before moving on',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'i ran this and it works', 'verified the output', 'tested the result',
+      'confirmed this does what we wanted', 'checked the output',
+    ],
+    vibeKeywords: [
+      'let me try this', 'running it now', 'does this actually work',
+    ],
+    absenceThreshold: 5,
+    nature: 'beginner',
+  },
+
+  // ── Phase 5 D2 — beginner cluster 2 (R05) ────────────────────────────────────
+  {
+    key: 'requirement_clarity_before_ask',
+    description: 'Specifying a clear requirement before prompting for implementation',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'the requirement is', 'specifically what i need is',
+      'the expected behavior is', 'success looks like',
+    ],
+    vibeKeywords: [
+      'i want it to', 'make it so that', 'what i mean is',
+    ],
+    absenceThreshold: 4,
+    nature: 'beginner',
+  },
+  {
+    key: 'copy_paste_awareness',
+    description: 'Understanding code before integrating AI-generated blocks',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'i understand what this code does', 'reviewing the generated code',
+      'walking through this code', 'this code works because',
+    ],
+    absenceThreshold: 7,
+    nature: 'beginner',
+  },
+  {
+    key: 'debugging_observation_gap',
+    description: 'Describing observed behavior precisely before asking for a fix',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'i observed that', 'the actual behavior is', 'expected vs actual',
+      'what i see is', 'the error message says',
+    ],
+    absenceThreshold: 5,
+    nature: 'beginner',
+  },
+  {
+    key: 'learning_consolidation',
+    description: 'Pausing to consolidate and recap what was understood in the session',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'so to summarize what i learned', 'now i understand how',
+      'let me recap what we did', 'i now know how to',
+    ],
+    vibeKeywords: [
+      'okay so now i understand', 'makes sense now', 'so basically',
+    ],
+    absenceThreshold: 15,
+    nature: 'beginner',
+  },
+
+  // ── Phase 5 D3 — beginner cluster 3 (R06) ────────────────────────────────────
+  {
+    key: 'simple_solution_first',
+    description: 'Choosing the simplest solution before adding unnecessary complexity',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'simplest solution here', 'easiest way to do this',
+      'do i need all this complexity', 'is there a simpler approach',
+    ],
+    absenceThreshold: 6,
+    nature: 'beginner',
+  },
+  {
+    key: 'single_responsibility_prompting',
+    description: 'Keeping each prompt focused on one concern at a time',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'one thing at a time', 'let\'s focus on just this part',
+      'separate these concerns', 'do this step only',
+    ],
+    absenceThreshold: 4,
+    nature: 'beginner',
+  },
+  {
+    key: 'rollback_awareness',
+    description: 'Verifying ability to revert before making significant code changes',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'i committed before changing', 'i can revert this if needed',
+      'git stash', 'i\'ll check this into git first', 'backup this working state',
+    ],
+    absenceThreshold: 10,
+    nature: 'beginner',
+  },
+  {
+    key: 'build_vs_understand_ratio',
+    description: 'Periodically pausing to understand what was built rather than only continuing to build',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'explain how this works', 'how does this piece connect to',
+      'i want to understand this', 'i want to understand what we built',
+    ],
+    vibeKeywords: [
+      'how does this work', 'what does this do', 'explain this',
+    ],
+    absenceThreshold: 12,
+    nature: 'beginner',
+  },
+
+  // ── Phase 5 D4 — cool_geek cluster 1 (R07) ───────────────────────────────────
+  {
+    key: 'feature_completion_check',
+    description: 'Finishing and verifying the current feature before starting the next',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'finishing this feature before starting the next',
+      'this feature is done and tested', 'completed and verified before moving on',
+    ],
+    absenceThreshold: 5,
+    nature: 'cool_geek',
+  },
+  {
+    key: 'finishing_line_awareness',
+    description: 'Recognising that partial features deliver no user value — pushing to completion',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'this is fully complete', 'shipped this feature',
+      'ready to use', 'end-to-end working',
+    ],
+    absenceThreshold: 8,
+    nature: 'cool_geek',
+  },
+  {
+    key: 'polish_vs_function',
+    description: 'Keeping visual polish deferred until core functionality works end-to-end',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'core functionality is working first', 'polish after function is done',
+      'visual improvements after it works', 'functional before aesthetic',
+    ],
+    absenceThreshold: 5,
+    nature: 'cool_geek',
+  },
+  {
+    key: 'mvp_scope_discipline',
+    description: 'Checking each addition against the MVP boundary before building',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'is this mvp scope', 'minimum needed to test this', 'mvp boundary check',
+      'core hypothesis still being tested', 'this is beyond mvp',
+    ],
+    absenceThreshold: 5,
+    nature: 'cool_geek',
+  },
+
+  // ── Phase 5 D5 — cool_geek cluster 2 (R08) ───────────────────────────────────
+  {
+    key: 'idea_to_spec_bridge',
+    description: 'Specifying what a new idea does and its boundaries before building it',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'the spec for this idea is', 'how this fits into the product',
+      'what this feature does and doesn\'t do', 'boundaries of this idea',
+    ],
+    absenceThreshold: 4,
+    nature: 'cool_geek',
+  },
+  {
+    key: 'demo_vs_product',
+    description: 'Distinguishing demo-quality code from production-ready code',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'production-ready', 'real data connected', 'handles edge cases',
+      'error states working', 'this is demo vs production',
+    ],
+    absenceThreshold: 6,
+    nature: 'cool_geek',
+  },
+  {
+    key: 'user_journey_check',
+    description: 'Designing the full user journey for a feature — not just the happy path',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'full user journey for this', 'what does the user experience end to end',
+      'empty state for this', 'error state for this', 'first time user sees this',
+    ],
+    absenceThreshold: 6,
+    nature: 'cool_geek',
+  },
+
+  // ── Phase 5 D6 — cool_geek cluster 3 (R09) ───────────────────────────────────
+  {
+    key: 'technical_spike_treatment',
+    description: 'Treating exploratory code as a spike to be extracted or discarded, not committed directly',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'this was a spike to learn', 'cleaning up the exploration code',
+      'extracting the useful part from the experiment', 'production version of this',
+    ],
+    absenceThreshold: 7,
+    nature: 'cool_geek',
+  },
+  {
+    key: 'dependency_adventure',
+    description: 'Adding dependencies only for need, not for exploration or novelty',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'need this library for', 'this solves the specific problem of',
+      'evaluated alternatives before adding', 'maintenance burden considered',
+    ],
+    absenceThreshold: 8,
+    nature: 'cool_geek',
+  },
+  {
+    key: 'restart_impulse_check',
+    description: 'Debugging the current approach before starting over from scratch',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'debugging this before starting over', 'root cause before restart',
+      'fix the current approach', 'what specifically went wrong',
+    ],
+    absenceThreshold: 5,
+    nature: 'cool_geek',
+  },
+  {
+    key: 'creative_vs_core_ratio',
+    description: 'Keeping creative/aesthetic prompts proportional to core-feature prompts',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'this serves the core product', 'this is the core feature',
+      'prioritizing core value', 'the main feature first',
+    ],
+    absenceThreshold: 10,
+    nature: 'cool_geek',
+  },
+
+  // ── Phase 5 D7 — pro_geek_soul cluster 1 (R10) ───────────────────────────────
+  {
+    key: 'code_documentation_gap',
+    description: 'Adding inline documentation for non-obvious logic and complex functions',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'documenting this function', 'inline comment for this logic',
+      'docstring for this', 'commenting why this works this way',
+    ],
+    absenceThreshold: 10,
+    nature: 'pro_geek_soul',
+  },
+  {
+    key: 'technical_debt_acknowledgment',
+    description: 'Explicitly tagging shortcuts and workarounds as technical debt',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'noting this as tech debt', 'temporary workaround, needs refactor',
+    ],
+    vibeKeywords: [
+      'quick and dirty', 'good enough for now', 'workaround for now',
+      'hacky solution', 'fix later',
+    ],
+    absenceThreshold: 8,
+    nature: 'pro_geek_soul',
+  },
+  {
+    key: 'test_depth_check',
+    description: 'Writing tests that cover edge cases and error paths, not just the happy path',
+    expectedStages: ['review_testing'],
+    detectionKeywords: [
+      'edge case test', 'boundary value test', 'error path test',
+      'null input test', 'concurrent access test', 'negative test case',
+    ],
+    absenceThreshold: 10,
+    nature: 'pro_geek_soul',
+  },
+  {
+    key: 'architecture_note_absence',
+    description: 'Documenting the rationale for significant structural or architectural decisions',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'note on why this architecture', 'decision record for this',
+      'commenting the architectural rationale', 'why this pattern was chosen',
+    ],
+    absenceThreshold: 12,
+    nature: 'pro_geek_soul',
+  },
+
+  // ── Phase 5 D8 — pro_geek_soul cluster 2 (R11) ───────────────────────────────
+  {
+    key: 'dependency_audit_gap',
+    description: 'Evaluating maintenance status, alternatives, and license before adding a dependency',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'checked maintenance status', 'evaluated alternatives to',
+      'license is compatible', 'bundle size impact of', 'last release date',
+    ],
+    absenceThreshold: 8,
+    nature: 'pro_geek_soul',
+  },
+  {
+    key: 'security_review_gap',
+    description: 'Reviewing security considerations for features touching user data or auth',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'security consideration for this', 'owasp check',
+      'authorization check', 'injection prevention',
+    ],
+    absenceThreshold: 10,
+    nature: 'pro_geek_soul',
+  },
+  {
+    key: 'api_contract_definition',
+    description: 'Defining the API contract before implementing an endpoint or service layer',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'api contract defined', 'request schema is', 'response schema is',
+      'error response format', 'defining the interface before implementing',
+    ],
+    absenceThreshold: 6,
+    nature: 'pro_geek_soul',
+  },
+  {
+    key: 'error_handling_coverage',
+    description: 'Explicitly handling error paths for every non-trivial operation',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'error state handled', 'fallback for when this errors', 'error case covered',
+    ],
+    vibeKeywords: [
+      'what happens when this fails', 'error boundary',
+    ],
+    absenceThreshold: 8,
+    nature: 'pro_geek_soul',
+  },
+
+  // ── Phase 5 D9 — pro_geek_soul cluster 3 (R12) ───────────────────────────────
+  {
+    key: 'refactoring_checkpoint',
+    description: 'Running a refactor pass before adding features to already-complex code',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'refactored this before adding', 'cleaned up first',
+      'extracted this into', 'simplified before extending',
+    ],
+    absenceThreshold: 12,
+    nature: 'pro_geek_soul',
+  },
+  {
+    key: 'backwards_compatibility_check',
+    description: 'Checking all callers and considering versioning before changing an interface',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'callers of this updated', 'backwards compatible change',
+      'versioning this change', 'existing consumers checked',
+    ],
+    absenceThreshold: 8,
+    nature: 'pro_geek_soul',
+  },
+  {
+    key: 'self_review_habit',
+    description: 'Running a self-review pass before committing after an extended build run',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'reviewing what we wrote', 'reading through the implementation',
+      'checking the diff', 'does this all make sense together',
+    ],
+    absenceThreshold: 15,
+    nature: 'pro_geek_soul',
+  },
+  {
+    key: 'performance_awareness',
+    description: 'Noting performance implications for data-heavy operations before shipping',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'performance impact of this', 'n+1 query check',
+      'pagination added', 'lazy load this',
+    ],
+    vibeKeywords: [
+      'fetch all the data', 'load everything', 'get all records',
+    ],
+    absenceThreshold: 12,
+    nature: 'pro_geek_soul',
+  },
+
+  // ── Phase 5 D10 — hardcore_pro cluster 1 (R13) ───────────────────────────────
+  {
+    key: 'decision_record_absence',
+    description: 'Recording the context and rationale for significant architectural choices',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'adr for this', 'recording the decision', 'context and consequences',
+      'why this over alternatives', 'decision record',
+    ],
+    absenceThreshold: 10,
+    nature: 'hardcore_pro',
+  },
+  {
+    key: 'over_engineering_check',
+    description: 'Applying YAGNI — not building for hypothetical future requirements',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'this is needed now', 'yagni check', 'current requirements require',
+      'building this because we need it today',
+    ],
+    absenceThreshold: 8,
+    nature: 'hardcore_pro',
+  },
+  {
+    key: 'pair_review_absence',
+    description: 'Having a review plan (peer, self, or diff review) before committing critical code',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'getting this reviewed', 'pair programming this',
+      'review plan for this', 'diff review before merge',
+    ],
+    absenceThreshold: 15,
+    nature: 'hardcore_pro',
+  },
+
+  // ── Phase 5 D11 — hardcore_pro cluster 2 (R14) ───────────────────────────────
+  {
+    key: 'observability_first',
+    description: 'Adding logging, metrics, and tracing before or alongside a new feature',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'observability for this', 'logging added', 'metrics instrumented',
+      'tracing span added', 'alert for this',
+    ],
+    absenceThreshold: 10,
+    nature: 'hardcore_pro',
+  },
+  {
+    key: 'failure_mode_analysis',
+    description: 'Enumerating failure modes for each dependency before finalising design',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'failure mode for this', 'circuit breaker for',
+      'fallback when', 'resilience for this',
+    ],
+    vibeKeywords: [
+      'what happens when x fails',
+    ],
+    absenceThreshold: 8,
+    nature: 'hardcore_pro',
+  },
+  {
+    key: 'contract_testing_gap',
+    description: 'Adding contract tests for service boundaries and API integrations',
+    expectedStages: ['review_testing'],
+    detectionKeywords: [
+      'contract test for this', 'pact test', 'consumer-driven contract',
+      'integration contract verified',
+    ],
+    absenceThreshold: 12,
+    nature: 'hardcore_pro',
+  },
+
+  // ── Phase 5 D12 — hardcore_pro clusters 3+4 (R15–R16) ────────────────────────
+  {
+    key: 'capacity_planning_gap',
+    description: 'Estimating capacity implications before shipping a load-adding feature',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'capacity estimate for this', 'load this will add',
+      'storage growth projection', 'rps estimate', 'resource utilization',
+    ],
+    absenceThreshold: 10,
+    nature: 'hardcore_pro',
+  },
+  {
+    key: 'security_threat_modeling',
+    description: 'Running a threat model before finalising security-sensitive feature design',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'threat model for this', 'stride analysis',
+      'attack surface review', 'privilege escalation considered', 'security design review',
+    ],
+    absenceThreshold: 8,
+    nature: 'hardcore_pro',
+  },
+  {
+    key: 'database_migration_safety',
+    description: 'Applying expand-migrate-contract pattern for backwards-compatible schema migrations',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'backwards compatible migration', 'expand-migrate-contract',
+      'phased migration', 'rollback migration', 'migration safety review',
+    ],
+    absenceThreshold: 6,
+    nature: 'hardcore_pro',
+  },
+  {
+    key: 'deployment_strategy_absence',
+    description: 'Defining a deployment strategy (feature flag, canary, blue-green) before shipping',
+    expectedStages: ['release'],
+    detectionKeywords: [
+      'feature flag for this', 'canary deployment', 'blue-green deployment', 'staged rollout',
+    ],
+    absenceThreshold: 6,
+    nature: 'hardcore_pro',
+  },
+  {
+    key: 'operational_runbook_gap',
+    description: 'Writing an operational runbook for new services before release',
+    expectedStages: ['release'],
+    detectionKeywords: [
+      'runbook for this', 'operational documentation',
+      'how to debug this in production', 'on-call guide for',
+    ],
+    absenceThreshold: 8,
+    nature: 'hardcore_pro',
+  },
+  {
+    key: 'slo_definition_gap',
+    description: 'Defining SLO (availability, latency, error rate targets) before shipping a service',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'slo for this', 'availability target', 'latency target',
+      'error rate budget', 'reliability target',
+    ],
+    absenceThreshold: 10,
+    nature: 'hardcore_pro',
+  },
 ];
 
 // ── Signal detection from prompt text ────────────────────────────────────────
