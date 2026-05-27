@@ -718,6 +718,68 @@ describe('createTtySelectFn — Linux new-window path', () => {
     expect(capturedFreqScript).toContain('"every_event"');
   });
 
+  it('role script lists the four predefined roles and excludes the legacy Clear option', async () => {
+    let capturedRoleScript = '';
+    let callCount = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      gnomeTerminalMock((_cmd: string, args: string[]) => {
+        callCount++;
+        if (callCount === 1) {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (callCount === 2) {
+          const rootScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-root-sel-'));
+          if (rootScriptArg) {
+            const rootResultFile = rootScriptArg.replace('-sel-', '-res-').replace('.mjs', '.txt');
+            writeFileSync(rootResultFile, '__ROLE_FLOW__', 'utf8');
+          }
+        } else if (callCount === 3) {
+          const roleScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-role-sel-'));
+          if (roleScriptArg && existsSync(roleScriptArg)) {
+            capturedRoleScript = readFileSync(roleScriptArg, 'utf8');
+          }
+        }
+      }),
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(capturedRoleScript).toContain("value: 'indie_hacker'");
+    expect(capturedRoleScript).toContain("value: 'founder'");
+    expect(capturedRoleScript).toContain("value: 'pm'");
+    expect(capturedRoleScript).toContain("value: 'vibe_coder'");
+    expect(capturedRoleScript).toContain('indie hacker developer');
+    expect(capturedRoleScript).toContain('founder / product creator');
+    expect(capturedRoleScript).toContain('product manager');
+    expect(capturedRoleScript).toContain('vibe coder');
+    expect(capturedRoleScript).not.toContain("value: 'clear'");
+    expect(capturedRoleScript).not.toContain('Clear role');
+  });
+
+  it('role script embeds initialValue derived from the current configured role (founder default)', async () => {
+    let capturedRoleScript = '';
+    let callCount = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      gnomeTerminalMock((_cmd: string, args: string[]) => {
+        callCount++;
+        if (callCount === 1) {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (callCount === 2) {
+          const rootScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-root-sel-'));
+          if (rootScriptArg) {
+            const rootResultFile = rootScriptArg.replace('-sel-', '-res-').replace('.mjs', '.txt');
+            writeFileSync(rootResultFile, '__ROLE_FLOW__', 'utf8');
+          }
+        } else if (callCount === 3) {
+          const roleScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-role-sel-'));
+          if (roleScriptArg && existsSync(roleScriptArg)) {
+            capturedRoleScript = readFileSync(roleScriptArg, 'utf8');
+          }
+        }
+      }),
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(capturedRoleScript).toContain('initialValue:');
+    expect(capturedRoleScript).toContain('"founder"');
+  });
+
   it('role flow path produces one role-window spawn and no freq-window spawn', async () => {
     let roleSpawnCount = 0;
     let freqSpawnCount = 0;

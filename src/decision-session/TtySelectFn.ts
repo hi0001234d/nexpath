@@ -195,17 +195,18 @@ process.exit(0);
 `;
 }
 
-function buildRoleMjsScript(clackUrl: string, resultFileFwd: string): string {
+function buildRoleMjsScript(clackUrl: string, resultFileFwd: string, currentRole: string): string {
   return `import { select, isCancel } from '${clackUrl}';
 import { writeFileSync } from 'node:fs';
 
 const picked = await select({
   message: 'Project role',
+  initialValue: ${JSON.stringify(currentRole)},
   options: [
-    { value: 'founder',      label: 'Founder \\u2014 building your own product' },
-    { value: 'indie_hacker', label: 'Indie hacker \\u2014 shipping solo' },
-    { value: 'pm',           label: 'PM \\u2014 product management focus' },
-    { value: 'clear',        label: 'Clear role (use universal signals only)' },
+    { value: 'indie_hacker', label: 'indie hacker developer' },
+    { value: 'founder',      label: 'founder / product creator' },
+    { value: 'pm',           label: 'product manager' },
+    { value: 'vibe_coder',   label: 'vibe coder' },
   ],
 });
 
@@ -249,13 +250,13 @@ const ROOT_WINDOW_TITLE = 'Nexpath — Adjust';
 /** Callback that spawns a new window running the given .mjs script with the given title. */
 type SpawnWindowFn = (title: string, scriptPath: string) => void;
 
-/** Spawn the role-selection sub-menu in a new window and return the role sentinel. */
-function spawnRoleMenuFlow(clackUrl: string, spawnWindow: SpawnWindowFn): string | symbol {
+/** Spawn the role-selection sub-menu in a new window with the user's current role pre-selected. */
+function spawnRoleMenuFlow(clackUrl: string, spawnWindow: SpawnWindowFn, currentRole: string): string | symbol {
   const roleId         = randomUUID();
   const roleResultFile = join(tmpdir(), `nexpath-role-res-${roleId}.txt`);
   const roleScriptFile = join(tmpdir(), `nexpath-role-sel-${roleId}.mjs`);
   const roleResultFwd  = roleResultFile.replace(/\\/g, '/');
-  writeFileSync(roleScriptFile, buildRoleMjsScript(clackUrl, roleResultFwd), 'utf8');
+  writeFileSync(roleScriptFile, buildRoleMjsScript(clackUrl, roleResultFwd, currentRole), 'utf8');
   spawnWindow(ROLE_WINDOW_TITLE, roleScriptFile);
   let result: string | symbol = Symbol('cancelled');
   if (existsSync(roleResultFile)) {
@@ -297,6 +298,7 @@ function spawnRootChooserFlow(
   clackUrl:    string,
   spawnWindow: SpawnWindowFn,
   currentFreq: string,
+  currentRole: string,
 ): string | symbol {
   const rootId         = randomUUID();
   const rootResultFile = join(tmpdir(), `nexpath-root-res-${rootId}.txt`);
@@ -310,7 +312,7 @@ function spawnRootChooserFlow(
     if (routed === '__FREQ_FLOW__') {
       result = spawnFreqMenuFlow(clackUrl, spawnWindow, currentFreq);
     } else if (routed === '__ROLE_FLOW__') {
-      result = spawnRoleMenuFlow(clackUrl, spawnWindow);
+      result = spawnRoleMenuFlow(clackUrl, spawnWindow, currentRole);
     }
   }
   for (const f of [rootScriptFile, rootResultFile]) {
@@ -328,6 +330,19 @@ function readCurrentFreq(store: Store | undefined, projectRoot: string | undefin
   }
   const globalValue = getConfig(store.db, 'advisory_frequency');
   return globalValue ?? 'every_event';
+}
+
+/** Read the currently configured role, project-scoped first then global, default 'founder'. */
+function readCurrentRole(store: Store | undefined, projectRoot: string | undefined): string {
+  const valid = ['indie_hacker', 'founder', 'pm', 'vibe_coder'];
+  if (!store) return 'founder';
+  if (projectRoot) {
+    const projectValue = getConfig(store.db, `role:${projectRoot}`);
+    if (projectValue && valid.includes(projectValue)) return projectValue;
+  }
+  const globalValue = getConfig(store.db, 'role');
+  if (globalValue && valid.includes(globalValue)) return globalValue;
+  return 'founder';
 }
 
 /**
@@ -418,7 +433,7 @@ function buildWindowsNewWindowSelectFn(store?: Store, projectRoot?: string): Sel
               ['/c', 'start', '/WAIT', title, 'node', script],
               { stdio: 'ignore' },
             );
-          }, readCurrentFreq(store, projectRoot));
+          }, readCurrentFreq(store, projectRoot), readCurrentRole(store, projectRoot));
         } else if (raw.startsWith('__FREQ__:')) {
           result = raw;
         } else if (raw.startsWith('__ROLE__:')) {
@@ -579,7 +594,7 @@ function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): Selec
         } else if (raw === '__ROOT_MENU_PENDING__') {
           result = spawnRootChooserFlow(clackUrl, (title, script) => {
             spawnSync(terminal.cmd, terminal.args(title, script), { stdio: 'ignore' });
-          }, readCurrentFreq(store, projectRoot));
+          }, readCurrentFreq(store, projectRoot), readCurrentRole(store, projectRoot));
         } else if (raw.startsWith('__FREQ__:')) {
           result = raw;
         } else if (raw.startsWith('__ROLE__:')) {
@@ -677,7 +692,7 @@ function buildMacNewWindowSelectFn(store?: Store, projectRoot?: string): SelectF
         } else if (raw === '__ROOT_MENU_PENDING__') {
           result = spawnRootChooserFlow(clackUrl, (_title, script) => {
             spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${script}`)], { stdio: 'ignore' });
-          }, readCurrentFreq(store, projectRoot));
+          }, readCurrentFreq(store, projectRoot), readCurrentRole(store, projectRoot));
         } else if (raw.startsWith('__FREQ__:')) {
           result = raw;
         } else if (raw.startsWith('__ROLE__:')) {
@@ -752,16 +767,20 @@ function runRoleSubMenu(
   projectRoot: string | undefined,
   cleanup:     (value: string | symbol) => void,
 ): void {
+  const currentRole = readCurrentRole(store, projectRoot);
   const roleOptions = [
-    { num: 1, value: 'founder',      label: 'Founder — building your own product' },
-    { num: 2, value: 'indie_hacker', label: 'Indie hacker — shipping solo' },
-    { num: 3, value: 'pm',           label: 'PM — product management focus' },
-    { num: 4, value: 'clear',        label: 'Clear role (use universal signals only)' },
+    { num: 1, value: 'indie_hacker', label: 'indie hacker developer' },
+    { num: 2, value: 'founder',      label: 'founder / product creator' },
+    { num: 3, value: 'pm',           label: 'product manager' },
+    { num: 4, value: 'vibe_coder',   label: 'vibe coder' },
   ];
   const menuLines = [
     pc.cyan('│'),
     `${pc.cyan('◆')}  ${pc.bold('Project role')}`,
-    ...roleOptions.map((o) => `${pc.cyan('│')}  ${pc.green(`${o.num})`)} ${o.label}`),
+    ...roleOptions.map((o) => {
+      const suffix = o.value === currentRole ? pc.dim(' (current)') : '';
+      return `${pc.cyan('│')}  ${pc.green(`${o.num})`)} ${o.label}${suffix}`;
+    }),
     pc.cyan('│'),
   ];
   streams.output.write(menuLines.join('\n') + '\n');
@@ -771,21 +790,12 @@ function runRoleSubMenu(
     const num = parseInt(answer.trim(), 10);
     const choice = roleOptions.find((o) => o.num === num);
     if (choice && store && projectRoot) {
-      if (choice.value === 'clear') {
-        setConfig(store, `role:${projectRoot}`, '');
-        streams.output.write(
-          `${pc.cyan('│')}  ${pc.dim('Role cleared.')}
+      setConfig(store, `role:${projectRoot}`, choice.value);
+      streams.output.write(
+        `${pc.cyan('│')}  ${pc.dim(`Role set to: ${choice.label}`)}
 ${pc.cyan('│')}
 `,
-        );
-      } else {
-        setConfig(store, `role:${projectRoot}`, choice.value);
-        streams.output.write(
-          `${pc.cyan('│')}  ${pc.dim(`Role set to: ${choice.label}`)}
-${pc.cyan('│')}
-`,
-        );
-      }
+      );
     }
     cleanup(SKIP_NOW);
   });
