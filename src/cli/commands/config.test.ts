@@ -228,6 +228,22 @@ describe('configSetAction — role validation', () => {
     cleanup();
   });
 
+  it('error message for invalid role lists all four valid roles', async () => {
+    const { path, cleanup } = await tempDb();
+    const errSpy  = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('process.exit called');
+    }) as (code?: string | number | null | undefined) => never);
+    await expect(configSetAction('role', 'developer', path)).rejects.toThrow('process.exit called');
+    const message = errSpy.mock.calls[0][0] as string;
+    expect(message).toContain('founder');
+    expect(message).toContain('indie_hacker');
+    expect(message).toContain('pm');
+    expect(message).toContain('vibe_coder');
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    cleanup();
+  });
+
   it('accepts empty string for role key (clears role)', async () => {
     const { path, cleanup } = await tempDb();
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});

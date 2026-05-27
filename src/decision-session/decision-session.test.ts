@@ -249,6 +249,7 @@ import {
   ABSENCE_PROGRESS_CONSOLIDATION_GAP_BEGINNER,
 } from './options-beginner.js';
 import type { UserProfile } from '../classifier/types.js';
+import { SIGNAL_DEFINITIONS } from '../classifier/signals.js';
 import {
   buildSelectMessage,
   formatPinchLabel,
@@ -5003,6 +5004,11 @@ describe('resolveDecisionContent — vibe_coder role routing', () => {
     const vibeCoder = resolveDecisionContent('implementation', 'absence:test_creation', makeVibeCoderProfile('hardcore_pro'));
     const noRole    = resolveDecisionContent('implementation', 'absence:test_creation', { nature: 'hardcore_pro' } as UserProfile);
     expect(vibeCoder).toBe(noRole);
+  });
+
+  it('no SignalDefinition is keyed to role vibe_coder (fall-through guarantee)', () => {
+    const vibeCoderSignals = SIGNAL_DEFINITIONS.filter((s) => s.role === ('vibe_coder' as never));
+    expect(vibeCoderSignals).toHaveLength(0);
   });
 });
 
