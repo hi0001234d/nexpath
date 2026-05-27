@@ -9,6 +9,7 @@ import { detectSignals, initialSignalCounters, SIGNAL_DEFINITIONS, SIGNAL_MAP } 
 import { openStore, closeStore } from '../store/index.js';
 import { upsertProject, setDetectedLanguage } from '../store/projects.js';
 import type { SessionState, ClassificationResult } from './types.js';
+import type { StreamBPresenceResult } from './StreamBPresenceClassifier.js';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -2796,6 +2797,88 @@ describe('SessionStateManager', () => {
     mgr.processPrompt(store, 'ok', makeResult('idea', MIN_STAGE_CHANGE_CONFIDENCE - 0.01));
     expect(mgr.current.currentStage).toBe('implementation'); // stage unchanged
     expect(mgr.current.promptsInCurrentStage).toBe(1);       // counter still advanced
+    closeStore(store);
+  });
+
+  // ── streamBOverrides parameter ────────────────────────────────────────────────
+
+  it('streamBOverrides=false suppresses vibeKeyword-triggered Stream B signal', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/sb-false');
+    // 'does this actually work? try this out' triggers implementation_checkpoint via 2 vibeKeywords
+    const overrides: StreamBPresenceResult = {
+      feature_scope_before_build: false,
+      implementation_checkpoint:  false,
+      spec_before_code:           false,
+    };
+    mgr.processPrompt(
+      store,
+      'does this actually work? try this out and see',
+      makeResult('implementation', 0.8),
+      Date.now(),
+      MIN_STAGE_CHANGE_CONFIDENCE,
+      overrides,
+    );
+    expect(mgr.current.signalCounters['implementation_checkpoint'].lastSeenAt).toBeNull();
+    closeStore(store);
+  });
+
+  it('streamBOverrides=true marks Stream B signal as seen when vibeKeywords also fire', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/sb-true');
+    const overrides: StreamBPresenceResult = {
+      feature_scope_before_build: false,
+      implementation_checkpoint:  true,
+      spec_before_code:           false,
+    };
+    mgr.processPrompt(
+      store,
+      'does this actually work? try this out and see',
+      makeResult('implementation', 0.8),
+      Date.now(),
+      MIN_STAGE_CHANGE_CONFIDENCE,
+      overrides,
+    );
+    expect(mgr.current.signalCounters['implementation_checkpoint'].lastSeenAt).toBe(0);
+    closeStore(store);
+  });
+
+  it('streamBOverrides does not affect correction_seeking streak (uses original detected)', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/sb-streak');
+    mgr.processPrompt(store, 'add feature x', makeResult('implementation', 0.8));
+    mgr.processPrompt(store, 'add feature y', makeResult('implementation', 0.8));
+    expect(mgr.current.consecutiveAcceptanceStreak).toBe(2);
+    // Prompt triggers correction_seeking ('something is off') + implementation_checkpoint vibeKeywords
+    const overrides: StreamBPresenceResult = {
+      feature_scope_before_build: false,
+      implementation_checkpoint:  false,
+      spec_before_code:           false,
+    };
+    mgr.processPrompt(
+      store,
+      'something is off here, does this actually work? try this out and see',
+      makeResult('implementation', 0.8),
+      Date.now(),
+      MIN_STAGE_CHANGE_CONFIDENCE,
+      overrides,
+    );
+    // correction_seeking still resets streak (uses original detected, not effectiveDetected)
+    expect(mgr.current.consecutiveAcceptanceStreak).toBe(0);
+    // implementation_checkpoint is suppressed by the override
+    expect(mgr.current.signalCounters['implementation_checkpoint'].lastSeenAt).toBeNull();
+    closeStore(store);
+  });
+
+  it('streamBOverrides=undefined preserves original vibeKeyword behavior', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/sb-undef');
+    mgr.processPrompt(
+      store,
+      'does this actually work? try this out and see',
+      makeResult('implementation', 0.8),
+    );
+    expect(mgr.current.signalCounters['implementation_checkpoint'].lastSeenAt).toBe(0);
     closeStore(store);
   });
 });

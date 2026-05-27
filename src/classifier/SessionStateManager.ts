@@ -5,6 +5,7 @@ import type { SessionState, Stage, PromptRecord, ClassificationResult, UserProfi
 import { detectSignals, initialSignalCounters } from './signals.js';
 import { buildSafeDefaults } from './LLMProfileClassifier.js';
 import { getProject } from '../store/projects.js';
+import type { StreamBPresenceResult } from './StreamBPresenceClassifier.js';
 
 /** Gap in ms after which the session resets (30 minutes per research). */
 export const SESSION_GAP_MS = 30 * 60 * 1000;
@@ -114,6 +115,7 @@ export class SessionStateManager {
     classification: ClassificationResult,
     now = Date.now(),
     minStageChangeConfidence = MIN_STAGE_CHANGE_CONFIDENCE,
+    streamBOverrides?: StreamBPresenceResult,
   ): void {
     const s = this.state;
 
@@ -189,8 +191,18 @@ export class SessionStateManager {
 
     // ── Signal counters ───────────────────────────────────────────────────────
     const detected = detectSignals(promptText);
+
+    const effectiveDetected = streamBOverrides
+      ? detected.filter((key) => {
+          if (key === 'feature_scope_before_build') return streamBOverrides!.feature_scope_before_build;
+          if (key === 'implementation_checkpoint')  return streamBOverrides!.implementation_checkpoint;
+          if (key === 'spec_before_code')           return streamBOverrides!.spec_before_code;
+          return true;
+        })
+      : detected;
+
     for (const key of Object.keys(s.signalCounters)) {
-      if (detected.includes(key)) {
+      if (effectiveDetected.includes(key)) {
         s.signalCounters[key].present    = true;
         s.signalCounters[key].lastSeenAt = promptIndex;
       }
