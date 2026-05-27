@@ -228,7 +228,7 @@ describe('createTtySelectFn — Windows (win32)', () => {
     await createTtySelectFn()!(makeOpts());
     expect(capturedScript).toContain('emitKeypressEvents');
     expect(capturedScript).toContain('__NEXPATH_OPT_OUT__');
-    expect(capturedScript).toContain('__FREQ_MENU_PENDING__');
+    expect(capturedScript).toContain('__ROOT_MENU_PENDING__');
   });
 
   it('.mjs script embeds clipboard commands as iterable array (not hardcoded clip)', async () => {
@@ -244,16 +244,23 @@ describe('createTtySelectFn — Windows (win32)', () => {
     expect(capturedScript).toContain('if (_r.status === 0) break');
   });
 
-  it('freq script contains frequency sub-menu options when __FREQ_MENU_PENDING__ is returned', async () => {
+  it('freq script contains frequency sub-menu options after Ctrl+T → root chooser → frequency flow', async () => {
     const FREQ_SCRIPT_FILE = join(tmpdir(), `nexpath-freq-sel-${UUID}.mjs`);
     let capturedFreqScript = '';
     let callCount = 0;
-    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation((_cmd: string, args: string[]) => {
       callCount++;
       if (callCount === 1) {
-        // Main window: user pressed Ctrl+T → trigger freq flow
-        writeFileSync(RESULT_FILE, '__FREQ_MENU_PENDING__', 'utf8');
+        // Main window: user pressed Ctrl+T → emit root chooser sentinel
+        writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
       } else if (callCount === 2) {
+        // Root chooser window: pick "frequency"
+        const rootScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-root-sel-'));
+        if (rootScriptArg) {
+          const rootResultFile = rootScriptArg.replace('-sel-', '-res-').replace('.mjs', '.txt');
+          writeFileSync(rootResultFile, '__FREQ_FLOW__', 'utf8');
+        }
+      } else if (callCount === 3) {
         // Freq window: capture the freq script
         if (existsSync(FREQ_SCRIPT_FILE)) capturedFreqScript = readFileSync(FREQ_SCRIPT_FILE, 'utf8');
       }
@@ -588,20 +595,94 @@ describe('createTtySelectFn — Linux new-window path', () => {
     expect(stderrCalls.some((msg) => msg.includes('nexpath'))).toBe(true);
   });
 
-  it('spawns second terminal window for __FREQ_MENU_PENDING__', async () => {
+  it('spawns root chooser then freq window for __ROOT_MENU_PENDING__ → frequency flow', async () => {
     const FREQ_SCRIPT_FILE = join(tmpdir(), `nexpath-freq-sel-${UUID}.mjs`);
     let terminalSpawnCount = 0;
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
-      gnomeTerminalMock(() => {
+      gnomeTerminalMock((_cmd: string, args: string[]) => {
         terminalSpawnCount++;
         if (terminalSpawnCount === 1) {
-          writeFileSync(RESULT_FILE, '__FREQ_MENU_PENDING__', 'utf8');
+          // Main window: emit root chooser sentinel (user pressed Ctrl+T)
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (terminalSpawnCount === 2) {
+          // Root chooser window: pick "frequency"
+          const rootScriptArg = args.find((a) => a.endsWith('.mjs') && a.includes('nexpath-root-sel-'));
+          if (rootScriptArg) {
+            const rootResultFile = rootScriptArg.replace('-sel-', '-res-').replace('.mjs', '.txt');
+            writeFileSync(rootResultFile, '__FREQ_FLOW__', 'utf8');
+          }
         }
       }),
     );
     await createTtySelectFn()!(makeOpts());
-    expect(terminalSpawnCount).toBe(2);
+    expect(terminalSpawnCount).toBe(3);
     try { unlinkSync(FREQ_SCRIPT_FILE); } catch { /* ignore */ }
+  });
+
+  it('spawns root chooser then role window for __ROOT_MENU_PENDING__ → role flow', async () => {
+    let terminalSpawnCount = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      gnomeTerminalMock((_cmd: string, args: string[]) => {
+        terminalSpawnCount++;
+        if (terminalSpawnCount === 1) {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (terminalSpawnCount === 2) {
+          const rootScriptArg = args.find((a) => a.endsWith('.mjs') && a.includes('nexpath-root-sel-'));
+          if (rootScriptArg) {
+            const rootResultFile = rootScriptArg.replace('-sel-', '-res-').replace('.mjs', '.txt');
+            writeFileSync(rootResultFile, '__ROLE_FLOW__', 'utf8');
+          }
+        }
+      }),
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(terminalSpawnCount).toBe(3);
+  });
+
+  it('root chooser script contains both top-level options and emits __FREQ_FLOW__ / __ROLE_FLOW__', async () => {
+    let capturedRootScript = '';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      gnomeTerminalMock((_cmd: string, args: string[]) => {
+        const rootScriptArg = args.find((a) => a.endsWith('.mjs') && a.includes('nexpath-root-sel-'));
+        if (rootScriptArg && existsSync(rootScriptArg)) {
+          capturedRootScript = readFileSync(rootScriptArg, 'utf8');
+        }
+        if (existsSync(SCRIPT_FILE) && !capturedRootScript) {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        }
+      }),
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(capturedRootScript).toContain('Adjust advisory frequency');
+    expect(capturedRootScript).toContain('Configure role');
+    expect(capturedRootScript).toContain('__FREQ_FLOW__');
+    expect(capturedRootScript).toContain('__ROLE_FLOW__');
+  });
+
+  it('role flow path produces one role-window spawn and no freq-window spawn', async () => {
+    let roleSpawnCount = 0;
+    let freqSpawnCount = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      gnomeTerminalMock((_cmd: string, args: string[]) => {
+        if (args.some((a) => typeof a === 'string' && a.includes('nexpath-role-sel-'))) {
+          roleSpawnCount++;
+        }
+        if (args.some((a) => typeof a === 'string' && a.includes('nexpath-freq-sel-'))) {
+          freqSpawnCount++;
+        }
+        if (existsSync(SCRIPT_FILE) && !roleSpawnCount && !freqSpawnCount) {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        }
+        const rootScriptArg = args.find((a) => a.endsWith('.mjs') && a.includes('nexpath-root-sel-'));
+        if (rootScriptArg) {
+          const rootResultFile = rootScriptArg.replace('-sel-', '-res-').replace('.mjs', '.txt');
+          writeFileSync(rootResultFile, '__ROLE_FLOW__', 'utf8');
+        }
+      }),
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(roleSpawnCount).toBe(1);
+    expect(freqSpawnCount).toBe(0);
   });
 });
 
@@ -719,22 +800,50 @@ describe('createTtySelectFn — macOS (darwin)', () => {
     expect(stderrCalls.some((msg) => msg.includes('nexpath'))).toBe(true);
   });
 
-  it('spawns second osascript for __FREQ_MENU_PENDING__', async () => {
+  it('spawns root chooser then freq osascript for __ROOT_MENU_PENDING__ → frequency flow', async () => {
     const FREQ_SCRIPT_FILE = join(tmpdir(), `nexpath-freq-sel-${UUID}.mjs`);
     let osascriptCount = 0;
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
-      (cmd: string) => {
-        if (cmd === 'osascript') {
-          osascriptCount++;
-          if (osascriptCount === 1) {
-            writeFileSync(RESULT_FILE, '__FREQ_MENU_PENDING__', 'utf8');
+      (cmd: string, args: string[]) => {
+        if (cmd !== 'osascript') return;
+        osascriptCount++;
+        if (osascriptCount === 1) {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (osascriptCount === 2) {
+          const appleScript = args[1] ?? '';
+          const match = appleScript.match(/nexpath-root-sel-[a-zA-Z0-9-]+\.mjs/);
+          if (match) {
+            const rootResultFile = join(tmpdir(), match[0].replace('-sel-', '-res-').replace('.mjs', '.txt'));
+            writeFileSync(rootResultFile, '__FREQ_FLOW__', 'utf8');
           }
         }
       },
     );
     await createTtySelectFn()!(makeOpts());
-    expect(osascriptCount).toBe(2);
+    expect(osascriptCount).toBe(3);
     try { unlinkSync(FREQ_SCRIPT_FILE); } catch { /* ignore */ }
+  });
+
+  it('spawns root chooser then role osascript for __ROOT_MENU_PENDING__ → role flow', async () => {
+    let osascriptCount = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd !== 'osascript') return;
+        osascriptCount++;
+        if (osascriptCount === 1) {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (osascriptCount === 2) {
+          const appleScript = args[1] ?? '';
+          const match = appleScript.match(/nexpath-root-sel-[a-zA-Z0-9-]+\.mjs/);
+          if (match) {
+            const rootResultFile = join(tmpdir(), match[0].replace('-sel-', '-res-').replace('.mjs', '.txt'));
+            writeFileSync(rootResultFile, '__ROLE_FLOW__', 'utf8');
+          }
+        }
+      },
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(osascriptCount).toBe(3);
   });
 });
 
@@ -844,7 +953,7 @@ describe('Regression: .mjs script content is platform-consistent', () => {
       expect(script).not.toContain('Promise.race');
       expect(script).not.toContain('60_000');
       expect(script).toContain('__NEXPATH_OPT_OUT__');
-      expect(script).toContain('__FREQ_MENU_PENDING__');
+      expect(script).toContain('__ROOT_MENU_PENDING__');
       expect(script).toContain('emitKeypressEvents');
     }
 
