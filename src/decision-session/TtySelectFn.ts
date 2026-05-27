@@ -12,7 +12,7 @@ import type { SelectFn } from './DecisionSession.js';
 import { CLIPBOARD_ONLY, OPTION_SEPARATOR, OPT_OUT_SENTINEL } from './DecisionSession.js';
 import { SKIP_NOW, SHOW_SIMPLER } from './options.js';
 import type { Store } from '../store/db.js';
-import { setConfig } from '../store/config.js';
+import { getConfig, setConfig } from '../store/config.js';
 
 // ── New-window helpers: .mjs script builders ─────────────────────────────────
 
@@ -171,27 +171,24 @@ process.exit(0);
 `;
 }
 
-function buildFreqMjsScript(clackUrl: string, resultFileFwd: string): string {
+function buildFreqMjsScript(clackUrl: string, resultFileFwd: string, currentFreq: string): string {
   return `import { select, isCancel } from '${clackUrl}';
 import { writeFileSync } from 'node:fs';
 
 const picked = await select({
   message: 'Advisory frequency',
+  initialValue: ${JSON.stringify(currentFreq)},
   options: [
     { value: 'every_event',      label: 'Every qualifying event (default)' },
+    { value: 'optimum',          label: 'Optimum \\u2014 frequent advisories (3\\u20135 prompts)' },
     { value: 'major_only',       label: 'Major transitions only (stage changes)' },
     { value: 'once_per_session', label: 'Once per coding session' },
     { value: 'off',              label: 'Off \\u2014 disable all advisories' },
-    { value: '__role_menu__',    label: 'Configure role\\u2026' },
   ],
 });
 
 if (!isCancel(picked) && typeof picked === 'string') {
-  if (picked === '__role_menu__') {
-    writeFileSync('${resultFileFwd}', '__ROLE_MENU_PENDING__', 'utf8');
-  } else {
-    writeFileSync('${resultFileFwd}', \`__FREQ__:\${picked}\`, 'utf8');
-  }
+  writeFileSync('${resultFileFwd}', \`__FREQ__:\${picked}\`, 'utf8');
 }
 
 process.exit(0);
@@ -271,24 +268,19 @@ function spawnRoleMenuFlow(clackUrl: string, spawnWindow: SpawnWindowFn): string
   return result;
 }
 
-/**
- * Spawn the frequency sub-menu in a new window. If the user selects "Configure
- * role…" inside the frequency menu, cascade into spawnRoleMenuFlow.
- */
-function spawnFreqMenuFlow(clackUrl: string, spawnWindow: SpawnWindowFn): string | symbol {
+/** Spawn the frequency sub-menu in a new window with the user's current value pre-selected. */
+function spawnFreqMenuFlow(clackUrl: string, spawnWindow: SpawnWindowFn, currentFreq: string): string | symbol {
   const freqId         = randomUUID();
   const freqResultFile = join(tmpdir(), `nexpath-freq-res-${freqId}.txt`);
   const freqScriptFile = join(tmpdir(), `nexpath-freq-sel-${freqId}.mjs`);
   const freqResultFwd  = freqResultFile.replace(/\\/g, '/');
-  writeFileSync(freqScriptFile, buildFreqMjsScript(clackUrl, freqResultFwd), 'utf8');
+  writeFileSync(freqScriptFile, buildFreqMjsScript(clackUrl, freqResultFwd, currentFreq), 'utf8');
   spawnWindow(FREQ_WINDOW_TITLE, freqScriptFile);
   let result: string | symbol = Symbol('cancelled');
   if (existsSync(freqResultFile)) {
     const freqRaw = readFileSync(freqResultFile, 'utf8').trim();
     if (freqRaw.startsWith('__FREQ__:')) {
       result = freqRaw;
-    } else if (freqRaw === '__ROLE_MENU_PENDING__') {
-      result = spawnRoleMenuFlow(clackUrl, spawnWindow);
     }
   }
   for (const f of [freqScriptFile, freqResultFile]) {
@@ -301,7 +293,11 @@ function spawnFreqMenuFlow(clackUrl: string, spawnWindow: SpawnWindowFn): string
  * Spawn the root chooser in a new window. The user picks either "Adjust advisory
  * frequency" or "Configure role" and we dispatch into the corresponding sub-menu.
  */
-function spawnRootChooserFlow(clackUrl: string, spawnWindow: SpawnWindowFn): string | symbol {
+function spawnRootChooserFlow(
+  clackUrl:    string,
+  spawnWindow: SpawnWindowFn,
+  currentFreq: string,
+): string | symbol {
   const rootId         = randomUUID();
   const rootResultFile = join(tmpdir(), `nexpath-root-res-${rootId}.txt`);
   const rootScriptFile = join(tmpdir(), `nexpath-root-sel-${rootId}.mjs`);
@@ -312,7 +308,7 @@ function spawnRootChooserFlow(clackUrl: string, spawnWindow: SpawnWindowFn): str
   if (existsSync(rootResultFile)) {
     const routed = readFileSync(rootResultFile, 'utf8').trim();
     if (routed === '__FREQ_FLOW__') {
-      result = spawnFreqMenuFlow(clackUrl, spawnWindow);
+      result = spawnFreqMenuFlow(clackUrl, spawnWindow, currentFreq);
     } else if (routed === '__ROLE_FLOW__') {
       result = spawnRoleMenuFlow(clackUrl, spawnWindow);
     }
@@ -321,6 +317,17 @@ function spawnRootChooserFlow(clackUrl: string, spawnWindow: SpawnWindowFn): str
     try { unlinkSync(f); } catch { /* ignore */ }
   }
   return result;
+}
+
+/** Read the currently configured advisory_frequency, project-scoped first then global, default 'every_event'. */
+function readCurrentFreq(store: Store | undefined, projectRoot: string | undefined): string {
+  if (!store) return 'every_event';
+  if (projectRoot) {
+    const projectValue = getConfig(store.db, `advisory_frequency:${projectRoot}`);
+    if (projectValue) return projectValue;
+  }
+  const globalValue = getConfig(store.db, 'advisory_frequency');
+  return globalValue ?? 'every_event';
 }
 
 /**
@@ -347,7 +354,7 @@ function spawnRootChooserFlow(clackUrl: string, spawnWindow: SpawnWindowFn): str
  * Foreground activation: cmd /c start uses ShellExecuteEx (SW_SHOWNORMAL)
  * which reliably brings the new window to the foreground.
  */
-function buildWindowsNewWindowSelectFn(_store?: Store, _projectRoot?: string): SelectFn {
+function buildWindowsNewWindowSelectFn(store?: Store, projectRoot?: string): SelectFn {
   const clackUrl = resolveClackEsmUrl();
 
   return (opts) =>
@@ -411,7 +418,7 @@ function buildWindowsNewWindowSelectFn(_store?: Store, _projectRoot?: string): S
               ['/c', 'start', '/WAIT', title, 'node', script],
               { stdio: 'ignore' },
             );
-          });
+          }, readCurrentFreq(store, projectRoot));
         } else if (raw.startsWith('__FREQ__:')) {
           result = raw;
         } else if (raw.startsWith('__ROLE__:')) {
@@ -572,7 +579,7 @@ function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): Selec
         } else if (raw === '__ROOT_MENU_PENDING__') {
           result = spawnRootChooserFlow(clackUrl, (title, script) => {
             spawnSync(terminal.cmd, terminal.args(title, script), { stdio: 'ignore' });
-          });
+          }, readCurrentFreq(store, projectRoot));
         } else if (raw.startsWith('__FREQ__:')) {
           result = raw;
         } else if (raw.startsWith('__ROLE__:')) {
@@ -629,7 +636,7 @@ function buildTerminalAppleScript(command: string): string {
 end tell`;
 }
 
-function buildMacNewWindowSelectFn(_store?: Store, _projectRoot?: string): SelectFn {
+function buildMacNewWindowSelectFn(store?: Store, projectRoot?: string): SelectFn {
   const clackUrl = resolveClackEsmUrl();
 
   return (opts) =>
@@ -670,7 +677,7 @@ function buildMacNewWindowSelectFn(_store?: Store, _projectRoot?: string): Selec
         } else if (raw === '__ROOT_MENU_PENDING__') {
           result = spawnRootChooserFlow(clackUrl, (_title, script) => {
             spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${script}`)], { stdio: 'ignore' });
-          });
+          }, readCurrentFreq(store, projectRoot));
         } else if (raw.startsWith('__FREQ__:')) {
           result = raw;
         } else if (raw.startsWith('__ROLE__:')) {
@@ -826,17 +833,21 @@ function runFrequencySubMenu(
   projectRoot: string | undefined,
   cleanup:     (value: string | symbol) => void,
 ): void {
+  const currentFreq = readCurrentFreq(store, projectRoot);
   const freqOptions = [
     { num: 1, value: 'every_event',      label: 'Every qualifying event (default)' },
-    { num: 2, value: 'major_only',       label: 'Major transitions only (stage changes)' },
-    { num: 3, value: 'once_per_session', label: 'Once per coding session' },
-    { num: 4, value: 'off',              label: 'Off — disable all advisories' },
-    { num: 5, value: 'role_menu',        label: 'Configure role…' },
+    { num: 2, value: 'optimum',          label: 'Optimum — frequent advisories (3–5 prompts)' },
+    { num: 3, value: 'major_only',       label: 'Major transitions only (stage changes)' },
+    { num: 4, value: 'once_per_session', label: 'Once per coding session' },
+    { num: 5, value: 'off',              label: 'Off — disable all advisories' },
   ];
   const menuLines = [
     pc.cyan('│'),
     `${pc.cyan('◆')}  ${pc.bold('Advisory frequency')}`,
-    ...freqOptions.map((o) => `${pc.cyan('│')}  ${pc.green(`${o.num})`)} ${o.label}`),
+    ...freqOptions.map((o) => {
+      const suffix = o.value === currentFreq ? pc.dim(' (current)') : '';
+      return `${pc.cyan('│')}  ${pc.green(`${o.num})`)} ${o.label}${suffix}`;
+    }),
     pc.cyan('│'),
   ];
   streams.output.write(menuLines.join('\n') + '\n');
@@ -845,19 +856,13 @@ function runFrequencySubMenu(
   iface.once('line', (answer) => {
     const num = parseInt(answer.trim(), 10);
     const choice = freqOptions.find((o) => o.num === num);
-    if (choice) {
-      if (choice.value === 'role_menu') {
-        runRoleSubMenu(streams, iface, store, projectRoot, cleanup);
-        return;
-      }
-      if (store && projectRoot) {
-        setConfig(store, `advisory_frequency:${projectRoot}`, choice.value);
-        streams.output.write(
-          `${pc.cyan('│')}  ${pc.dim(`Frequency set to: ${choice.label}`)}
+    if (choice && store && projectRoot) {
+      setConfig(store, `advisory_frequency:${projectRoot}`, choice.value);
+      streams.output.write(
+        `${pc.cyan('│')}  ${pc.dim(`Frequency set to: ${choice.label}`)}
 ${pc.cyan('│')}
 `,
-        );
-      }
+      );
     }
     cleanup(SKIP_NOW);
   });

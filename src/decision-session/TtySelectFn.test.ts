@@ -659,6 +659,65 @@ describe('createTtySelectFn — Linux new-window path', () => {
     expect(capturedRootScript).toContain('__ROLE_FLOW__');
   });
 
+  it('freq script lists optimum option and excludes the legacy "Configure role…" entry', async () => {
+    let capturedFreqScript = '';
+    let callCount = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      gnomeTerminalMock((_cmd: string, args: string[]) => {
+        callCount++;
+        if (callCount === 1) {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (callCount === 2) {
+          const rootScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-root-sel-'));
+          if (rootScriptArg) {
+            const rootResultFile = rootScriptArg.replace('-sel-', '-res-').replace('.mjs', '.txt');
+            writeFileSync(rootResultFile, '__FREQ_FLOW__', 'utf8');
+          }
+        } else if (callCount === 3) {
+          const freqScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-freq-sel-'));
+          if (freqScriptArg && existsSync(freqScriptArg)) {
+            capturedFreqScript = readFileSync(freqScriptArg, 'utf8');
+          }
+        }
+      }),
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(capturedFreqScript).toContain("value: 'optimum'");
+    expect(capturedFreqScript).toContain("value: 'every_event'");
+    expect(capturedFreqScript).toContain("value: 'major_only'");
+    expect(capturedFreqScript).toContain("value: 'once_per_session'");
+    expect(capturedFreqScript).toContain("value: 'off'");
+    expect(capturedFreqScript).not.toContain('__role_menu__');
+    expect(capturedFreqScript).not.toContain('Configure role');
+  });
+
+  it('freq script embeds initialValue derived from currently configured frequency', async () => {
+    let capturedFreqScript = '';
+    let callCount = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      gnomeTerminalMock((_cmd: string, args: string[]) => {
+        callCount++;
+        if (callCount === 1) {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (callCount === 2) {
+          const rootScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-root-sel-'));
+          if (rootScriptArg) {
+            const rootResultFile = rootScriptArg.replace('-sel-', '-res-').replace('.mjs', '.txt');
+            writeFileSync(rootResultFile, '__FREQ_FLOW__', 'utf8');
+          }
+        } else if (callCount === 3) {
+          const freqScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-freq-sel-'));
+          if (freqScriptArg && existsSync(freqScriptArg)) {
+            capturedFreqScript = readFileSync(freqScriptArg, 'utf8');
+          }
+        }
+      }),
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(capturedFreqScript).toContain('initialValue:');
+    expect(capturedFreqScript).toContain('"every_event"');
+  });
+
   it('role flow path produces one role-window spawn and no freq-window spawn', async () => {
     let roleSpawnCount = 0;
     let freqSpawnCount = 0;
