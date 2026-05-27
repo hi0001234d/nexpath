@@ -12,10 +12,19 @@ vi.mock('node:child_process', () => ({
 }));
 
 // Deferred import so mocks are in place before module is evaluated
-const { createTtySelectFn, buildUnixMenuLines, detectLinuxTerminal } = await import('./TtySelectFn.js');
-const { OPT_OUT_SENTINEL }   = await import('./DecisionSession.js');
+const {
+  createTtySelectFn,
+  buildUnixMenuLines,
+  detectLinuxTerminal,
+  runCtrlTRootChooser,
+  runFrequencySubMenu,
+  runRoleSubMenu,
+} = await import('./TtySelectFn.js');
+const { OPT_OUT_SENTINEL }       = await import('./DecisionSession.js');
 const { SHOW_SIMPLER, SKIP_NOW } = await import('./options.js');
-const { spawnSync }          = await import('node:child_process');
+const { spawnSync }              = await import('node:child_process');
+const { openStore }              = await import('../store/index.js');
+const { getConfig, setConfig }   = await import('../store/config.js');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -1083,5 +1092,300 @@ describe('Regression: .mjs script content is platform-consistent', () => {
     expect(macScript).toContain('pbcopy');
     expect(linuxScript).not.toContain('pbcopy');
     expect(macScript).not.toContain('xclip');
+  });
+});
+
+// ── Sentinel inventory ───────────────────────────────────────────────────────
+//
+// Static-source audit that guards the contract between the .mjs scripts (which
+// emit sentinels) and the orchestrator handlers (which consume them).
+//
+// Every literal __XXX__ string written to a result file must have at least one
+// consumer site that recognises it. Legacy sentinels that are no longer emitted
+// must be fully purged.
+
+describe('Sentinel inventory — every emitter has a consumer', () => {
+  const ttySource = readFileSync(
+    join(import.meta.dirname ?? __dirname, 'TtySelectFn.ts'),
+    'utf8',
+  );
+  const dsSource = readFileSync(
+    join(import.meta.dirname ?? __dirname, 'DecisionSession.ts'),
+    'utf8',
+  );
+  const combined = ttySource + '\n' + dsSource;
+
+  it('current sentinels are all present in TtySelectFn.ts', () => {
+    const currentSentinels = [
+      '__NEXPATH_OPT_OUT__',
+      '__CLIP__',
+      '__ROOT_MENU_PENDING__',
+      '__FREQ_FLOW__',
+      '__ROLE_FLOW__',
+      '__FREQ__:',
+      '__ROLE__:',
+    ];
+    for (const sentinel of currentSentinels) {
+      expect(ttySource, `${sentinel} should be present in TtySelectFn.ts`).toContain(sentinel);
+    }
+  });
+
+  it('legacy dead sentinels are not present in source', () => {
+    const legacy = ['__FREQ_MENU_PENDING__', '__ROLE_MENU_PENDING__'];
+    for (const sentinel of legacy) {
+      expect(ttySource, `${sentinel} should not appear in TtySelectFn.ts`).not.toContain(sentinel);
+      expect(dsSource, `${sentinel} should not appear in DecisionSession.ts`).not.toContain(sentinel);
+    }
+  });
+
+  it('every literal __SENTINEL__ string written via writeFileSync has at least one consumer reference', () => {
+    // Capture sentinels emitted via writeFileSync('...', '__FOO__', ...) calls.
+    // These appear inside the .mjs script templates as well as in handler bodies.
+    const emitMatches = [...ttySource.matchAll(/writeFileSync\s*\([^,)]+,\s*['"`](__[A-Z_]+__)['"`]/g)];
+    const emitted = new Set(emitMatches.map((m) => m[1]));
+
+    expect(emitted.size, 'at least three literal sentinels should be detected').toBeGreaterThanOrEqual(3);
+
+    for (const sentinel of emitted) {
+      const refPattern = new RegExp(`['"\`]${sentinel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"\`]`, 'g');
+      const refCount = [...combined.matchAll(refPattern)].length;
+      expect(
+        refCount,
+        `sentinel ${sentinel} should appear at least twice across TtySelectFn.ts and DecisionSession.ts (emit + consume)`,
+      ).toBeGreaterThanOrEqual(2);
+    }
+  });
+});
+
+// ── Unix-path sub-menu functions (runCtrlTRootChooser / runFrequencySubMenu / runRoleSubMenu) ──
+//
+// These functions are used when nexpath falls back to the in-line /dev/tty
+// readline interface (no GUI terminal emulator). They mirror the new-window
+// mjs scripts but are tested independently because their stateful readline
+// dispatch logic is not exercised by the script-content tests above.
+
+function makeFakeStreams() {
+  const writes: string[] = [];
+  return {
+    writes,
+    streams: {
+      input: {} as never,
+      output: { write: (s: string) => { writes.push(s); return true; } } as never,
+      sharedFd: false,
+    } as never,
+  };
+}
+
+function makeFakeInterface() {
+  let lineCallback: ((answer: string) => void) | null = null;
+  const iface = {
+    once: vi.fn((event: string, cb: unknown) => {
+      if (event === 'line') lineCallback = cb as (answer: string) => void;
+    }),
+  } as never;
+  return {
+    iface,
+    trigger: (answer: string) => {
+      if (!lineCallback) throw new Error('no line callback was registered before trigger()');
+      const cb = lineCallback;
+      lineCallback = null;
+      cb(answer);
+    },
+  };
+}
+
+describe('runCtrlTRootChooser (Unix path)', () => {
+  it('renders both top-level options with a 1-2 selection prompt', () => {
+    const { writes, streams } = makeFakeStreams();
+    const { iface } = makeFakeInterface();
+    const cleanup = vi.fn();
+    runCtrlTRootChooser(streams, iface, undefined, undefined, cleanup);
+    const rendered = writes.join('');
+    expect(rendered).toContain('Adjust advisory frequency');
+    expect(rendered).toContain('Configure role');
+    expect(rendered).toContain('Select (1-2)');
+  });
+
+  it('dispatches into the frequency sub-menu when the user selects 1', () => {
+    const { writes, streams } = makeFakeStreams();
+    const { iface, trigger } = makeFakeInterface();
+    const cleanup = vi.fn();
+    runCtrlTRootChooser(streams, iface, undefined, undefined, cleanup);
+    trigger('1');
+    const rendered = writes.join('');
+    expect(rendered).toContain('Advisory frequency');
+    expect(rendered).toContain('Optimum');
+    expect(cleanup).not.toHaveBeenCalled();
+  });
+
+  it('dispatches into the role sub-menu when the user selects 2', () => {
+    const { writes, streams } = makeFakeStreams();
+    const { iface, trigger } = makeFakeInterface();
+    const cleanup = vi.fn();
+    runCtrlTRootChooser(streams, iface, undefined, undefined, cleanup);
+    trigger('2');
+    const rendered = writes.join('');
+    expect(rendered).toContain('Project role');
+    expect(rendered).toContain('vibe coder');
+    expect(cleanup).not.toHaveBeenCalled();
+  });
+
+  it('cleans up with SKIP_NOW when the answer is invalid', () => {
+    const { streams } = makeFakeStreams();
+    const { iface, trigger } = makeFakeInterface();
+    const cleanup = vi.fn();
+    runCtrlTRootChooser(streams, iface, undefined, undefined, cleanup);
+    trigger('99');
+    expect(cleanup).toHaveBeenCalledWith(SKIP_NOW);
+  });
+});
+
+describe('runFrequencySubMenu (Unix path)', () => {
+  it('renders all five frequency options including optimum and excludes the legacy role entry', async () => {
+    const store = await openStore(':memory:');
+    try {
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      const cleanup = vi.fn();
+      runFrequencySubMenu(streams, iface, store, '/proj/freq', cleanup);
+      const rendered = writes.join('');
+      expect(rendered).toContain('Every qualifying event');
+      expect(rendered).toContain('Optimum');
+      expect(rendered).toContain('Major transitions only');
+      expect(rendered).toContain('Once per coding session');
+      expect(rendered).toContain('Off');
+      expect(rendered).not.toContain('Configure role');
+      expect(rendered).toContain('Select (1-5)');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('marks the currently configured frequency with a (current) suffix', async () => {
+    const store = await openStore(':memory:');
+    try {
+      setConfig(store, 'advisory_frequency:/proj/freq2', 'optimum');
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      runFrequencySubMenu(streams, iface, store, '/proj/freq2', vi.fn());
+      const rendered = writes.join('');
+      const optimumLine = rendered.split('\n').find((line) => line.includes('Optimum'));
+      expect(optimumLine).toBeDefined();
+      expect(optimumLine).toContain('(current)');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('writes the selected frequency to config and cleans up with SKIP_NOW', async () => {
+    const store = await openStore(':memory:');
+    try {
+      const { streams } = makeFakeStreams();
+      const { iface, trigger } = makeFakeInterface();
+      const cleanup = vi.fn();
+      runFrequencySubMenu(streams, iface, store, '/proj/freq3', cleanup);
+      trigger('2'); // optimum
+      expect(getConfig(store.db, 'advisory_frequency:/proj/freq3')).toBe('optimum');
+      expect(cleanup).toHaveBeenCalledWith(SKIP_NOW);
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('cleans up with SKIP_NOW without writing when the answer is invalid', async () => {
+    const store = await openStore(':memory:');
+    try {
+      const { streams } = makeFakeStreams();
+      const { iface, trigger } = makeFakeInterface();
+      const cleanup = vi.fn();
+      runFrequencySubMenu(streams, iface, store, '/proj/freq4', cleanup);
+      trigger('99');
+      expect(getConfig(store.db, 'advisory_frequency:/proj/freq4')).toBeUndefined();
+      expect(cleanup).toHaveBeenCalledWith(SKIP_NOW);
+    } finally {
+      store.db.close();
+    }
+  });
+});
+
+describe('runRoleSubMenu (Unix path)', () => {
+  it('renders four role options including vibe_coder and excludes the legacy Clear option', async () => {
+    const store = await openStore(':memory:');
+    try {
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      const cleanup = vi.fn();
+      runRoleSubMenu(streams, iface, store, '/proj/role', cleanup);
+      const rendered = writes.join('');
+      expect(rendered).toContain('indie hacker developer');
+      expect(rendered).toContain('founder / product creator');
+      expect(rendered).toContain('product manager');
+      expect(rendered).toContain('vibe coder');
+      expect(rendered).not.toContain('Clear role');
+      expect(rendered).toContain('Select (1-4)');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('marks the currently configured role with a (current) suffix; falls back to founder default', async () => {
+    const store = await openStore(':memory:');
+    try {
+      setConfig(store, 'role:/proj/role2', 'vibe_coder');
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      runRoleSubMenu(streams, iface, store, '/proj/role2', vi.fn());
+      const rendered = writes.join('');
+      const vibeLine = rendered.split('\n').find((line) => line.includes('vibe coder'));
+      expect(vibeLine).toBeDefined();
+      expect(vibeLine).toContain('(current)');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('defaults the current indicator to founder when no role is configured', async () => {
+    const store = await openStore(':memory:');
+    try {
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      runRoleSubMenu(streams, iface, store, '/proj/role3', vi.fn());
+      const rendered = writes.join('');
+      const founderLine = rendered.split('\n').find((line) => line.includes('founder / product creator'));
+      expect(founderLine).toBeDefined();
+      expect(founderLine).toContain('(current)');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('treats legacy "clear" / empty role values as unset → founder default', async () => {
+    const store = await openStore(':memory:');
+    try {
+      setConfig(store, 'role:/proj/role4', 'clear');
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      runRoleSubMenu(streams, iface, store, '/proj/role4', vi.fn());
+      const rendered = writes.join('');
+      const founderLine = rendered.split('\n').find((line) => line.includes('founder / product creator'));
+      expect(founderLine).toContain('(current)');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('writes the selected role to config and cleans up with SKIP_NOW', async () => {
+    const store = await openStore(':memory:');
+    try {
+      const { streams } = makeFakeStreams();
+      const { iface, trigger } = makeFakeInterface();
+      const cleanup = vi.fn();
+      runRoleSubMenu(streams, iface, store, '/proj/role5', cleanup);
+      trigger('4'); // vibe_coder
+      expect(getConfig(store.db, 'role:/proj/role5')).toBe('vibe_coder');
+      expect(cleanup).toHaveBeenCalledWith(SKIP_NOW);
+    } finally {
+      store.db.close();
+    }
   });
 });

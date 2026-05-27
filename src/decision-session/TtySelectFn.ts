@@ -760,7 +760,7 @@ function copyToClipboardUnix(text: string): void {
   }
 }
 
-function runRoleSubMenu(
+export function runRoleSubMenu(
   streams:     TtyStreams,
   iface:       rl.Interface,
   store:       Store | undefined,
@@ -801,7 +801,7 @@ ${pc.cyan('│')}
   });
 }
 
-function runCtrlTRootChooser(
+export function runCtrlTRootChooser(
   streams:     TtyStreams,
   iface:       rl.Interface,
   store:       Store | undefined,
@@ -836,7 +836,7 @@ function runCtrlTRootChooser(
   });
 }
 
-function runFrequencySubMenu(
+export function runFrequencySubMenu(
   streams:     TtyStreams,
   iface:       rl.Interface,
   store:       Store | undefined,
