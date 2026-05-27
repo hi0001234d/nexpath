@@ -220,6 +220,58 @@ process.exit(0);
 `;
 }
 
+const WINDOW_TITLE = 'Nexpath — Action Required';
+const FREQ_WINDOW_TITLE = 'Nexpath — Frequency';
+const ROLE_WINDOW_TITLE = 'Nexpath — Role';
+
+/** Callback that spawns a new window running the given .mjs script with the given title. */
+type SpawnWindowFn = (title: string, scriptPath: string) => void;
+
+/** Spawn the role-selection sub-menu in a new window and return the role sentinel. */
+function spawnRoleMenuFlow(clackUrl: string, spawnWindow: SpawnWindowFn): string | symbol {
+  const roleId         = randomUUID();
+  const roleResultFile = join(tmpdir(), `nexpath-role-res-${roleId}.txt`);
+  const roleScriptFile = join(tmpdir(), `nexpath-role-sel-${roleId}.mjs`);
+  const roleResultFwd  = roleResultFile.replace(/\\/g, '/');
+  writeFileSync(roleScriptFile, buildRoleMjsScript(clackUrl, roleResultFwd), 'utf8');
+  spawnWindow(ROLE_WINDOW_TITLE, roleScriptFile);
+  let result: string | symbol = Symbol('cancelled');
+  if (existsSync(roleResultFile)) {
+    const roleRaw = readFileSync(roleResultFile, 'utf8').trim();
+    if (roleRaw.startsWith('__ROLE__:')) result = roleRaw;
+  }
+  for (const f of [roleScriptFile, roleResultFile]) {
+    try { unlinkSync(f); } catch { /* ignore */ }
+  }
+  return result;
+}
+
+/**
+ * Spawn the frequency sub-menu in a new window. If the user selects "Configure
+ * role…" inside the frequency menu, cascade into spawnRoleMenuFlow.
+ */
+function spawnFreqMenuFlow(clackUrl: string, spawnWindow: SpawnWindowFn): string | symbol {
+  const freqId         = randomUUID();
+  const freqResultFile = join(tmpdir(), `nexpath-freq-res-${freqId}.txt`);
+  const freqScriptFile = join(tmpdir(), `nexpath-freq-sel-${freqId}.mjs`);
+  const freqResultFwd  = freqResultFile.replace(/\\/g, '/');
+  writeFileSync(freqScriptFile, buildFreqMjsScript(clackUrl, freqResultFwd), 'utf8');
+  spawnWindow(FREQ_WINDOW_TITLE, freqScriptFile);
+  let result: string | symbol = Symbol('cancelled');
+  if (existsSync(freqResultFile)) {
+    const freqRaw = readFileSync(freqResultFile, 'utf8').trim();
+    if (freqRaw.startsWith('__FREQ__:')) {
+      result = freqRaw;
+    } else if (freqRaw === '__ROLE_MENU_PENDING__') {
+      result = spawnRoleMenuFlow(clackUrl, spawnWindow);
+    }
+  }
+  for (const f of [freqScriptFile, freqResultFile]) {
+    try { unlinkSync(f); } catch { /* ignore */ }
+  }
+  return result;
+}
+
 /**
  * Windows-specific SelectFn that opens a new console window running Node.js
  * with @clack/prompts — preserving the full arrow-key, visual-cursor UI.
@@ -302,43 +354,13 @@ function buildWindowsNewWindowSelectFn(_store?: Store, _projectRoot?: string): S
         } else if (raw === '__NEXPATH_OPT_OUT__') {
           result = OPT_OUT_SENTINEL;
         } else if (raw === '__FREQ_MENU_PENDING__') {
-          const freqId         = randomUUID();
-          const freqResultFile = join(tmpdir(), `nexpath-freq-res-${freqId}.txt`);
-          const freqScriptFile = join(tmpdir(), `nexpath-freq-sel-${freqId}.mjs`);
-          const freqResultFwd  = freqResultFile.replace(/\\/g, '/');
-          writeFileSync(freqScriptFile, buildFreqMjsScript(clackUrl, freqResultFwd), 'utf8');
-          spawnSync(
-            'cmd.exe',
-            ['/c', 'start', '/WAIT', 'Nexpath \u2014 Frequency', 'node', freqScriptFile],
-            { stdio: 'ignore' },
-          );
-          if (existsSync(freqResultFile)) {
-            const freqRaw = readFileSync(freqResultFile, 'utf8').trim();
-            if (freqRaw.startsWith('__FREQ__:')) {
-              result = freqRaw;
-            } else if (freqRaw === '__ROLE_MENU_PENDING__') {
-              const roleId         = randomUUID();
-              const roleResultFile = join(tmpdir(), `nexpath-role-res-${roleId}.txt`);
-              const roleScriptFile = join(tmpdir(), `nexpath-role-sel-${roleId}.mjs`);
-              const roleResultFwd  = roleResultFile.replace(/\\/g, '/');
-              writeFileSync(roleScriptFile, buildRoleMjsScript(clackUrl, roleResultFwd), 'utf8');
-              spawnSync(
-                'cmd.exe',
-                ['/c', 'start', '/WAIT', ROLE_WINDOW_TITLE, 'node', roleScriptFile],
-                { stdio: 'ignore' },
-              );
-              if (existsSync(roleResultFile)) {
-                const roleRaw = readFileSync(roleResultFile, 'utf8').trim();
-                if (roleRaw.startsWith('__ROLE__:')) result = roleRaw;
-              }
-              for (const f of [roleScriptFile, roleResultFile]) {
-                try { unlinkSync(f); } catch { /* ignore */ }
-              }
-            }
-          }
-          for (const f of [freqScriptFile, freqResultFile]) {
-            try { unlinkSync(f); } catch { /* ignore */ }
-          }
+          result = spawnFreqMenuFlow(clackUrl, (title, script) => {
+            spawnSync(
+              'cmd.exe',
+              ['/c', 'start', '/WAIT', title, 'node', script],
+              { stdio: 'ignore' },
+            );
+          });
         } else if (raw.startsWith('__FREQ__:')) {
           result = raw;
         } else if (raw.startsWith('__ROLE__:')) {
@@ -455,10 +477,6 @@ const LINUX_CLIPBOARD_CMDS: ClipboardCmd[] = [
   ['xsel', ['--clipboard', '--input']],
 ];
 
-const WINDOW_TITLE = 'Nexpath \u2014 Action Required';
-const FREQ_WINDOW_TITLE = 'Nexpath \u2014 Frequency';
-const ROLE_WINDOW_TITLE = 'Nexpath \u2014 Role';
-
 function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): SelectFn | null {
   const terminal = detectLinuxTerminal();
   if (!terminal) return null;
@@ -501,35 +519,9 @@ function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): Selec
         } else if (raw === '__NEXPATH_OPT_OUT__') {
           result = OPT_OUT_SENTINEL;
         } else if (raw === '__FREQ_MENU_PENDING__') {
-          const freqId         = randomUUID();
-          const freqResultFile = join(tmpdir(), `nexpath-freq-res-${freqId}.txt`);
-          const freqScriptFile = join(tmpdir(), `nexpath-freq-sel-${freqId}.mjs`);
-          const freqResultFwd  = freqResultFile.replace(/\\/g, '/');
-          writeFileSync(freqScriptFile, buildFreqMjsScript(clackUrl, freqResultFwd), 'utf8');
-          spawnSync(terminal.cmd, terminal.args(FREQ_WINDOW_TITLE, freqScriptFile), { stdio: 'ignore' });
-          if (existsSync(freqResultFile)) {
-            const freqRaw = readFileSync(freqResultFile, 'utf8').trim();
-            if (freqRaw.startsWith('__FREQ__:')) {
-              result = freqRaw;
-            } else if (freqRaw === '__ROLE_MENU_PENDING__') {
-              const roleId         = randomUUID();
-              const roleResultFile = join(tmpdir(), `nexpath-role-res-${roleId}.txt`);
-              const roleScriptFile = join(tmpdir(), `nexpath-role-sel-${roleId}.mjs`);
-              const roleResultFwd  = roleResultFile.replace(/\\/g, '/');
-              writeFileSync(roleScriptFile, buildRoleMjsScript(clackUrl, roleResultFwd), 'utf8');
-              spawnSync(terminal.cmd, terminal.args(ROLE_WINDOW_TITLE, roleScriptFile), { stdio: 'ignore' });
-              if (existsSync(roleResultFile)) {
-                const roleRaw = readFileSync(roleResultFile, 'utf8').trim();
-                if (roleRaw.startsWith('__ROLE__:')) result = roleRaw;
-              }
-              for (const f of [roleScriptFile, roleResultFile]) {
-                try { unlinkSync(f); } catch { /* ignore */ }
-              }
-            }
-          }
-          for (const f of [freqScriptFile, freqResultFile]) {
-            try { unlinkSync(f); } catch { /* ignore */ }
-          }
+          result = spawnFreqMenuFlow(clackUrl, (title, script) => {
+            spawnSync(terminal.cmd, terminal.args(title, script), { stdio: 'ignore' });
+          });
         } else if (raw.startsWith('__FREQ__:')) {
           result = raw;
         } else if (raw.startsWith('__ROLE__:')) {
@@ -625,35 +617,9 @@ function buildMacNewWindowSelectFn(_store?: Store, _projectRoot?: string): Selec
         } else if (raw === '__NEXPATH_OPT_OUT__') {
           result = OPT_OUT_SENTINEL;
         } else if (raw === '__FREQ_MENU_PENDING__') {
-          const freqId         = randomUUID();
-          const freqResultFile = join(tmpdir(), `nexpath-freq-res-${freqId}.txt`);
-          const freqScriptFile = join(tmpdir(), `nexpath-freq-sel-${freqId}.mjs`);
-          const freqResultFwd  = freqResultFile.replace(/\\/g, '/');
-          writeFileSync(freqScriptFile, buildFreqMjsScript(clackUrl, freqResultFwd), 'utf8');
-          spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${freqScriptFile}`)], { stdio: 'ignore' });
-          if (existsSync(freqResultFile)) {
-            const freqRaw = readFileSync(freqResultFile, 'utf8').trim();
-            if (freqRaw.startsWith('__FREQ__:')) {
-              result = freqRaw;
-            } else if (freqRaw === '__ROLE_MENU_PENDING__') {
-              const roleId         = randomUUID();
-              const roleResultFile = join(tmpdir(), `nexpath-role-res-${roleId}.txt`);
-              const roleScriptFile = join(tmpdir(), `nexpath-role-sel-${roleId}.mjs`);
-              const roleResultFwd  = roleResultFile.replace(/\\/g, '/');
-              writeFileSync(roleScriptFile, buildRoleMjsScript(clackUrl, roleResultFwd), 'utf8');
-              spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${roleScriptFile}`)], { stdio: 'ignore' });
-              if (existsSync(roleResultFile)) {
-                const roleRaw = readFileSync(roleResultFile, 'utf8').trim();
-                if (roleRaw.startsWith('__ROLE__:')) result = roleRaw;
-              }
-              for (const f of [roleScriptFile, roleResultFile]) {
-                try { unlinkSync(f); } catch { /* ignore */ }
-              }
-            }
-          }
-          for (const f of [freqScriptFile, freqResultFile]) {
-            try { unlinkSync(f); } catch { /* ignore */ }
-          }
+          result = spawnFreqMenuFlow(clackUrl, (_title, script) => {
+            spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${script}`)], { stdio: 'ignore' });
+          });
         } else if (raw.startsWith('__FREQ__:')) {
           result = raw;
         } else if (raw.startsWith('__ROLE__:')) {
