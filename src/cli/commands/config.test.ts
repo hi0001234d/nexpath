@@ -200,6 +200,22 @@ describe('configSetAction — role validation', () => {
     cleanup();
   });
 
+  it('accepts "vibe_coder" as a valid role value and stores it', async () => {
+    const { path, cleanup } = await tempDb();
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await configSetAction('role', 'vibe_coder', path);
+    expect(spy.mock.calls[0][0]).toBe('role = vibe_coder');
+    cleanup();
+  });
+
+  it('accepts "vibe_coder" for a project-scoped role key', async () => {
+    const { path, cleanup } = await tempDb();
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await configSetAction('role:/some/project', 'vibe_coder', path);
+    expect(spy.mock.calls[0][0]).toBe('role:/some/project = vibe_coder');
+    cleanup();
+  });
+
   it('rejects an invalid role value with console.error and process.exit(1)', async () => {
     const { path, cleanup } = await tempDb();
     const errSpy  = vi.spyOn(console, 'error').mockImplementation(() => {});

@@ -161,7 +161,7 @@ export interface UserProfile {
 // ── Role ──────────────────────────────────────────────────────────────────────
 
 /** Explicit project role set via config. Unlocks Dim2 (role-based) signals. */
-export type UserRole = 'founder' | 'indie_hacker' | 'pm';
+export type UserRole = 'founder' | 'indie_hacker' | 'pm' | 'vibe_coder';
 
 // ── Signal definitions ─────────────────────────────────────────────────────────
 

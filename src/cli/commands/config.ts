@@ -12,7 +12,7 @@ export async function configGetAction(key: string, dbPath = DEFAULT_DB_PATH): Pr
   }
 }
 
-const VALID_ROLES = ['founder', 'indie_hacker', 'pm'] as const;
+const VALID_ROLES = ['founder', 'indie_hacker', 'pm', 'vibe_coder'] as const;
 
 const VALID_ADVISORY_FREQUENCY_LEVELS = ['off', 'major_only', 'once_per_session', 'every_event', 'optimum'] as const;
 
