@@ -1330,14 +1330,6 @@ describe('detectSignals', () => {
     expect(detectSignals('let me spec this feature before we code anything')).toContain('feature_scope_before_build');
   });
 
-  it('feature_scope_before_build: 2 vibe keywords detect signal', () => {
-    expect(detectSignals('what are we actually building here and what exactly should this do')).toContain('feature_scope_before_build');
-  });
-
-  it('feature_scope_before_build: 1 vibe keyword alone does NOT detect signal', () => {
-    expect(detectSignals('what are we actually building here')).not.toContain('feature_scope_before_build');
-  });
-
   it('feature_scope_before_build has absenceThreshold of 3', () => {
     const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'feature_scope_before_build');
     expect(sig?.absenceThreshold).toBe(3);
@@ -1373,14 +1365,6 @@ describe('detectSignals', () => {
     expect(detectSignals('quick check before moving on to the next feature')).toContain('implementation_checkpoint');
   });
 
-  it('implementation_checkpoint: 2 vibe keywords detect signal', () => {
-    expect(detectSignals('does this actually work? try this out and see')).toContain('implementation_checkpoint');
-  });
-
-  it('implementation_checkpoint: 1 vibe keyword alone does NOT detect signal', () => {
-    expect(detectSignals('does this actually work')).not.toContain('implementation_checkpoint');
-  });
-
   it('implementation_checkpoint has absenceThreshold of 4', () => {
     const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'implementation_checkpoint');
     expect(sig?.absenceThreshold).toBe(4);
@@ -1414,14 +1398,6 @@ describe('detectSignals', () => {
 
   it('detects "behavior spec for this" → spec_before_code', () => {
     expect(detectSignals('I need a behavior spec for this before we build it')).toContain('spec_before_code');
-  });
-
-  it('spec_before_code: 2 vibe keywords detect signal', () => {
-    expect(detectSignals('what should this do exactly, what is this supposed to do')).toContain('spec_before_code');
-  });
-
-  it('spec_before_code: 1 vibe keyword alone does NOT detect signal', () => {
-    expect(detectSignals('what should this do exactly')).not.toContain('spec_before_code');
   });
 
   it('spec_before_code has absenceThreshold of 3', () => {
@@ -2463,11 +2439,6 @@ describe('detectSignals', () => {
     expect(signals).toContain('spec_acceptance_check');
   });
 
-  it('co-fires implementation_checkpoint + test_creation via vibe on shared vibe keywords', () => {
-    const signals = detectSignals('does this actually work? try this out and make sure it works');
-    expect(signals).toContain('implementation_checkpoint');
-    expect(signals).toContain('test_creation');
-  });
 });
 
 // ── SessionStateManager ────────────────────────────────────────────────────────
@@ -2802,10 +2773,9 @@ describe('SessionStateManager', () => {
 
   // ── streamBOverrides parameter ────────────────────────────────────────────────
 
-  it('streamBOverrides=false suppresses vibeKeyword-triggered Stream B signal', async () => {
+  it('streamBOverrides=false: signal stays absent when LLM says absent', async () => {
     const store = await openStore(':memory:');
     const mgr = SessionStateManager.load(store, '/project/sb-false');
-    // 'does this actually work? try this out' triggers implementation_checkpoint via 2 vibeKeywords
     const overrides: StreamBPresenceResult = {
       feature_scope_before_build: false,
       implementation_checkpoint:  false,
@@ -2823,7 +2793,7 @@ describe('SessionStateManager', () => {
     closeStore(store);
   });
 
-  it('streamBOverrides=true marks Stream B signal as seen when vibeKeywords also fire', async () => {
+  it('streamBOverrides=true injects Stream B signal as seen even when keywords miss', async () => {
     const store = await openStore(':memory:');
     const mgr = SessionStateManager.load(store, '/project/sb-true');
     const overrides: StreamBPresenceResult = {
@@ -2849,7 +2819,7 @@ describe('SessionStateManager', () => {
     mgr.processPrompt(store, 'add feature x', makeResult('implementation', 0.8));
     mgr.processPrompt(store, 'add feature y', makeResult('implementation', 0.8));
     expect(mgr.current.consecutiveAcceptanceStreak).toBe(2);
-    // Prompt triggers correction_seeking ('something is off') + implementation_checkpoint vibeKeywords
+    // Prompt triggers correction_seeking ('something is off'); overrides suppress implementation_checkpoint
     const overrides: StreamBPresenceResult = {
       feature_scope_before_build: false,
       implementation_checkpoint:  false,
@@ -2870,12 +2840,12 @@ describe('SessionStateManager', () => {
     closeStore(store);
   });
 
-  it('streamBOverrides=undefined preserves original vibeKeyword behavior', async () => {
+  it('streamBOverrides=undefined: detectionKeyword still marks signal as seen', async () => {
     const store = await openStore(':memory:');
     const mgr = SessionStateManager.load(store, '/project/sb-undef');
     mgr.processPrompt(
       store,
-      'does this actually work? try this out and see',
+      'smoke test this before we continue to the next step',
       makeResult('implementation', 0.8),
     );
     expect(mgr.current.signalCounters['implementation_checkpoint'].lastSeenAt).toBe(0);

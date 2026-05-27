@@ -187,12 +187,10 @@ export async function runAuto(
   }
 
   // ── 2.8. Stream B presence classification ────────────────────────────────────
-  // Only call when already in implementation stage and past the absence gate.
-  // ABSENCE_MIN_PROMPTS = 15 — absence detection doesn't trigger before this,
-  // so LLM calls before this threshold are wasted.
+  // Start from prompt 3 — the earliest any Stream B absence threshold can fire.
   let streamBOverrides: StreamBPresenceResult | undefined;
   if (mgr.current.currentStage === 'implementation'
-      && mgr.current.promptsInCurrentStage >= ABSENCE_MIN_PROMPTS) {
+      && mgr.current.promptsInCurrentStage >= 3) {
     streamBOverrides = await classifyStreamBPresence(input.promptText, openai)
       .catch(() => {
         logger.debug('stream_b_presence_failed', { prompt: input.promptText.slice(0, 60) });

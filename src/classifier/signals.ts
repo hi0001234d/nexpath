@@ -571,12 +571,6 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'feature requirements are', 'let me spec this feature',
       'define what done looks like for this',
     ],
-    vibeKeywords: [
-      'what are we actually building here', 'what exactly should this do',
-      'let me think about what we want', 'let me scope this out',
-      'what are we supposed to be building', 'let me be clear about what this needs to do',
-      'ok what does this actually need to do', 'before i keep going what should this do',
-    ],
     absenceThreshold: 3,
   },
   {
@@ -589,12 +583,6 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'verify this before continuing', 'make sure this works first',
       'quick check before moving on', 'confirm this is working before',
     ],
-    vibeKeywords: [
-      'does this actually work', 'try this out', 'let me check this real quick',
-      'quick test before we continue', 'is this working',
-      'let me just make sure this works', 'does this still work',
-      'let me try this real quick',
-    ],
     absenceThreshold: 4,
   },
   {
@@ -606,12 +594,6 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
       'write the behavior first', 'define the behavior before',
       'specify the expected behavior', 'write the expected output',
       'behavior spec for this', 'describe what this should do before coding',
-    ],
-    vibeKeywords: [
-      'what should this do exactly', 'let me think about what this needs',
-      'before coding what does this need to do', 'what is this supposed to do',
-      'ok what should happen when', 'let me figure out what this needs to do first',
-      'what exactly is this supposed to do',
     ],
     absenceThreshold: 3,
   },

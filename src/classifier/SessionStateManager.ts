@@ -192,16 +192,21 @@ export class SessionStateManager {
     // ── Signal counters ───────────────────────────────────────────────────────
     const detected = detectSignals(promptText);
 
-    // Apply LLM presence overrides for Stream B signals only.
+    // Inject or suppress Stream B signals based on LLM result.
     // `effectiveDetected` is used ONLY for signalCounters — NOT for correction_seeking below.
-    const effectiveDetected = streamBOverrides
-      ? detected.filter((key) => {
-          if (key === 'feature_scope_before_build') return streamBOverrides!.feature_scope_before_build;
-          if (key === 'implementation_checkpoint')  return streamBOverrides!.implementation_checkpoint;
-          if (key === 'spec_before_code')           return streamBOverrides!.spec_before_code;
-          return true; // non-Stream-B signals unaffected
-        })
-      : detected;
+    const effectiveDetected = [...detected];
+    if (streamBOverrides) {
+      const streamBMap: Record<string, boolean> = {
+        feature_scope_before_build: streamBOverrides.feature_scope_before_build,
+        implementation_checkpoint:  streamBOverrides.implementation_checkpoint,
+        spec_before_code:           streamBOverrides.spec_before_code,
+      };
+      for (const [key, present] of Object.entries(streamBMap)) {
+        const idx = effectiveDetected.indexOf(key);
+        if (present && idx === -1) effectiveDetected.push(key);
+        else if (!present && idx !== -1) effectiveDetected.splice(idx, 1);
+      }
+    }
 
     for (const key of Object.keys(s.signalCounters)) {
       if (effectiveDetected.includes(key)) {
