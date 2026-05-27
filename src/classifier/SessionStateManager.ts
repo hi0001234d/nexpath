@@ -192,12 +192,14 @@ export class SessionStateManager {
     // ── Signal counters ───────────────────────────────────────────────────────
     const detected = detectSignals(promptText);
 
+    // Apply LLM presence overrides for Stream B signals only.
+    // `effectiveDetected` is used ONLY for signalCounters — NOT for correction_seeking below.
     const effectiveDetected = streamBOverrides
       ? detected.filter((key) => {
           if (key === 'feature_scope_before_build') return streamBOverrides!.feature_scope_before_build;
           if (key === 'implementation_checkpoint')  return streamBOverrides!.implementation_checkpoint;
           if (key === 'spec_before_code')           return streamBOverrides!.spec_before_code;
-          return true;
+          return true; // non-Stream-B signals unaffected
         })
       : detected;
 
@@ -209,6 +211,8 @@ export class SessionStateManager {
     }
 
     // ── Consecutive acceptance streak ─────────────────────────────────────────
+    // Uses original `detected`, NOT effectiveDetected — correction_seeking is not a
+    // Stream B signal and must not be affected by the LLM override.
     if (detected.includes('correction_seeking')) {
       s.consecutiveAcceptanceStreak = 0;
     } else {
