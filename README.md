@@ -133,9 +133,15 @@ npm run build
 npm link
 
 # Register with your coding agent and verify
-nexpath install --yes
+nexpath install
 nexpath status
 ```
+
+During `nexpath install`, you'll be asked to choose how often advisories should appear
+(advisory frequency) and what kind of work you do (project role). Both can be changed
+later — see [Frequency and Role](#frequency-and-role) below, or press Ctrl+T (Cmd+T on
+macOS) during an advisory popup. Use `nexpath install --yes` to accept the defaults
+without prompts (every qualifying event, founder / product creator).
 
 ### Environment Variables
 
@@ -183,6 +189,37 @@ nexpath uninstall
 ---
 
 ## Configuration and Privacy
+
+### Frequency and Role
+
+**Advisory frequency** controls how often nexpath surfaces advisories during your session.
+The default is `every_event`; pick whichever cadence suits you best.
+
+| Value              | Behaviour                                                                 |
+|--------------------|---------------------------------------------------------------------------|
+| `every_event`      | Fire on each qualifying event (default)                                   |
+| `optimum`          | Frequent advisories targeting a 3–5 prompt cadence                        |
+| `major_only`       | Fire only on major stage transitions                                      |
+| `once_per_session` | At most one advisory per coding session                                   |
+| `off`              | Disable advisories entirely                                               |
+
+**Project role** tells nexpath what kind of work you do, which informs the kinds of
+advisories you receive.
+
+| Value          | Description                          |
+|----------------|--------------------------------------|
+| `indie_hacker` | indie hacker developer               |
+| `founder`      | founder / product creator (default)  |
+| `pm`           | product manager                      |
+| `vibe_coder`   | vibe coder                           |
+
+Both values are configured during `nexpath install`. They can be changed at any time
+from inside an advisory popup by pressing Ctrl+T (Cmd+T on macOS), or from the CLI:
+
+```bash
+nexpath config set advisory_frequency optimum
+nexpath config set role vibe_coder
+```
 
 ### Privacy Controls
 
