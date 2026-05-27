@@ -126,7 +126,7 @@ describe('GlobalConfig — OPTIMUM_LEVEL_CONFIG cap values (Stream C validation)
     expect(OPTIMUM_LEVEL_CONFIG.minPromptsBeforeAdvisory).toBe(1);
   });
 
-  it('all 9 FrequencyLevelConfig fields are present', () => {
+  it('all 10 FrequencyLevelConfig fields are present', () => {
     const keys: Array<keyof typeof OPTIMUM_LEVEL_CONFIG> = [
       'minPromptsBeforeAdvisory',
       'postAdvisoryCooldown',
@@ -137,10 +137,19 @@ describe('GlobalConfig — OPTIMUM_LEVEL_CONFIG cap values (Stream C validation)
       'stage2S1LowConfidence',
       'signalAbsenceThresholdMultiplier',
       'minStageChangeConfidence',
+      'signalAbsenceMinFloor',
     ];
     for (const key of keys) {
       expect(OPTIMUM_LEVEL_CONFIG[key]).toBeDefined();
     }
+  });
+
+  it('signalAbsenceMinFloor is 2 (lower floor for optimum multiplier benefit)', () => {
+    expect(OPTIMUM_LEVEL_CONFIG.signalAbsenceMinFloor).toBe(2);
+  });
+
+  it('every_event signalAbsenceMinFloor is 5 (unchanged from original hardcoded value)', () => {
+    expect(FREQUENCY_LEVEL_CONFIGS.every_event.signalAbsenceMinFloor).toBe(5);
   });
 
   it('standard cap of 20 is sufficient to sustain advisory coverage across 300-prompt sessions', () => {

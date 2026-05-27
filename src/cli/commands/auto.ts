@@ -202,6 +202,7 @@ export async function runAuto(
     mgr.current.profile,
     projectType,
     freqConfig.signalAbsenceThresholdMultiplier,
+    freqConfig.signalAbsenceMinFloor,
   );
   for (const flag of newFlags) {
     mgr.addAbsenceFlag(store, flag);

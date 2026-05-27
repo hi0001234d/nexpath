@@ -100,6 +100,7 @@ export function detectAbsenceFlags(
   profile?:            UserProfile | null,
   projectType?:        string,
   thresholdMultiplier = 1.0,
+  absenceMinFloor     = 5,
 ): AbsenceFlag[] {
   const { currentStage, stageConfidence, promptsInCurrentStage, promptCount } = state;
 
@@ -129,7 +130,7 @@ export function detectAbsenceFlags(
     if (sig.role && sig.role !== profile?.role) continue;
 
     // Gate 3 — per-signal threshold with profile multiplier and global frequency multiplier
-    const effectiveThreshold = Math.max(5, Math.ceil(sig.absenceThreshold * profileMultiplier * thresholdMultiplier));
+    const effectiveThreshold = Math.max(absenceMinFloor, Math.ceil(sig.absenceThreshold * profileMultiplier * thresholdMultiplier));
     if (promptsInCurrentStage < effectiveThreshold) continue;
 
     // Custom detection for F1 signals (streak/velocity/domain-bucket based)

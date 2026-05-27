@@ -15,6 +15,7 @@ export interface FrequencyLevelConfig {
   stage2S1LowConfidence: number;
   signalAbsenceThresholdMultiplier: number;
   minStageChangeConfidence: number;
+  signalAbsenceMinFloor: number;
 }
 
 export const OPTIMUM_LEVEL_CONFIG: Readonly<FrequencyLevelConfig> = {
@@ -27,6 +28,7 @@ export const OPTIMUM_LEVEL_CONFIG: Readonly<FrequencyLevelConfig> = {
   stage2S1LowConfidence:          0.25,
   signalAbsenceThresholdMultiplier: 0.25,
   minStageChangeConfidence:         0.50,
+  signalAbsenceMinFloor:             2,
 };
 
 export const FREQUENCY_LEVEL_CONFIGS: Record<AdvisoryFrequencyLevel, FrequencyLevelConfig> = {
@@ -40,6 +42,7 @@ export const FREQUENCY_LEVEL_CONFIGS: Record<AdvisoryFrequencyLevel, FrequencyLe
     stage2S1LowConfidence:             1.0,
     signalAbsenceThresholdMultiplier:  1.0,
     minStageChangeConfidence:          0.50,
+    signalAbsenceMinFloor:               5,
   },
   major_only: {
     minPromptsBeforeAdvisory:            5,
@@ -51,6 +54,7 @@ export const FREQUENCY_LEVEL_CONFIGS: Record<AdvisoryFrequencyLevel, FrequencyLe
     stage2S1LowConfidence:            0.50,
     signalAbsenceThresholdMultiplier:  1.0,
     minStageChangeConfidence:          0.50,
+    signalAbsenceMinFloor:               5,
   },
   once_per_session: {
     minPromptsBeforeAdvisory:           10,
@@ -62,6 +66,7 @@ export const FREQUENCY_LEVEL_CONFIGS: Record<AdvisoryFrequencyLevel, FrequencyLe
     stage2S1LowConfidence:            0.55,
     signalAbsenceThresholdMultiplier:  1.0,
     minStageChangeConfidence:          0.50,
+    signalAbsenceMinFloor:               5,
   },
   every_event: {
     minPromptsBeforeAdvisory:            3,
@@ -73,6 +78,7 @@ export const FREQUENCY_LEVEL_CONFIGS: Record<AdvisoryFrequencyLevel, FrequencyLe
     stage2S1LowConfidence:            0.50,
     signalAbsenceThresholdMultiplier:  1.0,
     minStageChangeConfidence:          0.50,
+    signalAbsenceMinFloor:               5,
   },
   optimum: OPTIMUM_LEVEL_CONFIG,
 };
