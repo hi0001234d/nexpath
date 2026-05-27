@@ -1335,6 +1335,540 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     absenceThreshold: 10,
     nature: 'hardcore_pro',
   },
+
+  // ── Phase 6 E1-E3 — founder role signals ────────────────────────────────────
+
+  {
+    key: 'user_value_check',
+    description: 'Lean Startup / Steve Blank (2005, 2011) — build only validated features. Customer discovery precedes engineering commitment. Every feature hypothesis needs a user signal before becoming a build task.',
+    expectedStages: ['idea', 'implementation'],
+    detectionKeywords: [
+      'validated this with users', 'user research shows', 'users asked for',
+      'market signal for this', 'user feedback confirms', 'user need validated',
+    ],
+    vibeKeywords: [
+      'user testing showed', 'validated with users',
+      'users confirmed this', 'got feedback from users',
+    ],
+    absenceThreshold: 5,
+    role: 'founder',
+  },
+  {
+    key: 'outcome_definition',
+    description: 'OKR methodology (Doerr 2018) / Marty Cagan — features need defined success metrics before building starts. Output vs outcome: launching ≠ succeeding. Define the measurable outcome before committing to the build.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'success metric for this', 'how we\'ll measure this',
+      'the outcome we\'re targeting', 'KPI for this feature',
+    ],
+    vibeKeywords: [
+      'success looks like', 'measuring this by',
+      'the metric we\'re tracking', 'how we\'ll know it worked',
+    ],
+    absenceThreshold: 6,
+    role: 'founder',
+  },
+  {
+    key: 'feature_prioritization',
+    description: 'Agile backlog prioritization / Marty Cagan — features ordered by user/business impact, not recency or opportunism. Building without impact justification = feature factory pattern.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'highest priority because', 'impact-effort matrix',
+      'most valuable next', 'prioritized this because', 'users need this most',
+    ],
+    vibeKeywords: [
+      'this is priority one', 'highest impact next',
+      'focusing on this first because', 'most valuable to work on',
+    ],
+    absenceThreshold: 8,
+    role: 'founder',
+  },
+  {
+    key: 'user_persona_clarity',
+    description: 'Alan Cooper personas (1999) / JTBD (Christensen) — design for a concrete user, not a hypothetical generic user. Every feature needs a defined persona or user type for design decisions to be testable.',
+    expectedStages: ['idea', 'implementation'],
+    detectionKeywords: [
+      'for our user type', 'persona this serves',
+      'user segment for this', 'who specifically this helps', 'target user for this feature',
+    ],
+    vibeKeywords: [
+      'this is designed for', 'our target user here',
+      'specifically for users who', 'for the segment that',
+    ],
+    absenceThreshold: 8,
+    role: 'founder',
+  },
+  {
+    key: 'competitive_awareness',
+    description: 'Marty Cagan / Steve Blank — competitive analysis is prerequisite to feature prioritization. Table stakes vs. differentiating vs. irrelevant: knowing which category a feature falls in shapes the build decision.',
+    expectedStages: ['idea', 'implementation'],
+    detectionKeywords: [
+      'competitor analysis for this', 'how competitors do this',
+      'our differentiation here', 'market has this via',
+    ],
+    vibeKeywords: [
+      'checking how competitors', 'competitor research shows',
+      'our differentiation is', 'how competitors handle this',
+    ],
+    absenceThreshold: 10,
+    role: 'founder',
+  },
+  {
+    key: 'mvp_boundary_discipline',
+    description: 'Lean Startup MVP principle (Ries 2011) — MVP tests the riskiest hypothesis with minimum effort. Every addition beyond MVP scope delays validated learning. Feature creep in MVP phases is avoidance behaviour.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'is this MVP scope', 'minimum needed to test',
+      'MVP boundary', 'core hypothesis test', 'this isn\'t MVP scope',
+    ],
+    vibeKeywords: [
+      'staying MVP scope', 'minimum to test this',
+      'keeping it minimal', 'just enough for the hypothesis',
+    ],
+    absenceThreshold: 5,
+    role: 'founder',
+  },
+  {
+    key: 'user_acquisition_consideration',
+    description: 'Andrew Chen / Peter Thiel — distribution fit is as important as product fit. Features need a defined acquisition path at build time, not after launch.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'how users find this feature', 'acquisition path for this',
+      'SEO/sharing/referral for this', 'distribution for this feature',
+    ],
+    vibeKeywords: [
+      'users will discover this via', 'reach this audience by',
+      'growth channel for this', 'user acquisition via',
+    ],
+    absenceThreshold: 10,
+    role: 'founder',
+  },
+  {
+    key: 'retention_mechanism_check',
+    description: 'Nir Eyal (2014) / David Skok SaaS Metrics — retention thinking at feature design stage. Hook model: features should increase the likelihood of the next interaction. Acquisition without retention = high-churn product.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'retention impact of this', 'engagement loop for this',
+      'why users come back for this', 'habit-forming aspect',
+    ],
+    vibeKeywords: [
+      'keeps users coming back', 'engagement loop here',
+      'retention angle for this', 'habit loop for this feature',
+    ],
+    absenceThreshold: 10,
+    role: 'founder',
+  },
+  {
+    key: 'feedback_loop_establishment',
+    description: 'Lean Startup Build-Measure-Learn (Ries 2011) — shipping without a feedback mechanism breaks the learning loop at measure. Every ship requires analytics, survey trigger, or behavioral instrumentation.',
+    expectedStages: ['release'],
+    detectionKeywords: [
+      'feedback mechanism for this', 'how we\'ll hear from users',
+      'analytics added for this', 'measuring success of this',
+    ],
+    vibeKeywords: [
+      'adding analytics for', 'tracking this with',
+      'set up a feedback loop', 'will collect feedback via',
+    ],
+    absenceThreshold: 5,
+    role: 'founder',
+  },
+  {
+    key: 'hypothesis_before_build',
+    description: 'Lean UX / hypothesis-driven development (Gothelf & Seiden 2013) — every feature is an experiment. Define hypothesis before building. Without hypothesis: the experiment has no measurement criteria.',
+    expectedStages: ['idea', 'implementation'],
+    detectionKeywords: [
+      'hypothesis we\'re testing', 'what this proves if it works',
+      'success evidence for this hypothesis', 'experiment definition',
+    ],
+    vibeKeywords: [
+      'testing the hypothesis that', 'the hypothesis here is',
+      'proving or disproving', 'experiment to test',
+    ],
+    absenceThreshold: 5,
+    role: 'founder',
+  },
+  {
+    key: 'technical_vs_product_time_balance',
+    description: 'Marty Cagan / Lean Startup — founders systematically under-invest in product thinking relative to technical implementation. Product discovery should run alongside implementation, not after.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'product direction check', 'stepping back to think about the product',
+      'am I building the right thing', 'product vs engineering focus',
+    ],
+    vibeKeywords: [
+      'taking a product perspective', 'product check on this',
+      'thinking about what we\'re building', 'product-level thinking here',
+    ],
+    absenceThreshold: 12,
+    role: 'founder',
+  },
+  {
+    key: 'north_star_alignment',
+    description: 'OKR north star (Doerr 2018) / Sean Ellis — all features traceable to north star movement. Features with no traceable connection = noise consuming engineering capacity.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'this contributes to our north star by', 'how this moves our core metric',
+      'aligned with core product goal', 'north star impact',
+    ],
+    vibeKeywords: [
+      'ties to our north star', 'contributes to our core metric',
+      'north star connection here', 'aligns with our main goal',
+    ],
+    absenceThreshold: 15,
+    role: 'founder',
+  },
+
+  // ── Phase 6 E4-E6 — indie_hacker role signals ────────────────────────────────
+
+  {
+    key: 'time_to_value_check',
+    description: '37signals (2006) / Lean Startup — solve for current scale, not hoped-for scale. Complex infrastructure for zero users optimizes the wrong problem. Solo builders pay the complexity maintenance cost forever.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'right for my current scale', 'appropriate for zero users',
+      'simple enough for now', 'right size solution',
+    ],
+    vibeKeywords: [
+      'keeping it simple for now', 'right size for current users',
+      'simple solution for now', 'appropriate for this scale',
+    ],
+    absenceThreshold: 6,
+    role: 'indie_hacker',
+  },
+  {
+    key: 'ship_readiness_definition',
+    description: '37signals / lean shipping — define ship criteria before building: ready when X is true. Without explicit criteria, "not ready yet" justifies infinite additions. Ship criteria must be binary and written before building begins.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'ready to ship when', 'ship criteria',
+      'launch checklist', 'minimum to launch', 'what\'s blocking launch',
+    ],
+    vibeKeywords: [
+      'clear on what done means', 'ship criteria set',
+      'know when it\'s ready', 'launch conditions defined',
+    ],
+    absenceThreshold: 8,
+    role: 'indie_hacker',
+  },
+  {
+    key: 'manual_before_automate',
+    description: 'Paul Graham (2013) — do manually first, automate the proven process. Automating an unvalidated workflow builds automation for something that may be abandoned. Manual execution is validation; automation is optimization.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'validated this manually first', 'done this manually to confirm',
+      'automating a proven manual process',
+    ],
+    vibeKeywords: [
+      'doing this manually first', 'manually tested this process',
+      'proven manually before automating', 'validated the manual version',
+    ],
+    absenceThreshold: 5,
+    role: 'indie_hacker',
+  },
+  {
+    key: 'tech_stack_complexity_check',
+    description: '37signals / solo architecture principle — evaluate every architectural choice against "can I maintain this alone?" CV-driven development adds complexity a team distributes but a solo builder pays in full.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'maintainable solo', 'complexity I can handle alone',
+      'right complexity for solo', 'simple enough for me to maintain',
+    ],
+    vibeKeywords: [
+      'simple enough to maintain solo', 'keeping the stack simple',
+      'manageable complexity for one person', 'solo-friendly architecture',
+    ],
+    absenceThreshold: 5,
+    role: 'indie_hacker',
+  },
+  {
+    key: 'launch_strategy_absence',
+    description: 'Weinberg & Mares (2014) / Peter Thiel — distribution must be planned before launch. 19 documented channels; none happen by accident. Silent launches are the default without explicit launch planning.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'launch strategy', 'where I\'m announcing this',
+      'Product Hunt plan', 'community post planned', 'launch audience',
+    ],
+    vibeKeywords: [
+      'announcing this via', 'launch plan includes',
+      'posting to communities', 'pre-launch audience',
+    ],
+    absenceThreshold: 12,
+    role: 'indie_hacker',
+  },
+  {
+    key: 'early_user_feedback',
+    description: 'Steve Blank customer development (2005) / Paul Graham — seek user feedback early and continuously. Building in a silo is the primary cause of PMF failure. The earlier the feedback, the lower the cost of pivoting.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'showed this to users', 'early user feedback on this',
+      'user reaction to this', 'beta user tested this',
+    ],
+    vibeKeywords: [
+      'showed this to a user', 'user reaction was',
+      'beta tester said', 'early user said',
+    ],
+    absenceThreshold: 10,
+    role: 'indie_hacker',
+  },
+  {
+    key: 'solo_maintainability',
+    description: '37signals — every architectural addition should pass the "alone at 2am" test. Each integration, abstraction, and service boundary is maintenance surface paid entirely by one person.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'maintainable by me alone', 'solo debug cost of this',
+      'can I support this solo', 'complexity cost for one person',
+    ],
+    vibeKeywords: [
+      'one-person maintainable', 'I can support this',
+      'easy enough to debug alone', 'solo-sustainable',
+    ],
+    absenceThreshold: 8,
+    role: 'indie_hacker',
+  },
+  {
+    key: 'distribution_thinking',
+    description: 'Weinberg & Mares (2014) — distribution is a design constraint, not a post-launch task. Every feature has a discovery question: how do users find and access it? Distribution thinking shapes implementation decisions.',
+    expectedStages: ['idea', 'implementation'],
+    detectionKeywords: [
+      'discovery path for this', 'how users find this',
+      'distribution channel for', 'SEO/community/referral strategy',
+    ],
+    vibeKeywords: [
+      'reaching users through', 'distribution approach is',
+      'users find this product via', 'community channel for',
+    ],
+    absenceThreshold: 10,
+    role: 'indie_hacker',
+  },
+  {
+    key: 'monetization_path_clarity',
+    description: 'Ash Maurya (2012) / Steve Blank — revenue model must be validated continuously, not deferred to launch. Every significant feature should connect to the monetization path.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'monetization path for this', 'revenue model connected',
+      'how this relates to the paid tier', 'business model alignment',
+    ],
+    vibeKeywords: [
+      'connects to the paid tier', 'monetization angle here',
+      'how this earns revenue', 'business model consideration',
+    ],
+    absenceThreshold: 12,
+    role: 'indie_hacker',
+  },
+  {
+    key: 'build_in_public_opportunity',
+    description: 'Arvid Kahl (2021) — build-in-public builds audience before launch. Every milestone is a distribution opportunity: share what you built, what you learned, what surprised you.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'sharing this publicly', 'build-in-public post about this',
+      'tweet about this milestone', 'sharing progress',
+    ],
+    vibeKeywords: [
+      'worth sharing publicly', 'build-in-public moment',
+      'time to share progress', 'posting this milestone',
+    ],
+    absenceThreshold: 15,
+    role: 'indie_hacker',
+  },
+  {
+    key: 'scope_vs_time_check',
+    description: '37signals — scope hammering: build the smallest version that\'s still useful. Without time constraint acknowledgment, scope expands by default. Time-boxing is the solo builder\'s primary scope discipline.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'time budget for this', 'does this fit my timeline',
+      'scope vs my available time', 'time-boxed to',
+    ],
+    vibeKeywords: [
+      'checking scope vs time', 'fits within my timeline',
+      'keeping scope manageable', 'scope check against time',
+    ],
+    absenceThreshold: 8,
+    role: 'indie_hacker',
+  },
+
+  // ── Phase 6 E7-E9 — pm role signals ─────────────────────────────────────────
+
+  {
+    key: 'acceptance_criteria_before_dev',
+    description: 'Mike Cohn (2004) / Scrum DoR — user story not ready without AC. AC defines what done means: without it, developers build to their imagination. PM obligation: AC exists and is testable before the first implementation prompt.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'acceptance criteria for this', 'AC defined',
+      'how we know this is done', 'what done looks like for this story',
+    ],
+    vibeKeywords: [
+      'when this is done it should', 'this story passes when',
+      'done criteria for this', 'how I know this is complete',
+    ],
+    absenceThreshold: 4,
+    role: 'pm',
+  },
+  {
+    key: 'stakeholder_alignment_check',
+    description: 'PMBOK stakeholder management / PMI-ACP — demo-time surprises have a clear root cause: alignment assumed, not verified. Every unvalidated assumption about stakeholder intent is a potential rework item.',
+    expectedStages: ['idea', 'implementation'],
+    detectionKeywords: [
+      'stakeholder aligned on this', 'signed off on this',
+      'confirmed with the team', 'stakeholders agree on',
+    ],
+    vibeKeywords: [
+      'checking with the team', 'stakeholder sign-off',
+      'aligning with stakeholders', 'getting team alignment',
+    ],
+    absenceThreshold: 6,
+    role: 'pm',
+  },
+  {
+    key: 'requirements_ambiguity_flag',
+    description: 'Requirements ambiguity is the leading cause of rework (Wiegers, SEI). Words like better/faster/improved are quality attribute placeholders — they survive into implementation because they feel precise enough to build toward.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'measurable definition of', 'ambiguity resolved in',
+      'clarified what better means', 'specific metric for',
+    ],
+    vibeKeywords: [
+      'defining a measurable target', 'putting a number on this',
+      'what specific improvement', 'measurable success definition',
+    ],
+    absenceThreshold: 5,
+    role: 'pm',
+  },
+  {
+    key: 'dependency_mapping',
+    description: 'Dependency identification (WBS, critical path method) — before any work begins: what does this work depend on (upstream), and what depends on this work (downstream)? Unmapped dependencies create blocked work mid-sprint.',
+    expectedStages: ['idea', 'implementation'],
+    detectionKeywords: [
+      'dependencies mapped', 'upstream dependency on',
+      'downstream impact on', 'blocking and unblocking for this',
+    ],
+    vibeKeywords: [
+      'checking dependencies for this', 'who else does this affect',
+      'mapping out dependencies', 'identifying blockers for this',
+    ],
+    absenceThreshold: 6,
+    role: 'pm',
+  },
+  {
+    key: 'definition_of_done',
+    description: 'Scrum Definition of Done (Schwaber & Sutherland 2020) / Mike Cohn — DoD is the shared understanding of what complete means. Without it, done is subjective: sprint review becomes a conflict resolution session.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'definition of done for this', 'DoD',
+      'this is done when', 'completion criteria',
+    ],
+    vibeKeywords: [
+      'accepted when', 'story closes when',
+      'done condition is', 'sprint item done when',
+    ],
+    absenceThreshold: 4,
+    role: 'pm',
+  },
+  {
+    key: 'cross_team_impact_check',
+    description: 'Cross-team coordination — changes to shared APIs, schemas, or services affect every dependent team. Notification before the change costs a message. Discovery after the change costs team-days of recovery.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'notified other team', 'cross-team coordination',
+      'aligned with', 'impact on other teams checked',
+    ],
+    vibeKeywords: [
+      'checking with the other team', 'notifying the other squad',
+      'cross-team heads-up', 'impact check with other teams',
+    ],
+    absenceThreshold: 8,
+    role: 'pm',
+  },
+  {
+    key: 'success_metric_definition',
+    description: 'Outcome-driven development (OKRs) — features need defined success metrics before building starts. A feature without a metric cannot be evaluated after it ships. Define metric, threshold, and timeline before building.',
+    expectedStages: ['idea', 'implementation'],
+    detectionKeywords: [
+      'success metric for this', 'KPI for this feature',
+      'how we measure success', 'metric that proves this worked',
+    ],
+    vibeKeywords: [
+      'tracking success by', 'measure feature success by',
+      'how to know this worked', 'defining the KPI',
+    ],
+    absenceThreshold: 5,
+    role: 'pm',
+  },
+  {
+    key: 'priority_justification',
+    description: 'Agile backlog prioritization (WSJF, MoSCoW) — without explicit priority reasoning, teams default to whatever is easiest, most recently requested, or most loudly advocated for. Articulate why this item over the alternatives.',
+    expectedStages: ['idea'],
+    detectionKeywords: [
+      'prioritized because', 'highest impact because',
+      'this before that because', 'priority justification',
+    ],
+    vibeKeywords: [
+      'highest priority because', 'this comes first because',
+      'priority rationale', 'most valuable right now',
+    ],
+    absenceThreshold: 8,
+    role: 'pm',
+  },
+  {
+    key: 'user_story_completeness',
+    description: 'Mike Cohn (2004) — Connextra format: "As a [user], I want [action], so that [value]." Missing "who": conflicting user needs go unnoticed. Missing "why": team cannot make value trade-offs. PM obligation: who/what/why before implementation.',
+    expectedStages: ['idea', 'implementation'],
+    detectionKeywords: [
+      'as a [user type] I want [action] so that [value]',
+      'user story format', 'who this is for and why',
+    ],
+    vibeKeywords: [
+      'as a user who', 'so that the user can',
+      'who benefits from this', 'user need this solves',
+    ],
+    absenceThreshold: 5,
+    role: 'pm',
+  },
+  {
+    key: 'risk_flag',
+    description: 'PMBOK risk management (Ch.11) — risks must be identified before significant decisions. Unnamed risks are assumed risks, and assumed risks become unplanned work. Lightweight continuous risk naming in agile.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'risks identified for this', 'risk mitigation for',
+      'flagging risk of', 'risk register updated',
+    ],
+    vibeKeywords: [
+      'flagging a risk', 'risk to watch',
+      'potential issue here', 'mitigating the risk',
+    ],
+    absenceThreshold: 8,
+    role: 'pm',
+  },
+  {
+    key: 'scope_change_impact_assessment',
+    description: 'Scope change governance — every mid-sprint scope change either displaces a committed item, extends the sprint, or reduces quality. All three require an explicit decision before the change enters the sprint.',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'impact assessed for this change', 'timeline impact of',
+      'what we\'re trading off for this', 'scope change impact',
+    ],
+    vibeKeywords: [
+      'assessing the impact', 'checking what this affects',
+      'tradeoff for this change', 'timeline check for this scope',
+    ],
+    absenceThreshold: 5,
+    role: 'pm',
+  },
+  {
+    key: 'retrospective_habit',
+    description: 'Sprint Retrospective (Scrum Guide 2020) — converts team experience into process improvement. Each skipped retrospective is compounding debt: process errors from Sprint N carry into Sprint N+1 unchanged.',
+    expectedStages: ['feedback_loop'],
+    detectionKeywords: [
+      'retrospective on this sprint', 'what went well',
+      'process improvements', 'lessons from this iteration', 'retro findings',
+    ],
+    vibeKeywords: [
+      'retro on this sprint', 'what worked this sprint',
+      'process learning from', 'lessons from this cycle',
+    ],
+    absenceThreshold: 20,
+    role: 'pm',
+  },
 ];
 
 // ── Signal detection from prompt text ────────────────────────────────────────

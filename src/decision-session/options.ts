@@ -2277,6 +2277,607 @@ const ABSENCE_SLO_DEFINITION_GAP_FORMAL: DecisionContent = {
   ],
 };
 
+// ── Phase 6 E1-E3 — founder role CASUAL content ───────────────────────────────
+
+export const ABSENCE_USER_VALUE_CHECK_CASUAL: DecisionContent = {
+  question: 'Has this feature been validated with real users?',
+  pinchFallback: 'Check user signal before committing to this build.',
+  L1: [
+    'The single biggest waste in product development is building something nobody asked for. Lean Startup core loop: before any feature build, check whether you have a user signal — a conversation, a behavioral observation, a direct request, or survey data — that confirms the problem you\'re solving is real for your users. Without signal, you\'re making a bet, not a decision.',
+    'User validation doesn\'t have to be formal. Showing a sketch to 5 users beats shipping a polished feature to zero signal. The goal is to reduce the chance that the feature solves a problem that only exists in the builder\'s imagination. Customer discovery question: did at least one real user tell you they need this, or did you observe them struggling with the absence of it?',
+    'If you haven\'t validated yet: pause and define the minimum signal that would confirm this feature is worth building. A user interview, a feature request count, a survey question, or behavioral data from existing usage. The cost of a short validation step is always lower than the cost of shipping an unvalidated feature and finding out it doesn\'t get used.',
+  ],
+  L2: [
+    'What user signal do you have that this feature is worth building? A request, observation, or research data — any concrete signal reduces the build risk.',
+    'Minimum validation: can you point to one user who said they need this, or behavioral data showing they struggle without it?',
+  ],
+  L3: [
+    'Pause to validate with at least one real user before committing to this build.',
+  ],
+};
+
+export const ABSENCE_OUTCOME_DEFINITION_CASUAL: DecisionContent = {
+  question: 'What does success look like for this feature?',
+  pinchFallback: 'Define the success metric before building starts.',
+  L1: [
+    'An output is something you ship. An outcome is the change in user behavior that justifies shipping it. The OKR discipline applied to product: before building, write one sentence that completes "This feature is successful if...". Without that sentence, you can\'t evaluate whether the feature worked, you can\'t communicate success criteria to teammates, and you can\'t decide when the feature is done enough to ship.',
+    'Success metrics don\'t need to be complex. "Feature is used at least once by 40% of active users in the first month" is a perfectly good key result. What makes it useful: it\'s observable after shipping, it has a timeframe, and it tells you whether the feature earned its engineering cost. Without a metric, shipping is the finish line — and shipping is an output, not an outcome.',
+    'Defining the outcome before building also prevents scope creep: if you know the feature succeeds when a specific user behavior changes, every addition should be evaluated against "does this help hit the outcome?" rather than "does this seem like a good idea?" The outcome definition is the scope boundary.',
+  ],
+  L2: [
+    'Finish this sentence before coding: "This feature succeeds if X happens for Y users within Z timeframe." Without this, you can\'t measure whether the feature worked.',
+    'What\'s the one metric that would tell you, 30 days after shipping, whether this feature justified the engineering time?',
+  ],
+  L3: [
+    'Define the success metric now — the observable outcome that tells you the feature worked.',
+  ],
+};
+
+export const ABSENCE_FEATURE_PRIORITIZATION_CASUAL: DecisionContent = {
+  question: 'Why is this the highest-priority thing to build right now?',
+  pinchFallback: 'Confirm this is the highest-impact item before building.',
+  L1: [
+    'Building what comes to mind next — rather than what has the highest impact — is the feature factory pattern. Every hour of engineering time spent on a lower-impact feature is an hour not spent on a higher-impact one. Backlog prioritization question: what evidence suggests this feature delivers more value to users than any alternative you could build with the same engineering time?',
+    'A useful prioritization heuristic: impact-effort scoring. Impact = estimated positive change in a key metric if this ships. Effort = engineering days to implement. Highest impact-to-effort ratio wins. You don\'t need a formal matrix — a quick mental comparison against 2-3 alternatives is enough. The question is: is there a feature you\'re not building that would deliver more value for less effort?',
+    'If the answer to "why this over anything else?" is "it seemed like a good idea" or "we had a request for it" — those aren\'t prioritization decisions, they\'re reactions. Prioritization requires a comparison: this vs. the alternatives, and a reason this wins. Even a brief explicit rationale prevents the feature factory spiral.',
+  ],
+  L2: [
+    'Name the top 2 alternatives you\'re not building right now. Is this feature higher impact-to-effort than either of them? If yes, the prioritization is justified.',
+    'What\'s the user/business impact of NOT building this feature, vs. NOT building the next highest-priority alternative?',
+  ],
+  L3: [
+    'Confirm explicit prioritization rationale before starting — impact vs. alternatives.',
+  ],
+};
+
+export const ABSENCE_USER_PERSONA_CLARITY_CASUAL: DecisionContent = {
+  question: 'Who specifically is this feature for?',
+  pinchFallback: 'Name the specific user this feature is designed for.',
+  L1: [
+    'Building for "users" in the abstract builds for no one in particular. Alan Cooper\'s persona principle: design decisions are only resolvable when you have a concrete user in scope. "Is this button label clear?" is answerable when you can ask "clear to whom? — Marcus, the first-time user who has never seen this interface." It\'s unanswerable when the answer is "users in general."',
+    'You don\'t need formal user research to have persona clarity. A 2-sentence description is enough: "This is for the freelance designer who manages 3-10 clients and doesn\'t use project management software." That\'s enough to make design decisions testable. The goal is to reduce the range of valid design choices to those that serve a concrete person, not every possible user.',
+    'Persona clarity also clarifies scope: if a feature request doesn\'t serve the defined user, it\'s out of scope by definition, not by preference. "For whom is this feature?" is both a design question and a scope question. Every feature should have a one-sentence user answer before build decisions begin.',
+  ],
+  L2: [
+    'Name the specific user type this feature is for — 2 sentences about who they are and what they\'re trying to do. "For users" isn\'t an answer.',
+    'If you had to describe the one person who would get the most value from this feature, who would it be? Build for that person explicitly.',
+  ],
+  L3: [
+    'Name the specific user type this feature is designed for before making build decisions.',
+  ],
+};
+
+export const ABSENCE_COMPETITIVE_AWARENESS_CASUAL: DecisionContent = {
+  question: 'Have you checked how competitors handle this?',
+  pinchFallback: 'Run a quick competitive check before committing to this build.',
+  L1: [
+    'Building a feature without knowing the competitive landscape means you\'re solving a problem that may already be solved — possibly better than you\'ll solve it. Before committing to any non-trivial feature, answer three questions: does a competitor already have this? If yes, how have they implemented it? And what would make your version a reason to switch rather than a reason to stay with the incumbent?',
+    'Competitive awareness isn\'t about copying — it\'s about knowing whether you\'re building table stakes (required to compete), a differentiator (reason to switch), or something users don\'t actually compare. These three categories require very different implementation strategies: table stakes need polish parity; differentiators need a clear wedge; irrelevant features shouldn\'t be built at all.',
+    'A 20-minute competitive audit is often enough: open 2-3 competitor products, find where they solve the same problem, screenshot the implementation, and note what they got right and wrong. Your implementation decision — and the differentiation angle — should come from that observation, not from building in a vacuum.',
+  ],
+  L2: [
+    'What do the top 2 competitors do for this feature? And what would make your version a reason to choose you over them?',
+    'Is this feature table stakes, a differentiator, or something users don\'t compare? That classification should drive the implementation approach.',
+  ],
+  L3: [
+    'Run a quick competitive audit before building — check how competitors solve this and where you differentiate.',
+  ],
+};
+
+export const ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL: DecisionContent = {
+  question: 'Is this addition within MVP scope?',
+  pinchFallback: 'Check whether this is needed to test the core hypothesis.',
+  L1: [
+    'MVP stands for minimum viable product — minimum meaning the smallest version that can test the riskiest hypothesis. Every feature added beyond that minimum is scope that delays the learning loop and consumes engineering capacity that could run the next experiment instead. The failure mode isn\'t adding bad features — it\'s adding good features at the wrong time, before the core hypothesis is validated.',
+    'The discipline question for every addition: does this help test what we\'re trying to learn, or does it just make the product feel more complete? "Feel more complete" is the scope creep justification. If the feature doesn\'t reduce the uncertainty about whether the core hypothesis is true, it\'s out of MVP scope — not permanently, just for this phase. Ship the minimum, learn, then add.',
+    'Common MVP scope creep patterns: "nice to have" additions that don\'t affect hypothesis testing, polish passes that go beyond the minimum for usability, and "while we\'re in this area" additions. All three delay the learning loop without increasing its quality. Define the scope boundary explicitly: list the features that are in-hypothesis-scope and treat everything else as post-validation work.',
+  ],
+  L2: [
+    'Does this addition help test the core hypothesis, or does it just make the product feel more complete? If the latter, it\'s out of MVP scope for now.',
+    'What is the minimum set of features needed to get a real answer on the riskiest hypothesis? Is the current scope still within that minimum?',
+  ],
+  L3: [
+    'Check MVP scope — only include what\'s needed to test the core hypothesis, defer the rest.',
+  ],
+};
+
+export const ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL: DecisionContent = {
+  question: 'How will target users find and access this feature?',
+  pinchFallback: 'Define the acquisition path before building.',
+  L1: [
+    'A feature\'s value is zero for any user who never encounters it. Distribution fit is as important as product-market fit — and it has to be designed in, not discovered after launch. Before committing to a feature build, answer: what is the specific path through which target users will find and start using this feature? SEO, referral loop, in-app discovery, sharing mechanic, onboarding hook, community post — name the channel.',
+    'Acquisition thinking during development isn\'t a marketing task — it\'s an engineering constraint. Features with a built-in sharing or referral mechanic get built differently than features that assume organic word-of-mouth. Features that depend on SEO need different URL structure and content than features that depend on in-app discovery. The acquisition path shapes the implementation.',
+    'If you can\'t name the acquisition path before building, that\'s a signal the feature may not be distribution-ready. The minimum acceptable answer: "Users reach this via X, and the first time they see it they\'re shown Y." Without that sentence, you\'re shipping into a distribution vacuum.',
+  ],
+  L2: [
+    'Name the specific acquisition path: how do target users find out this feature exists, and how do they reach it for the first time?',
+    'Is the acquisition mechanic built into the feature, or does it rely on users discovering it organically? Distribution-by-design vs. distribution-by-hope.',
+  ],
+  L3: [
+    'Define the acquisition path before building — name how target users will find and reach this feature.',
+  ],
+};
+
+export const ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL: DecisionContent = {
+  question: 'How does this feature bring users back?',
+  pinchFallback: 'Consider the retention angle before building.',
+  L1: [
+    'Features that acquire users but don\'t retain them have diminishing returns forever. Every significant feature should have an answer to: why does a user return to this feature after the first use, and how does using it once make the next use more likely? Without a retention angle, you\'re building acquisition features, not engagement features.',
+    'Retention mechanics don\'t have to be complex. The simplest versions: the feature saves something the user wants to come back to (a record, a result, a creation); the feature creates a loop where the output of one session becomes the input to the next; or the feature connects the user to other users, creating social pull. Any of these creates a reason to return. No retention mechanic = first-use feature.',
+    'Nir Eyal\'s Hook model: trigger → action → reward → investment. "Investment" is what makes the next trigger more effective — the user puts something into the product (data, preferences, connections, history) that increases the value of returning. Every feature should have an answer for what the "investment" is. If there isn\'t one, the feature has no retention loop.',
+  ],
+  L2: [
+    'What\'s the retention mechanic for this feature — what makes a user come back after the first use, and what makes returning more valuable than the first visit?',
+    'Does using this feature once make the next use more likely? If not, it\'s a one-visit feature — which may be fine, but should be an explicit design choice.',
+  ],
+  L3: [
+    'Define the retention angle now — what brings users back to this feature after the first use.',
+  ],
+};
+
+export const ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL: DecisionContent = {
+  question: 'How will you know if this feature is working after you ship it?',
+  pinchFallback: 'Add a feedback mechanism before shipping.',
+  L1: [
+    'Shipping without a way to measure whether the feature worked means the engineering investment produces no validated learning. The Lean Startup loop: Build → Measure → Learn. Skipping the Measure step after Build means the loop stops at the most expensive point and never produces the insight that informs the next build. Define your measurement mechanism before shipping, not after.',
+    'Feedback mechanisms don\'t have to be complex. The minimum viable set: one analytics event that fires when the feature is used (confirms usage), one way to hear from users who struggled (support channel, in-product feedback button), and one indicator of whether the feature met its success metric. Three data points that tell you whether to iterate, expand, or kill the feature.',
+    'Common shipping patterns that break the feedback loop: shipping with no analytics instrumentation, shipping with analytics but no defined success threshold, and shipping with a metric but no scheduled review. All three mean the feature will run for weeks without producing a learning decision. Define the mechanism, the metric, and the review date before the code ships.',
+  ],
+  L2: [
+    'Name the feedback mechanism: what data will tell you whether this feature is being used, and what will tell you whether it\'s solving the problem it was built for?',
+    'When will you review the data, and what will you do if the feature isn\'t hitting the success metric you defined?',
+  ],
+  L3: [
+    'Add a feedback mechanism before shipping — analytics event, success metric, and review date.',
+  ],
+};
+
+export const ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL: DecisionContent = {
+  question: 'What hypothesis does this feature test?',
+  pinchFallback: 'Define the hypothesis before starting the build.',
+  L1: [
+    'Every feature build is an experiment. The question is whether it\'s a defined experiment or an undefined one. Defined experiment: "We believe adding X will cause Y for users of type Z. We will know this is true when [observable signal] appears within [timeframe]." Undefined experiment: build X, ship it, and see what happens. Both cost the same to build. Only one produces learnable outcomes.',
+    'The hypothesis doesn\'t have to be certain — it has to be falsifiable. "Users will use the export feature at least once per week" is falsifiable. "Users will find this useful" is not. The falsifiability test: after shipping, can you look at a single data point and say definitively whether the hypothesis was proven or disproven? If not, refine the hypothesis until you can.',
+    'Writing the hypothesis before building also prevents post-hoc rationalization: the tendency to interpret any usage pattern as confirming the original idea. The hypothesis is a commitment made before the data exists — it\'s what makes the observation meaningful. Without it, every outcome is a success story in hindsight.',
+  ],
+  L2: [
+    'Complete this before coding: "We believe [this feature] will [achieve outcome] for [user type]. We will know this is true when [observable signal]."',
+    'What would tell you this experiment failed? If you can\'t name a failure condition, the hypothesis isn\'t specific enough to be falsifiable.',
+  ],
+  L3: [
+    'Define the hypothesis now — what outcome does this feature test, and how will you know if it worked?',
+  ],
+};
+
+export const ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL: DecisionContent = {
+  question: 'When did you last check product direction — not just implementation?',
+  pinchFallback: 'Take a product perspective before continuing to build.',
+  L1: [
+    'Founders who code face a structural bias toward technical work: implementation is visible, progresses in concrete steps, and produces something tangible. Product thinking — asking whether you\'re building the right thing, for the right users, toward the right goal — produces decisions, not artifacts. The result is that product thinking gets squeezed out of sessions that are nominally "product development" but are actually pure implementation.',
+    'A useful ratio check: in the last 10-15 prompts, how many were implementation instructions ("build this", "add this", "fix this") vs. product-direction questions ("should we build this at all", "is this the right user experience", "does this move our core metric")? Heavy implementation skew is a signal that product thinking has been suspended. Suspend it too long and you optimize the implementation of the wrong feature.',
+    'Product check questions that take < 5 minutes: Is this feature still the highest-priority thing to build right now? Does the implementation direction still match the product goal? Is there a user I should talk to before the next build decision? Has anything changed about the problem I\'m solving? These questions don\'t interrupt implementation — they protect it from building in the wrong direction.',
+  ],
+  L2: [
+    'Pause the implementation for a moment: is the feature you\'re building still the right thing to be building right now, and is the direction still aligned with your product goal?',
+    'One product-direction question before continuing: is there anything you\'ve learned in the last few sessions that should change what you\'re building or how you\'re building it?',
+  ],
+  L3: [
+    'Take a product-direction check before continuing to build — not just what, but whether.',
+  ],
+};
+
+export const ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL: DecisionContent = {
+  question: 'How does this feature connect to your product\'s core metric?',
+  pinchFallback: 'Check north star alignment before adding this feature.',
+  L1: [
+    'The north star metric is the single number that best captures the value your product delivers to users. All product work should be traceable to movement in that number — either directly (this feature drives the metric) or indirectly (this feature enables other features that do). Features with no traceable connection to the north star consume engineering capacity without producing user value that scales.',
+    'North star alignment doesn\'t require every feature to directly move the metric. Infrastructure, DX improvements, and technical foundations are valid — but even these should have an articulated connection: "this reduces load time, which reduces churn, which improves our retention rate." If the connection can\'t be articulated in one or two steps, the feature may be noise.',
+    'The north star check is also a scope filter: if a feature doesn\'t connect to the north star, it either belongs in a later phase (when the north star itself evolves) or doesn\'t belong in the product at all. Making the connection explicit before building prevents scope inflation — the slow accumulation of technically reasonable features that collectively dilute the product\'s core value proposition.',
+  ],
+  L2: [
+    'In one sentence: how does this feature move your north star metric? Direct path, or via which intermediate effect?',
+    'If this feature has no traceable connection to your north star, is it a foundation for features that will, or is it scope inflation?',
+  ],
+  L3: [
+    'Articulate the north star connection before building — direct or indirect, but traceable.',
+  ],
+};
+
+// ── Phase 6 E4-E6 — indie_hacker role CASUAL content ─────────────────────────
+
+export const ABSENCE_TIME_TO_VALUE_CHECK_CASUAL: DecisionContent = {
+  question: 'Is this solution the right size for your current scale?',
+  pinchFallback: 'Check whether this complexity is justified at current user count.',
+  L1: [
+    'The most common indie hacker time sink: building complex infrastructure for a product with zero users. Queue systems, caching layers, microservices, and distributed architectures are solutions to scale problems — and before you have users, the scale problem doesn\'t exist. Every hour spent building infrastructure for hypothetical scale is an hour not spent on the user problem you actually have right now.',
+    '37signals principle: your solution should match your current traffic, not your hoped-for traffic. The complexity you add today must be maintained indefinitely — before, during, and after finding product-market fit. A solution that works for 100 users and is easily replaceable when you hit 10,000 is better than a solution designed for 10,000 that adds maintenance cost from day one.',
+    'Right-sizing heuristic: if a simple database query, a single API call, or a flat file solves the problem — and you\'re reaching for a queue system, caching layer, or distributed component — ask whether your current user count justifies the complexity. "Not yet but it will eventually" is the premature optimization justification. Build the simple version, ship it, and complicate it when scale actually demands it.',
+  ],
+  L2: [
+    'What\'s your current user count, and does the complexity of this solution match that scale? What\'s the simplest version that works for the users you have right now?',
+    'Could a simpler technology solve the same problem and be easily replaced when scale actually requires the complex version?',
+  ],
+  L3: [
+    'Right-size this — build the simplest solution that works for your current scale, not future scale.',
+  ],
+};
+
+export const ABSENCE_SHIP_READINESS_DEFINITION_CASUAL: DecisionContent = {
+  question: 'What needs to be true for this to be ready to ship?',
+  pinchFallback: 'Write ship criteria before continuing to build.',
+  L1: [
+    'The "not ready yet" trap is the most common indie hacker failure mode. Without a clear definition of what "ready" means, every addition is rational in isolation — "just one more thing" — while collectively they make the launch date recede indefinitely. The fix: write down what must be true for this to ship, before building. That list is your Definition of Done, and it has two functions: it tells you when to stop adding, and it tells you exactly when you\'re done.',
+    'Ship criteria should be binary: each item is objectively true or false. "Users can sign up and complete the core workflow" is a valid ship criterion. "The design feels polished" is not. Criteria that can\'t be evaluated as pass/fail don\'t function as ship gates — they become "not ready yet" justifications that can always be renegotiated. Write criteria you can check off with a yes or a no.',
+    'A useful constraint: limit your ship criteria to what\'s needed for the first user to get value from the product. Everything beyond that is post-launch scope. Add it to a backlog, not the ship gate. The ship gate is about minimum viable launch, not minimum viable polish.',
+  ],
+  L2: [
+    'Write down the ship criteria right now: specific, binary conditions that must be true before you ship. This becomes your launch checklist.',
+    'Of those criteria, which ones are needed for the first user to get value — and which are "nice to have before launching"? Separate them: one list is the ship gate, the other is a post-launch backlog.',
+  ],
+  L3: [
+    'Write explicit ship criteria now — specific, binary. Everything else is post-launch scope.',
+  ],
+};
+
+export const ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL: DecisionContent = {
+  question: 'Have you done this manually to confirm it works before automating?',
+  pinchFallback: 'Do it manually first, then automate the proven version.',
+  L1: [
+    'Paul Graham: "Do things that don\'t scale." The insight: manual execution validates the process before engineering time is committed to automating it. If you automate a workflow before doing it manually, you build automation for a process you haven\'t confirmed is correct, efficient, or actually wanted by users. Manual first costs one manual execution. Automating first costs the engineering time plus the cost of discovering the manual version was wrong.',
+    'The manual-before-automate discipline: do the process manually for the first users, watch what actually happens — what\'s needed, what\'s not, what users ask for that you didn\'t anticipate — then automate the validated version. Every time automation is built for an unvalidated process, there\'s a real chance of needing to rebuild the automation after discovering the manual version was wrong.',
+    'Questions to ask before automating: have you done this manually at least once? Did it work as expected? Did users respond as expected? If any answer is no — do it manually first. Automation is optimization. Optimization of an unvalidated process is premature spend.',
+  ],
+  L2: [
+    'How many times have you done this process manually, and what did you learn that shaped the automation design? If the answer is zero — do it manually first.',
+    'What would happen if you did this manually for the first 10 users instead of building the automation now? Is there anything you\'d learn that might change how you automate it?',
+  ],
+  L3: [
+    'Do this manually first — validate it works for real users before building the automation.',
+  ],
+};
+
+export const ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL: DecisionContent = {
+  question: 'Can you maintain this architecture alone, at 2am, when it breaks?',
+  pinchFallback: 'Apply the solo maintainability test before adding this complexity.',
+  L1: [
+    'Every technology choice for a solo indie project is a choice you\'ll maintain alone — debugging it at 2am, extending it when requirements change, understanding it after 3 months away. Complexity that would be distributed across a team of engineers is complexity a solo builder pays in full. The right lens: "is this the simplest stack I can maintain alone, or is this the most impressive stack I can technically justify?"',
+    'CV-driven development trap: adding architectural complexity appropriate for a team is inappropriate for a solo operator who must maintain it indefinitely. Microservices, event sourcing, and distributed architectures provide real benefits at scale with a team. For a solo builder at early scale, they add maintenance surface without adding user value. The user doesn\'t see the architecture — they see the product.',
+    'Solo maintainability benchmark: if a production issue hit this system tonight, how long would it take you to find and fix it alone, without documentation? A simpler stack answers that in minutes. A complex one answers it in hours — and that difference is paid by you, every time something breaks. Simpler stack = lower maintenance tax = more time shipping.',
+  ],
+  L2: [
+    'What\'s the simplest architecture that solves the same problem? Is the added complexity of this approach worth the increased solo maintenance cost?',
+    'If this broke in production at midnight, how would you debug it alone? What\'s your mean-time-to-understand for this architecture under pressure?',
+  ],
+  L3: [
+    'Apply the solo maintainability test — choose the simplest architecture you can debug alone.',
+  ],
+};
+
+export const ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL: DecisionContent = {
+  question: 'How are people going to find out this product exists when you launch?',
+  pinchFallback: 'Define a launch strategy before getting closer to ship date.',
+  L1: [
+    'Shipping without a launch plan means launching into silence. Good products do not attract users by themselves — distribution is a discipline that must be planned and executed, not discovered. The minimum viable launch strategy: name one specific channel where you will announce this product, write the post before launch day, and identify who in your network or community should see it. That\'s a launch plan.',
+    'Distribution channels that indie hackers actually use: Product Hunt (works for dev/productivity tools, requires scheduling and upvote coordination), Hacker News Show HN (write the Show HN post before launch day), relevant subreddits, Twitter/X announcement, personal email list, niche community Slack/Discord, cold outreach to 5-10 target users. One channel executed well beats five channels half-heartedly attempted on launch day.',
+    'The launch plan question: when you ship, who specifically is going to see it, and how? If the answer is "people will find it" — that\'s not a plan, that\'s a hope. Name the channel, identify the audience, and write the announcement before you\'re in launch-day mode.',
+  ],
+  L2: [
+    'Name the specific channel and the specific audience: where will you announce, and who exactly will see it on launch day?',
+    'Write the launch announcement draft now — before you need it. It forces clarity on what the product is, who it\'s for, and what makes it worth trying.',
+  ],
+  L3: [
+    'Write a launch plan now: one specific channel, one specific audience, one drafted announcement.',
+  ],
+};
+
+export const ABSENCE_EARLY_USER_FEEDBACK_CASUAL: DecisionContent = {
+  question: 'When did you last get a real user\'s reaction to what you\'re building?',
+  pinchFallback: 'Show what you\'ve built to at least one real user before continuing.',
+  L1: [
+    'Building in a silo is the primary cause of product-market fit failure. Every prompt you spend building without external user input is a prompt where you\'re confirming your own assumptions rather than testing them. The assumptions that feel most certain — "users obviously want this", "this UX is clearly better" — are the ones most likely to be wrong, because certainty removes the impulse to test.',
+    'Early user feedback doesn\'t require a polished product. A screenshot, a Loom walkthrough, a live screen share, or a rough prototype shown to 2-3 people produces feedback that changes build direction more than any amount of self-review. The goal is not approval — it\'s friction: finding the things that confuse, the steps that feel wrong, the value that isn\'t landing.',
+    'A practical minimum: before finishing any significant feature, show a working or near-working version to one real user and watch them interact with it without explaining anything. What they struggle with, what they don\'t notice, what they ask about — that\'s the feedback that matters. You don\'t need a survey. You need one real person trying to use the thing.',
+  ],
+  L2: [
+    'Who can you show the current build state to today — not to get approval, but to watch them use it and see where they get confused or stuck?',
+    'What\'s the riskiest assumption in your current build? Is there a way to test that assumption with a real user before building further on top of it?',
+  ],
+  L3: [
+    'Show this to at least one real user now — watch them use it before building further.',
+  ],
+};
+
+export const ABSENCE_SOLO_MAINTAINABILITY_CASUAL: DecisionContent = {
+  question: 'Is this addition maintainable by you alone, long-term?',
+  pinchFallback: 'Run the solo maintainability check before adding this complexity.',
+  L1: [
+    'Every integration, service, or abstraction you add to a solo project is complexity you\'ll maintain alone — debugging it in production, extending it when requirements change, understanding it after weeks away. The solo maintainability question is not "does this work?" but "can I own the full blast radius of this when it breaks, by myself, without help?" If the answer requires reading documentation for 30 minutes every time something goes wrong, the complexity cost is real and ongoing.',
+    'The solo tax compounds: each addition increases the total maintenance surface area paid by one person. A third-party integration that saves a day of development costs a day of debugging every time its API changes, its documentation is wrong, or its behavior is unexpected. The rule: only add an integration if the long-term maintenance cost is clearly lower than the long-term development cost of building it yourself or finding a simpler alternative.',
+    'Before adding any new service, integration, or complex abstraction: name the failure mode that\'s most likely to wake you up at 3am. Can you diagnose and fix that failure alone, in under 30 minutes, with the logs you\'ll have available? If not, the complexity is not solo-sustainable.',
+  ],
+  L2: [
+    'What\'s the most likely failure mode for this addition, and how long would it take you to diagnose and fix it alone, at night, with no colleagues to ask?',
+    'Is there a simpler alternative that solves the same problem with lower solo maintenance cost — even if it takes an extra day to build?',
+  ],
+  L3: [
+    'Apply the solo maintainability test: can you own the full failure mode of this, alone?',
+  ],
+};
+
+export const ABSENCE_DISTRIBUTION_THINKING_CASUAL: DecisionContent = {
+  question: 'How will users discover and access this feature?',
+  pinchFallback: 'Consider the distribution angle before building this feature.',
+  L1: [
+    'Distribution is a design constraint, not a marketing task. Features that assume users will discover them organically are features built on distribution magic. Before building any significant feature, answer: what is the specific path through which a new user discovers this feature exists and reaches it for the first time? The answer shapes the implementation — SEO-friendly URLs, in-product sharing mechanics, referral hooks, and community-compatible output formats are all distribution design, not afterthoughts.',
+    'The distribution question for indie products: are you relying on existing users to find this (in-product discovery), new users to find the product through this feature (SEO / social sharing), or explicit outreach to get people to try it? Each of these requires a different implementation approach. In-product discovery needs navigation design; SEO requires content structure; social sharing requires a shareable artifact. Choosing the distribution approach before building ensures the feature can actually fulfill it.',
+    'A minimum distribution consideration: for each feature, name the one most likely way a user first encounters it. Then check whether the current implementation supports that discovery path. If the implementation makes the feature invisible to the intended discovery mechanism, distribution is broken before the feature ships.',
+  ],
+  L2: [
+    'Name the specific discovery path for this feature: how does a user who has never seen it find out it exists and reach it?',
+    'Does the current implementation support that discovery path, or would a user arriving through that channel hit a dead end?',
+  ],
+  L3: [
+    'Name the distribution path for this feature before building — how does a user first find it?',
+  ],
+};
+
+export const ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL: DecisionContent = {
+  question: 'How does this feature connect to how the product makes money?',
+  pinchFallback: 'Consider the monetization connection before building this feature.',
+  L1: [
+    'Building features without monetization awareness builds a free product by default — regardless of intent. Every significant feature should have an articulated answer to "how does this connect to the revenue model?" It doesn\'t need to be direct: "this is a retention feature that reduces churn, which improves LTV" is a valid connection. "This makes the product better" is not — it\'s the answer that leads to technically excellent, commercially unsustainable products.',
+    'Revenue model options for indie products: paid tier (freemium gate), usage-based pricing, one-time purchase, SaaS subscription, affiliate revenue, API access tier. For each feature, ask: is this in the free tier (acquisition) or the paid tier (monetization)? If free, why — what acquisition or retention goal does it serve that connects back to paid conversion? If paid, what makes it worth paying for? These questions don\'t slow development — they prevent building the wrong tier.',
+    'The risk of deferred monetization thinking: every feature added without a business model connection narrows the future monetization options. Features that train users to expect something for free are hard to move behind a paywall later. Revenue model decisions made during development are lower cost than revenue model decisions made after launch.',
+  ],
+  L2: [
+    'Is this feature in the free or paid tier? What\'s the explicit reason — acquisition, retention, conversion, or direct revenue?',
+    'If this feature were behind a paywall, would users pay for it? If not, what would need to change about the feature — or the framing — to make it worth paying for?',
+  ],
+  L3: [
+    'Name the monetization connection for this feature before building — free tier or paid, and why.',
+  ],
+};
+
+export const ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL: DecisionContent = {
+  question: 'Is this a milestone worth sharing publicly?',
+  pinchFallback: 'Consider sharing this milestone publicly before moving to the next.',
+  L1: [
+    'Every milestone you reach while building in silence is a distribution opportunity permanently lost. Build-in-public isn\'t just social media content — it\'s a parallel audience-building track that runs alongside development. The people who follow your progress become your first customers, your first promoters, and your first feedback providers. Building without sharing means you\'re building toward a cold launch: no audience, no early users, no feedback loop until the product is shipped.',
+    'What makes a milestone worth sharing: first working version of a core feature, reaching a significant technical milestone, shipping something users can try, hitting a number (first 10 users, first revenue, first 100 signups), or learning something worth teaching. The bar is lower than it feels — people follow progress, not perfection. A rough demo shared early generates more signal than a polished demo shared at launch.',
+    'The format doesn\'t need to be a polished post. A short tweet ("just shipped X — here\'s what it does and what I learned"), a Loom walkthrough posted to a community, or a one-paragraph update in a relevant forum. The goal is consistent presence during the build, not a single launch-day announcement. Audiences built over months survive launch-day logistics failures; audiences built in the last week don\'t.',
+  ],
+  L2: [
+    'What\'s the simplest format to share this milestone today — a tweet, a short post, a screen share? Who specifically should see it?',
+    'What did you learn building this that another indie hacker would find useful? That\'s the post. Share the process, not just the output.',
+  ],
+  L3: [
+    'Share this milestone publicly now — a short post about what you built and what you learned.',
+  ],
+};
+
+export const ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL: DecisionContent = {
+  question: 'Is the current scope still within your available time and energy?',
+  pinchFallback: 'Run a scope-vs-time check before adding more to the build.',
+  L1: [
+    'The most common reason indie projects are abandoned is not technical failure — it\'s scope that expanded past available time and energy without anyone acknowledging it. Every "also want to add" is individually reasonable. Collectively, they make the project feel endless, which makes shipping feel impossible, which makes abandonment feel rational. Scope hammering — consciously limiting scope to what fits available time — is the discipline that prevents this.',
+    'Time-box check: at the current scope, how long will it take to ship something a real user can use? If the answer is "a few more weeks" and it was "a few more weeks" last session too — scope has grown past the original timeline without acknowledgment. The fix is not to work faster; it\'s to cut scope to fit the original timeline, not to extend the timeline to fit the expanded scope.',
+    'A useful constraint: define the minimum version that\'s still shippable given the time you have available this week or this month. Everything beyond that goes to a post-launch backlog. The constraint is productive: it forces the prioritization decision that scope expansion defers indefinitely.',
+  ],
+  L2: [
+    'At current scope, when will you ship something a real user can actually use? If that date keeps moving, scope has grown past the timeline — cut something.',
+    'What\'s the minimum version that\'s shippable in your available time this week/month? What specifically gets cut to reach that minimum?',
+  ],
+  L3: [
+    'Cut scope to fit available time — define the minimum shippable version for this week/month.',
+  ],
+};
+
+// ── Phase 6 E7-E9 — pm role FORMAL content ───────────────────────────────────
+
+export const ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL: DecisionContent = {
+  question: 'Are acceptance criteria defined for this story before development begins?',
+  pinchFallback: 'Define acceptance criteria for this story before starting implementation.',
+  L1: [
+    'Scrum\'s Definition of Ready requires that acceptance criteria exist before a story enters development. AC serves two functions: it tells developers what "done" means (reducing implementation ambiguity), and it gives the product owner testable conditions to evaluate the work against. Without AC, developers build to their imagination and product owners evaluate against their expectations — and these rarely match. Rework caused by missing AC is one of the most expensive and preventable failure modes in sprint delivery.',
+    'Well-formed acceptance criteria follow the INVEST model\'s testability requirement: each criterion should be independently verifiable. AC format options: Given/When/Then (BDD-style, most precise for testable behavior); bulleted completion conditions ("This story is done when: [a], [b], [c]"); or user-facing outcomes ("A user can [accomplish X] without [friction Y]"). The format matters less than the testability: if a tester cannot write a test case from the AC, the AC is too vague.',
+    'Before writing any implementation prompt: name the acceptance criteria. One sentence minimum: "This is done when [condition]." This 30-second discipline prevents the most expensive rework scenario: building the wrong thing correctly.',
+  ],
+  L2: [
+    'Write the acceptance criteria now, in Given/When/Then or completion-condition format, before starting the implementation prompt.',
+    'What is the explicit condition that would cause you to reject this story at demo? That condition IS the acceptance criteria.',
+  ],
+  L3: [
+    'State the acceptance criteria — "this is done when [condition]" — before any implementation.',
+  ],
+};
+
+export const ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL: DecisionContent = {
+  question: 'Have relevant stakeholders been aligned on this feature before development begins?',
+  pinchFallback: 'Verify stakeholder alignment before proceeding with significant development work.',
+  L1: [
+    'PMBOK stakeholder management (Ch.13) requires continuous engagement, not point-in-time sign-off. For PMs using AI coding tools, the risk is speed: AI reduces the effort to build features to minutes, which means significant decisions that previously required stakeholder conversations before implementation can now be implemented before the conversation happens. Speed is the mechanism that converts alignment assumptions into demo-time surprises.',
+    'The cost asymmetry of stakeholder alignment: a 15-minute conversation before development costs one scheduled touchpoint. Discovery at demo that a feature doesn\'t match stakeholder expectations costs rework time, relationship repair, potential sprint replanning, and a process culture that has learned building before aligning is acceptable. The last cost is the most expensive — process culture is set by what PMs do under time pressure.',
+    'Alignment threshold: not every feature requires formal sign-off. The question is: who has a legitimate opinion about this feature that, if unvalidated, could cause rejection at demo? If the answer is "anyone," alignment before development is required. Document who was aligned and when.',
+  ],
+  L2: [
+    'Who has a legitimate opinion about this feature that could cause rework if not validated? Contact them before writing the first implementation prompt.',
+    'What assumption about stakeholder expectations is embedded in this feature? Validate the assumption before coding it in.',
+  ],
+  L3: [
+    'Identify and align the relevant stakeholder for this feature before beginning implementation.',
+  ],
+};
+
+export const ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL: DecisionContent = {
+  question: 'Are there ambiguous quality attributes in these requirements that need a measurable definition?',
+  pinchFallback: 'Resolve ambiguous quality attributes to measurable criteria before implementation.',
+  L1: [
+    'Requirements ambiguity is the leading cause of rework in software development (Wiegers, SEI). Words like "better," "faster," "more intuitive," "improved," and "user-friendly" are quality attribute placeholders — they communicate direction without specifying a testable target. They survive into implementation because they feel precise enough to build toward, but fail at acceptance because no test condition exists. The PM who builds on ambiguous requirements is building toward a subjective evaluation that will always be wrong for someone.',
+    'Ambiguity resolution is a one-time cost: 15 minutes to define "faster" as "API response time under 200ms at P95" before development. The measurable definition can be referenced in acceptance criteria, automated in tests, and communicated to stakeholders without interpretation. The alternative — building "faster" as-is — generates a post-implementation negotiation about whether the improvement was sufficient, which is always slower and more expensive than the 15-minute definition cost.',
+    'SMART criteria applied to requirements: Specific (quantifiable), Measurable (testable), Achievable (within scope), Relevant (connected to user value), Time-bound (when measured). Every quality attribute should pass SMART before implementation begins. SMART is not process overhead — it is the difference between requirements that can be accepted and requirements that cannot.',
+  ],
+  L2: [
+    'Replace each quality attribute placeholder ("better," "faster," "improved") with a specific, measurable target. State the measurement method and success threshold.',
+    'What is the testable condition that would prove this requirement is met? Write it before building toward it.',
+  ],
+  L3: [
+    'Define a measurable acceptance target for every quality attribute before starting implementation.',
+  ],
+};
+
+export const ABSENCE_DEPENDENCY_MAPPING_FORMAL: DecisionContent = {
+  question: 'Have upstream and downstream dependencies for this work been identified before starting?',
+  pinchFallback: 'Map dependencies before beginning this work to prevent blocked integration.',
+  L1: [
+    'Dependency identification is a foundational project management discipline (WBS, critical path method). Before any work begins: what does this work depend on (upstream), and what depends on this work completing (downstream)? Unmapped upstream dependencies create blocked work discovered mid-sprint; unmapped downstream dependencies create integration surprises at the worst time — when another team has built against an unstated assumption.',
+    'Agile dependency taxonomy: technical dependencies (APIs, data, infrastructure that must exist); team dependencies (work being done by another squad); external dependencies (third-party services, vendor deliverables); knowledge dependencies (decisions not yet made that block implementation). Each type has a different resolution path. Technical and team dependencies require coordination; external require timeline negotiation; knowledge dependencies require a decision before development can begin.',
+    'Dependency mapping cost asymmetry: typically 30-60 minutes distributed across relevant teams. Discovery cost when unmapped dependencies surface at integration: typically 2-5x the original estimate for affected work, plus timeline impact on dependent items. The PM\'s role is to have the 30-minute conversation before development, not the 5x recovery conversation after.',
+  ],
+  L2: [
+    'List all upstream dependencies (what this work requires to proceed) and downstream impacts (what depends on this work completing). Who needs to be notified?',
+    'Which of these dependencies are currently unresolved? What specific action is needed before development can safely begin?',
+  ],
+  L3: [
+    'Map all upstream and downstream dependencies for this work item before the first implementation prompt.',
+  ],
+};
+
+export const ABSENCE_DEFINITION_OF_DONE_FORMAL: DecisionContent = {
+  question: 'Is there an explicit Definition of Done for this sprint item?',
+  pinchFallback: 'Define the completion criteria for this item before starting work.',
+  L1: [
+    'The Scrum Definition of Done is the shared understanding of what "complete" means for a sprint item. Without it, done is subjective: the developer, the QA, and the PM all have different implicit definitions — and sprint review becomes a negotiation about whether work is finished rather than a verification against agreed criteria. A DoD converts subjective completion into an objective check.',
+    'DoD composition for a PM-managed sprint item: (1) functional acceptance — the behavior the system should exhibit; (2) quality gate — what testing or review must pass; (3) documentation requirement — what must be documented or updated; (4) deployment state — what environment must the change reach. Not every item requires all four — but each element should be explicitly addressed or explicitly excluded.',
+    'One-line DoD minimum: "This item is done when [functional condition] AND [quality gate]." The one-line DoD is better than no DoD. It creates a shared target, surfaces disagreement before work starts, and makes sprint review a verification rather than a debate.',
+  ],
+  L2: [
+    'Write the Definition of Done for this item now — "this is done when [condition]." State both the functional condition and the quality gate.',
+    'What would cause you to reject this item at sprint review? That rejection condition IS the Definition of Done.',
+  ],
+  L3: [
+    'State the Definition of Done — "this is done when [condition]" — before any work begins.',
+  ],
+};
+
+export const ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL: DecisionContent = {
+  question: 'Have teams affected by this change been notified before development begins?',
+  pinchFallback: 'Identify and notify affected teams before building this change to shared systems.',
+  L1: [
+    'Changes to shared infrastructure, APIs, or data models have downstream effects on every team that depends on those systems. The cost of notification before the change is a Slack message and a brief alignment conversation. The cost of discovering the impact after the change is built — through a broken integration, a failed deployment, or a downstream sprint disrupted — is measured in team-days of recovery work.',
+    'Cross-team impact taxonomy: API contract changes (endpoint behavior, response schema, authentication) affect all API consumers; database schema changes affect all services reading or writing those tables; shared service behavior changes affect all callers; infrastructure changes affect deployment pipelines across teams. Each category requires a different notification path — the API contract change requires consumer teams, the schema change requires the data team and downstream services.',
+    'Minimum notification standard: before building any change to a shared system, name the affected teams, send a notification, and document that notification in the sprint item. "Notified Team X on [date] — no blocking concerns raised" is sufficient. The documentation creates accountability and a paper trail for sprint retrospectives.',
+  ],
+  L2: [
+    'List the teams affected by this change. Send them a notification before writing the first implementation prompt. Document who was notified.',
+    'What would break in another team\'s work if this change deployed without warning? That team needs notification before you begin.',
+  ],
+  L3: [
+    'Notify all affected teams of this shared-system change before starting implementation.',
+  ],
+};
+
+export const ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL: DecisionContent = {
+  question: 'Is there a success metric defined for this feature before development begins?',
+  pinchFallback: 'Define how success will be measured for this feature before starting implementation.',
+  L1: [
+    'Outcome-driven development (OKRs, product management best practice) requires that the outcome be defined before the output is built. A feature without a success metric is a feature whose value cannot be evaluated after it ships — it exists in an evaluation vacuum where users may or may not use it and metrics may or may not move, with no basis for the post-ship retrospective conversation.',
+    'Success metric format: name the metric, the measurement method, the success threshold, and the measurement timeline. Example: "Success metric: feature adoption rate. Method: track feature_used events in analytics. Threshold: 30% of active users within 30 days of launch. Timeline: 60-day measurement window." A metric without a threshold is not a metric — it\'s an observation. A metric without a timeline is not actionable.',
+    'The pre-development success metric serves three functions: it aligns the team on what value the feature is supposed to deliver; it creates the basis for the post-ship evaluation; and it forces the product question before development: if we can\'t define how success would be measured, should we be building this at all?',
+  ],
+  L2: [
+    'Define the success metric now: name the metric, measurement method, success threshold, and measurement timeline. Write it in the sprint item before coding begins.',
+    'If this feature shipped tomorrow and no one used it, would we know? If not, the success metric is missing — define it now.',
+  ],
+  L3: [
+    'State the success metric, threshold, and measurement timeline before any implementation work.',
+  ],
+};
+
+export const ABSENCE_PRIORITY_JUSTIFICATION_FORMAL: DecisionContent = {
+  question: 'Is there an explicit justification for why this item is the current highest priority?',
+  pinchFallback: 'Articulate the priority justification for this item before beginning work.',
+  L1: [
+    'Every sprint item that enters development displaces something else that didn\'t. Agile backlog prioritization (WSJF, MoSCoW, impact-vs-effort) exists because without explicit priority reasoning, teams default to prioritizing whatever is easiest to implement, most recently requested, or most loudly advocated for. These implicit priority signals consistently produce suboptimal backlog ordering — high-value, high-effort items get perpetually deferred in favor of low-effort, low-value items.',
+    'Priority justification components: user or business value (who benefits and how much?); urgency or time criticality (does delay reduce value?); risk reduction (does doing this now prevent a future problem?); effort estimate (relative cost). WSJF combines these: (Value + Time Criticality + Risk Reduction) / Effort. The formula is less important than the discipline — before committing to any item, articulate why this item over the alternatives.',
+    'One-sentence priority justification minimum: "This item is highest priority because [specific reason — user impact / time constraint / risk / strategic alignment]." This 30-second discipline makes backlog prioritization decisions explicit, reversible, and legible to the team. It prevents the silent drift toward whatever is easiest.',
+  ],
+  L2: [
+    'State the priority justification for this item in one sentence: why this item over the next item in the backlog? Name the specific reason.',
+    'What would be lost if this item were pushed to the next sprint? If the answer is "nothing significant," it may not be the highest priority item.',
+  ],
+  L3: [
+    'Justify this item\'s priority before starting: why this item now, over the alternatives?',
+  ],
+};
+
+export const ABSENCE_USER_STORY_COMPLETENESS_FORMAL: DecisionContent = {
+  question: 'Is this work item expressed as a complete user story with who, what, and why?',
+  pinchFallback: 'Reframe this work item as a user story — who benefits, what they need, why it matters.',
+  L1: [
+    'The Connextra user story format — "As a [user type], I want [action], so that [value]" — is not ceremonial. Each element carries work that technical task definitions skip: "who" identifies whose problem is being solved and surfaces conflicting needs across user types; "what" defines the capability required; "why" aligns the team on the value being delivered and enables trade-off decisions. Technical task definitions ("add the button") skip all three and produce features that are technically complete and value-ambiguous.',
+    'The "so that" is the most valuable element. Without it, the team has no basis for evaluating implementation alternatives — they build the first thing that works rather than the simplest thing that delivers the value. With it, the PM can validate any implementation by asking: does this approach achieve the "so that"? The "so that" is the acceptance test for the product decision.',
+    'Reframe now: "As a [specific user type], I want [the action this feature enables], so that [the outcome they can achieve]." If you cannot complete the "so that," the feature\'s value is not yet understood — and that is the most important thing to resolve before implementation begins.',
+  ],
+  L2: [
+    'Complete the user story template: "As a [user type], I want [action], so that [value]." If the "so that" is unclear, that is what to resolve before building.',
+    'Who specifically benefits from this feature? What outcome does it enable for them? That is the user story — write it before writing the implementation prompt.',
+  ],
+  L3: [
+    'Write the full user story — who/what/why — before any implementation begins.',
+  ],
+};
+
+export const ABSENCE_RISK_FLAG_FORMAL: DecisionContent = {
+  question: 'Have risks been identified for this decision or scope change before proceeding?',
+  pinchFallback: 'Identify and document risks before proceeding with this significant decision.',
+  L1: [
+    'Risk management (PMBOK Ch.11) requires that risks be identified before significant decisions are made. In agile PM, this is lightweight and continuous — not a formal risk register review at every decision point. The minimum obligation is to name the uncertainty before proceeding: what could go wrong, how likely, and what the impact would be. Unnamed risks are assumed risks, and assumed risks become unplanned work.',
+    'Risk categories relevant to PM + AI development: technical risk (the implementation approach may not work as designed or may have performance characteristics that break under load); scope risk (the feature may be more complex than the current estimate); stakeholder risk (a decision-maker may reject the direction at demo); dependency risk (an upstream team or external service may not deliver on time); timeline risk (effort estimates may be wrong). Each category should be briefly evaluated before proceeding.',
+    'Risk naming format: "[Risk]: [description] — [likelihood: H/M/L] — [impact: H/M/L] — [mitigation: action or accepted]." A one-sentence risk identification is better than no identification. It converts an assumption into a monitored uncertainty, which is the prerequisite for doing anything about it.',
+  ],
+  L2: [
+    'Name the risks for this decision before proceeding: what could go wrong, how likely, what the impact is, and whether there is a mitigation or it is accepted.',
+    'What assumption embedded in this decision, if wrong, would cause the most damage? That assumption IS the risk. Name it before committing to the decision.',
+  ],
+  L3: [
+    'Identify and document risks before proceeding — what could go wrong and how it would be mitigated.',
+  ],
+};
+
+export const ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL: DecisionContent = {
+  question: 'Has the impact of this scope change on the current sprint been assessed?',
+  pinchFallback: 'Assess sprint impact before accepting this scope change.',
+  L1: [
+    'Scope change mid-sprint is acceptable in agile — responsiveness to change is a core value. What is not acceptable is accepting scope change without assessing what it displaces. The sprint is a time-boxed commitment. Every item added mid-sprint either displaces a previously committed item, extends the sprint (breaking the timebox), or is absorbed by reducing quality. None of these outcomes is free, and all require an explicit decision.',
+    'Four-point impact assessment for any mid-sprint scope change: (1) Timeline impact — does this change the sprint end date? (2) In-progress item impact — what currently in-flight work is affected or displaced? (3) Downstream dependency impact — do other teams have a date dependency on something this change affects? (4) Trade-off decision — what is explicitly removed or deferred to make room for this change? All four must be answered before the change enters the sprint.',
+    'Scope change governance minimum: "Accepting [change X]. Impact: [timeline +N days / no change]. Displaces: [item Y — deferred to next sprint]. Downstream: [Team Z notified / no downstream impact]. Trade-off: [accepted — deferred item Y is lower priority]." This 60-second assessment prevents sprint failure and creates a paper trail for the retrospective.',
+  ],
+  L2: [
+    'Before accepting this scope change: what does it displace, does it affect the sprint end date, and are downstream teams impacted? Answer all three before committing.',
+    'What is being removed or deferred to make room for this change? If nothing is being removed, the sprint commitment has just expanded without capacity expanding.',
+  ],
+  L3: [
+    'Complete the four-point impact assessment before accepting this scope change into the sprint.',
+  ],
+};
+
+export const ABSENCE_RETROSPECTIVE_HABIT_FORMAL: DecisionContent = {
+  question: 'Has this sprint or iteration been closed with a retrospective before starting the next?',
+  pinchFallback: 'Run a retrospective on this sprint before moving to the next cycle.',
+  L1: [
+    'The Sprint Retrospective (Scrum Guide 2020) is the mechanism that converts team experience into process improvement. Without it, teams repeat the same process mistakes because mistakes are never explicitly surfaced, discussed, or resolved. Each skipped retrospective is a compounding debt: the process errors from Sprint N carry into Sprint N+1 unchanged, and the team wonders why performance doesn\'t improve despite effort.',
+    'Effective retrospective structure (Norm Kerth\'s Prime Directive framework): (1) What went well — identify practices to preserve and reinforce; (2) What didn\'t go well — identify process problems without blame; (3) What to try next sprint — one or two specific, actionable process changes that can be implemented in the next cycle. The retrospective takes 30-60 minutes and produces one to two process change commitments. That is the entire obligation.',
+    'The most common retrospective failure mode is confusing a retrospective with a post-mortem. A retrospective is forward-looking: it produces specific, actionable commitments for the next sprint. "We should communicate better" is not a retrospective action item — it is a platitude. "We will use a shared Slack channel for async decisions instead of email, starting next sprint" is a retrospective action item.',
+  ],
+  L2: [
+    'Before starting the next sprint: run the retrospective — what went well, what didn\'t, and one specific process change to try next cycle. Document the action item.',
+    'What process mistake from this sprint, if not addressed now, will definitely repeat in the next sprint? That is the retrospective topic.',
+  ],
+  L3: [
+    'Run the sprint retrospective now — what went well, what didn\'t, one process change for next sprint.',
+  ],
+};
+
 // ── Content resolution ─────────────────────────────────────────────────────────
 
 /**
@@ -2411,6 +3012,50 @@ const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
   performance_awareness:         ABSENCE_PERFORMANCE_AWARENESS_CASUAL,
 };
 
+const ABSENCE_CONTENT_FOUNDER: Partial<Record<string, DecisionContent>> = {
+  user_value_check:                  ABSENCE_USER_VALUE_CHECK_CASUAL,
+  outcome_definition:                ABSENCE_OUTCOME_DEFINITION_CASUAL,
+  feature_prioritization:            ABSENCE_FEATURE_PRIORITIZATION_CASUAL,
+  user_persona_clarity:              ABSENCE_USER_PERSONA_CLARITY_CASUAL,
+  competitive_awareness:             ABSENCE_COMPETITIVE_AWARENESS_CASUAL,
+  mvp_boundary_discipline:           ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL,
+  user_acquisition_consideration:    ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL,
+  retention_mechanism_check:         ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL,
+  feedback_loop_establishment:       ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL,
+  hypothesis_before_build:           ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL,
+  technical_vs_product_time_balance: ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL,
+  north_star_alignment:              ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL,
+};
+
+const ABSENCE_CONTENT_INDIE_HACKER: Partial<Record<string, DecisionContent>> = {
+  time_to_value_check:         ABSENCE_TIME_TO_VALUE_CHECK_CASUAL,
+  ship_readiness_definition:   ABSENCE_SHIP_READINESS_DEFINITION_CASUAL,
+  manual_before_automate:      ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL,
+  tech_stack_complexity_check: ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL,
+  launch_strategy_absence:     ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL,
+  early_user_feedback:         ABSENCE_EARLY_USER_FEEDBACK_CASUAL,
+  solo_maintainability:        ABSENCE_SOLO_MAINTAINABILITY_CASUAL,
+  distribution_thinking:       ABSENCE_DISTRIBUTION_THINKING_CASUAL,
+  monetization_path_clarity:   ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL,
+  build_in_public_opportunity: ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL,
+  scope_vs_time_check:         ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL,
+};
+
+const ABSENCE_CONTENT_PM: Partial<Record<string, DecisionContent>> = {
+  acceptance_criteria_before_dev: ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL,
+  stakeholder_alignment_check:    ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL,
+  requirements_ambiguity_flag:    ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL,
+  dependency_mapping:             ABSENCE_DEPENDENCY_MAPPING_FORMAL,
+  definition_of_done:             ABSENCE_DEFINITION_OF_DONE_FORMAL,
+  cross_team_impact_check:        ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL,
+  success_metric_definition:      ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL,
+  priority_justification:         ABSENCE_PRIORITY_JUSTIFICATION_FORMAL,
+  user_story_completeness:        ABSENCE_USER_STORY_COMPLETENESS_FORMAL,
+  risk_flag:                      ABSENCE_RISK_FLAG_FORMAL,
+  scope_change_impact_assessment: ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL,
+  retrospective_habit:            ABSENCE_RETROSPECTIVE_HABIT_FORMAL,
+};
+
 /**
  * Stage transition content lookup.
  * Keyed by the DESTINATION stage (currentStage after transition).
@@ -2427,6 +3072,13 @@ const TRANSITION_CONTENT: Partial<Record<Stage, DecisionContent>> = {
 function selectAbsenceMap(nature: UserProfile['nature'] | null | undefined): Partial<Record<string, DecisionContent>> {
   if (nature === 'hardcore_pro') return ABSENCE_CONTENT;
   return ABSENCE_CONTENT_CASUAL;
+}
+
+function selectRoleAbsenceMap(role: UserProfile['role'] | null | undefined): Partial<Record<string, DecisionContent>> | null {
+  if (role === 'founder')      return ABSENCE_CONTENT_FOUNDER;
+  if (role === 'indie_hacker') return ABSENCE_CONTENT_INDIE_HACKER;
+  if (role === 'pm')           return ABSENCE_CONTENT_PM;
+  return null;
 }
 
 function selectNonBeginnerVariant(nature: UserProfile['nature'] | null | undefined): DecisionContent {
@@ -2467,11 +3119,14 @@ export function resolveDecisionContent(
   const isBeginner    = profile?.nature === 'beginner';
   const isVibe        = isBeginner;
   const absenceMap    = isVibe ? ABSENCE_CONTENT_BEGINNER : selectAbsenceMap(profile?.nature);
+  const roleMap       = isVibe ? null : selectRoleAbsenceMap(profile?.role);
   const transitionMap = isVibe ? TRANSITION_CONTENT_BEGINNER : TRANSITION_CONTENT;
 
   if (flagType.startsWith('absence:')) {
-    const signalKey = flagType.slice('absence:'.length);
-    const override  = absenceMap[signalKey];
+    const signalKey  = flagType.slice('absence:'.length);
+    const roleHit    = roleMap?.[signalKey];
+    if (roleHit) return roleHit;
+    const override   = absenceMap[signalKey];
     if (override) return override;
   }
 

@@ -139,6 +139,41 @@ import {
   ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL,
   ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL,
   ABSENCE_SLO_DEFINITION_GAP_FORMAL,
+  ABSENCE_USER_VALUE_CHECK_CASUAL,
+  ABSENCE_OUTCOME_DEFINITION_CASUAL,
+  ABSENCE_FEATURE_PRIORITIZATION_CASUAL,
+  ABSENCE_USER_PERSONA_CLARITY_CASUAL,
+  ABSENCE_COMPETITIVE_AWARENESS_CASUAL,
+  ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL,
+  ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL,
+  ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL,
+  ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL,
+  ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL,
+  ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL,
+  ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL,
+  ABSENCE_TIME_TO_VALUE_CHECK_CASUAL,
+  ABSENCE_SHIP_READINESS_DEFINITION_CASUAL,
+  ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL,
+  ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL,
+  ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL,
+  ABSENCE_EARLY_USER_FEEDBACK_CASUAL,
+  ABSENCE_SOLO_MAINTAINABILITY_CASUAL,
+  ABSENCE_DISTRIBUTION_THINKING_CASUAL,
+  ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL,
+  ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL,
+  ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL,
+  ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL,
+  ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL,
+  ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL,
+  ABSENCE_DEPENDENCY_MAPPING_FORMAL,
+  ABSENCE_DEFINITION_OF_DONE_FORMAL,
+  ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL,
+  ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL,
+  ABSENCE_PRIORITY_JUSTIFICATION_FORMAL,
+  ABSENCE_USER_STORY_COMPLETENESS_FORMAL,
+  ABSENCE_RISK_FLAG_FORMAL,
+  ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL,
+  ABSENCE_RETROSPECTIVE_HABIT_FORMAL,
 } from './options.js';
 import {
   ABSENCE_CONTENT_BEGINNER,
@@ -4506,6 +4541,408 @@ describe('resolveDecisionContent — Stream B universal signals', () => {
     ];
     for (const key of expected) {
       expect(key in ABSENCE_CONTENT_BEGINNER).toBe(true);
+    }
+  });
+});
+
+describe('resolveDecisionContent — Phase 6 role-based signal routing', () => {
+  const makeRoleProfile = (role: 'founder' | 'indie_hacker' | 'pm') =>
+    ({ role } as UserProfile);
+
+  // ── Phase 6 E1-E3 — founder role signals ──────────────────────────────────────
+
+  it('absence:user_value_check, founder → ABSENCE_USER_VALUE_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:user_value_check', makeRoleProfile('founder'))).toBe(ABSENCE_USER_VALUE_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_USER_VALUE_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_USER_VALUE_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_USER_VALUE_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_USER_VALUE_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:outcome_definition, founder → ABSENCE_OUTCOME_DEFINITION_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:outcome_definition', makeRoleProfile('founder'))).toBe(ABSENCE_OUTCOME_DEFINITION_CASUAL);
+  });
+
+  it('ABSENCE_OUTCOME_DEFINITION_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_OUTCOME_DEFINITION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_OUTCOME_DEFINITION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_OUTCOME_DEFINITION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:feature_prioritization, founder → ABSENCE_FEATURE_PRIORITIZATION_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:feature_prioritization', makeRoleProfile('founder'))).toBe(ABSENCE_FEATURE_PRIORITIZATION_CASUAL);
+  });
+
+  it('ABSENCE_FEATURE_PRIORITIZATION_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_FEATURE_PRIORITIZATION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_FEATURE_PRIORITIZATION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_FEATURE_PRIORITIZATION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:user_persona_clarity, founder → ABSENCE_USER_PERSONA_CLARITY_CASUAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:user_persona_clarity', makeRoleProfile('founder'))).toBe(ABSENCE_USER_PERSONA_CLARITY_CASUAL);
+  });
+
+  it('ABSENCE_USER_PERSONA_CLARITY_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_USER_PERSONA_CLARITY_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_USER_PERSONA_CLARITY_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_USER_PERSONA_CLARITY_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:competitive_awareness, founder → ABSENCE_COMPETITIVE_AWARENESS_CASUAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:competitive_awareness', makeRoleProfile('founder'))).toBe(ABSENCE_COMPETITIVE_AWARENESS_CASUAL);
+  });
+
+  it('ABSENCE_COMPETITIVE_AWARENESS_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_COMPETITIVE_AWARENESS_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_COMPETITIVE_AWARENESS_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_COMPETITIVE_AWARENESS_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:mvp_boundary_discipline, founder → ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:mvp_boundary_discipline', makeRoleProfile('founder'))).toBe(ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL);
+  });
+
+  it('ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:user_acquisition_consideration, founder → ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:user_acquisition_consideration', makeRoleProfile('founder'))).toBe(ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL);
+  });
+
+  it('ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:retention_mechanism_check, founder → ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('release', 'absence:retention_mechanism_check', makeRoleProfile('founder'))).toBe(ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:feedback_loop_establishment, founder → ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL', () => {
+    expect(resolveDecisionContent('release', 'absence:feedback_loop_establishment', makeRoleProfile('founder'))).toBe(ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL);
+  });
+
+  it('ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:hypothesis_before_build, founder → ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:hypothesis_before_build', makeRoleProfile('founder'))).toBe(ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL);
+  });
+
+  it('ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:technical_vs_product_time_balance, founder → ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:technical_vs_product_time_balance', makeRoleProfile('founder'))).toBe(ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL);
+  });
+
+  it('ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:north_star_alignment, founder → ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:north_star_alignment', makeRoleProfile('founder'))).toBe(ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL);
+  });
+
+  it('ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL.L3).toHaveLength(1);
+  });
+
+  // ── Phase 6 E4-E6 — indie_hacker role signals ─────────────────────────────────
+
+  it('absence:time_to_value_check, indie_hacker → ABSENCE_TIME_TO_VALUE_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:time_to_value_check', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_TIME_TO_VALUE_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_TIME_TO_VALUE_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TIME_TO_VALUE_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_TIME_TO_VALUE_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_TIME_TO_VALUE_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:ship_readiness_definition, indie_hacker → ABSENCE_SHIP_READINESS_DEFINITION_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:ship_readiness_definition', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_SHIP_READINESS_DEFINITION_CASUAL);
+  });
+
+  it('ABSENCE_SHIP_READINESS_DEFINITION_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SHIP_READINESS_DEFINITION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SHIP_READINESS_DEFINITION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SHIP_READINESS_DEFINITION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:manual_before_automate, indie_hacker → ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:manual_before_automate', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL);
+  });
+
+  it('ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:tech_stack_complexity_check, indie_hacker → ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:tech_stack_complexity_check', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:launch_strategy_absence, indie_hacker → ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:launch_strategy_absence', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL);
+  });
+
+  it('ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:early_user_feedback, indie_hacker → ABSENCE_EARLY_USER_FEEDBACK_CASUAL', () => {
+    expect(resolveDecisionContent('release', 'absence:early_user_feedback', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_EARLY_USER_FEEDBACK_CASUAL);
+  });
+
+  it('ABSENCE_EARLY_USER_FEEDBACK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_EARLY_USER_FEEDBACK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_EARLY_USER_FEEDBACK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_EARLY_USER_FEEDBACK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:solo_maintainability, indie_hacker → ABSENCE_SOLO_MAINTAINABILITY_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:solo_maintainability', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_SOLO_MAINTAINABILITY_CASUAL);
+  });
+
+  it('ABSENCE_SOLO_MAINTAINABILITY_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SOLO_MAINTAINABILITY_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SOLO_MAINTAINABILITY_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SOLO_MAINTAINABILITY_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:distribution_thinking, indie_hacker → ABSENCE_DISTRIBUTION_THINKING_CASUAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:distribution_thinking', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_DISTRIBUTION_THINKING_CASUAL);
+  });
+
+  it('ABSENCE_DISTRIBUTION_THINKING_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DISTRIBUTION_THINKING_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_DISTRIBUTION_THINKING_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_DISTRIBUTION_THINKING_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:monetization_path_clarity, indie_hacker → ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:monetization_path_clarity', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL);
+  });
+
+  it('ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:build_in_public_opportunity, indie_hacker → ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:build_in_public_opportunity', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL);
+  });
+
+  it('ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:scope_vs_time_check, indie_hacker → ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:scope_vs_time_check', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  // ── Phase 6 E7-E9 — pm role signals ──────────────────────────────────────────
+
+  it('absence:acceptance_criteria_before_dev, pm → ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:acceptance_criteria_before_dev', makeRoleProfile('pm'))).toBe(ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL);
+  });
+
+  it('ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:stakeholder_alignment_check, pm → ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:stakeholder_alignment_check', makeRoleProfile('pm'))).toBe(ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL);
+  });
+
+  it('ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:requirements_ambiguity_flag, pm → ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:requirements_ambiguity_flag', makeRoleProfile('pm'))).toBe(ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL);
+  });
+
+  it('ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:dependency_mapping, pm → ABSENCE_DEPENDENCY_MAPPING_FORMAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:dependency_mapping', makeRoleProfile('pm'))).toBe(ABSENCE_DEPENDENCY_MAPPING_FORMAL);
+  });
+
+  it('ABSENCE_DEPENDENCY_MAPPING_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEPENDENCY_MAPPING_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_DEPENDENCY_MAPPING_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_DEPENDENCY_MAPPING_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:definition_of_done, pm → ABSENCE_DEFINITION_OF_DONE_FORMAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:definition_of_done', makeRoleProfile('pm'))).toBe(ABSENCE_DEFINITION_OF_DONE_FORMAL);
+  });
+
+  it('ABSENCE_DEFINITION_OF_DONE_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEFINITION_OF_DONE_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_DEFINITION_OF_DONE_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_DEFINITION_OF_DONE_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:cross_team_impact_check, pm → ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:cross_team_impact_check', makeRoleProfile('pm'))).toBe(ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL);
+  });
+
+  it('ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:success_metric_definition, pm → ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:success_metric_definition', makeRoleProfile('pm'))).toBe(ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL);
+  });
+
+  it('ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:priority_justification, pm → ABSENCE_PRIORITY_JUSTIFICATION_FORMAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:priority_justification', makeRoleProfile('pm'))).toBe(ABSENCE_PRIORITY_JUSTIFICATION_FORMAL);
+  });
+
+  it('ABSENCE_PRIORITY_JUSTIFICATION_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_PRIORITY_JUSTIFICATION_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_PRIORITY_JUSTIFICATION_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_PRIORITY_JUSTIFICATION_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:user_story_completeness, pm → ABSENCE_USER_STORY_COMPLETENESS_FORMAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:user_story_completeness', makeRoleProfile('pm'))).toBe(ABSENCE_USER_STORY_COMPLETENESS_FORMAL);
+  });
+
+  it('ABSENCE_USER_STORY_COMPLETENESS_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_USER_STORY_COMPLETENESS_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_USER_STORY_COMPLETENESS_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_USER_STORY_COMPLETENESS_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:risk_flag, pm → ABSENCE_RISK_FLAG_FORMAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:risk_flag', makeRoleProfile('pm'))).toBe(ABSENCE_RISK_FLAG_FORMAL);
+  });
+
+  it('ABSENCE_RISK_FLAG_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_RISK_FLAG_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_RISK_FLAG_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_RISK_FLAG_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:scope_change_impact_assessment, pm → ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:scope_change_impact_assessment', makeRoleProfile('pm'))).toBe(ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL);
+  });
+
+  it('ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:retrospective_habit, pm → ABSENCE_RETROSPECTIVE_HABIT_FORMAL', () => {
+    expect(resolveDecisionContent('feedback_loop', 'absence:retrospective_habit', makeRoleProfile('pm'))).toBe(ABSENCE_RETROSPECTIVE_HABIT_FORMAL);
+  });
+
+  it('ABSENCE_RETROSPECTIVE_HABIT_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_RETROSPECTIVE_HABIT_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_RETROSPECTIVE_HABIT_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_RETROSPECTIVE_HABIT_FORMAL.L3).toHaveLength(1);
+  });
+
+  // ── Role map key coverage checks ──────────────────────────────────────────────
+
+  it('resolveDecisionContent returns founder CASUAL content for all 12 E1-E3 keys', () => {
+    const founderKeys = [
+      'user_value_check', 'outcome_definition', 'feature_prioritization',
+      'user_persona_clarity', 'competitive_awareness', 'mvp_boundary_discipline',
+      'user_acquisition_consideration', 'retention_mechanism_check', 'feedback_loop_establishment',
+      'hypothesis_before_build', 'technical_vs_product_time_balance', 'north_star_alignment',
+    ];
+    for (const key of founderKeys) {
+      const result = resolveDecisionContent('implementation', `absence:${key}`, makeRoleProfile('founder'));
+      expect(result).toBeDefined();
+    }
+  });
+
+  it('resolveDecisionContent returns indie_hacker CASUAL content for all 11 E4-E6 keys', () => {
+    const indieKeys = [
+      'time_to_value_check', 'ship_readiness_definition', 'manual_before_automate',
+      'tech_stack_complexity_check', 'launch_strategy_absence', 'early_user_feedback',
+      'solo_maintainability', 'distribution_thinking', 'monetization_path_clarity',
+      'build_in_public_opportunity', 'scope_vs_time_check',
+    ];
+    for (const key of indieKeys) {
+      const result = resolveDecisionContent('implementation', `absence:${key}`, makeRoleProfile('indie_hacker'));
+      expect(result).toBeDefined();
+    }
+  });
+
+  it('resolveDecisionContent returns pm FORMAL content for all 12 E7-E9 keys', () => {
+    const pmKeys = [
+      'acceptance_criteria_before_dev', 'stakeholder_alignment_check', 'requirements_ambiguity_flag',
+      'dependency_mapping', 'definition_of_done', 'cross_team_impact_check',
+      'success_metric_definition', 'priority_justification', 'user_story_completeness',
+      'risk_flag', 'scope_change_impact_assessment', 'retrospective_habit',
+    ];
+    for (const key of pmKeys) {
+      const result = resolveDecisionContent('implementation', `absence:${key}`, makeRoleProfile('pm'));
+      expect(result).toBeDefined();
     }
   });
 });
