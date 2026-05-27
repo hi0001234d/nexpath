@@ -6,7 +6,9 @@ import type { Store } from '../../store/db.js';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
 import { classifyPrompt } from '../../classifier/PromptClassifier.js';
 import { SessionStateManager } from '../../classifier/SessionStateManager.js';
-import { detectAbsenceFlags } from '../../classifier/AbsenceDetector.js';
+import { detectAbsenceFlags, ABSENCE_MIN_PROMPTS } from '../../classifier/AbsenceDetector.js';
+import { classifyStreamBPresence } from '../../classifier/StreamBPresenceClassifier.js';
+import type { StreamBPresenceResult } from '../../classifier/StreamBPresenceClassifier.js';
 import { shouldFireStage2, runStage2 } from '../../classifier/Stage2Trigger.js';
 import { generatePinchLabel } from '../../decision-session/PinchGenerator.js';
 import { generateOptionList } from '../../decision-session/OptionGenerator.js';
@@ -184,8 +186,23 @@ export async function runAuto(
     mgr.setProfile({ ...currentProfileForRole, role: configuredRole });
   }
 
+  // ── 2.8. Stream B presence classification ────────────────────────────────────
+  // Only call when already in implementation stage and past the absence gate.
+  // ABSENCE_MIN_PROMPTS = 15 — absence detection doesn't trigger before this,
+  // so LLM calls before this threshold are wasted.
+  let streamBOverrides: StreamBPresenceResult | undefined;
+  if (mgr.current.currentStage === 'implementation'
+      && mgr.current.promptsInCurrentStage >= ABSENCE_MIN_PROMPTS) {
+    streamBOverrides = await classifyStreamBPresence(input.promptText, openai)
+      .catch(() => {
+        logger.debug('stream_b_presence_failed', { prompt: input.promptText.slice(0, 60) });
+        return undefined; // fallback: vibeKeyword detection stands
+      });
+  }
+
   // ── 3. Process prompt → updates state (stage, history, counters) ─────────────
-  mgr.processPrompt(store, input.promptText, classification, Date.now(), freqConfig.minStageChangeConfidence);
+  mgr.processPrompt(store, input.promptText, classification, Date.now(),
+    freqConfig.minStageChangeConfidence, streamBOverrides);
   logger.debug('after_process', { stage: mgr.current.currentStage, stageConfidence: mgr.current.stageConfidence });
 
   // ── 3.5. Effective language — read from projects table (detection runs in nexpath stop) ──
