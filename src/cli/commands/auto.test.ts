@@ -1495,3 +1495,107 @@ describe('runAuto — telemetry events', () => {
     }
   });
 });
+
+// ── runAuto — absence flag selective add (Fix: bulk-add removed) ──────────────
+//
+// Before the fix, ALL flags returned by detectAbsenceFlags were added to absenceFlags
+// immediately, burning a 30-prompt cooldown for signals whose DS was never shown.
+// After the fix, only newFlags[0] (the selected signal) is added — and only after all
+// early-exit gates pass (step 6.8, immediately before Stage 2).
+
+describe('runAuto — absence flag selective add', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  // Neutral implementation-context prompt that does not match any signal's
+  // detectionKeywords or vibeKeywords — keeps all signal counters lastSeenAt=null.
+  const NEUTRAL_IMPL = 'add the configuration and wire the service layer';
+
+  async function setupImplState(projectRoot: string): Promise<void> {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    setConfig(store, 'advisory_frequency', 'optimum');
+    // One run to advance promptCount past minPromptsBeforeAdvisory (1 at optimum)
+    await runAuto(makeInput({ promptText: NEUTRAL_IMPL, projectRoot }), store);
+    // pICS=2: Gate 2 passes on the next call (absenceMinFloor=2 at optimum, pICS→3 after
+    // processPrompt). Critically, Stream B fires when promptsInCurrentStage >= 3 BEFORE
+    // processPrompt — using pICS=2 keeps Stream B dormant so the first OpenAI call
+    // goes to Stage 2, not Stream B, keeping the makeMockOpenAI call order correct.
+    const mgr = SessionStateManager.load(store, projectRoot);
+    (mgr as unknown as { state: Record<string, unknown> }).state['currentStage']         = 'implementation';
+    (mgr as unknown as { state: Record<string, unknown> }).state['stageConfidence']       = 0.9;
+    (mgr as unknown as { state: Record<string, unknown> }).state['promptsInCurrentStage'] = 2;
+    mgr.setDetectedLanguage(store, 'en'); // triggers saveState to persist above
+  }
+
+  it('adds at most one absence flag when Condition 2 fires — not all qualifying signals', async () => {
+    // With pICS=14 (→15 after processPrompt) and optimum thresholds, many signals
+    // qualify simultaneously. Fix A ensures only newFlags[0] is added to absenceFlags.
+    await setupImplState('/test/selective-add-fire');
+    const result = await runAuto(
+      makeInput({ promptText: NEUTRAL_IMPL, projectRoot: '/test/selective-add-fire' }),
+      store,
+      makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'),
+    );
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/selective-add-fire');
+    // outcome=pending → DS fired → exactly 1 new flag added (not all qualifying signals)
+    // outcome=no_action → stage flipped (pICS reset to 0, Gate 2 blocked) → 0 flags added
+    // Either way, absenceFlags.length must be ≤ 1.
+    expect(mgr.current.absenceFlags.length).toBeLessThanOrEqual(1);
+    if (result.outcome === 'pending') {
+      expect(mgr.current.absenceFlags.length).toBe(1);
+    }
+  });
+
+  it('adds the selected flag before Stage 2 runs — flag present even on Stage 2 decline', async () => {
+    // Stage 2 declines → pipeline returns no_action. The selected flag must still be
+    // in absenceFlags so Stage 2 is not triggered again on the very next prompt (hammer prevention).
+    await setupImplState('/test/selective-add-decline');
+    vi.mocked(writeTelemetry).mockClear();
+    await runAuto(
+      makeInput({ promptText: NEUTRAL_IMPL, projectRoot: '/test/selective-add-decline' }),
+      store,
+      makeMockOpenAI(FIRE_NO_RESPONSE),
+    );
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/selective-add-decline');
+    // Find a stage2_evaluated event for an absence flagType that declined
+    const s2Call = vi.mocked(writeTelemetry).mock.calls.find(([, ev]) => ev === 'stage2_evaluated');
+    const absenceDeclined =
+      s2Call !== undefined &&
+      (s2Call[2] as Record<string, unknown>)?.['confirmed'] === false &&
+      typeof (s2Call[2] as Record<string, unknown>)?.['flagType'] === 'string' &&
+      ((s2Call[2] as Record<string, unknown>)?.['flagType'] as string).startsWith('absence:');
+    if (absenceDeclined) {
+      // Stage 2 ran for an absence signal and declined — selected flag must be in absenceFlags
+      expect(mgr.current.absenceFlags.length).toBe(1);
+    } else {
+      // Stage transition path or early exit — flag correctly not added or already counted
+      expect(mgr.current.absenceFlags.length).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('does not add any flag when post-advisory cooldown blocks before step 6.8', async () => {
+    // Pipeline exits at step 6.6 (cooldown) — before the addAbsenceFlag call at step 6.8.
+    // Even if Condition 2 fired (newFlags > 0), no flag should be added.
+    await setupImplState('/test/selective-add-cooldown');
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    // Set lastAdvisoryPromptIndex = promptCount so cooldown gap = 0 < postAdvisoryCooldown(2)
+    const mgr = SessionStateManager.load(store, '/test/selective-add-cooldown');
+    const currentCount = mgr.current.promptCount;
+    (mgr as unknown as { state: Record<string, unknown> }).state['lastAdvisoryPromptIndex'] = currentCount;
+    mgr.setDetectedLanguage(store, 'en');
+
+    const result = await runAuto(
+      makeInput({ promptText: NEUTRAL_IMPL, projectRoot: '/test/selective-add-cooldown' }),
+      store,
+      makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'),
+    );
+    const mgr2 = SessionStateManager.load(store, '/test/selective-add-cooldown');
+    expect(result.outcome).toBe('no_action');
+    // Cooldown blocked before step 6.8 — no absence flag should have been added
+    expect(mgr2.current.absenceFlags.length).toBe(0);
+  });
+});

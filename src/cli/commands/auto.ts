@@ -219,9 +219,6 @@ export async function runAuto(
     freqConfig.signalAbsenceThresholdMultiplier,
     freqConfig.signalAbsenceMinFloor,
   );
-  for (const flag of newFlags) {
-    mgr.addAbsenceFlag(store, flag);
-  }
   logger.debug('absence_flags', { new: newFlags.length, total: mgr.current.absenceFlags.length });
   writeTelemetry(input.projectRoot, 'absence_flags_detected', {
     newFlagsCount:   newFlags.length,
@@ -315,6 +312,13 @@ export async function runAuto(
       advisoryCap,
     });
     return { outcome: 'no_action' };
+  }
+
+  // ── 6.8. Persist the selected absence flag — only the one that will fire Stage 2 ──
+  // Non-selected signals must not enter the 30-prompt cooldown for a DS never shown to them.
+  // Guard: Condition 2 only fires when newFlags is non-empty and flagType is not stage_transition.
+  if (flagType !== 'stage_transition' && newFlags.length > 0) {
+    mgr.addAbsenceFlag(store, newFlags[0]!);
   }
 
   // ── 7. Stage 2 LLM cross-confirmation ───────────────────────────────────────
