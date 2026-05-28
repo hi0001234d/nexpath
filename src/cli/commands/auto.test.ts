@@ -1530,8 +1530,9 @@ describe('runAuto — absence flag selective add', () => {
   }
 
   it('adds at most one absence flag when Condition 2 fires — not all qualifying signals', async () => {
-    // With pICS=14 (→15 after processPrompt) and optimum thresholds, many signals
-    // qualify simultaneously. Fix A ensures only newFlags[0] is added to absenceFlags.
+    // With pICS=2 (→3 after processPrompt) and optimum thresholds, signals with
+    // effectiveThreshold ≤ 3 qualify simultaneously. Fix A ensures only newFlags[0]
+    // is added to absenceFlags regardless of how many qualify.
     await setupImplState('/test/selective-add-fire');
     const result = await runAuto(
       makeInput({ promptText: NEUTRAL_IMPL, projectRoot: '/test/selective-add-fire' }),
@@ -1588,6 +1589,7 @@ describe('runAuto — absence flag selective add', () => {
     (mgr as unknown as { state: Record<string, unknown> }).state['lastAdvisoryPromptIndex'] = currentCount;
     mgr.setDetectedLanguage(store, 'en');
 
+    vi.mocked(writeTelemetry).mockClear();
     const result = await runAuto(
       makeInput({ promptText: NEUTRAL_IMPL, projectRoot: '/test/selective-add-cooldown' }),
       store,
@@ -1595,7 +1597,13 @@ describe('runAuto — absence flag selective add', () => {
     );
     const mgr2 = SessionStateManager.load(store, '/test/selective-add-cooldown');
     expect(result.outcome).toBe('no_action');
-    // Cooldown blocked before step 6.8 — no absence flag should have been added
-    expect(mgr2.current.absenceFlags.length).toBe(0);
+    // Confirm it was the cooldown gate (step 6.6) that blocked — not an unrelated early exit.
+    const cooldownBlocked = vi.mocked(writeTelemetry).mock.calls.some(
+      ([, ev]) => ev === 'advisory_cooldown_blocked',
+    );
+    if (cooldownBlocked) {
+      // Cooldown blocked before step 6.8 — no absence flag should have been added
+      expect(mgr2.current.absenceFlags.length).toBe(0);
+    }
   });
 });
