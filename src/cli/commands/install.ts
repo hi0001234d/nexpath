@@ -396,9 +396,9 @@ const defaultFreqPrompt: FreqPromptFn = async (currentValue) =>
     message: 'Advisory frequency — choose how often nexpath should surface advisories',
     initialValue: currentValue,
     options: [
-      { value: 'every_event',      label: 'Every qualifying event (default)' },
-      { value: 'optimum',          label: 'Optimum — frequent advisories (3–5 prompts)' },
-      { value: 'major_only',       label: 'Major transitions only (stage changes)' },
+      { value: 'optimum',          label: 'Optimum — frequent advisories' },
+      { value: 'every_event',      label: 'Every qualifying event' },
+      { value: 'major_only',       label: 'Major transitions only' },
       { value: 'once_per_session', label: 'Once per coding session' },
       { value: 'off',              label: 'Off — disable all advisories' },
     ],

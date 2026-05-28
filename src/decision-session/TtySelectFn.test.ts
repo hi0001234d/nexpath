@@ -1256,6 +1256,16 @@ describe('runFrequencySubMenu (Unix path)', () => {
       expect(rendered).toContain('Off');
       expect(rendered).not.toContain('Configure role');
       expect(rendered).toContain('Select (1-5)');
+      // optimum is the first option; every_event is second
+      const lines = rendered.split('\n');
+      const optimumIdx = lines.findIndex((l) => l.includes('Optimum'));
+      const everyIdx = lines.findIndex((l) => l.includes('Every qualifying event'));
+      expect(optimumIdx).toBeGreaterThanOrEqual(0);
+      expect(everyIdx).toBeGreaterThan(optimumIdx);
+      // parenthetical descriptors removed from labels
+      expect(rendered).not.toContain('(3–5 prompts)');
+      expect(rendered).not.toContain('(stage changes)');
+      expect(rendered).not.toContain('Every qualifying event (default)');
     } finally {
       store.db.close();
     }
@@ -1284,7 +1294,7 @@ describe('runFrequencySubMenu (Unix path)', () => {
       const { iface, trigger } = makeFakeInterface();
       const cleanup = vi.fn();
       runFrequencySubMenu(streams, iface, store, '/proj/freq3', cleanup);
-      trigger('2'); // optimum
+      trigger('1'); // optimum
       expect(getConfig(store.db, 'advisory_frequency:/proj/freq3')).toBe('optimum');
       expect(cleanup).toHaveBeenCalledWith(SKIP_NOW);
     } finally {

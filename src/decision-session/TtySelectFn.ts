@@ -179,9 +179,9 @@ const picked = await select({
   message: 'Advisory frequency',
   initialValue: ${JSON.stringify(currentFreq)},
   options: [
-    { value: 'every_event',      label: 'Every qualifying event (default)' },
-    { value: 'optimum',          label: 'Optimum \\u2014 frequent advisories (3\\u20135 prompts)' },
-    { value: 'major_only',       label: 'Major transitions only (stage changes)' },
+    { value: 'optimum',          label: 'Optimum \\u2014 frequent advisories' },
+    { value: 'every_event',      label: 'Every qualifying event' },
+    { value: 'major_only',       label: 'Major transitions only' },
     { value: 'once_per_session', label: 'Once per coding session' },
     { value: 'off',              label: 'Off \\u2014 disable all advisories' },
   ],
@@ -845,9 +845,9 @@ export function runFrequencySubMenu(
 ): void {
   const currentFreq = readCurrentFreq(store, projectRoot);
   const freqOptions = [
-    { num: 1, value: 'every_event',      label: 'Every qualifying event (default)' },
-    { num: 2, value: 'optimum',          label: 'Optimum — frequent advisories (3–5 prompts)' },
-    { num: 3, value: 'major_only',       label: 'Major transitions only (stage changes)' },
+    { num: 1, value: 'optimum',          label: 'Optimum — frequent advisories' },
+    { num: 2, value: 'every_event',      label: 'Every qualifying event' },
+    { num: 3, value: 'major_only',       label: 'Major transitions only' },
     { num: 4, value: 'once_per_session', label: 'Once per coding session' },
     { num: 5, value: 'off',              label: 'Off — disable all advisories' },
   ];
