@@ -2874,6 +2874,12 @@ describe('AbsenceDetector', () => {
     expect(detectAbsenceFlags(state)).toHaveLength(0);
   });
 
+  it('Gate 2 respects absenceMinFloor — every_event behavior unchanged: absenceMinFloor=5, promptsInCurrentStage=4 returns []', () => {
+    // Explicit confirmation that every_event (absenceMinFloor=5) is unaffected by the fix
+    const state = makeState({ promptsInCurrentStage: 4, stageConfidence: 0.8 });
+    expect(detectAbsenceFlags(state, undefined, undefined, 1.0, 5)).toHaveLength(0);
+  });
+
   it('Gate 2 respects absenceMinFloor — returns flags at promptsInCurrentStage=2 when absenceMinFloor=2', () => {
     // At optimum level absenceMinFloor=2: Gate 2 passes when promptsInCurrentStage >= 2.
     // test_creation threshold=15, cool_geek profileMultiplier=0.5, thresholdMultiplier=0.25:
