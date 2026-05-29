@@ -108,7 +108,7 @@ describe('nexpath CLI — status command', () => {
     expect(statCmd.description().toLowerCase()).toContain('mcp');
   });
 
-  it('status prints MCP connections section to stdout', async () => {
+  it('status output omits the MCP connections section (temporarily disabled)', async () => {
     const lines: string[] = [];
     const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: unknown) => {
       lines.push(String(chunk));
@@ -117,6 +117,7 @@ describe('nexpath CLI — status command', () => {
     const prog = createProgram();
     await prog.parseAsync(['node', 'nexpath', 'status', '--db', ':memory:']);
     spy.mockRestore();
-    expect(lines.join('')).toContain('MCP connections');
+    // MCP connections section is commented out in renderStatus for now
+    expect(lines.join('')).not.toContain('MCP connections');
   });
 });
