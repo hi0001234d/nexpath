@@ -1254,6 +1254,282 @@ const ABSENCE_ITERATION_PLANNING_CASUAL: DecisionContent = {
   ],
 };
 
+// ── Sub-7 — formal content sets ───────────────────────────────────────────────
+
+const ABSENCE_SCOPE_CREEP: DecisionContent = {
+  question:      'Scope expanding — still on original plan?',
+  pinchFallback: 'Scope check?',
+  L1: [
+    'Audit what was just built against the original scope for this iteration: list what is complete, what is still in progress, and what has been added that was not in the original plan — and decide whether each addition stays in scope, gets deferred, or gets cut.',
+    'List every behaviour and feature added to this feature since implementation began — for each item, confirm whether it was in the agreed scope or was introduced along the way, and make a call: keep it, defer it, or cut it.',
+    'Write a scope summary for this project before continuing: what was the original plan for this iteration, what is now in the implementation, and what is the delta — treat anything outside the original plan as a decision that must be made now.',
+  ],
+  L2: [
+    'What was the original scope for this feature, and does the current implementation match it — or has it grown beyond the plan?',
+    'What is the most important addition to what was just built that was not in the original scope — and what is the decision on it: in, deferred, or cut?',
+  ],
+  L3: [
+    'What is one thing currently in this feature that was not in the original scope for this session?',
+  ],
+};
+
+const ABSENCE_CONTEXT_LOSS: DecisionContent = {
+  question:      'Long session — context recapped?',
+  pinchFallback: 'Context recap?',
+  L1: [
+    'Summarize the current state of what was just built: what decisions have been made, what is working, what remains incomplete, and what has changed since the session started — use this as a re-anchor before continuing.',
+    'Write a session summary for this project: what has been implemented, what the key technical decisions were, what the current blockers are, and what the next two or three steps are.',
+    'Before continuing work on this feature: list every significant decision made in this session, the current working state of the implementation, and what remains to complete the agreed scope — this prevents the session from drifting.',
+  ],
+  L2: [
+    'What is the current state of what was just built — what is working, what is still in progress, and what is the immediate next step?',
+    'What is the most important technical decision made this session about this feature that must be explicitly carried forward before continuing?',
+  ],
+  L3: [
+    'What is the one piece of context about this project that must not be lost before continuing — the single most important thing to anchor right now?',
+  ],
+};
+
+const ABSENCE_API_DESIGN_REVIEW: DecisionContent = {
+  question:      'API being built — design reviewed?',
+  pinchFallback: 'API design?',
+  L1: [
+    'Review the API surface of what was just built for backwards compatibility: list any changes to existing endpoints, parameters, or response shapes, and confirm whether each change is backwards compatible or constitutes a breaking change that requires a version bump.',
+    'Define the contract for this feature\'s API before finalizing implementation: document the endpoint paths, accepted inputs, response shapes, and any error codes — confirm these are stable and not likely to change once consumers depend on them.',
+    'Establish the versioning strategy for this project\'s API: will breaking changes be managed through URL versioning, header versioning, or deprecation notices — and does the current implementation reflect that strategy?',
+  ],
+  L2: [
+    'Does what was just built introduce any breaking changes to the existing API contract — and if so, what is the plan for consumers already depending on the current contract?',
+    'Is the API surface of this feature explicitly documented and locked before implementation continues — or are the endpoint signatures, inputs, and responses still in flux?',
+  ],
+  L3: [
+    'What is the most important API design decision for this feature that needs to be made before the implementation is considered complete?',
+  ],
+};
+
+const ABSENCE_ACCESSIBILITY: DecisionContent = {
+  question:      'UI being built — accessibility checked?',
+  pinchFallback: 'Accessibility?',
+  L1: [
+    'Audit the ARIA labelling and semantic structure of what was just built: identify every interactive element and confirm it has an accessible name — via native semantics, aria-label, or aria-labelledby — and that its role is correctly communicated to assistive technologies.',
+    'Test keyboard navigation for this feature: tab through every interactive element and confirm the tab order is logical, all interactive elements are reachable by keyboard, no focus is trapped unexpectedly, and all actions achievable with a mouse are also achievable without one.',
+    'Review the visual accessibility of what was just built: check that all text meets WCAG AA contrast ratios against its background, that focus states are visually distinct, and that no information is conveyed by colour alone.',
+  ],
+  L2: [
+    'Can a keyboard-only user complete the primary workflow in this feature without a mouse — and is the focus order logical as they tab through?',
+    'Does every interactive element in what was just built have an accessible name that a screen reader would announce correctly?',
+  ],
+  L3: [
+    'What is the most significant accessibility gap in this feature that a user with a disability would encounter right now?',
+  ],
+};
+
+const ABSENCE_ENV_AND_SECRETS: DecisionContent = {
+  question:      'Credentials in use — secrets management reviewed?',
+  pinchFallback: 'Secrets setup?',
+  L1: [
+    'Audit the secrets storage pattern for what was just built: identify every credential, API key, and environment-specific value used — confirm none are hardcoded in source, all are loaded from environment variables, and the variable names are documented in a `.env.example` file.',
+    'Review the environment configuration for this feature: confirm a `.env.example` exists with all required keys (values redacted), that `.env` is in `.gitignore`, and that any secret loaded at runtime has a clear failure path if the variable is missing.',
+    'Define the secret rotation plan for this project: for each credential in use, identify who holds it, how it gets rotated if compromised, and whether the current implementation supports hot-swapping secrets without a redeploy.',
+  ],
+  L2: [
+    'Are there any hardcoded credentials, API keys, or secrets in what was just built — and if so, what is the remediation plan before this reaches production?',
+    'Is there a `.env.example` that documents every environment variable required by this feature, and is the actual `.env` file excluded from source control?',
+  ],
+  L3: [
+    'What is the most sensitive credential used by this feature — and where is it currently stored?',
+  ],
+};
+
+const ABSENCE_DATA_VALIDATION: DecisionContent = {
+  question:      'Accepting input — data validation in place?',
+  pinchFallback: 'Input validation?',
+  L1: [
+    'Define the input schema for what was just built: for every endpoint or form, document the expected shape — required fields, optional fields, data types, and any constraints (min/max, allowed values) — and implement schema validation using a library such as Zod, Yup, or Joi.',
+    'Audit the validation coverage for this feature: for each input accepted, confirm there is an explicit check for required fields, correct data types, and acceptable value ranges — and that invalid inputs return a clear, descriptive error rather than failing silently or crashing.',
+    'Write the unhappy-path scenarios for data validation in this project: what happens when a required field is missing, when a value is the wrong type, and when the payload structure is completely unexpected — confirm the implementation handles each case explicitly.',
+  ],
+  L2: [
+    'Is there a schema validation layer for what was just built that rejects malformed inputs before they reach the business logic — and which library or approach is being used?',
+    'What are the required fields for each input accepted by this feature, and what happens if any of them are missing or the wrong type?',
+  ],
+  L3: [
+    'What is one input accepted by this feature that currently has no validation — and what is the worst-case outcome if it receives unexpected data?',
+  ],
+};
+
+const ABSENCE_CI_PIPELINE: DecisionContent = {
+  question:      'Moving toward release — CI pipeline configured?',
+  pinchFallback: 'CI pipeline?',
+  L1: [
+    'Confirm automated test execution is configured for this project: check that a CI workflow (e.g. GitHub Actions) runs the full test suite on every pull request and push to main — verify the workflow file exists, the test command is correct, and test failures block merges.',
+    'Review the CI build verification for this feature: confirm that a failing build — compilation errors, type errors, or broken imports — is caught automatically before code reaches the main branch, and that the pipeline status is visible on every pull request.',
+    'Audit the CI pipeline coverage for what was just built: list every check currently configured (tests, linting, type-checking, security scans), confirm each is wired up correctly, and identify any verification that runs locally but is missing from the pipeline.',
+  ],
+  L2: [
+    'Does this project have a CI pipeline that automatically runs its tests on every pull request — and does a test failure block a merge?',
+    'What does the CI pipeline for this feature actually verify — and is there anything checked locally during development that is not running automatically in CI?',
+  ],
+  L3: [
+    'What is the most important automated check missing from the CI pipeline for this project right now?',
+  ],
+};
+
+const ABSENCE_RATE_LIMITING: DecisionContent = {
+  question:      'API endpoint built — rate limiting designed?',
+  pinchFallback: 'Rate limiting?',
+  L1: [
+    'Define the rate limiting strategy for what was just built: specify the throttle limits per user, per API key, or per IP address — confirm which identifier is used for tracking, what the limit is (requests per second or per minute), and what happens when the limit is exceeded.',
+    'Design the throttle response for this feature: when a caller exceeds the rate limit, confirm the API returns a 429 status with a `Retry-After` header or equivalent signal — and document the expected backoff behaviour for clients.',
+    'Establish the quota model for this project: decide whether rate limits are applied per second, per minute, or per hour, whether limits differ by user tier or API key, and whether the throttle resets on a rolling window or a fixed interval.',
+  ],
+  L2: [
+    'What is the per-user or per-key request limit for what was just built — and is there any middleware or layer currently enforcing that limit?',
+    'What response does this feature return when a caller is throttled — and does the response include enough information for the client to know when to retry?',
+  ],
+  L3: [
+    'What is the most likely way this feature gets abused through excessive requests — and is there any throttle mechanism currently in place to prevent it?',
+  ],
+};
+
+// ── Sub-7 — casual content sets ───────────────────────────────────────────────
+
+const ABSENCE_SCOPE_CREEP_CASUAL: DecisionContent = {
+  question:      'Scope expanding — still on original plan?',
+  pinchFallback: 'Scope check?',
+  L1: [
+    'Take a look at what was just built and compare it to what you originally set out to do — is anything in there that wasn\'t part of the plan? Go through it and flag any extras before adding more.',
+    'Think about what this feature was supposed to do when you started — has anything crept in that wasn\'t in the original idea? Go through it and decide what to keep, what to push to later, and what to drop.',
+    'Before going further with this project — list what you originally planned to build this session and what\'s actually in there now. For anything extra, make a call: now, later, or never.',
+  ],
+  L2: [
+    'What did you originally set out to build in this feature, and does what\'s there now actually match that — or has it grown?',
+    'What\'s the most important thing added to what was just built that wasn\'t part of the original plan — and what are you going to do with it?',
+  ],
+  L3: [
+    'What\'s one thing in this feature that ended up there but wasn\'t in the original plan?',
+  ],
+};
+
+const ABSENCE_CONTEXT_LOSS_CASUAL: DecisionContent = {
+  question:      'Long session — context recapped?',
+  pinchFallback: 'Context recap?',
+  L1: [
+    'Let\'s get back on the same page — go through what was just built and give me a quick rundown: what\'s done, what\'s working, and what\'s still left to do.',
+    'Take a minute to catch up on this project — what have we actually built this session, what decisions did we make, and what\'s coming next?',
+    'Before going further with this feature — do a quick check: where are we, what\'s working, and what\'s the next thing that actually needs to happen?',
+  ],
+  L2: [
+    'What\'s the situation with what was just built right now — what\'s working and what still needs to happen?',
+    'What\'s the most important decision we made about this feature this session that you want to make sure we don\'t lose track of?',
+  ],
+  L3: [
+    'What\'s the one thing you most need to remember about where this project is right now before you keep going?',
+  ],
+};
+
+const ABSENCE_API_DESIGN_REVIEW_CASUAL: DecisionContent = {
+  question:      'API being built — design reviewed?',
+  pinchFallback: 'API design?',
+  L1: [
+    'Take a look at what was just built and check whether it could break anything that already uses this API — are there any changes to how endpoints work, what they expect, or what they return that might surprise existing callers?',
+    'Before locking in the API for this feature — go through what it accepts and what it returns, and think about whether that\'s something you\'d be comfortable with other code depending on. Is anything likely to change again?',
+    'Think about how this project\'s API handles changes over time — if something needs to change in a future version, how do you manage that without breaking code that\'s already using it?',
+  ],
+  L2: [
+    'Does what was just built change how the API works in a way that could break something already depending on it — and if so, what\'s the plan?',
+    'Is the shape of this feature\'s API settled enough that you\'re comfortable building other things on top of it — or is it likely to change?',
+  ],
+  L3: [
+    'What\'s the most important API design question about this feature that hasn\'t been answered yet?',
+  ],
+};
+
+const ABSENCE_ACCESSIBILITY_CASUAL: DecisionContent = {
+  question:      'UI being built — accessibility checked?',
+  pinchFallback: 'Accessibility?',
+  L1: [
+    'Go through what was just built and check whether a screen reader could make sense of it — does every button and link have a clear label, and are there any parts that would be confusing or silent for someone using one?',
+    'Try using this feature with just the keyboard — no mouse. Can you get to everything, use everything, and does the tab order feel natural? Note anything that gets stuck or hard to reach.',
+    'Take a look at the visual design of this feature from an accessibility angle — is the contrast readable, are focus states visible when you tab through, and is anything communicated only through colour that a colour-blind user might miss?',
+  ],
+  L2: [
+    'Could someone who can\'t use a mouse still complete the main task in this feature using only the keyboard — and does tabbing through it feel natural?',
+    'Does everything in what was just built have a label that a screen reader would announce — so someone who can\'t see the screen knows what each button and input is for?',
+  ],
+  L3: [
+    'What\'s the one accessibility issue in this feature that would most get in the way of someone with a disability using it?',
+  ],
+};
+
+const ABSENCE_ENV_AND_SECRETS_CASUAL: DecisionContent = {
+  question:      'Credentials in use — secrets management reviewed?',
+  pinchFallback: 'Secrets setup?',
+  L1: [
+    'Take a look at what was just built and check whether any API keys, passwords, or credentials are written directly into the code — if so, move them out now and load them from a separate config file instead.',
+    'Go through the environment setup for this feature — is there a `.env.example` file that lists every variable the app needs to run? Does the real `.env` file stay out of the repo?',
+    'Think about what happens if one of the secrets used by this project gets leaked or needs to be changed — how would you swap it out, and does the current setup make that easy or painful?',
+  ],
+  L2: [
+    'Is there anything in what was just built that has a real password, API key, or token written directly into the code rather than loaded from a config file?',
+    'What happens in this feature if a required environment variable isn\'t set — does something break immediately with a clear message, or does it fail in a confusing way later?',
+  ],
+  L3: [
+    'Where are the passwords and API keys for this feature sitting right now — are they safe, or is there something that needs to move?',
+  ],
+};
+
+const ABSENCE_DATA_VALIDATION_CASUAL: DecisionContent = {
+  question:      'Accepting input — data validation in place?',
+  pinchFallback: 'Input validation?',
+  L1: [
+    'Take a look at what was just built and check what happens when someone sends unexpected data — a missing field, the wrong type, or a completely random value. Is the app handling it gracefully or just crashing?',
+    'Go through the inputs this feature accepts and think about what you\'re actually checking before using that data — are the required fields being verified, are the types right, and is there a clear error when something is off?',
+    'Think about the worst data someone could realistically send to this project — a payload that\'s completely wrong, a value that would confuse the logic, or a field that shouldn\'t be there at all — and confirm the current code handles it.',
+  ],
+  L2: [
+    'Is there anything in what was just built that accepts data from outside and uses it directly without first checking that it\'s in the right shape?',
+    'What happens in this feature if a required field is missing from the input — does it fail clearly with a useful message, or does it just break in a confusing way?',
+  ],
+  L3: [
+    'What\'s one input this feature accepts that isn\'t being validated yet?',
+  ],
+};
+
+const ABSENCE_CI_PIPELINE_CASUAL: DecisionContent = {
+  question:      'Moving toward release — CI pipeline configured?',
+  pinchFallback: 'CI pipeline?',
+  L1: [
+    'Take a look at whether this project has something set up to automatically run the tests whenever code is pushed — if not, setting up a simple GitHub Actions workflow now means you catch failures before they reach the main branch.',
+    'Go through what a CI run actually does for this feature — when someone pushes code, does it automatically run the tests and stop a bad merge if something fails?',
+    'Think about what was just built and whether the CI pipeline is actually checking everything it should — are the tests running, is the build being verified, and is anything important only being checked locally but not automatically?',
+  ],
+  L2: [
+    'Does this project run its tests automatically whenever code is pushed — and does it stop a bad merge if the tests fail?',
+    'Is there anything about this feature that gets checked by hand during development but isn\'t running automatically in CI — and should it be?',
+  ],
+  L3: [
+    'What\'s the most important thing the CI pipeline should be catching for this project that it isn\'t catching right now?',
+  ],
+};
+
+const ABSENCE_RATE_LIMITING_CASUAL: DecisionContent = {
+  question:      'API endpoint built — rate limiting designed?',
+  pinchFallback: 'Rate limiting?',
+  L1: [
+    'Take a look at what was just built and think about what happens if someone calls this endpoint way too many times in a short period — is there anything stopping them from doing that, and if not, what would happen to the app?',
+    'Think about how this feature handles someone who keeps hammering the API — what does it tell them when they\'ve made too many requests, and does it give them enough info to know when to try again?',
+    'Go through the rate limiting design for this project — how many requests does a user or API key get before they\'re throttled, does the limit reset every minute or every hour, and does it work the same way for everyone?',
+  ],
+  L2: [
+    'Is there anything in what was just built that prevents a single user or caller from hitting the endpoint too many times — and if not, is that something that needs to be added?',
+    'What does this feature say back to someone who\'s sent too many requests — do they get a useful response that tells them when they can try again?',
+  ],
+  L3: [
+    'What\'s the most realistic way this feature gets overwhelmed by too many requests — and is there anything in place right now to prevent that?',
+  ],
+};
+
 // ── Content resolution ─────────────────────────────────────────────────────────
 
 /**
@@ -1293,6 +1569,14 @@ const ABSENCE_CONTENT: Partial<Record<string, DecisionContent>> = {
   task_definition_of_done: ABSENCE_TASK_DEFINITION_OF_DONE,
   user_feedback_review:    ABSENCE_USER_FEEDBACK_REVIEW,
   iteration_planning:      ABSENCE_ITERATION_PLANNING,
+  scope_creep:             ABSENCE_SCOPE_CREEP,
+  context_loss:            ABSENCE_CONTEXT_LOSS,
+  api_design_review:       ABSENCE_API_DESIGN_REVIEW,
+  accessibility:           ABSENCE_ACCESSIBILITY,
+  environment_and_secrets: ABSENCE_ENV_AND_SECRETS,
+  data_validation:         ABSENCE_DATA_VALIDATION,
+  ci_pipeline:             ABSENCE_CI_PIPELINE,
+  rate_limiting:           ABSENCE_RATE_LIMITING,
 };
 
 const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
@@ -1327,6 +1611,14 @@ const ABSENCE_CONTENT_CASUAL: Partial<Record<string, DecisionContent>> = {
   task_definition_of_done: ABSENCE_TASK_DEFINITION_OF_DONE_CASUAL,
   user_feedback_review:    ABSENCE_USER_FEEDBACK_REVIEW_CASUAL,
   iteration_planning:      ABSENCE_ITERATION_PLANNING_CASUAL,
+  scope_creep:             ABSENCE_SCOPE_CREEP_CASUAL,
+  context_loss:            ABSENCE_CONTEXT_LOSS_CASUAL,
+  api_design_review:       ABSENCE_API_DESIGN_REVIEW_CASUAL,
+  accessibility:           ABSENCE_ACCESSIBILITY_CASUAL,
+  environment_and_secrets: ABSENCE_ENV_AND_SECRETS_CASUAL,
+  data_validation:         ABSENCE_DATA_VALIDATION_CASUAL,
+  ci_pipeline:             ABSENCE_CI_PIPELINE_CASUAL,
+  rate_limiting:           ABSENCE_RATE_LIMITING_CASUAL,
 };
 
 /**
@@ -1530,4 +1822,20 @@ export {
   ABSENCE_USER_FEEDBACK_REVIEW_CASUAL,
   ABSENCE_ITERATION_PLANNING,
   ABSENCE_ITERATION_PLANNING_CASUAL,
+  ABSENCE_SCOPE_CREEP,
+  ABSENCE_SCOPE_CREEP_CASUAL,
+  ABSENCE_CONTEXT_LOSS,
+  ABSENCE_CONTEXT_LOSS_CASUAL,
+  ABSENCE_API_DESIGN_REVIEW,
+  ABSENCE_API_DESIGN_REVIEW_CASUAL,
+  ABSENCE_ACCESSIBILITY,
+  ABSENCE_ACCESSIBILITY_CASUAL,
+  ABSENCE_ENV_AND_SECRETS,
+  ABSENCE_ENV_AND_SECRETS_CASUAL,
+  ABSENCE_DATA_VALIDATION,
+  ABSENCE_DATA_VALIDATION_CASUAL,
+  ABSENCE_CI_PIPELINE,
+  ABSENCE_CI_PIPELINE_CASUAL,
+  ABSENCE_RATE_LIMITING,
+  ABSENCE_RATE_LIMITING_CASUAL,
 };

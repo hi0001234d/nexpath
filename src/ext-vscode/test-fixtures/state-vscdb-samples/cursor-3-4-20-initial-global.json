@@ -1,0 +1,57 @@
+{
+  "capturedAt": "2026-05-15T06:51:16.488Z",
+  "sourcePath": "/home/emptyops/.config/Cursor/User/globalStorage/state.vscdb",
+  "platform": "linux",
+  "redacted": true,
+  "tables": [
+    "ItemTable",
+    "cursorDiskKV"
+  ],
+  "rows": [
+    {
+      "table": "ItemTable",
+      "key": "workbench.panel.composerChatViewPane.ff976495-7338-492f-86bb-ca0f33dfbcc2.hidden",
+      "value": "[{\"id\":\"****************************************************************\",\"isHidden\":false}]"
+    },
+    {
+      "table": "ItemTable",
+      "key": "workbench.panel.composerChatViewPane.a0186af5-4d32-46bc-bad5-62ea2229abfc.hidden",
+      "value": "[{\"id\":\"****************************************************************\",\"isHidden\":false}]"
+    },
+    {
+      "table": "ItemTable",
+      "key": "composer.planMigrationToHomeDirCompleted",
+      "value": "true"
+    },
+    {
+      "table": "ItemTable",
+      "key": "composer.composerHeaders",
+      "value": "{\"allComposers\":[{\"type\":\"head\",\"composerId\":\"*****************\",\"lastUpdatedAt\":1778827188097,\"createdAt\":1778827188088,\"unifiedMode\":\"chat\",\"forceMode\":\"edit\",\"hasUnreadMessages\":false,\"totalLinesAdded\":0,\"totalLinesRemoved\":0,\"hasBlockingPendingActions\":false,\"hasPendingPlan\":false,\"isArchived\":false,\"isDraft\":true,\"draftTarget\":{\"type\":\"existing\",\"environment\":{\"id\":\"************\"}},\"isWorktree\":false,\"worktreeStartedReadOnly\":false,\"isSpec\":false,\"isProject\":false,\"isBestOfNSubcomposer\":false,\"numSubComposers\":0,\"referencedPlans\":[],\"trackedGitRepos\":[],\"workspaceIdentifier\":{\"id\":\"************\"},\"hasBeenInSidebar\":false},{\"type\":\"head\",\"composerId\":\"************************************\",\"createdAt\":1778826248532,\"unifiedMode\":\"chat\",\"forceMode\":\"edit\",\"hasUnreadMessages\":false,\"totalLinesAdded\":0,\"totalLinesRemoved\":0,\"isArchived\":false,\"isDraft\":false,\"isWorktree\":false,\"worktreeStartedReadOnly\":false,\"isSpec\":false,\"isProject\":false,\"isBestOfNSubcomposer\":false,\"numSubComposers\":0,\"referencedPlans\":[],\"trackedGitRepos\":[],\"workspaceIdentifier\":{\"id\":\"*************\"}},{\"type\":\"head\",\"composerId\":\"************************************\",\"createdAt\":1778826248531,\"unifiedMode\":\"agent\",\"forceMode\":\"edit\",\"hasUnreadMessages\":false,\"totalLinesAdded\":0,\"totalLinesRemoved\":0,\"hasBlockingPendingActions\":false,\"hasPendingPlan\":false,\"isArchived\":false,\"isDraft\":false,\"isWorktree\":false,\"worktreeStartedReadOnly\":false,\"isSpec\":false,\"isProject\":false,\"isBestOfNSubcomposer\":false,\"numSubComposers\":0,\"referencedPlans\":[],\"trackedGitRepos\":[],\"workspaceIdentifier\":{\"id\":\"*************\"}}]}"
+    },
+    {
+      "table": "ItemTable",
+      "key": "workbench.backgroundComposer.persistentData",
+      "value": "{\"dataVersion\":1,\"lastOpenedBcIds\":{}}"
+    },
+    {
+      "table": "cursorDiskKV",
+      "key": "composerData:eeb03271-cfe2-45a4-8c80-bc4f8dd5d928",
+      "value": "{\"_v\":16,\"composerId\":\"************************************\",\"richText\":\"\",\"hasLoaded\":true,\"text\":\"\",\"fullConversationHeadersOnly\":[],\"conversationMap\":{},\"status\":\"none\",\"context\":{\"composers\":[],\"selectedCommits\":[],\"selectedPullRequests\":[],\"selectedImages\":[],\"selectedDocuments\":[],\"selectedVideos\":[],\"folderSelections\":[],\"fileSelections\":[],\"selections\":[],\"terminalSelections\":[],\"selectedDocs\":[],\"externalLinks\":[],\"cursorRules\":[],\"cursorCommands\":[],\"gitPRDiffSelections\":[],\"subagentSelections\":[],\"browserSelections\":[],\"extraContext\":[],\"mentions\":{\"composers\":{},\"selectedCommits\":{},\"selectedPullRequests\":{},\"gitDiff\":[],\"gitDiffFromBranchToMain\":[],\"selectedImages\":{},\"selectedDocuments\":{},\"selectedVideos\":{},\"folderSelections\":{},\"fileSelections\":{},\"terminalFiles\":{},\"selections\":{},\"terminalSelections\":{},\"selectedDocs\":{},\"externalLinks\":{},\"diffHistory\":[],\"cursorRules\":{},\"cursorCommands\":{},\"uiElementSelections\":[],\"consoleLogs\":[],\"ideEditorsState\":[],\"gitPRDiffSelections\":{},\"subagentSelections\":{},\"browserSelections\":{}}},\"generatingBubbleIds\":[],\"isReadingLongFile\":false,\"codeBlockData\":{},\"originalFileStates\":{},\"newlyCreatedFiles\":[],\"newlyCreatedFolders\":[],\"createdAt\":1778826248531,\"hasChangedContext\":false,\"activeTabsShouldBeReactive\":true,\"capabilities\":[{\"type\":15,\"data\":{\"bubbleDataMap\":\"{}\"}},{\"type\":19,\"data\":{}},{\"type\":33,\"data\":{}},{\"type\":32,\"data\":{}},{\"type\":23,\"data\":{}},{\"type\":16,\"data\":{}},{\"type\":24,\"data\":{}},{\"type\":21,\"data\":{}}],\"isFileListExpanded\":false,\"browserChipManuallyDisabled\":false,\"browserChipManuallyEnabled\":false,\"unifiedMode\":\"agent\",\"forceMode\":\"edit\",\"usageData\":{},\"allAttachedFileCodeChunksUris\":[],\"modelConfig\":{\"modelName\":\"default\",\"maxMode\":false},\"subComposerIds\":[],\"subagentComposerIds\":[],\"capabilityContexts\":[],\"todos\":[],\"isQueueExpanded\":true,\"hasUnreadMessages\":false,\"gitHubPromptDismissed\":false,\"totalLinesAdded\":0,\"totalLinesRemoved\":0,\"addedFiles\":0,\"removedFiles\":0,\"isDraft\":false,\"isCreatingWorktree\":false,\"isApplyingWorktree\":false,\"isUndoingWorktree\":false,\"applied\":false,\"pendingCreateWorktree\":false,\"worktreeStartedReadOnly\":false,\"isBestOfNSubcomposer\":false,\"isBestOfNParent\":false,\"isSpec\":false,\"isProject\":false,\"isSpecSubagentDone\":false,\"isContinuationInProgress\":false,\"stopHookLoopCount\":0,\"trackedGitRepos\":[],\"speculativeSummarizationEncryptionKey\":\"********************************************\",\"isNAL\":true,\"planModeSuggestionUsed\":false,\"debugModeSuggestionUsed\":false,\"conversationState\":\"~\",\"queueItems\":[],\"blobEncryptionKey\":\"********************************************\",\"isAgentic\":true}"
+    },
+    {
+      "table": "cursorDiskKV",
+      "key": "composerData:e2335a0e-2ca3-451c-baf0-3fc0070a823a",
+      "value": "{\"_v\":16,\"composerId\":\"************************************\",\"richText\":\"\",\"hasLoaded\":true,\"text\":\"\",\"fullConversationHeadersOnly\":[],\"conversationMap\":{},\"status\":\"none\",\"context\":{\"composers\":[],\"selectedCommits\":[],\"selectedPullRequests\":[],\"selectedImages\":[],\"selectedDocuments\":[],\"selectedVideos\":[],\"folderSelections\":[],\"fileSelections\":[],\"selections\":[],\"terminalSelections\":[],\"selectedDocs\":[],\"externalLinks\":[],\"cursorRules\":[],\"cursorCommands\":[],\"gitPRDiffSelections\":[],\"subagentSelections\":[],\"browserSelections\":[],\"extraContext\":[],\"mentions\":{\"composers\":{},\"selectedCommits\":{},\"selectedPullRequests\":{},\"gitDiff\":[],\"gitDiffFromBranchToMain\":[],\"selectedImages\":{},\"selectedDocuments\":{},\"selectedVideos\":{},\"folderSelections\":{},\"fileSelections\":{},\"terminalFiles\":{},\"selections\":{},\"terminalSelections\":{},\"selectedDocs\":{},\"externalLinks\":{},\"diffHistory\":[],\"cursorRules\":{},\"cursorCommands\":{},\"uiElementSelections\":[],\"consoleLogs\":[],\"ideEditorsState\":[],\"gitPRDiffSelections\":{},\"subagentSelections\":{},\"browserSelections\":{}}},\"generatingBubbleIds\":[],\"isReadingLongFile\":false,\"codeBlockData\":{},\"originalFileStates\":{},\"newlyCreatedFiles\":[],\"newlyCreatedFolders\":[],\"createdAt\":1778826248532,\"hasChangedContext\":false,\"activeTabsShouldBeReactive\":true,\"capabilities\":[],\"isFileListExpanded\":false,\"browserChipManuallyDisabled\":false,\"browserChipManuallyEnabled\":false,\"unifiedMode\":\"chat\",\"forceMode\":\"chat\",\"usageData\":{},\"allAttachedFileCodeChunksUris\":[],\"modelConfig\":{\"modelName\":\"default\",\"maxMode\":false},\"subComposerIds\":[],\"subagentComposerIds\":[],\"capabilityContexts\":[],\"todos\":[],\"isQueueExpanded\":true,\"hasUnreadMessages\":false,\"gitHubPromptDismissed\":false,\"totalLinesAdded\":0,\"totalLinesRemoved\":0,\"addedFiles\":0,\"removedFiles\":0,\"isDraft\":false,\"isCreatingWorktree\":false,\"isApplyingWorktree\":false,\"isUndoingWorktree\":false,\"applied\":false,\"pendingCreateWorktree\":false,\"worktreeStartedReadOnly\":false,\"isBestOfNSubcomposer\":false,\"isBestOfNParent\":false,\"isSpec\":false,\"isProject\":false,\"isSpecSubagentDone\":false,\"isContinuationInProgress\":false,\"stopHookLoopCount\":0,\"trackedGitRepos\":[],\"speculativeSummarizationEncryptionKey\":\"********************************************\",\"isNAL\":true,\"planModeSuggestionUsed\":false,\"debugModeSuggestionUsed\":false,\"conversationState\":\"~\",\"queueItems\":[],\"blobEncryptionKey\":\"********************************************\",\"isAgentic\":false}"
+    },
+    {
+      "table": "cursorDiskKV",
+      "key": "composerVirtualRowHeights:_recentIds",
+      "value": "[]"
+    },
+    {
+      "table": "cursorDiskKV",
+      "key": "composerData:empty-state-draft",
+      "value": "null"
+    }
+  ]
+}

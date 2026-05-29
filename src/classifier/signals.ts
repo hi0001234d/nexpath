@@ -428,6 +428,139 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
     ],
     absenceThreshold: 15,
   },
+
+  // ── Sub-7 — new advisory types ─────────────────────────────────────────────
+  {
+    key: 'scope_creep',
+    description: 'Checking for scope creep — staying focused on current feature before adding new ones',
+    expectedStages: ['implementation', 'review_testing'],
+    detectionKeywords: [
+      'scope creep', 'let\'s focus on', 'finish this first', 'let\'s not add more',
+      'that\'s out of scope for now', 'feature creep', 'before we add anything else',
+      'let\'s complete this first', 'stay focused on', 'we\'re getting sidetracked',
+      'not in scope for this', 'let\'s scope this down',
+    ],
+    vibeKeywords: [
+      'one thing at a time', 'don\'t get sidetracked', 'let\'s not scope creep',
+      'scope check', 'let\'s keep it focused', 'just this one thing for now',
+    ],
+    absenceThreshold: 15,
+  },
+  {
+    key: 'context_loss',
+    description: 'Recapping or re-anchoring session context in a long session',
+    expectedStages: ['implementation', 'review_testing', 'architecture'],
+    detectionKeywords: [
+      'let me summarize', 'to recap', 'here\'s where we are', 'so far we\'ve',
+      'as a reminder', 'let me bring you up to speed', 'to summarize our progress',
+      'before we continue let me recap', 'to catch you up', 'summary of what we\'ve done',
+    ],
+    vibeKeywords: [
+      'just to recap', 'so here\'s what we\'ve done', 'here\'s where we\'re at',
+      'to bring you up to speed', 'let me catch you up',
+    ],
+    absenceThreshold: 30,
+  },
+  {
+    key: 'api_design_review',
+    description: 'API contract, versioning, and backwards compatibility discussion',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'api contract', 'api versioning', 'backwards compatible', 'breaking change',
+      'openapi', 'swagger', 'api design', 'contract-first', 'api specification',
+      'api version', 'versioning strategy', 'backwards compatibility',
+    ],
+    vibeKeywords: [
+      'does this api work with older versions', 'what about existing clients',
+      'will this break anything using the api', 'is this backwards compatible',
+      'what if the api changes', 'how do we version this',
+    ],
+    absenceThreshold: 20,
+    relevantProjectTypes: ['api', 'web-app', 'library'],
+  },
+  {
+    key: 'accessibility',
+    description: 'Accessibility considerations during UI development',
+    expectedStages: ['implementation', 'review_testing'],
+    detectionKeywords: [
+      'accessibility', 'aria', 'screen reader', 'wcag', 'alt text',
+      'keyboard navigation', 'color contrast', 'focus management', 'a11y',
+      'aria-label', 'aria-describedby', 'tab order', 'focus trap',
+    ],
+    vibeKeywords: [
+      'can someone use this without a mouse', 'what about people with disabilities',
+      'is this keyboard accessible', 'does this work with a screen reader',
+      'can blind users use this', 'is the contrast good enough',
+    ],
+    absenceThreshold: 20,
+    relevantProjectTypes: ['web-app', 'mobile', 'desktop'],
+  },
+  {
+    key: 'environment_and_secrets',
+    description: 'Environment config and secrets management during implementation',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      '.env file', 'dotenv', 'secrets management', 'api key storage',
+      'credential storage', '.env.example', 'secrets vault', 'environment secrets',
+      'secret rotation', 'env secret', 'store the secret', 'secret management',
+    ],
+    vibeKeywords: [
+      'where do the api keys go', 'how do we handle secrets',
+      'where do secrets live', 'how do we store credentials',
+      'should the key be in the code', 'where does the password go',
+    ],
+    absenceThreshold: 15,
+  },
+  {
+    key: 'data_validation',
+    description: 'Data schema and structural validation of inputs',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'schema validation', 'zod', 'yup', 'joi', 'form validation',
+      'validate the form', 'required fields', 'data schema', 'input schema',
+      'payload validation', 'validate the request body', 'data type check',
+    ],
+    vibeKeywords: [
+      'what if someone sends bad data', 'what if the input is wrong',
+      'what if they put something unexpected', 'checking the input format',
+      'making sure the data is right', 'what if the fields are missing',
+    ],
+    absenceThreshold: 15,
+  },
+  {
+    key: 'ci_pipeline',
+    description: 'CI/CD pipeline setup and automation discussion',
+    expectedStages: ['review_testing', 'release'],
+    detectionKeywords: [
+      'github actions', 'ci/cd', 'continuous integration', 'build pipeline',
+      'ci pipeline', 'workflow yaml', 'ci configuration', 'pipeline setup',
+      'run in ci', 'ci runs', 'run tests automatically', 'on push trigger',
+    ],
+    vibeKeywords: [
+      'does this run automatically', 'can we automate the build',
+      'what about deployment automation', 'how does this deploy automatically',
+      'automating the release', 'trigger on commit',
+    ],
+    absenceThreshold: 15,
+  },
+  {
+    key: 'rate_limiting',
+    description: 'API rate limiting and throttling design',
+    expectedStages: ['implementation'],
+    detectionKeywords: [
+      'throttle requests', 'request throttling', 'requests per second',
+      'api quota', 'rate cap', 'throttle middleware', 'too many requests limit',
+      'backoff strategy', '429 handling', 'rate limit per user',
+      'request rate', 'throttle the api',
+    ],
+    vibeKeywords: [
+      'what if someone calls this too many times', 'what if too many requests come in',
+      'protecting the api from overuse', 'preventing api abuse',
+      'what if they spam the endpoint', 'limiting how often this can be called',
+    ],
+    absenceThreshold: 20,
+    relevantProjectTypes: ['api', 'web-app'],
+  },
 ];
 
 // ── Signal detection from prompt text ────────────────────────────────────────

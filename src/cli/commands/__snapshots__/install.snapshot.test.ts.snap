@@ -1,0 +1,47 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`installAction snapshot (M1 zero-diff safety net) > writes the same settings.json bytes and stdout as the pre-refactor baseline 1`] = `
+{
+  "settingsContent": "{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "_nexpath_hook": true,
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \\"/fixture/nexpath/dist/cli/index.js\\" auto --db \\"$HOME/.nexpath/prompt-store.db\\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "_nexpath_hook": true,
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \\"/fixture/nexpath/dist/cli/index.js\\" stop --db \\"$HOME/.nexpath/prompt-store.db\\""
+          }
+        ]
+      }
+    ]
+  }
+}
+",
+  "stdout": "
+Before installing nexpath, a few things to know:
+  1. An OpenAI API key is required (OPENAI_API_KEY) for advisory generation
+  2. Prompts are stored locally at $HOME/.nexpath/prompt-store.db — nothing leaves your machine
+  3. To opt out at any time: press Ctrl+X during an advisory, or run nexpath uninstall
+
+Detected: Claude Code
+✓ Claude Code  — advisory hook written to $HOME/.claude/settings.json
+
+Restart your agents to activate nexpath-prompt-store.
+Note: advisory pipeline (nexpath auto) auto-wired for Claude Code only.
+Run: nexpath status  to verify connections.",
+}
+`;
