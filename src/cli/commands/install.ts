@@ -418,7 +418,7 @@ const defaultRolePrompt: RolePromptFn = async (currentValue) => {
       const sym = this.state === 'submit' ? pc.green('◇')
                 : this.state === 'cancel' ? pc.red('■')
                 : pc.cyan('◆');
-      const head = `${pc.gray('│')}\n${sym}  Project role\n`;
+      const head = `${pc.gray('│')}\n${sym}  ${pc.bold('Project role')}\n`;
       if (this.state === 'submit' || this.state === 'cancel') {
         return `${head}${pc.gray('│')}  ${pc.dim(this.options[this.cursor].label)}`;
       }

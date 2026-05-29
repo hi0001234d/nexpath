@@ -211,7 +211,7 @@ import { writeFileSync } from 'node:fs';
 
 const ESC = String.fromCharCode(27);
 const A = (c) => (s) => ESC + '[' + c + 'm' + s + ESC + '[0m';
-const gray = A('90'), cyan = A('36'), green = A('32'), dim = A('2'), red = A('31');
+const gray = A('90'), cyan = A('36'), green = A('32'), dim = A('2'), red = A('31'), bold = A('1');
 const descLines = ${JSON.stringify(descLines)};
 
 const p = new SelectPrompt({
@@ -221,7 +221,7 @@ const p = new SelectPrompt({
     const sym = this.state === 'submit' ? green('◇')
               : this.state === 'cancel' ? red('■')
               : cyan('◆');
-    const head = gray('│') + '\\n' + sym + '  Project role\\n';
+    const head = gray('│') + '\\n' + sym + '  ' + bold('Project role') + '\\n';
     if (this.state === 'submit' || this.state === 'cancel') {
       return head + gray('│') + '  ' + dim(this.options[this.cursor].label);
     }

@@ -35,7 +35,11 @@ export const ROLE_DESCRIPTION_TEXT = ROLE_DESCRIPTION_LINES.join('\n');
  */
 export function buildRoleDescriptionLines(colors: ReturnType<typeof pc.createColors> = pc): string[] {
   const bar = colors.cyan('│');
-  return ROLE_DESCRIPTION_LINES.map((line) => {
+  return ROLE_DESCRIPTION_LINES.map((line, i) => {
+    if (i === 0) {
+      // First line is the heading — style it like the "Project role" title (bold).
+      return `${bar}  ${colors.bold(line)}`;
+    }
     if (line.startsWith(GOAL_EMPHASIS)) {
       return `${bar}  ${colors.bold(GOAL_EMPHASIS)}${colors.gray(line.slice(GOAL_EMPHASIS.length))}`;
     }
