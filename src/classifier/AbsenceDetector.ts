@@ -47,17 +47,17 @@ export const ABSENCE_COOLDOWN_PROMPTS = 30;
  * Returns only NEW flags (not already active/in-cooldown).
  */
 export function detectAbsenceFlags(
-  state:   SessionState,
-  profile?: UserProfile | null,
+  state:        SessionState,
+  profile?:     UserProfile | null,
+  projectType?: string,
 ): AbsenceFlag[] {
   const { currentStage, stageConfidence, promptsInCurrentStage, promptCount } = state;
 
   // Gate 1 — stage must be confirmed
   if (stageConfidence < STAGE_CONFIRM_THRESHOLD) return [];
 
-  // Profile-aware threshold for Gate 3
-  const isVibeProfile = profile?.nature === 'beginner' || profile?.nature === 'cool_geek';
-  const effectiveMinPrompts = isVibeProfile ? 5 : 10;
+  const isVibeProfile    = profile?.nature === 'beginner' || profile?.nature === 'cool_geek';
+  const profileMultiplier = isVibeProfile ? 0.5 : 1.0;
 
   // Gate 2 — must have been in this stage long enough before checking
   if (promptsInCurrentStage < 5) return [];
@@ -68,8 +68,13 @@ export function detectAbsenceFlags(
     // Gate — signal expected in this stage?
     if (!sig.expectedStages.includes(currentStage)) continue;
 
-    // Gate 3 — profile-aware: enough prompts in stage for this signal?
-    if (promptsInCurrentStage < effectiveMinPrompts) continue;
+    // Gate — project-type filter: null/undefined/'other' bypasses the filter entirely
+    if (sig.relevantProjectTypes && projectType && projectType !== 'other'
+        && !sig.relevantProjectTypes.includes(projectType)) continue;
+
+    // Gate 3 — per-signal threshold with profile multiplier
+    const effectiveThreshold = Math.max(5, Math.ceil(sig.absenceThreshold * profileMultiplier));
+    if (promptsInCurrentStage < effectiveThreshold) continue;
 
     // Gate — signal never detected?
     const counter = state.signalCounters[sig.key];
