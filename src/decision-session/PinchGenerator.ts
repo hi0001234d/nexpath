@@ -171,6 +171,7 @@ export async function generatePinchLabel(
       messages:    [{ role: 'user', content: prompt }],
       temperature: PINCH_TEMPERATURE,
       max_tokens:  PINCH_MAX_TOKENS,
+      timeout:     10_000,
     });
 
     const raw   = response.choices[0]?.message?.content ?? '';
