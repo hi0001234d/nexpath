@@ -739,6 +739,41 @@ describe('store — pending_advisories', () => {
     markAdvisoryShown(store, 9999); // id does not exist
     expect(getPendingAdvisory(store, '/proj/main')).not.toBeNull();
   });
+
+  // ── session_id filter ─────────────────────────────────────────────────────
+
+  it('getPendingAdvisory with matching sessionId returns the advisory', () => {
+    upsertPendingAdvisory(store, BASE_ADVISORY);
+    const row = getPendingAdvisory(store, '/proj/main', 'sess-abc');
+    expect(row).not.toBeNull();
+    expect(row!.sessionId).toBe('sess-abc');
+  });
+
+  it('getPendingAdvisory with different sessionId returns null (cross-session guard)', () => {
+    upsertPendingAdvisory(store, BASE_ADVISORY);
+    const row = getPendingAdvisory(store, '/proj/main', 'sess-different');
+    expect(row).toBeNull();
+  });
+
+  it('getPendingAdvisory without sessionId returns advisory regardless of session', () => {
+    upsertPendingAdvisory(store, BASE_ADVISORY);
+    const row = getPendingAdvisory(store, '/proj/main');
+    expect(row).not.toBeNull();
+  });
+
+  // ── prevStage field ───────────────────────────────────────────────────────
+
+  it('upsertPendingAdvisory stores prevStage and getPendingAdvisory returns it', () => {
+    upsertPendingAdvisory(store, { ...BASE_ADVISORY, prevStage: 'implementation' });
+    const row = getPendingAdvisory(store, '/proj/main');
+    expect(row!.prevStage).toBe('implementation');
+  });
+
+  it('prevStage is undefined when not provided', () => {
+    upsertPendingAdvisory(store, BASE_ADVISORY);
+    const row = getPendingAdvisory(store, '/proj/main');
+    expect(row!.prevStage).toBeUndefined();
+  });
 });
 
 // ── setDetectedLanguage ───────────────────────────────────────────────────────
