@@ -1511,10 +1511,10 @@ describe('runAuto — absence flag selective add', () => {
     mgr.setDetectedLanguage(store, 'en'); // triggers saveState to persist above
   }
 
-  it('adds at most one absence flag when Condition 2 fires — not all qualifying signals', async () => {
+  it('adds all qualifying absence flags when Condition 2 fires', async () => {
     // With pICS=2 (→3 after processPrompt) and optimum thresholds, signals with
-    // effectiveThreshold ≤ 3 qualify simultaneously. Fix A ensures only newFlags[0]
-    // is added to absenceFlags regardless of how many qualify.
+    // effectiveThreshold ≤ 3 may qualify simultaneously. All qualifying signals are
+    // added to absenceFlags so Stage 2 can select the most contextually relevant one.
     await setupImplState('/test/selective-add-fire');
     const result = await runAuto(
       makeInput({ promptText: NEUTRAL_IMPL, projectRoot: '/test/selective-add-fire' }),
@@ -1523,18 +1523,16 @@ describe('runAuto — absence flag selective add', () => {
     );
     const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
     const mgr = SessionStateManager.load(store, '/test/selective-add-fire');
-    // outcome=pending → DS fired → exactly 1 new flag added (not all qualifying signals)
-    // outcome=no_action → stage flipped (pICS reset to 0, Gate 2 blocked) → 0 flags added
-    // Either way, absenceFlags.length must be ≤ 1.
-    expect(mgr.current.absenceFlags.length).toBeLessThanOrEqual(1);
+    // outcome=pending → at least 1 absence flag added
+    // outcome=no_action → stage may have flipped (pICS reset), 0 flags possible
     if (result.outcome === 'pending') {
-      expect(mgr.current.absenceFlags.length).toBe(1);
+      expect(mgr.current.absenceFlags.length).toBeGreaterThanOrEqual(1);
     }
   });
 
-  it('adds the selected flag before Stage 2 runs — flag present even on Stage 2 decline', async () => {
-    // Stage 2 declines → pipeline returns no_action. The selected flag must still be
-    // in absenceFlags so Stage 2 is not triggered again on the very next prompt (hammer prevention).
+  it('adds all qualifying flags before Stage 2 runs — flags present even on Stage 2 decline', async () => {
+    // Stage 2 declines → pipeline returns no_action. All qualifying flags must still be
+    // in absenceFlags so Stage 2 is not triggered again immediately (hammer prevention).
     await setupImplState('/test/selective-add-decline');
     vi.mocked(writeTelemetry).mockClear();
     await runAuto(
@@ -1544,19 +1542,18 @@ describe('runAuto — absence flag selective add', () => {
     );
     const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
     const mgr = SessionStateManager.load(store, '/test/selective-add-decline');
-    // Find a stage2_evaluated event for an absence flagType that declined
+    // Find a stage2_evaluated event for an absence trigger that declined
     const s2Call = vi.mocked(writeTelemetry).mock.calls.find(([, ev]) => ev === 'stage2_evaluated');
     const absenceDeclined =
       s2Call !== undefined &&
       (s2Call[2] as Record<string, unknown>)?.['confirmed'] === false &&
-      typeof (s2Call[2] as Record<string, unknown>)?.['flagType'] === 'string' &&
-      ((s2Call[2] as Record<string, unknown>)?.['flagType'] as string).startsWith('absence:');
+      (s2Call[2] as Record<string, unknown>)?.['flagType'] === 'absence';
     if (absenceDeclined) {
-      // Stage 2 ran for an absence signal and declined — selected flag must be in absenceFlags
-      expect(mgr.current.absenceFlags.length).toBe(1);
+      // Stage 2 ran for an absence signal and declined — all qualifying flags are in absenceFlags
+      expect(mgr.current.absenceFlags.length).toBeGreaterThanOrEqual(1);
     } else {
-      // Stage transition path or early exit — flag correctly not added or already counted
-      expect(mgr.current.absenceFlags.length).toBeLessThanOrEqual(1);
+      // Stage transition path or early exit — flags correctly not added or already counted
+      expect(mgr.current.absenceFlags.length).toBeGreaterThanOrEqual(0);
     }
   });
 

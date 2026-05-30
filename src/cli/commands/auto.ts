@@ -12,7 +12,7 @@ import type { StreamBPresenceResult } from '../../classifier/StreamBPresenceClas
 import { shouldFireStage2, runStage2 } from '../../classifier/Stage2Trigger.js';
 import { generatePinchLabel } from '../../decision-session/PinchGenerator.js';
 import type { Stage } from '../../classifier/types.js';
-import type { FlagType } from '../../classifier/Stage2Trigger.js';
+import type { FlagType, Stage2TriggerResult } from '../../classifier/Stage2Trigger.js';
 import { resolveLanguage } from '../../classifier/LanguageDetector.js';
 import { insertPrompt } from '../../store/prompts.js';
 import { getConfig } from '../../store/config.js';
@@ -237,38 +237,41 @@ export async function runAuto(
   }
 
   // ── 5. Should Stage 2 fire? ──────────────────────────────────────────────────
-  const flagType = shouldFireStage2(
+  const triggerResult: Stage2TriggerResult = shouldFireStage2(
     mgr.current as import('../../classifier/types.js').SessionState,
     prevStage,
     newFlags,
     freqConfig.stage2S1LowConfidence,
   );
-  logger.debug('should_fire', { flagType: flagType ?? null });
+  logger.debug('should_fire', { trigger: triggerResult?.kind ?? null });
 
-  if (!flagType) {
+  if (!triggerResult) {
     writeTelemetry(input.projectRoot, 'pipeline_no_action', { reason: 'no_flag' });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'no_flag' });
     return { outcome: 'no_action' };
   }
 
   // ── 6. Deduplication — already fired this session? ──────────────────────────
-  const firedKey     = buildFiredKey(flagType, prevStage, mgr.current.currentStage);
-  const alreadyFired = mgr.hasFiredDecisionSession(firedKey);
-  logger.debug('dedup', { firedKey, alreadyFired });
+  // For absence: use first qualifying flag as the pre-Stage-2 guard proxy.
+  const preCheckFiredKey = triggerResult.kind === 'stage_transition'
+    ? buildFiredKey('stage_transition', prevStage, mgr.current.currentStage)
+    : buildFiredKey(`absence:${triggerResult.qualifyingFlags[0]!.signalKey}` as FlagType, prevStage, mgr.current.currentStage);
+  const alreadyFired = mgr.hasFiredDecisionSession(preCheckFiredKey);
+  logger.debug('dedup', { firedKey: preCheckFiredKey, alreadyFired });
   if (alreadyFired) {
-    writeTelemetry(input.projectRoot, 'advisory_dedup_blocked', { firedKey });
-    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'already_fired', firedKey });
+    writeTelemetry(input.projectRoot, 'advisory_dedup_blocked', { firedKey: preCheckFiredKey });
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'already_fired', firedKey: preCheckFiredKey });
     return { outcome: 'no_action' };
   }
 
   // ── 6.5. Advisory frequency gate ────────────────────────────────────────────
-  if (freq === 'major_only' && flagType !== 'stage_transition') {
-    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType });
-    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_major_only', flagType });
+  if (freq === 'major_only' && triggerResult.kind !== 'stage_transition') {
+    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType: triggerResult.kind });
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_major_only', flagType: triggerResult.kind });
     return { outcome: 'no_action' };
   }
   if (freq === 'once_per_session' && mgr.current.firedDecisionSessions.length > 0) {
-    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType });
+    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType: triggerResult.kind });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_once_per_session' });
     return { outcome: 'no_action' };
   }
@@ -312,19 +315,21 @@ export async function runAuto(
     return { outcome: 'no_action' };
   }
 
-  // ── 6.8. Persist the selected absence flag — only the one that will fire Stage 2 ──
-  // Non-selected signals must not enter the 30-prompt cooldown for a DS never shown to them.
-  // Guard: Condition 2 only fires when newFlags is non-empty and flagType is not stage_transition.
-  if (flagType !== 'stage_transition' && newFlags.length > 0) {
-    mgr.addAbsenceFlag(store, newFlags[0]!);
+  // ── 6.8. Persist newly-detected absence flags — all qualify for Stage 2 consideration ──
+  // Guard: Condition 2 only fires when newFlags is non-empty and trigger kind is absence.
+  if (triggerResult.kind === 'absence' && newFlags.length > 0) {
+    for (const flag of newFlags) {
+      mgr.addAbsenceFlag(store, flag);
+    }
   }
 
   // ── 7. Stage 2 LLM cross-confirmation ───────────────────────────────────────
   const stage2Input = {
-    state:         mgr.current as import('../../classifier/types.js').SessionState,
-    detectedStage: mgr.current.currentStage,
-    confidence:    mgr.current.stageConfidence,
-    flagType,
+    state:          mgr.current as import('../../classifier/types.js').SessionState,
+    detectedStage:  mgr.current.currentStage,
+    confidence:     mgr.current.stageConfidence,
+    flagType:       triggerResult.kind as 'stage_transition' | 'absence',
+    qualifyingFlags: triggerResult.kind === 'absence' ? triggerResult.qualifyingFlags : undefined,
   };
 
   let stage2Output: import('../../classifier/Stage2Trigger.js').Stage2Output;
@@ -334,7 +339,7 @@ export async function runAuto(
       contextWindow: freqConfig.stage2ContextWindow,
     });
     logger.debug('stage2_result', { fire: stage2Output.fire_decision_session, confidence: stage2Output.stage_confidence, reason: stage2Output.reason });
-    writeTelemetry(input.projectRoot, 'stage2_evaluated', { flagType, confirmed: stage2Output.fire_decision_session });
+    writeTelemetry(input.projectRoot, 'stage2_evaluated', { flagType: triggerResult.kind, confirmed: stage2Output.fire_decision_session });
   } catch (err) {
     logger.warn('stage2_error', { ...extractApiError(err, 'openai'), stage: mgr.current.currentStage });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'stage2_error' });
@@ -348,7 +353,11 @@ export async function runAuto(
     return { outcome: 'no_action' };
   }
 
-  // ── 8. Mark as fired (before storing — prevents re-entry on restart) ────────
+  // ── 8. Compute effective flagType from Stage 2 selection, then mark as fired ─
+  const effectiveFlagType: FlagType = triggerResult.kind === 'stage_transition'
+    ? 'stage_transition'
+    : `absence:${stage2Output.selected_signal_key}`;
+  const firedKey = buildFiredKey(effectiveFlagType, prevStage, mgr.current.currentStage);
   mgr.markDecisionSessionFired(store, firedKey);
 
   // ── 8.5. Read user profile (computed in processPrompt, null if < 5 prompts) ──
@@ -357,7 +366,7 @@ export async function runAuto(
   // ── 9. Pinch label — option gen runs in stop hook after Claude responds ──────
   const pinchLabel = await generatePinchLabel(
     mgr.current.currentStage,
-    flagType,
+    effectiveFlagType,
     openai,
     userProfile,
     effectiveLang,
@@ -367,13 +376,13 @@ export async function runAuto(
   upsertPendingAdvisory(store, {
     projectRoot: input.projectRoot,
     stage:       mgr.current.currentStage,
-    flagType,
+    flagType:    effectiveFlagType,
     pinchLabel,
     sessionId:   mgr.current.sessionId,
     promptCount: mgr.current.promptCount,
     prevStage,
   });
-  writeTelemetry(input.projectRoot, 'pipeline_advisory_pending', { flagType, stage: mgr.current.currentStage, pinchLabel });
+  writeTelemetry(input.projectRoot, 'pipeline_advisory_pending', { flagType: effectiveFlagType, stage: mgr.current.currentStage, pinchLabel });
   mgr.markAdvisoryFired(store);
 
   logger.info('pipeline_outcome', { outcome: 'pending', pinchLabel });
