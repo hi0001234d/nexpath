@@ -1209,9 +1209,8 @@ describe('runAuto — generated options wiring', () => {
     } as unknown as OpenAI;
   }
 
-  it('advisory stores generatedL1/L2/L3 when generateOptionList returns valid options', async () => {
+  it('advisory is stored with null generatedL1/L2/L3 — option gen runs in stop hook', async () => {
     const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
-    const { TASK_REVIEW } = await import('../../decision-session/options.js');
 
     for (let i = 0; i < 2; i++) {
       await runAuto(makeInput({ projectRoot: '/test/gen-opts' }), store);
@@ -1222,35 +1221,20 @@ describe('runAuto — generated options wiring', () => {
       signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 0, cooldownUntil: 100,
     });
 
-    const pass1Response = JSON.stringify({
-      l1: TASK_REVIEW.L1.map((o) => `[adapted] ${o}`),
-      l2: TASK_REVIEW.L2.map((o) => `[adapted] ${o}`),
-      l3: TASK_REVIEW.L3.map((o) => `[adapted] ${o}`),
-    });
-    const optResponse = JSON.stringify({
-      l1: TASK_REVIEW.L1.map((o) => `[grounded] ${o}`),
-      l2: TASK_REVIEW.L2.map((o) => `[grounded] ${o}`),
-      l3: TASK_REVIEW.L3.map((o) => `[grounded] ${o}`),
-    });
-
-    const openai = makeParallelMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.', optResponse, pass1Response);
+    const openai = makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.');
     const result = await runAuto(makeInput({ projectRoot: '/test/gen-opts' }), store, openai);
 
     if (result.outcome === 'pending') {
       const advisory = getPendingAdvisory(store, '/test/gen-opts');
       expect(advisory).not.toBeNull();
       expect(advisory?.status).toBe('pending');
-      expect(advisory?.generatedL1).not.toBeNull();
-      expect(advisory?.generatedL1?.[0]).toContain('[grounded]');
+      expect(advisory?.generatedL1).toBeNull();
+      expect(advisory?.generatedL2).toBeNull();
+      expect(advisory?.generatedL3).toBeNull();
     }
   });
 
-  it('advisory is stored with null generatedL1 when generateOptionList returns null', async () => {
-    const generateSpy = vi.spyOn(
-      await import('../../decision-session/OptionGenerator.js'),
-      'generateOptionList',
-    ).mockResolvedValue(null);
-
+  it('advisory is stored with null generatedL1/L2/L3 — auto no longer calls option gen', async () => {
     const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
     const mgr = SessionStateManager.load(store, '/test/gen-null');
     mgr.addAbsenceFlag(store, {
@@ -1266,8 +1250,6 @@ describe('runAuto — generated options wiring', () => {
       expect(advisory?.generatedL2).toBeNull();
       expect(advisory?.generatedL3).toBeNull();
     }
-
-    generateSpy.mockRestore();
   });
 
   it('upsertPendingAdvisory round-trips generatedL1/L2/L3 through DB', async () => {
