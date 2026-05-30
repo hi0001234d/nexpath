@@ -11,8 +11,6 @@ import { classifyStreamBPresence } from '../../classifier/StreamBPresenceClassif
 import type { StreamBPresenceResult } from '../../classifier/StreamBPresenceClassifier.js';
 import { shouldFireStage2, runStage2 } from '../../classifier/Stage2Trigger.js';
 import { generatePinchLabel } from '../../decision-session/PinchGenerator.js';
-import { generateOptionList } from '../../decision-session/OptionGenerator.js';
-import { resolveDecisionContent } from '../../decision-session/options.js';
 import type { Stage } from '../../classifier/types.js';
 import type { FlagType } from '../../classifier/Stage2Trigger.js';
 import { resolveLanguage } from '../../classifier/LanguageDetector.js';
@@ -356,36 +354,14 @@ export async function runAuto(
   // ── 8.5. Read user profile (computed in processPrompt, null if < 5 prompts) ──
   const userProfile = mgr.current.profile ?? undefined;
 
-  // ── 9. Pinch label + option text — run concurrently ─────────────────────────
-  const decisionContent = resolveDecisionContent(
+  // ── 9. Pinch label — option gen runs in stop hook after Claude responds ──────
+  const pinchLabel = await generatePinchLabel(
     mgr.current.currentStage,
     flagType,
-    mgr.current.profile,
-    prevStage,
+    openai,
+    userProfile,
+    effectiveLang,
   );
-
-  const [pinchLabel, generatedOptions] = await Promise.all([
-    generatePinchLabel(
-      mgr.current.currentStage,
-      flagType,
-      openai,
-      userProfile,
-      effectiveLang,
-    ),
-    generateOptionList(
-      decisionContent,
-      userProfile,
-      effectiveLang,
-      mgr.current.promptHistory as import('../../classifier/types.js').PromptRecord[],
-      {
-        flagType,
-        currentStage:          mgr.current.currentStage,
-        prevStage,
-        promptsInCurrentStage: mgr.current.promptsInCurrentStage,
-      },
-      openai,
-    ),
-  ]);
 
   // ── 10. Store pending advisory — Stop hook will show UI after Claude responds
   upsertPendingAdvisory(store, {
@@ -395,9 +371,7 @@ export async function runAuto(
     pinchLabel,
     sessionId:   mgr.current.sessionId,
     promptCount: mgr.current.promptCount,
-    generatedL1: generatedOptions?.l1,
-    generatedL2: generatedOptions?.l2,
-    generatedL3: generatedOptions?.l3,
+    prevStage,
   });
   writeTelemetry(input.projectRoot, 'pipeline_advisory_pending', { flagType, stage: mgr.current.currentStage, pinchLabel });
   mgr.markAdvisoryFired(store);

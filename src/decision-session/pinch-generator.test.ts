@@ -275,12 +275,14 @@ describe('generatePinchLabel', () => {
     const client = makeMockClient('Hold up.');
     await generatePinchLabel('implementation', 'stage_transition', client);
     const createFn = (client.chat.completions.create as ReturnType<typeof vi.fn>);
-    expect(createFn).toHaveBeenCalledWith(expect.objectContaining({
-      model:       PINCH_MODEL,
-      temperature: PINCH_TEMPERATURE,
-      max_tokens:  PINCH_MAX_TOKENS,
-      timeout:     10_000,
-    }));
+    expect(createFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model:       PINCH_MODEL,
+        temperature: PINCH_TEMPERATURE,
+        max_tokens:  PINCH_MAX_TOKENS,
+      }),
+      expect.objectContaining({ timeout: 10_000 }),
+    );
   });
 
   it('passes the prompt as a user message', async () => {

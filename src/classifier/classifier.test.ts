@@ -3541,7 +3541,7 @@ describe('AbsenceDetector', () => {
       promptCount:           20,
       currentStage:          'implementation',
       signalCounters:        initialSignalCounters(),
-      promptHistory:         [{ index: 0, text: 'there is a bug in the login form', capturedAt: 1000 }],
+      promptHistory:         [{ index: 0, text: 'there is a bug in the login form', capturedAt: 1000, classifiedStage: 'implementation', confidence: 0.85 }],
     });
     expect(detectAbsenceFlags(state).map((f) => f.signalKey)).toContain('problem_correction');
   });
@@ -3555,7 +3555,7 @@ describe('AbsenceDetector', () => {
       promptCount:           20,
       currentStage:          'implementation',
       signalCounters:        counters,
-      promptHistory:         [{ index: 0, text: 'there is a bug in the login form', capturedAt: 1000 }],
+      promptHistory:         [{ index: 0, text: 'there is a bug in the login form', capturedAt: 1000, classifiedStage: 'implementation', confidence: 0.85 }],
     });
     expect(detectAbsenceFlags(state).map((f) => f.signalKey)).not.toContain('problem_correction');
   });
