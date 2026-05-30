@@ -645,11 +645,29 @@ describe('buildEmbeddingPrompt — feature word grounding', () => {
     l3: ['Any problems?'],
   };
 
-  it('contains R4 two-step extraction header with Step A and Step B', () => {
+  it('contains holistic multi-prompt extraction instruction (no Step A/B)', () => {
     const prompt = buildEmbeddingPrompt(adaptedOpts, [makePrompt('build the login page', 0)]);
-    expect(prompt).toContain('Feature noun extraction — two steps');
-    expect(prompt).toContain('Step A');
-    expect(prompt).toContain('Step B');
+    expect(prompt).toContain('Feature noun extraction — identify the primary feature area');
+    expect(prompt).toContain('favour the noun that appears across multiple recent prompts');
+    expect(prompt).not.toContain('Step A');
+    expect(prompt).not.toContain('Step B');
+  });
+
+  it('holistic instruction favors recurring feature noun over last-prompt-only noun', () => {
+    // Last prompt has a unique noun ("button"); preceding prompts consistently reference "booking system"
+    const history = [
+      makePrompt('add the booking form to the booking system', 0),
+      makePrompt('the booking confirmation email is not sending', 1),
+      makePrompt('fix the booking system date picker', 2),
+      makePrompt('the button is too small', 3),
+    ];
+    const prompt = buildEmbeddingPrompt(adaptedOpts, history);
+    // Holistic instruction tells LLM to weight recurring nouns over last-prompt-only
+    expect(prompt).toContain('favour the noun that appears across multiple recent prompts');
+    expect(prompt).toContain('over a noun that appears only in the last prompt');
+    // All prompts appear in the grounding section
+    expect(prompt).toContain('booking system');
+    expect(prompt).toContain('button is too small');
   });
 
   it('R8 scoped non-quotation header present', () => {
@@ -717,12 +735,11 @@ describe('buildEmbeddingPrompt — embedding instruction', () => {
     expect(prompt).not.toContain('naturally');
   });
 
-  it('R4 positive and negative extraction examples present', () => {
+  it('holistic extraction instruction includes feature noun examples and this-feature fallback', () => {
     const prompt = buildEmbeddingPrompt(adaptedOpts, [makePrompt('build the login page', 0)]);
-    // Positive — bug/styling prompt with a feature noun → noun extracted
-    expect(prompt).toContain('"the login is not working on my phone" → "login"');
-    // Negative — genuinely meta prompt with no feature noun → 'this feature' fallback
-    expect(prompt).toContain('"fix this"');
+    // Feature noun examples in the holistic instruction
+    expect(prompt).toContain('"booking system"');
+    // 'this feature' fallback still present
     expect(prompt).toContain("'this feature'");
   });
 
