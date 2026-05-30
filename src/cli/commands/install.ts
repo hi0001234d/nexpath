@@ -538,6 +538,7 @@ const defaultInstallPrompts: InstallPrompts = {
         "What's NOT sent:   your code, prompts, API key,",
         '                   file paths, personal information',
         '',
+        'If you select:',
         'Yes  → events captured locally AND auto-synced to our server',
         'No   → no capture, no sync — full stop',
         '',
@@ -754,8 +755,6 @@ export async function installAction(
 
   console.log('');
   console.log('Restart your agents to activate nexpath-prompt-store.');
-  console.log('Note: advisory pipeline (nexpath auto) auto-wired for Claude Code only.');
-  console.log('Run: nexpath status  to verify connections.');
 
   closeStore(store);
 
@@ -783,8 +782,6 @@ export async function installAction(
     `Agents:     ${registered.length > 0 ? registered.join(', ') : 'none'}`,
     failed.length > 0 ? `Failed:     ${failed.join(', ')}` : null,
     extrasLine,
-    '',
-    'Run `nexpath status` to verify connections.',
   ].filter((l): l is string => l !== null).join('\n');
   note(summaryLines, 'Setup Complete');
   outro('Done!');
