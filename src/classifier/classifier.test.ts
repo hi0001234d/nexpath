@@ -3218,7 +3218,7 @@ describe('AbsenceDetector', () => {
     const state = makeState({
       stageConfidence:       0.85,
       promptsInCurrentStage: 15,
-      promptCount:           15,
+      promptCount:           30,
       currentStage:          'implementation',
       signalCounters:        initialSignalCounters(),
     });
@@ -3518,6 +3518,90 @@ describe('AbsenceDetector', () => {
       mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1 };
     const keys = detectAbsenceFlags(state, profile, undefined, 0.5).map((f) => f.signalKey);
     expect(keys).not.toContain('test_creation');
+  });
+
+  // ── Semantic precondition gates ───────────────────────────────────────────
+
+  it('problem_correction: no bug language in history → signal blocked', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+      promptHistory:         [],
+    });
+    expect(detectAbsenceFlags(state).map((f) => f.signalKey)).not.toContain('problem_correction');
+  });
+
+  it('problem_correction: bug language in history → signal qualifies', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+      promptHistory:         [{ index: 0, text: 'there is a bug in the login form', capturedAt: 1000 }],
+    });
+    expect(detectAbsenceFlags(state).map((f) => f.signalKey)).toContain('problem_correction');
+  });
+
+  it('problem_correction: bug language present but lastSeenAt set → signal blocked', () => {
+    const counters = initialSignalCounters();
+    counters['problem_correction'] = { present: true, lastSeenAt: 5, windowsSinceLastSeen: 0 };
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        counters,
+      promptHistory:         [{ index: 0, text: 'there is a bug in the login form', capturedAt: 1000 }],
+    });
+    expect(detectAbsenceFlags(state).map((f) => f.signalKey)).not.toContain('problem_correction');
+  });
+
+  it('deployment_planning: implementation stage → signal blocked by precondition', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    expect(detectAbsenceFlags(state).map((f) => f.signalKey)).not.toContain('deployment_planning');
+  });
+
+  it('deployment_planning: release stage → signal qualifies', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'release',
+      signalCounters:        initialSignalCounters(),
+    });
+    expect(detectAbsenceFlags(state).map((f) => f.signalKey)).toContain('deployment_planning');
+  });
+
+  it('context_loss: promptCount=12 → signal blocked by precondition', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 30,
+      promptCount:           12,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    expect(detectAbsenceFlags(state).map((f) => f.signalKey)).not.toContain('context_loss');
+  });
+
+  it('context_loss: promptCount=25 and promptsInCurrentStage=30 → signal qualifies', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 30,
+      promptCount:           30,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    expect(detectAbsenceFlags(state).map((f) => f.signalKey)).toContain('context_loss');
   });
 });
 
