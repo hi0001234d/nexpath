@@ -8,7 +8,14 @@ import {
   type GeneratedOptions,
   type OptionGenContext,
 } from './OptionGenerator.js';
-import { TASK_REVIEW, IMPLEMENTATION_TO_REVIEW } from './options.js';
+import {
+  TASK_REVIEW,
+  IMPLEMENTATION_TO_REVIEW,
+  ABSENCE_CORRECTION_SEEKING,
+  ABSENCE_CORRECTION_SEEKING_CASUAL,
+  ABSENCE_PROMPT_CONTEXT,
+  ABSENCE_PROMPT_CONTEXT_CASUAL,
+} from './options.js';
 import {
   TASK_REVIEW_BEGINNER,
   ABSENCE_CORRECTION_SEEKING_BEGINNER,
@@ -928,5 +935,241 @@ describe('Issue 16 Phase 1 — ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER 
   it('L1[0] contains no "ask the AI" self-referential phrase', () => {
     expect(ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L1[0]).not.toContain('ask the AI');
     expect(ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L1[0]).not.toContain('Ask the AI');
+  });
+});
+
+// ── Issue 16 Phase 2 — content regression: ABSENCE_CORRECTION_SEEKING ──────────────────────────
+
+describe('Issue 16 Phase 2 — ABSENCE_CORRECTION_SEEKING content', () => {
+  it('question and pinchFallback are unchanged', () => {
+    expect(ABSENCE_CORRECTION_SEEKING.question).toBe('AI output — self-verification requested?');
+    expect(ABSENCE_CORRECTION_SEEKING.pinchFallback).toBe('No verification.');
+  });
+
+  it('L1[0] is the self-review corrected text', () => {
+    expect(ABSENCE_CORRECTION_SEEKING.L1[0]).toBe(
+      'Self-review what was just built: identify any assumptions that may be incorrect, logic that could fail under edge cases, and any parts of the implementation you are not confident about.',
+    );
+  });
+
+  it('L1[1] is the adversarial-argument corrected text', () => {
+    expect(ABSENCE_CORRECTION_SEEKING.L1[1]).toBe(
+      'Argue against your own implementation of what was just built — what would a skeptical senior engineer flag, what alternative approaches were not considered, and what are the weakest parts of this solution?',
+    );
+  });
+
+  it('L1[2] is the failure-analysis corrected text', () => {
+    expect(ABSENCE_CORRECTION_SEEKING.L1[2]).toBe(
+      'Produce a failure analysis of what was just built: what are the most likely ways this implementation fails in production, what inputs would cause incorrect behaviour, and what would you change if rebuilding this from scratch?',
+    );
+  });
+
+  it('L2[0] is the senior-engineer-review corrected text', () => {
+    expect(ABSENCE_CORRECTION_SEEKING.L2[0]).toBe(
+      'Review what was just built critically — what would you change or flag if reviewing this as a senior engineer rather than as the author?',
+    );
+  });
+
+  it('L2[1] is the self-critique corrected text', () => {
+    expect(ABSENCE_CORRECTION_SEEKING.L2[1]).toBe(
+      'Self-critique what was just built: what are the weakest parts, and what were you least confident about when generating this?',
+    );
+  });
+
+  it('L3[0] is the least-confident corrected text', () => {
+    expect(ABSENCE_CORRECTION_SEEKING.L3[0]).toBe(
+      'Identify the part of what was just built you are least confident is correct.',
+    );
+  });
+
+  it('no option text contains coaching-voice relay patterns', () => {
+    const allTexts = [
+      ...ABSENCE_CORRECTION_SEEKING.L1,
+      ...ABSENCE_CORRECTION_SEEKING.L2,
+      ...ABSENCE_CORRECTION_SEEKING.L3,
+    ];
+    const patterns = ['Ask the AI', 'ask the AI', 'ask it to', 'what it says', 'its answer', 'Has the AI', 'Does the AI', 'has it seen', 'has it been'];
+    for (const text of allTexts) {
+      for (const pattern of patterns) {
+        expect(text).not.toContain(pattern);
+      }
+    }
+  });
+});
+
+// ── Issue 16 Phase 2 — content regression: ABSENCE_CORRECTION_SEEKING_CASUAL ────────────────────
+
+describe('Issue 16 Phase 2 — ABSENCE_CORRECTION_SEEKING_CASUAL content', () => {
+  it('question and pinchFallback are unchanged', () => {
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.question).toBe('Has the AI checked its own work?');
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.pinchFallback).toBe('No verification.');
+  });
+
+  it('L1[0] is the second-look critique corrected text', () => {
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L1[0]).toBe(
+      "Take a second look at what was just built — not to explain it, but to actually critique it. What would you do differently, what assumptions did you make that might be wrong, and what are the riskiest parts?",
+    );
+  });
+
+  it('L1[1] is the argue-against corrected text', () => {
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L1[1]).toBe(
+      "Argue against your own output for what was just built: what's the case against this approach, what did you not consider, and what's the part you're least confident about?",
+    );
+  });
+
+  it('L1[2] is the find-a-bug corrected text', () => {
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L1[2]).toBe(
+      'If you had to find a bug or a flaw in what was just built, what would it be? Don\'t let yourself off the hook with "it looks fine."',
+    );
+  });
+
+  it('L2[0] is the reviewer corrected text', () => {
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L2[0]).toBe(
+      "Review what was just built as if you hadn't written it — what would you flag or change?",
+    );
+  });
+
+  it('L2[1] is the weakest-part corrected text', () => {
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L2[1]).toBe(
+      'Identify the weakest part of what was just built and explain what you\'re not sure about.',
+    );
+  });
+
+  it('L3[0] is the least-confident corrected text', () => {
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L3[0]).toBe(
+      "Identify the part of what was just built you're least confident is correct.",
+    );
+  });
+
+  it('no option text contains coaching-voice relay patterns', () => {
+    const allTexts = [
+      ...ABSENCE_CORRECTION_SEEKING_CASUAL.L1,
+      ...ABSENCE_CORRECTION_SEEKING_CASUAL.L2,
+      ...ABSENCE_CORRECTION_SEEKING_CASUAL.L3,
+    ];
+    const patterns = ['Ask the AI', 'ask the AI', 'ask it to', 'what it says', 'its answer', 'Has the AI', 'Does the AI', 'has it seen', 'has it been'];
+    for (const text of allTexts) {
+      for (const pattern of patterns) {
+        expect(text).not.toContain(pattern);
+      }
+    }
+  });
+});
+
+// ── Issue 16 Phase 2 — content regression: ABSENCE_PROMPT_CONTEXT ───────────────────────────────
+
+describe('Issue 16 Phase 2 — ABSENCE_PROMPT_CONTEXT content', () => {
+  it('question and pinchFallback are unchanged', () => {
+    expect(ABSENCE_PROMPT_CONTEXT.question).toBe('Prompts sent — spec and arch referenced?');
+    expect(ABSENCE_PROMPT_CONTEXT.pinchFallback).toBe('Missing context.');
+  });
+
+  it('L1[0] is the review-prompts corrected text', () => {
+    expect(ABSENCE_PROMPT_CONTEXT.L1[0]).toBe(
+      "Review the prompts used to build this feature: are they grounded in the project's spec, architecture decisions, and task breakdown, or are they ad hoc instructions that you are implementing without access to the full planning context? If context is missing, inject it now before the next prompt.",
+    );
+  });
+
+  it('L1[1] is the audit-context-richness corrected text', () => {
+    expect(ABSENCE_PROMPT_CONTEXT.L1[1]).toBe(
+      'Audit the context richness of the prompts used to build this feature: do you have access to the current spec, the established architecture, and the specific acceptance criteria for what was just built, or are you making assumptions that a context-rich prompt would have resolved?',
+    );
+  });
+
+  it('L1[2] is the cross-confirm corrected text', () => {
+    expect(ABSENCE_PROMPT_CONTEXT.L1[2]).toBe(
+      "Cross-confirm that what was just built is aligned with the project's planning artifacts: paste the relevant spec section, architecture diagram, or task definition into the conversation and verify that your implementation matches what was planned.",
+    );
+  });
+
+  it('L2[0] is the have-spec corrected text', () => {
+    expect(ABSENCE_PROMPT_CONTEXT.L2[0]).toBe(
+      'Do you have the spec and architecture context needed to build this feature correctly, or have you been working from ad hoc instructions? Inject the relevant planning context before continuing.',
+    );
+  });
+
+  it('L2[1] is the paste-spec corrected text', () => {
+    expect(ABSENCE_PROMPT_CONTEXT.L2[1]).toBe(
+      'Paste the spec or acceptance criteria for this feature into the conversation and check whether what was just built matches what was planned.',
+    );
+  });
+
+  it('L3[0] is the enough-context corrected text', () => {
+    expect(ABSENCE_PROMPT_CONTEXT.L3[0]).toBe(
+      'Do you have enough context about the spec and architecture to be building this feature correctly, or are you working without the full picture?',
+    );
+  });
+
+  it('no option text contains coaching-voice relay patterns', () => {
+    const allTexts = [
+      ...ABSENCE_PROMPT_CONTEXT.L1,
+      ...ABSENCE_PROMPT_CONTEXT.L2,
+      ...ABSENCE_PROMPT_CONTEXT.L3,
+    ];
+    const patterns = ['Ask the AI', 'ask the AI', 'ask it to', 'what it says', 'its answer', 'Has the AI', 'Does the AI', 'has it seen', 'has it been'];
+    for (const text of allTexts) {
+      for (const pattern of patterns) {
+        expect(text).not.toContain(pattern);
+      }
+    }
+  });
+});
+
+// ── Issue 16 Phase 2 — content regression: ABSENCE_PROMPT_CONTEXT_CASUAL ────────────────────────
+
+describe('Issue 16 Phase 2 — ABSENCE_PROMPT_CONTEXT_CASUAL content', () => {
+  it('question and pinchFallback are unchanged', () => {
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.question).toBe('Sending prompts — have you shared the spec?');
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.pinchFallback).toBe('Missing context.');
+  });
+
+  it('L1[0] is the check-prompts corrected text', () => {
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L1[0]).toBe(
+      "Check the prompts used to build this feature — do you actually know what the spec says, what the architecture looks like, and what the task is supposed to achieve? If you've just been getting ad hoc instructions, paste the relevant context in now so you're building the right thing.",
+    );
+  });
+
+  it('L1[1] is the full-picture corrected text', () => {
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L1[1]).toBe(
+      "Have you been working with the full picture, or just the last thing asked of you? If there's a spec, an architecture doc, or a task breakdown you haven't seen, let me know — then check that what was just built matches up once you have the full context.",
+    );
+  });
+
+  it('L1[2] is the paste-and-confirm corrected text', () => {
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L1[2]).toBe(
+      "Paste the relevant spec or task definition into the conversation and confirm that what was just built actually does what it's supposed to. If there's a mismatch, now is a better time to find it than after shipping.",
+    );
+  });
+
+  it('L2[0] is the enough-context corrected text', () => {
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L2[0]).toBe(
+      "Do you have enough context to build this feature correctly — have you seen the spec, the architecture, or the task breakdown? If not, share the relevant bits now.",
+    );
+  });
+
+  it('L2[1] is the paste-and-check corrected text (unchanged)', () => {
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L2[1]).toBe(
+      'Paste the spec or the definition of done for this feature into the conversation and check whether what was just built actually matches it.',
+    );
+  });
+
+  it('L3[0] is the know-the-spec corrected text', () => {
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L3[0]).toBe(
+      "Do you know what the spec says for this feature, or have you been building without seeing it?",
+    );
+  });
+
+  it('no option text contains coaching-voice relay patterns', () => {
+    const allTexts = [
+      ...ABSENCE_PROMPT_CONTEXT_CASUAL.L1,
+      ...ABSENCE_PROMPT_CONTEXT_CASUAL.L2,
+      ...ABSENCE_PROMPT_CONTEXT_CASUAL.L3,
+    ];
+    const patterns = ['Ask the AI', 'ask the AI', 'ask it to', 'what it says', 'its answer', 'Has the AI', 'Does the AI', 'has it seen', 'has it been'];
+    for (const text of allTexts) {
+      for (const pattern of patterns) {
+        expect(text).not.toContain(pattern);
+      }
+    }
   });
 });
