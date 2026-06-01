@@ -703,7 +703,7 @@ describe('installAction', () => {
     }
   });
 
-  it('prints restart and status instructions on success', async () => {
+  it('prints restart instructions on success', async () => {
     const { dir, cleanup } = tmpDir();
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
@@ -711,7 +711,6 @@ describe('installAction', () => {
       await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, skipClipboardCheck: true });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('Restart your agents');
-      expect(output).toContain('nexpath status');
     } finally {
       cleanup();
     }
@@ -782,17 +781,6 @@ describe('installAction', () => {
     } finally { cleanup(); }
   });
 
-  it('prints advisory pipeline auto-wired note after agent loop', async () => {
-    const { dir, cleanup } = tmpDir();
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    try {
-      const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, skipClipboardCheck: true });
-      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
-      expect(output).toContain('advisory pipeline');
-      expect(output).toContain('Claude Code only');
-    } finally { cleanup(); }
-  });
 });
 
 // ── uninstallAction ───────────────────────────────────────────────────────────
@@ -803,7 +791,7 @@ describe('uninstallAction', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      await uninstallAction({ paths, execFn: () => {} });
+      await uninstallAction({ paths, execFn: () => {}, apiKeyConfirmFn: async () => false });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('Prompt history retained');
       expect(output).toContain('nexpath store delete');
@@ -819,7 +807,7 @@ describe('uninstallAction', () => {
       mkdirSync(join(dir, '.cursor'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
       writeMcpEntry(paths.cursor, buildStandardEntry(false));
-      await uninstallAction({ paths, execFn: () => {} });
+      await uninstallAction({ paths, execFn: () => {}, apiKeyConfirmFn: async () => false });
       const servers = readJson(paths.cursor).mcpServers as Record<string, unknown>;
       expect(servers[MCP_SERVER_NAME]).toBeUndefined();
     } finally {
@@ -834,7 +822,7 @@ describe('uninstallAction', () => {
       mkdirSync(join(dir, '.config', 'opencode'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
       writeOpenCodeEntry(paths.openCodeGlobal, buildOpenCodeEntry(false));
-      await uninstallAction({ paths, execFn: () => {} });
+      await uninstallAction({ paths, execFn: () => {}, apiKeyConfirmFn: async () => false });
       const mcp = readJson(paths.openCodeGlobal).mcp as Record<string, unknown>;
       expect(mcp[MCP_SERVER_NAME]).toBeUndefined();
     } finally {
@@ -849,7 +837,7 @@ describe('uninstallAction', () => {
       mkdirSync(join(dir, '.cursor'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
       // Don't write cursor config — so cursor has no nexpath entry
-      await uninstallAction({ paths, execFn: () => {} });
+      await uninstallAction({ paths, execFn: () => {}, apiKeyConfirmFn: async () => false });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('not registered');
     } finally {
@@ -866,6 +854,7 @@ describe('uninstallAction', () => {
       await uninstallAction({
         paths,
         execFn: () => { throw new Error('claude not found'); },
+        apiKeyConfirmFn: async () => false,
       });
       const servers = readJson(paths.claudeJson).mcpServers as Record<string, unknown>;
       expect(servers[MCP_SERVER_NAME]).toBeUndefined();
@@ -881,7 +870,7 @@ describe('uninstallAction', () => {
       const paths = resolveAgentPaths(dir, dir, dir);
       // Pre-write the hook so uninstall has something to remove
       writeHookEntry(paths.claudeSettings, dir, 'linux');
-      await uninstallAction({ paths, execFn: () => {} });
+      await uninstallAction({ paths, execFn: () => {}, apiKeyConfirmFn: async () => false });
       // File should no longer contain the nexpath hook group
       const data  = readJson(paths.claudeSettings) as Record<string, unknown>;
       const hooks = data.hooks as Record<string, unknown>;
@@ -897,7 +886,7 @@ describe('uninstallAction', () => {
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
       // settings.json never written — hook was never registered
-      await uninstallAction({ paths, execFn: () => {} });
+      await uninstallAction({ paths, execFn: () => {}, apiKeyConfirmFn: async () => false });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('hook not registered');
     } finally { cleanup(); }

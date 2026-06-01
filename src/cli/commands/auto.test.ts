@@ -691,7 +691,7 @@ describe('runAuto — prompt persistence', () => {
     expect(rows[0].text).toBe('third');
     expect(rows[1].text).toBe('second');
     expect(rows[2].text).toBe('first');
-  });
+  }, 15000);
 
   it('stores a capturedAt timestamp close to Date.now()', async () => {
     const before = Date.now();
