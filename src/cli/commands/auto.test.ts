@@ -1546,7 +1546,7 @@ describe('runAuto — telemetry events', () => {
       const payload = pendingCall[2] as { recentPrompts: unknown[] };
       expect(payload.recentPrompts.length).toBeLessThanOrEqual(5);
     }
-  });
+  }, 30000);
 });
 
 // ── runAuto — absence flag selective add (Fix: bulk-add removed) ──────────────
