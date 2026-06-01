@@ -451,12 +451,14 @@ export async function generateOptionList(
   context?: OptionGenContext,
   client?:  OpenAI,
 ): Promise<GeneratedOptions | null> {
-  const openai = client ?? new OpenAI();
-
   // ── Pass 1: vocabulary adaptation ─────────────────────────────────────────────
   let pass1Output: GeneratedOptions | null = null;
+  // Constructor is inside the try so a missing OPENAI_API_KEY surfaces as a null
+  // return (graceful fallback to static options), not a synchronous throw.
+  let openai!: OpenAI;
 
   try {
+    openai = client ?? new OpenAI();
     const prompt = buildAdaptationPrompt(content, profile, language, history);
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
       { role: 'user', content: prompt },

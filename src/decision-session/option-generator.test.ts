@@ -471,6 +471,21 @@ describe('generateOptionList', () => {
     expect(create.mock.calls[0][1]).toEqual({ timeout: 12_000 });
     expect(create.mock.calls[1][1]).toEqual({ timeout: 12_000 });
   });
+
+  it('returns null (not throws) when no client passed and OPENAI_API_KEY missing', async () => {
+    // Honour the JSDoc "Never throws" contract: a missing key should surface as a
+    // null return so callers (stop hook) fall back to static options instead of
+    // crashing the whole pipeline.
+    const savedKey = process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
+    try {
+      const result = await generateOptionList(TASK_REVIEW, makeProfile(), undefined, []);
+      expect(result).toBeNull();
+    } finally {
+      if (savedKey === undefined) delete process.env.OPENAI_API_KEY;
+      else                         process.env.OPENAI_API_KEY = savedKey;
+    }
+  });
 });
 
 // ── buildAdaptationPrompt — Pass 1 semantics ─────────────────────────────────

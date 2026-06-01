@@ -1,6 +1,4 @@
 import OpenAI from 'openai';
-import { join } from 'node:path';
-import { config as loadDotenv } from 'dotenv';
 import { platform } from 'node:process';
 import type { Store } from '../../store/db.js';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
@@ -21,6 +19,7 @@ import { recentPromptMetadata } from '../../telemetry/recent-prompts.js';
 import { readStdin } from './auto.js';
 import { resolveDecisionContent } from '../../decision-session/options.js';
 import { generateOptionList } from '../../decision-session/OptionGenerator.js';
+import { resolveOpenAIKey, getKeySource } from '../../config/ApiKeyResolver.js';
 
 /**
  * nexpath stop — Claude Code Stop hook handler.
@@ -220,12 +219,25 @@ export function registerStopCommand(program: import('commander').Command): void 
         return;
       }
 
-      const envPath = join(payload.cwd, '.env');
-      loadDotenv({ path: envPath, override: true });
+      // Resolve OPENAI_API_KEY through the 4-layer chain (env → project .env →
+      // OS keychain → 0600 fallback file). Matches the auto hook contract so the
+      // stop hook works for every key source, not just project .env.
+      await resolveOpenAIKey(payload.cwd);
 
       const store = await openStore(opts.db);
       const logLevel = getConfig(store.db, 'log_level') as LogLevel | undefined;
       initLogger('stop', logLevel);
+
+      const keySource = await getKeySource(payload.cwd);
+      const keyFound  = !!process.env['OPENAI_API_KEY'];
+      logger.debug('env_load', { cwd: payload.cwd, keySource, keyFound });
+
+      if (!keyFound) {
+        logger.warn('openai_api_key_missing', {
+          cwd:        payload.cwd,
+          actionable: 'Set OPENAI_API_KEY in the shell, in the project\'s .env file, or via the OS keychain — decision option generation will fall back to static text until a key is configured.',
+        });
+      }
 
       try {
         const result = await runStop(payload, store);
