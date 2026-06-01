@@ -78,16 +78,20 @@ function windowResultFile(kind: 'root' | 'freq' | 'role', cmd: string, args: str
   return m ? join(tmpdir(), m[0].replace('-sel-', '-res-').replace('.mjs', '.txt')) : null;
 }
 
-// ── Windows SelectFn (these tests run on the win32 platform naturally) ─────────
+// ── Windows SelectFn (process.platform spoofed to 'win32' so tests run on any host) ──
 
 describe('createTtySelectFn — Windows (win32)', () => {
+  const origPlatform = process.platform;
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(process.stderr, 'write').mockReturnValue(true as never);
+    Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
     cleanTempFiles();
   });
 
   afterEach(() => {
+    Object.defineProperty(process, 'platform', { value: origPlatform, writable: true });
     vi.restoreAllMocks();
     cleanTempFiles();
   });

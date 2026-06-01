@@ -413,16 +413,16 @@ const ABSENCE_CORRECTION_SEEKING: DecisionContent = {
   question:      'AI output — self-verification requested?',
   pinchFallback: 'No verification.',
   L1: [
-    'Instruct the AI to self-review what was just built: ask it to identify any assumptions that may be incorrect, logic that could fail under edge cases, and any parts of the implementation it is not confident about.',
-    'Request a critical re-evaluation of what was just built: ask the AI to argue against its own implementation — what would a skeptical senior engineer flag, what alternative approaches were not considered, and what are the weakest parts of this solution?',
-    'Ask the AI to produce a failure analysis of what was just built: what are the most likely ways this implementation fails in production, what inputs would cause incorrect behaviour, and what would it change if asked to rebuild this from scratch?',
+    'Self-review what was just built: identify any assumptions that may be incorrect, logic that could fail under edge cases, and any parts of the implementation you are not confident about.',
+    'Argue against your own implementation of what was just built — what would a skeptical senior engineer flag, what alternative approaches were not considered, and what are the weakest parts of this solution?',
+    'Produce a failure analysis of what was just built: what are the most likely ways this implementation fails in production, what inputs would cause incorrect behaviour, and what would you change if rebuilding this from scratch?',
   ],
   L2: [
-    'Ask the AI to review what was just built critically — what would it change or flag if it were reviewing this as a senior engineer rather than as the author?',
-    'Request a self-critique of what was just built: what are the weakest parts, and what was the AI least confident about when generating this?',
+    'Review what was just built critically — what would you change or flag if reviewing this as a senior engineer rather than as the author?',
+    'Self-critique what was just built: what are the weakest parts, and what were you least confident about when generating this?',
   ],
   L3: [
-    'Ask the AI to identify the part of what was just built it is least confident is correct.',
+    'Identify the part of what was just built you are least confident is correct.',
   ],
 };
 
@@ -481,16 +481,16 @@ const ABSENCE_PROMPT_CONTEXT: DecisionContent = {
   question:      'Prompts sent — spec and arch referenced?',
   pinchFallback: 'Missing context.',
   L1: [
-    'Review the prompts used to build this feature: are they grounded in the project\'s spec, architecture decisions, and task breakdown, or are they ad hoc instructions that the AI is implementing without access to the full planning context? If context is missing, inject it now before the next prompt.',
-    'Audit the context richness of the prompts used to build this feature: does the AI have access to the current spec, the established architecture, and the specific acceptance criteria for what was just built, or is it making assumptions that a context-rich prompt would have resolved?',
-    'Cross-confirm that what was just built is aligned with the project\'s planning artifacts: paste the relevant spec section, architecture diagram, or task definition into the conversation and ask the AI to verify that its implementation matches what was planned.',
+    'Review the prompts used to build this feature: are they grounded in the project\'s spec, architecture decisions, and task breakdown, or are they ad hoc instructions that you are implementing without access to the full planning context? If context is missing, inject it now before the next prompt.',
+    'Audit the context richness of the prompts used to build this feature: do you have access to the current spec, the established architecture, and the specific acceptance criteria for what was just built, or are you making assumptions that a context-rich prompt would have resolved?',
+    'Cross-confirm that what was just built is aligned with the project\'s planning artifacts: paste the relevant spec section, architecture diagram, or task definition into the conversation and verify that your implementation matches what was planned.',
   ],
   L2: [
-    'Does the AI have the spec and architecture context it needs to build this feature correctly, or has it been working from ad hoc instructions? Inject the relevant planning context before continuing.',
-    'Paste the spec or acceptance criteria for this feature into the conversation and ask the AI to check whether what was just built matches what was planned.',
+    'Do you have the spec and architecture context needed to build this feature correctly, or have you been working from ad hoc instructions? Inject the relevant planning context before continuing.',
+    'Paste the spec or acceptance criteria for this feature into the conversation and check whether what was just built matches what was planned.',
   ],
   L3: [
-    'Does the AI have enough context about the spec and architecture to be building this feature correctly, or is it working without the full picture?',
+    'Do you have enough context about the spec and architecture to be building this feature correctly, or are you working without the full picture?',
   ],
 };
 
@@ -791,16 +791,16 @@ const ABSENCE_CORRECTION_SEEKING_CASUAL: DecisionContent = {
   question:      'Has the AI checked its own work?',
   pinchFallback: 'No verification.',
   L1: [
-    'Ask the AI to take a second look at what was just built — not to explain it, but to actually critique it. What would it do differently, what assumptions did it make that might be wrong, and what are the riskiest parts?',
-    'Get the AI to argue against its own output for what was just built: what\'s the case against this approach, what did it not consider, and what\'s the part it\'s least confident about?',
-    'Ask the AI: if you had to find a bug or a flaw in what was just built, what would it be? Don\'t let it off the hook with "it looks fine."',
+    'Take a second look at what was just built — not to explain it, but to actually critique it. What would you do differently, what assumptions did you make that might be wrong, and what are the riskiest parts?',
+    'Argue against your own output for what was just built: what\'s the case against this approach, what did you not consider, and what\'s the part you\'re least confident about?',
+    'If you had to find a bug or a flaw in what was just built, what would it be? Don\'t let yourself off the hook with "it looks fine."',
   ],
   L2: [
-    'Ask the AI to review what was just built as if it hadn\'t written it — what would it flag or change?',
-    'Get the AI to identify the weakest part of what was just built and explain what it\'s not sure about.',
+    'Review what was just built as if you hadn\'t written it — what would you flag or change?',
+    'Identify the weakest part of what was just built and explain what you\'re not sure about.',
   ],
   L3: [
-    'Ask the AI to identify the part of what was just built it\'s least confident is correct.',
+    'Identify the part of what was just built you\'re least confident is correct.',
   ],
 };
 
@@ -859,16 +859,16 @@ const ABSENCE_PROMPT_CONTEXT_CASUAL: DecisionContent = {
   question:      'Sending prompts — have you shared the spec?',
   pinchFallback: 'Missing context.',
   L1: [
-    'Check the prompts used to build this feature — does the AI actually know what the spec says, what the architecture looks like, and what the task is supposed to achieve? If it\'s just getting ad hoc instructions, paste the relevant context in now so it\'s building the right thing.',
-    'Has the AI been working with the full picture, or just the last thing you asked it to do? If there\'s a spec, an architecture doc, or a task breakdown it hasn\'t seen yet, share it and ask it to check that what was just built matches up.',
-    'Paste the relevant spec or task definition into the conversation and ask the AI to confirm that what was just built actually does what it\'s supposed to. If there\'s a mismatch, now is a better time to find it than after shipping.',
+    'Check the prompts used to build this feature — do you actually know what the spec says, what the architecture looks like, and what the task is supposed to achieve? If you\'ve just been getting ad hoc instructions, paste the relevant context in now so you\'re building the right thing.',
+    'Have you been working with the full picture, or just the last thing asked of you? If there\'s a spec, an architecture doc, or a task breakdown you haven\'t seen, let me know — then check that what was just built matches up once you have the full context.',
+    'Paste the relevant spec or task definition into the conversation and confirm that what was just built actually does what it\'s supposed to. If there\'s a mismatch, now is a better time to find it than after shipping.',
   ],
   L2: [
-    'Does the AI have enough context to build this feature correctly — has it seen the spec, the architecture, or the task breakdown? If not, share the relevant bits now.',
+    'Do you have enough context to build this feature correctly — have you seen the spec, the architecture, or the task breakdown? If not, share the relevant bits now.',
     'Paste the spec or the definition of done for this feature into the conversation and check whether what was just built actually matches it.',
   ],
   L3: [
-    'Does the AI know what the spec says for this feature, or has it been building without seeing it?',
+    'Do you know what the spec says for this feature, or have you been building without seeing it?',
   ],
 };
 

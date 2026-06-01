@@ -133,7 +133,7 @@ export function detectAbsenceFlags(
     const effectiveThreshold = Math.max(absenceMinFloor, Math.ceil(sig.absenceThreshold * profileMultiplier * thresholdMultiplier));
     if (promptsInCurrentStage < effectiveThreshold) continue;
 
-    // Custom detection for F1 signals (streak/velocity/domain-bucket based)
+    // Custom detection gates — F1 signals use streak/velocity/domain-bucket logic; three signals add semantic preconditions
     if (sig.key === 'decision_fatigue_pattern') {
       const streak = state.consecutiveAcceptanceStreak ?? 0;
       if (streak < sig.absenceThreshold) continue;
@@ -141,6 +141,25 @@ export function detectAbsenceFlags(
       if (!detectWorkRhythmFlag(state)) continue;
     } else if (sig.key === 'focus_drift_detection') {
       if (!detectFocusDriftFlag(state)) continue;
+    } else if (sig.key === 'problem_correction') {
+      const hasProblemContext = state.promptHistory.some((p) =>
+        /\b(bug|error|broken|crash|fail(ed|ing)?|issue|problem|not working|doesn't work|TypeError|undefined|exception)\b/i.test(p.text)
+      );
+      if (!hasProblemContext) continue;
+      const counter = state.signalCounters[sig.key];
+      if (!counter || counter.lastSeenAt !== null) continue;
+    } else if (sig.key === 'deployment_planning') {
+      const MIN_REVIEW_TESTING_PROMPTS = 5;
+      if (currentStage !== 'release' &&
+          !(currentStage === 'review_testing' &&
+            promptsInCurrentStage >= MIN_REVIEW_TESTING_PROMPTS)) continue;
+      const counter = state.signalCounters[sig.key];
+      if (!counter || counter.lastSeenAt !== null) continue;
+    } else if (sig.key === 'context_loss') {
+      const MIN_CONTEXT_LOSS_PROMPTS = 25;
+      if (promptCount < MIN_CONTEXT_LOSS_PROMPTS) continue;
+      const counter = state.signalCounters[sig.key];
+      if (!counter || counter.lastSeenAt !== null) continue;
     } else {
       // Standard gate — signal never detected?
       const counter = state.signalCounters[sig.key];

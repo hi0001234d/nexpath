@@ -16,6 +16,7 @@ export interface PendingAdvisory {
   generatedL1: string[] | null;
   generatedL2: string[] | null;
   generatedL3: string[] | null;
+  prevStage?:  Stage;
 }
 
 export interface UpsertPendingAdvisoryInput {
@@ -28,6 +29,7 @@ export interface UpsertPendingAdvisoryInput {
   generatedL1?: string[];
   generatedL2?: string[];
   generatedL3?: string[];
+  prevStage?:   Stage;
 }
 
 /**
@@ -45,8 +47,8 @@ export function upsertPendingAdvisory(
   store.db.run(
     `INSERT INTO pending_advisories
        (project_root, stage, flag_type, pinch_label, session_id, prompt_count, status, created_at,
-        generated_l1, generated_l2, generated_l3)
-     VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
+        generated_l1, generated_l2, generated_l3, prev_stage)
+     VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)`,
     [
       input.projectRoot,
       input.stage,
@@ -58,6 +60,7 @@ export function upsertPendingAdvisory(
       input.generatedL1 !== undefined ? JSON.stringify(input.generatedL1) : null,
       input.generatedL2 !== undefined ? JSON.stringify(input.generatedL2) : null,
       input.generatedL3 !== undefined ? JSON.stringify(input.generatedL3) : null,
+      input.prevStage ?? null,
     ],
   );
   saveStore(store);
@@ -76,19 +79,25 @@ function parseJsonArray(raw: unknown): string[] | null {
   }
 }
 
-/** Return the most recent pending advisory for a project, or null if none. */
+/** Return the most recent pending advisory for a project, or null if none.
+ *  When sessionId is provided only advisories from that session are returned. */
 export function getPendingAdvisory(
   store: Store,
   projectRoot: string,
+  sessionId?: string,
 ): PendingAdvisory | null {
+  const sessionFilter = sessionId !== undefined ? ' AND session_id = ?' : '';
+  const params: (string | number)[] = sessionId !== undefined
+    ? [projectRoot, sessionId]
+    : [projectRoot];
   const result = store.db.exec(
     `SELECT id, project_root, stage, flag_type, pinch_label, session_id, prompt_count, status,
-            created_at, generated_l1, generated_l2, generated_l3
+            created_at, generated_l1, generated_l2, generated_l3, prev_stage
      FROM pending_advisories
-     WHERE project_root = ? AND status = 'pending'
+     WHERE project_root = ?${sessionFilter} AND status = 'pending'
      ORDER BY created_at DESC
      LIMIT 1`,
-    [projectRoot],
+    params,
   );
   const row = result[0]?.values[0];
   if (!row) return null;
@@ -105,6 +114,7 @@ export function getPendingAdvisory(
     generatedL1: parseJsonArray(row[9]),
     generatedL2: parseJsonArray(row[10]),
     generatedL3: parseJsonArray(row[11]),
+    prevStage:   row[12] ? row[12] as Stage : undefined,
   };
 }
 

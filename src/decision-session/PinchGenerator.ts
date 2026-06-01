@@ -166,12 +166,15 @@ export async function generatePinchLabel(
     const openai   = client ?? new OpenAI();
     const prompt   = buildPinchPrompt(content.question, flagType, stage, profile, language);
 
-    const response = await openai.chat.completions.create({
-      model:       PINCH_MODEL,
-      messages:    [{ role: 'user', content: prompt }],
-      temperature: PINCH_TEMPERATURE,
-      max_tokens:  PINCH_MAX_TOKENS,
-    });
+    const response = await openai.chat.completions.create(
+      {
+        model:       PINCH_MODEL,
+        messages:    [{ role: 'user', content: prompt }],
+        temperature: PINCH_TEMPERATURE,
+        max_tokens:  PINCH_MAX_TOKENS,
+      },
+      { timeout: 10_000 },
+    );
 
     const raw   = response.choices[0]?.message?.content ?? '';
     const label = validatePinchLabel(raw);

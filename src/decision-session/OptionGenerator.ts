@@ -21,7 +21,7 @@ import { GroundingConfig } from '../config/GroundingConfig.js';
 export const OPTION_GEN_MODEL       = 'gpt-4o-mini';
 export const OPTION_GEN_MAX_TOKENS  = 900;
 export const OPTION_GEN_TEMP        = 0;
-export const OPTION_GEN_MAX_RETRIES = 2;
+export const OPTION_GEN_MAX_RETRIES = 1;
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -181,21 +181,16 @@ function buildFeatureGroundingSection(
 Feature word grounding — embed at most ${maxWords} word(s) per option:
 ${advisoryBlock}Most recent session prompts (current feature context — do not copy these prompts verbatim into option text; extracting specific nouns for feature grounding is required):
 ${promptLines}
-Feature noun extraction — two steps:
+Feature noun extraction — identify the primary feature area:
 
-Step A — from the last prompt (highest-numbered), extract the most specific named component,
-page, field, or behaviour. A feature noun is present even in bug reports and styling prompts:
-  "the login is not working on my phone" → "login"
-  "the client list shows old data" → "client list"
-  "the pdf formatting is broken" → "pdf"
-  "one of my clients cant reset their password from the portal" → "forgot password"
-  "the portal page looks plain" → "client portal"
-Use 'this feature' ONLY when the last prompt contains NO named feature at all:
-  "fix this" / "make it look nicer" / "deploy it" / "where do i see errors" → 'this feature'
+From the 3–5 most recent session prompts, identify the primary feature area the developer has
+been working on. Weight more recent prompts more heavily. Extract at most ${maxWords} word(s)
+representing that feature area — favour the noun that appears across multiple recent prompts
+over a noun that appears only in the last prompt.
 
-Step B — if Step A falls back to 'this feature', scan the 4 prompts immediately before
-the last one. Use the most recent specific feature noun found there instead. Only keep
-'this feature' if none of those 4 prompts contains a specific feature noun.`;
+A feature noun is a specific component, page, field, or behaviour name (e.g. "study group form",
+"booking system", "forgot password flow"). Use 'this feature' only when none of the provided
+prompts contains any named feature noun at all.`;
 }
 
 // ── CO-STAR prompt ─────────────────────────────────────────────────────────────

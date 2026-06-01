@@ -1,3 +1,6 @@
+import OpenAI from 'openai';
+import { join } from 'node:path';
+import { config as loadDotenv } from 'dotenv';
 import { platform } from 'node:process';
 import type { Store } from '../../store/db.js';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
@@ -6,7 +9,7 @@ import { runDecisionSession } from '../../decision-session/DecisionSession.js';
 import type { SelectFn } from '../../decision-session/DecisionSession.js';
 import { createTtySelectFn } from '../../decision-session/TtySelectFn.js';
 import { getConfig } from '../../store/config.js';
-import { detectLanguage, LANG_WINDOW, LANG_DETECT_INTERVAL } from '../../classifier/LanguageDetector.js';
+import { detectLanguage, resolveLanguage, LANG_WINDOW, LANG_DETECT_INTERVAL } from '../../classifier/LanguageDetector.js';
 import { SessionStateManager } from '../../classifier/SessionStateManager.js';
 import { getRecentPrompts } from '../../store/prompts.js';
 import { getProject, setDetectedLanguage } from '../../store/projects.js';
@@ -16,6 +19,8 @@ import { writeHookStats } from '../../store/hook-stats.js';
 import { writeTelemetry } from '../../telemetry/index.js';
 import { recentPromptMetadata } from '../../telemetry/recent-prompts.js';
 import { readStdin } from './auto.js';
+import { resolveDecisionContent } from '../../decision-session/options.js';
+import { generateOptionList } from '../../decision-session/OptionGenerator.js';
 
 /**
  * nexpath stop — Claude Code Stop hook handler.
@@ -64,6 +69,7 @@ export async function runStop(
   payload:   StopPayload,
   store:     Store,
   selectFn?: SelectFn,
+  openai?:   OpenAI,
 ): Promise<StopOutcome> {
   // 1. Loop guard — Claude is continuing because of a previous Stop block; let it land
   if (payload.stop_hook_active) {
@@ -85,8 +91,11 @@ export async function runStop(
   // 1.7. Read decision_session_count for help-line gating in the decision session UI
   const decisionSessionCount = getProject(store, payload.cwd)?.decisionSessionCount ?? 0;
 
-  // 2. Check for a pending advisory stored by the auto hook
-  const advisory = getPendingAdvisory(store, payload.cwd);
+  // 2. Load session state — needed for session filter and option gen
+  const mgr = SessionStateManager.load(store, payload.cwd);
+
+  // 3. Check for a pending advisory stored by the auto hook
+  const advisory = getPendingAdvisory(store, payload.cwd, mgr.current.sessionId);
   if (!advisory) {
     logger.debug('stop_no_pending', { cwd: payload.cwd });
     writeTelemetry(payload.cwd, 'stop_no_pending', undefined, store);
@@ -126,18 +135,35 @@ export async function runStop(
     }
   }
 
-  // 5. Render decision session UI
-  const generatedOptions =
-    advisory.generatedL1 && advisory.generatedL2 && advisory.generatedL3
-      ? { l1: advisory.generatedL1, l2: advisory.generatedL2, l3: advisory.generatedL3 }
-      : undefined;
+  // 5. Generate decision options — runs after Claude's response, within stop's 600s window
+  const langOverride  = getConfig(store.db, 'language_override');
+  const detectedLang  = getProject(store, payload.cwd)?.detectedLanguage ?? undefined;
+  const effectiveLang = resolveLanguage(langOverride, detectedLang);
 
-  const mgr = SessionStateManager.load(store, payload.cwd);
+  const content = resolveDecisionContent(
+    advisory.stage,
+    advisory.flagType,
+    mgr.current.profile,
+  );
+
+  const generatedOptions = await generateOptionList(
+    content,
+    mgr.current.profile ?? undefined,
+    effectiveLang,
+    mgr.current.promptHistory as import('../../classifier/types.js').PromptRecord[],
+    {
+      flagType:              advisory.flagType,
+      currentStage:          mgr.current.currentStage,
+      prevStage:             advisory.prevStage,
+      promptsInCurrentStage: mgr.current.promptsInCurrentStage,
+    },
+    openai,
+  );
 
   writeTelemetry(payload.cwd, 'stop_advisory_shown', {
     flagType:         advisory.flagType,
     stage:            advisory.stage,
-    generatedOptions: !!(advisory.generatedL1 && advisory.generatedL2 && advisory.generatedL3),
+    generatedOptions: !!generatedOptions,
   }, store);
 
   const dsResult = await runDecisionSession(
@@ -149,7 +175,7 @@ export async function runStop(
       projectRoot:          payload.cwd,
       promptCount:          advisory.promptCount,
       decisionSessionCount,
-      generatedOptions,
+      generatedOptions:     generatedOptions ?? undefined,
       profile:              mgr.current.profile,
       // Phase 4 — Item B: last-5 prompt metadata for decision_session_started.
       recentPrompts:        recentPromptMetadata(mgr.current.promptHistory),
@@ -193,6 +219,9 @@ export function registerStopCommand(program: import('commander').Command): void 
         process.exit(0);
         return;
       }
+
+      const envPath = join(payload.cwd, '.env');
+      loadDotenv({ path: envPath, override: true });
 
       const store = await openStore(opts.db);
       const logLevel = getConfig(store.db, 'log_level') as LogLevel | undefined;

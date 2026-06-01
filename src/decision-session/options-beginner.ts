@@ -294,14 +294,14 @@ export const ABSENCE_CORRECTION_SEEKING_BEGINNER: DecisionContent = {
   question:      'Has the AI checked its own work?',
   pinchFallback: 'No verification.',
   L1: [
-    '1. Ask the AI to look at what was just built again — but this time, ask it to find what might be wrong with it.\n2. Share with me what it says.\n3. Then tell me: does its answer make sense to you, or does something still seem off?',
-    'Ask the AI: "what\'s the part of what was just built you\'re least sure about?" — then share what it says with me so we can check together.',
+    '1. Look at what was just built again — but this time, find what might be wrong with it.\n2. Share what you find with me.\n3. Then tell me: does what you found make sense, or does something still seem off?',
+    'What\'s the part of what was just built you\'re least sure about? — share what you find with me so we can check together.',
   ],
   L2: [
-    'Ask the AI to point out any part of what was just built that might not be right — then share what it says with me.',
+    'Point out any part of what was just built that might not be right — then share what you find with me.',
   ],
   L3: [
-    'Ask the AI to find one thing in what was just built that might be wrong or could be done better.',
+    'Find one thing in what was just built that might be wrong or could be done better.',
   ],
 };
 
@@ -354,14 +354,14 @@ export const ABSENCE_PROMPT_CONTEXT_BEGINNER: DecisionContent = {
   question:      'Sending prompts — have you shared the spec?',
   pinchFallback: 'Missing context.',
   L1: [
-    '1. Think about what you\'ve been asking the AI to build in this session.\n2. Share with me: has it seen the original plan for what we\'re building, or has it just been following each instruction without knowing the bigger picture?\n3. Then paste the plan or the task description into the conversation and ask it to check that what was just built matches what was planned.',
-    'Walk me through what the AI has been working from in this session — has it seen the full plan, or just individual instructions? Share the original plan with it now and ask it to check if what was just built matches up, then share what it says with me.',
+    '1. Think about what you\'ve been building in this session.\n2. Share with me: have you seen the original plan for what we\'re building, or have you just been following each instruction without knowing the bigger picture?\n3. Then paste the plan or the task description into the conversation and check that what was just built matches what was planned.',
+    'Walk me through what you\'ve been working from in this session — have you seen the full plan, or just individual instructions? Check whether what was just built matches the original plan if you have it, and share what you find with me.',
   ],
   L2: [
-    'Has the AI seen the plan or the description of what this feature is supposed to do? If not, share it now and ask it to check that what was just built matches — then share what it says with me.',
+    'Have you seen the plan or the description of what this feature is supposed to do? If not, ask me for it — then check that what was just built matches and share what you find.',
   ],
   L3: [
-    'Does the AI know what the full plan says for this feature, or has it been building without seeing it?',
+    'Do you know what the full plan says for this feature, or have you been building without seeing it?',
   ],
 };
 
@@ -724,7 +724,7 @@ export const ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER: DecisionContent =
   question:      'Asking a lot at once — let\'s do one thing at a time',
   pinchFallback: 'One thing at a time.',
   L1: [
-    '1. When you ask the AI to do several things at once, the results get messy and hard to check. Try focusing on just one thing per message.\n2. What\'s the most important thing to do right now? Start with that — then we\'ll move to the next.',
+    '1. When you send several things at once, the results get messy and hard to check. Try focusing on just one thing per message.\n2. What\'s the most important thing to do right now? Start with that — then we\'ll move to the next.',
     'One task per message works better than many — it\'s easier to see if it worked, easier to fix if it didn\'t, and easier to understand what happened. What\'s the single next step?',
   ],
   L2: [

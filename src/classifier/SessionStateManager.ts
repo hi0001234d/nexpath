@@ -306,6 +306,22 @@ export class SessionStateManager {
   }
 
   /**
+   * Feed Stage 2 signal assessments back into signal counters.
+   * Called in auto.ts after runStage2 confirms an advisory, before Step 8 dedup write.
+   * Only updates keys that exist in signalCounters — unknown LLM-returned keys are ignored.
+   */
+  applyStage2SignalUpdates(store: Store, signalsPresent: string[]): void {
+    const promptIndex = this.state.promptCount - 1;
+    for (const key of signalsPresent) {
+      if (key in this.state.signalCounters) {
+        this.state.signalCounters[key].present    = true;
+        this.state.signalCounters[key].lastSeenAt = promptIndex;
+      }
+    }
+    saveState(store, this.state);
+  }
+
+  /**
    * Pre-seed session state from imported historical prompts.
    * Called once per project after importHistoricalPrompts().
    * No-op if a session state already exists for this project.

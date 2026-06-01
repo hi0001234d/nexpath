@@ -271,15 +271,18 @@ describe('generatePinchLabel', () => {
     expect(result).toBe(IMPLEMENTATION_TO_REVIEW.pinchFallback);
   });
 
-  it('passes correct model and temperature to the OpenAI API', async () => {
+  it('passes correct model, temperature, and timeout to the OpenAI API', async () => {
     const client = makeMockClient('Hold up.');
     await generatePinchLabel('implementation', 'stage_transition', client);
     const createFn = (client.chat.completions.create as ReturnType<typeof vi.fn>);
-    expect(createFn).toHaveBeenCalledWith(expect.objectContaining({
-      model:       PINCH_MODEL,
-      temperature: PINCH_TEMPERATURE,
-      max_tokens:  PINCH_MAX_TOKENS,
-    }));
+    expect(createFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model:       PINCH_MODEL,
+        temperature: PINCH_TEMPERATURE,
+        max_tokens:  PINCH_MAX_TOKENS,
+      }),
+      expect.objectContaining({ timeout: 10_000 }),
+    );
   });
 
   it('passes the prompt as a user message', async () => {
