@@ -2489,8 +2489,8 @@ export const ABSENCE_TIME_TO_VALUE_CHECK_CASUAL: DecisionContent = {
   question: 'Is this solution the right size for your current scale?',
   pinchFallback: 'Check whether this complexity is justified at current user count.',
   L1: [
-    'The most common indie hacker time sink: building complex infrastructure for a product with zero users. Queue systems, caching layers, microservices, and distributed architectures are solutions to scale problems — and before you have users, the scale problem doesn\'t exist. Every hour spent building infrastructure for hypothetical scale is an hour not spent on the user problem you actually have right now.',
-    '37signals principle: your solution should match your current traffic, not your hoped-for traffic. The complexity you add today must be maintained indefinitely — before, during, and after finding product-market fit. A solution that works for 100 users and is easily replaceable when you hit 10,000 is better than a solution designed for 10,000 that adds maintenance cost from day one.',
+    'Right-size this solution for current scale: name the current user count, name the simplest technology that solves the problem at that scale (a database query, a single API call, a flat file), and propose using it. Defer infrastructure complexity until scale actually requires it.',
+    'Apply the 37signals match-current-traffic rule: confirm this solution fits today\'s traffic rather than hoped-for traffic. If you are reaching for a queue, cache, or distributed component before having users, propose the simpler version that will work at current scale and is easily replaceable later.',
     'Right-sizing heuristic: if a simple database query, a single API call, or a flat file solves the problem — and you\'re reaching for a queue system, caching layer, or distributed component — ask whether your current user count justifies the complexity. "Not yet but it will eventually" is the premature optimization justification. Build the simple version, ship it, and complicate it when scale actually demands it.',
   ],
   L2: [
@@ -2506,7 +2506,7 @@ export const ABSENCE_SHIP_READINESS_DEFINITION_CASUAL: DecisionContent = {
   question: 'What needs to be true for this to be ready to ship?',
   pinchFallback: 'Write ship criteria before continuing to build.',
   L1: [
-    'The "not ready yet" trap is the most common indie hacker failure mode. Without a clear definition of what "ready" means, every addition is rational in isolation — "just one more thing" — while collectively they make the launch date recede indefinitely. The fix: write down what must be true for this to ship, before building. That list is your Definition of Done, and it has two functions: it tells you when to stop adding, and it tells you exactly when you\'re done.',
+    'Write the ship criteria for this build before more is added: list the specific, binary conditions that must be true to ship — "users can sign up", "the core workflow completes end-to-end", etc. This list is your Definition of Done; everything beyond it is post-launch scope.',
     'Ship criteria should be binary: each item is objectively true or false. "Users can sign up and complete the core workflow" is a valid ship criterion. "The design feels polished" is not. Criteria that can\'t be evaluated as pass/fail don\'t function as ship gates — they become "not ready yet" justifications that can always be renegotiated. Write criteria you can check off with a yes or a no.',
     'A useful constraint: limit your ship criteria to what\'s needed for the first user to get value from the product. Everything beyond that is post-launch scope. Add it to a backlog, not the ship gate. The ship gate is about minimum viable launch, not minimum viable polish.',
   ],
@@ -2523,7 +2523,7 @@ export const ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL: DecisionContent = {
   question: 'Have you done this manually to confirm it works before automating?',
   pinchFallback: 'Do it manually first, then automate the proven version.',
   L1: [
-    'Paul Graham: "Do things that don\'t scale." The insight: manual execution validates the process before engineering time is committed to automating it. If you automate a workflow before doing it manually, you build automation for a process you haven\'t confirmed is correct, efficient, or actually wanted by users. Manual first costs one manual execution. Automating first costs the engineering time plus the cost of discovering the manual version was wrong.',
+    'Apply Paul Graham\'s "do things that don\'t scale" rule: do this workflow manually for the first users before automating it. Run the process by hand, capture what users actually need vs what you assumed, and only then automate the validated version.',
     'The manual-before-automate discipline: do the process manually for the first users, watch what actually happens — what\'s needed, what\'s not, what users ask for that you didn\'t anticipate — then automate the validated version. Every time automation is built for an unvalidated process, there\'s a real chance of needing to rebuild the automation after discovering the manual version was wrong.',
     'Questions to ask before automating: have you done this manually at least once? Did it work as expected? Did users respond as expected? If any answer is no — do it manually first. Automation is optimization. Optimization of an unvalidated process is premature spend.',
   ],
@@ -2541,7 +2541,7 @@ export const ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL: DecisionContent = {
   pinchFallback: 'Apply the solo maintainability test before adding this complexity.',
   L1: [
     'Every technology choice for a solo indie project is a choice you\'ll maintain alone — debugging it at 2am, extending it when requirements change, understanding it after 3 months away. Complexity that would be distributed across a team of engineers is complexity a solo builder pays in full. The right lens: "is this the simplest stack I can maintain alone, or is this the most impressive stack I can technically justify?"',
-    'CV-driven development trap: adding architectural complexity appropriate for a team is inappropriate for a solo operator who must maintain it indefinitely. Microservices, event sourcing, and distributed architectures provide real benefits at scale with a team. For a solo builder at early scale, they add maintenance surface without adding user value. The user doesn\'t see the architecture — they see the product.',
+    'Run the CV-driven-development check on this stack choice: if the architecture is team-grade complexity for a solo build, propose the simpler stack that solves the same user problem. The user sees the product, not the architecture — choose the stack you can debug alone at 2 a.m.',
     'Solo maintainability benchmark: if a production issue hit this system tonight, how long would it take you to find and fix it alone, without documentation? A simpler stack answers that in minutes. A complex one answers it in hours — and that difference is paid by you, every time something breaks. Simpler stack = lower maintenance tax = more time shipping.',
   ],
   L2: [
@@ -2558,7 +2558,7 @@ export const ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL: DecisionContent = {
   pinchFallback: 'Define a launch strategy before getting closer to ship date.',
   L1: [
     'Shipping without a launch plan means launching into silence. Good products do not attract users by themselves — distribution is a discipline that must be planned and executed, not discovered. The minimum viable launch strategy: name one specific channel where you will announce this product, write the post before launch day, and identify who in your network or community should see it. That\'s a launch plan.',
-    'Distribution channels that indie hackers actually use: Product Hunt (works for dev/productivity tools, requires scheduling and upvote coordination), Hacker News Show HN (write the Show HN post before launch day), relevant subreddits, Twitter/X announcement, personal email list, niche community Slack/Discord, cold outreach to 5-10 target users. One channel executed well beats five channels half-heartedly attempted on launch day.',
+    'Pick one specific launch channel and execute it well: Product Hunt (write the listing and schedule), Hacker News Show HN (draft the post), a targeted subreddit, a niche community, or cold outreach to 5-10 target users. One channel done properly beats five attempted on launch day — name the channel and start the announcement draft now.',
     'The launch plan question: when you ship, who specifically is going to see it, and how? If the answer is "people will find it" — that\'s not a plan, that\'s a hope. Name the channel, identify the audience, and write the announcement before you\'re in launch-day mode.',
   ],
   L2: [
@@ -2574,8 +2574,8 @@ export const ABSENCE_EARLY_USER_FEEDBACK_CASUAL: DecisionContent = {
   question: 'When did you last get a real user\'s reaction to what you\'re building?',
   pinchFallback: 'Show what you\'ve built to at least one real user before continuing.',
   L1: [
-    'Building in a silo is the primary cause of product-market fit failure. Every prompt you spend building without external user input is a prompt where you\'re confirming your own assumptions rather than testing them. The assumptions that feel most certain — "users obviously want this", "this UX is clearly better" — are the ones most likely to be wrong, because certainty removes the impulse to test.',
-    'Early user feedback doesn\'t require a polished product. A screenshot, a Loom walkthrough, a live screen share, or a rough prototype shown to 2-3 people produces feedback that changes build direction more than any amount of self-review. The goal is not approval — it\'s friction: finding the things that confuse, the steps that feel wrong, the value that isn\'t landing.',
+    'Break out of silo-building before more is built: identify one real user to show the current build to today — for a 10-minute screen-share, a Loom walk-through, or a screenshot review. Capture their actual reaction, not your interpretation, and adjust direction based on what you see.',
+    'Get rough early feedback before the next polish pass: show 2-3 real users the current build via screenshot, Loom, or live demo — the goal is not approval, it is friction (where they get confused, what they ignore, what they ask about). Capture each piece of friction and decide what to address before continuing.',
     'A practical minimum: before finishing any significant feature, show a working or near-working version to one real user and watch them interact with it without explaining anything. What they struggle with, what they don\'t notice, what they ask about — that\'s the feedback that matters. You don\'t need a survey. You need one real person trying to use the thing.',
   ],
   L2: [
@@ -2592,7 +2592,7 @@ export const ABSENCE_SOLO_MAINTAINABILITY_CASUAL: DecisionContent = {
   pinchFallback: 'Run the solo maintainability check before adding this complexity.',
   L1: [
     'Every integration, service, or abstraction you add to a solo project is complexity you\'ll maintain alone — debugging it in production, extending it when requirements change, understanding it after weeks away. The solo maintainability question is not "does this work?" but "can I own the full blast radius of this when it breaks, by myself, without help?" If the answer requires reading documentation for 30 minutes every time something goes wrong, the complexity cost is real and ongoing.',
-    'The solo tax compounds: each addition increases the total maintenance surface area paid by one person. A third-party integration that saves a day of development costs a day of debugging every time its API changes, its documentation is wrong, or its behavior is unexpected. The rule: only add an integration if the long-term maintenance cost is clearly lower than the long-term development cost of building it yourself or finding a simpler alternative.',
+    'Apply the solo-tax test before adding this integration: estimate the long-term maintenance cost (debugging, version churn, documentation drift) and compare to the long-term cost of building the simpler equivalent yourself. Adopt only if the maintenance cost is clearly lower.',
     'Before adding any new service, integration, or complex abstraction: name the failure mode that\'s most likely to wake you up at 3am. Can you diagnose and fix that failure alone, in under 30 minutes, with the logs you\'ll have available? If not, the complexity is not solo-sustainable.',
   ],
   L2: [
@@ -2627,7 +2627,7 @@ export const ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL: DecisionContent = {
   L1: [
     'Building features without monetization awareness builds a free product by default — regardless of intent. Every significant feature should have an articulated answer to "how does this connect to the revenue model?" It doesn\'t need to be direct: "this is a retention feature that reduces churn, which improves LTV" is a valid connection. "This makes the product better" is not — it\'s the answer that leads to technically excellent, commercially unsustainable products.',
     'Revenue model options for indie products: paid tier (freemium gate), usage-based pricing, one-time purchase, SaaS subscription, affiliate revenue, API access tier. For each feature, ask: is this in the free tier (acquisition) or the paid tier (monetization)? If free, why — what acquisition or retention goal does it serve that connects back to paid conversion? If paid, what makes it worth paying for? These questions don\'t slow development — they prevent building the wrong tier.',
-    'The risk of deferred monetization thinking: every feature added without a business model connection narrows the future monetization options. Features that train users to expect something for free are hard to move behind a paywall later. Revenue model decisions made during development are lower cost than revenue model decisions made after launch.',
+    'Lock the monetization decision for this feature now, before users learn to expect it for free: place it explicitly in the free tier (and name the acquisition or retention goal it serves) or the paid tier (and name what makes it worth paying for). Document the choice and the rationale.',
   ],
   L2: [
     'Is this feature in the free or paid tier? What\'s the explicit reason — acquisition, retention, conversion, or direct revenue?',
@@ -2642,9 +2642,9 @@ export const ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL: DecisionContent = {
   question: 'Is this a milestone worth sharing publicly?',
   pinchFallback: 'Consider sharing this milestone publicly before moving to the next.',
   L1: [
-    'Every milestone you reach while building in silence is a distribution opportunity permanently lost. Build-in-public isn\'t just social media content — it\'s a parallel audience-building track that runs alongside development. The people who follow your progress become your first customers, your first promoters, and your first feedback providers. Building without sharing means you\'re building toward a cold launch: no audience, no early users, no feedback loop until the product is shipped.',
-    'What makes a milestone worth sharing: first working version of a core feature, reaching a significant technical milestone, shipping something users can try, hitting a number (first 10 users, first revenue, first 100 signups), or learning something worth teaching. The bar is lower than it feels — people follow progress, not perfection. A rough demo shared early generates more signal than a polished demo shared at launch.',
-    'The format doesn\'t need to be a polished post. A short tweet ("just shipped X — here\'s what it does and what I learned"), a Loom walkthrough posted to a community, or a one-paragraph update in a relevant forum. The goal is consistent presence during the build, not a single launch-day announcement. Audiences built over months survive launch-day logistics failures; audiences built in the last week don\'t.',
+    'Share this milestone publicly today before continuing: draft a short post (tweet, Loom, community update) describing what you just shipped and what you learned. Audiences built during the build survive launch-day failures; audiences built launch-week do not.',
+    'Pick the milestone type and write the share: first working core feature, first technical milestone, first 10 users, first revenue, or one specific lesson worth teaching. Draft a one-paragraph post (no polish required) and identify the audience — your followers, a relevant community, or a niche forum.',
+    'Pick the lowest-friction share format and ship it: a short tweet, a 60-second Loom walk-through, or a one-paragraph forum update. Frequency over polish — consistent presence during the build is what compounds into a launch-day audience.',
   ],
   L2: [
     'What\'s the simplest format to share this milestone today — a tweet, a short post, a screen share? Who specifically should see it?',
@@ -2659,7 +2659,7 @@ export const ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL: DecisionContent = {
   question: 'Is the current scope still within your available time and energy?',
   pinchFallback: 'Run a scope-vs-time check before adding more to the build.',
   L1: [
-    'The most common reason indie projects are abandoned is not technical failure — it\'s scope that expanded past available time and energy without anyone acknowledging it. Every "also want to add" is individually reasonable. Collectively, they make the project feel endless, which makes shipping feel impossible, which makes abandonment feel rational. Scope hammering — consciously limiting scope to what fits available time — is the discipline that prevents this.',
+    'Run the scope-vs-time check on this build before more is added: name the current scope, estimate the shipping date at current pace, and compare to the original target. If the date has slipped twice in a row, cut scope to fit the original timeline — list specifically what gets deferred to post-launch.',
     'Time-box check: at the current scope, how long will it take to ship something a real user can use? If the answer is "a few more weeks" and it was "a few more weeks" last session too — scope has grown past the original timeline without acknowledgment. The fix is not to work faster; it\'s to cut scope to fit the original timeline, not to extend the timeline to fit the expanded scope.',
     'A useful constraint: define the minimum version that\'s still shippable given the time you have available this week or this month. Everything beyond that goes to a post-launch backlog. The constraint is productive: it forces the prioritization decision that scope expansion defers indefinitely.',
   ],

@@ -5305,6 +5305,79 @@ describe('PM role — no opener-citation or framework-only opener tokens in rewr
   }
 });
 
+// ── Phase 6 E4-E6 — indie_hacker role content invariants ─────────────────────
+// Locks pinch-UI labels (question + pinchFallback) and bans verbatim citations
+// of indie-hacker thought-leaders (37signals, Paul Graham, CV-driven dev) in the
+// rewritten L1 slots. Inline framework references inside instructions remain
+// acceptable; opener-citations are not.
+
+describe('Indie_hacker role — question + pinchFallback invariants', () => {
+  const pinchLabels: Array<{ name: string; c: import('./options.js').DecisionContent; q: string; pf: string }> = [
+    { name: 'ABSENCE_TIME_TO_VALUE_CHECK_CASUAL',         c: ABSENCE_TIME_TO_VALUE_CHECK_CASUAL,         q: 'Is this solution the right size for your current scale?',                       pf: 'Check whether this complexity is justified at current user count.' },
+    { name: 'ABSENCE_SHIP_READINESS_DEFINITION_CASUAL',   c: ABSENCE_SHIP_READINESS_DEFINITION_CASUAL,   q: 'What needs to be true for this to be ready to ship?',                            pf: 'Write ship criteria before continuing to build.' },
+    { name: 'ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL',      c: ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL,      q: 'Have you done this manually to confirm it works before automating?',             pf: 'Do it manually first, then automate the proven version.' },
+    { name: 'ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL', c: ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL, q: 'Can you maintain this architecture alone, at 2am, when it breaks?',              pf: 'Apply the solo maintainability test before adding this complexity.' },
+    { name: 'ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL',     c: ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL,     q: 'How are people going to find out this product exists when you launch?',          pf: 'Define a launch strategy before getting closer to ship date.' },
+    { name: 'ABSENCE_EARLY_USER_FEEDBACK_CASUAL',         c: ABSENCE_EARLY_USER_FEEDBACK_CASUAL,         q: 'When did you last get a real user\'s reaction to what you\'re building?',         pf: 'Show what you\'ve built to at least one real user before continuing.' },
+    { name: 'ABSENCE_SOLO_MAINTAINABILITY_CASUAL',        c: ABSENCE_SOLO_MAINTAINABILITY_CASUAL,        q: 'Is this addition maintainable by you alone, long-term?',                         pf: 'Run the solo maintainability check before adding this complexity.' },
+    { name: 'ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL',   c: ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL,   q: 'How does this feature connect to how the product makes money?',                  pf: 'Consider the monetization connection before building this feature.' },
+    { name: 'ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL', c: ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL, q: 'Is this a milestone worth sharing publicly?',                                     pf: 'Consider sharing this milestone publicly before moving to the next.' },
+    { name: 'ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL',         c: ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL,         q: 'Is the current scope still within your available time and energy?',              pf: 'Run a scope-vs-time check before adding more to the build.' },
+  ];
+
+  for (const { name, c, q, pf } of pinchLabels) {
+    it(`${name} question is preserved verbatim`, () => {
+      expect(c.question).toBe(q);
+    });
+    it(`${name} pinchFallback is preserved verbatim`, () => {
+      expect(c.pinchFallback).toBe(pf);
+    });
+  }
+});
+
+describe('Indie_hacker role — no opener-citation patterns in rewritten L1 slots', () => {
+  // Affected slots per analysis §12.9.
+  const affectedSlots: Array<{ name: string; c: import('./options.js').DecisionContent; slots: number[] }> = [
+    { name: 'ABSENCE_TIME_TO_VALUE_CHECK_CASUAL',         c: ABSENCE_TIME_TO_VALUE_CHECK_CASUAL,         slots: [0, 1] },
+    { name: 'ABSENCE_SHIP_READINESS_DEFINITION_CASUAL',   c: ABSENCE_SHIP_READINESS_DEFINITION_CASUAL,   slots: [0] },
+    { name: 'ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL',      c: ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL,      slots: [0] },
+    { name: 'ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL', c: ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL, slots: [1] },
+    { name: 'ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL',     c: ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL,     slots: [1] },
+    { name: 'ABSENCE_EARLY_USER_FEEDBACK_CASUAL',         c: ABSENCE_EARLY_USER_FEEDBACK_CASUAL,         slots: [0, 1] },
+    { name: 'ABSENCE_SOLO_MAINTAINABILITY_CASUAL',        c: ABSENCE_SOLO_MAINTAINABILITY_CASUAL,        slots: [1] },
+    { name: 'ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL',   c: ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL,   slots: [2] },
+    { name: 'ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL', c: ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL, slots: [0, 1, 2] },
+    { name: 'ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL',         c: ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL,         slots: [0] },
+  ];
+
+  // Forbidden patterns: opener attributions. Inline references like
+  // "Apply Paul Graham's 'do things that don't scale' rule" or "Apply the 37signals
+  // match-current-traffic rule" are acceptable — these are instructions that
+  // reference a named principle inline. Opener forms like "Paul Graham: 'quote'"
+  // or "37signals principle: ..." as the sentence-leading attribution are not.
+  const forbidden: Array<{ pattern: RegExp; description: string }> = [
+    // "Paul Graham: 'quote'..."-style attribution opener (proper name + colon at start of sentence)
+    { pattern: /^(?:Paul Graham|Joel Spolsky|Jason Fried|David Heinemeier Hansson|Nir Eyal|Eric Ries):/, description: 'attribution opener: "Author: ..."' },
+    // "37signals principle: ..."-style framework opener (where "principle:" is the slot opener)
+    { pattern: /^37signals principle:/, description: '37signals principle opener' },
+    // "CV-driven development trap: ..."-style trap opener
+    { pattern: /^CV-driven development trap:/, description: 'CV-driven development trap opener' },
+    // "Hook model: ..." style (Nir Eyal framework opener)
+    { pattern: /^(?:Nir Eyal's )?Hook model:/, description: 'Hook model opener' },
+  ];
+
+  for (const { name, c, slots } of affectedSlots) {
+    for (const slotIndex of slots) {
+      it(`${name} L1[${slotIndex}] (rewritten) contains no opener-citation patterns`, () => {
+        const text = c.L1[slotIndex];
+        for (const { pattern, description } of forbidden) {
+          expect(text, `L1[${slotIndex}] matches ${description}: "${text}"`).not.toMatch(pattern);
+        }
+      });
+    }
+  }
+});
+
 describe('Phase 7 content routing', () => {
   function makeProfile(nature: import('../classifier/types.js').UserNature, role?: import('../classifier/types.js').UserRole): import('../classifier/types.js').UserProfile {
     return {
