@@ -2884,13 +2884,16 @@ export const ABSENCE_DECISION_FATIGUE_PATTERN_CASUAL: DecisionContent = {
   question:      'Long acceptance streak — applied critical review recently?',
   pinchFallback: 'Streak alert.',
   L1: [
-    'Long acceptance streak — N prompts without any pushback.',
+    'Review the last few AI responses critically — especially for edge cases, hidden assumptions, and anything that was accepted without being read carefully.',
+    'Push back on the last significant AI suggestion: what would you question if you were reviewing this code rather than writing it?',
+    'Check recent AI output for anything that looks right at a glance but might fail — edge cases, incorrect assumptions, or logic that was never validated.',
   ],
   L2: [
-    'Uncritical AI output acceptance compounds over time. Edge cases, off-by-one errors, and contextual assumptions hide in unreviewed responses. A streak this long is worth a deliberate pause — not because the suggestions are wrong, but because you haven\'t verified that they\'re right.',
+    'Look at the last AI response with fresh eyes — is there anything you would question or verify before continuing?',
+    'Pick one thing from recent AI output to double-check before the next prompt.',
   ],
   L3: [
-    'Review the last few AI responses critically — especially for edge cases and assumptions that haven\'t been explicitly validated.',
+    'Is there anything in the last AI response worth questioning before continuing?',
   ],
 };
 
@@ -2898,13 +2901,16 @@ export const ABSENCE_WORK_RHYTHM_CHECK_CASUAL: DecisionContent = {
   question:      'Rapid prompting — verified each response before continuing?',
   pinchFallback: 'Slow down.',
   L1: [
-    'Prompting faster than you can verify output.',
+    'Read and verify the last AI response before continuing — check for anything that looks right at a glance but might be wrong: logic gaps, unchecked edge cases, incomplete error handling.',
+    'Before the next prompt: read the last response fully, identify anything not yet verified, and confirm the generated code is actually correct.',
+    'Slow down: read the last AI output in full and check for anything unverified before the next message.',
   ],
   L2: [
-    'High prompt velocity without reading responses is a flow-state trap — throughput feels productive but review quality drops. Rapid-fire prompting compounds unverified output into bugs that are harder to debug than the original problem.',
+    'Read the last AI response fully before continuing — has everything been verified?',
+    'Is there anything in the last response that was accepted without being read carefully?',
   ],
   L3: [
-    'Read and verify the last response before sending the next prompt.',
+    'Read the last response before sending the next message.',
   ],
 };
 
@@ -2912,41 +2918,50 @@ export const ABSENCE_FOCUS_DRIFT_DETECTION_CASUAL: DecisionContent = {
   question:      'Multiple areas open — completed any end-to-end?',
   pinchFallback: 'Focus drift.',
   L1: [
-    'N distinct areas touched this session without completing any.',
+    'Finish one thing before starting another: identify what is open right now, pick the most important one, and close it completely before touching anything else.',
+    'List the open concerns in this session, pick the most critical one, and complete it — resist starting anything new until that one is done.',
+    'Close one open thread end-to-end before continuing: what is the most important unfinished thing right now?',
   ],
   L2: [
-    'Context switching between unrelated areas fragments attention — each switch costs roughly 15–20 minutes of cognitive recovery time. Touching 5+ domains without completing any is a quality risk for all of them: none get the focused attention they need.',
+    'What is the most important open concern to complete right now, before anything else?',
+    'Pick one thing to finish completely before starting something new.',
   ],
   L3: [
-    'Finish one area end-to-end before opening the next. What\'s the most important thing to complete right now?',
+    'Complete one thing before opening another.',
   ],
 };
 
 export const ABSENCE_SESSION_LENGTH_CHECKPOINT_CASUAL: DecisionContent = {
-  question:      '25+ prompts — context checkpoint done?',
+  question:      'Extended session — context checkpoint done?',
   pinchFallback: 'Checkpoint due.',
   L1: [
-    '25+ prompts without a context checkpoint.',
+    'Drop a context checkpoint before continuing: what has been built, what decisions were made, what is still open, and what the current goal is.',
+    'Summarize where things stand: what got done, what decisions were made, and what is still open — so the next part of the session starts with clear state.',
+    'What is the current build state — what works, what is in progress, and what is the next step?',
   ],
   L2: [
-    'Long AI sessions drift — Claude\'s recall of earlier work degrades as the conversation grows. A quick reanchor (\'here\'s where we are: X done, Y remaining\') resets shared context and prevents compounding misalignment between you and the AI.',
+    'What has been built this session — what is working and what is still in progress?',
+    'What is the most important decision made this session that needs to carry forward?',
   ],
   L3: [
-    'Drop a context checkpoint: what\'s been built, what\'s still needed, and what the current goal is.',
+    'What is the one most important thing to not lose track of before continuing?',
   ],
 };
 
 export const ABSENCE_PROGRESS_CONSOLIDATION_GAP_CASUAL: DecisionContent = {
-  question:      '20+ implementation prompts — progress documented?',
+  question:      'Extended implementation — progress documented?',
   pinchFallback: 'Document now.',
   L1: [
-    '20+ implementation prompts without consolidation.',
+    'Consolidate: update the README, write a brief description of what was built, or add clarifying comments before continuing.',
+    'Lock in the current state: write down what was built, any key decisions made, and what is still open — before the session context is lost.',
+    'Write a quick progress note — what was built, what decisions were made, and what comes next.',
   ],
   L2: [
-    'Progress built in an AI session exists implicitly in conversation history — which is non-persistent. Consolidating into documentation, comments, or a state summary makes what was built explicit and recoverable. Don\'t let the project state live only in the AI\'s context window.',
+    'Add a brief note or comment documenting what was just built before moving on.',
+    'Write one sentence about the key decision made in this implementation run.',
   ],
   L3: [
-    'Consolidate: update the README, write a brief description of what was built, or add clarifying comments before continuing.',
+    'Write a one-sentence note on what was built before continuing.',
   ],
 };
 
@@ -2956,13 +2971,16 @@ export const ABSENCE_DECISION_FATIGUE_PATTERN_FORMAL: DecisionContent = {
   question:      'Long acceptance streak — applied critical review recently?',
   pinchFallback: 'Streak alert.',
   L1: [
-    'Consecutive AI acceptance streak: N prompts without critical review.',
+    'Apply deliberate critical review to the most recent AI responses: identify any assumptions that have not been validated, logic that could fail under edge cases, and changes made without explicit verification.',
+    'Self-review the last set of AI-generated changes: flag any hallucinated functions, plausible-but-incorrect logic, or unhandled edge cases before accepting the next response.',
+    'Audit recent AI output for correctness: check any state or data assumptions, verify control flow, and identify anything that was accepted without being read carefully.',
   ],
   L2: [
-    'Decision fatigue in AI-assisted development manifests as uncritical output acceptance — each unreviewed response compounds review debt. Independent critical evaluation of AI output is a professional discipline: accepting suggestions without review is not the same as verifying correctness. The longer the acceptance streak, the higher the probability of an undetected error in the stack.',
+    'Review recent AI responses critically — what would you flag if reviewing this as a senior engineer rather than as the author?',
+    'Pick the most significant recent AI response and push back on one aspect of it before continuing.',
   ],
   L3: [
-    'Apply deliberate critical review to the last N AI responses before continuing. Validate edge cases, check assumptions, confirm correctness independently.',
+    'Identify one thing in recent AI output to verify or question before accepting the next response.',
   ],
 };
 
@@ -2970,13 +2988,16 @@ export const ABSENCE_WORK_RHYTHM_CHECK_FORMAL: DecisionContent = {
   question:      'Rapid prompting — verified each response before continuing?',
   pinchFallback: 'Slow down.',
   L1: [
-    'Prompt velocity exceeds verification rate.',
+    'Read and verify the last AI response in full before sending the next prompt: check any logic or state assumptions, confirm any generated code is complete and correct, and identify anything that was not explicitly validated.',
+    'Audit the last AI-generated change for correctness before proceeding: trace any control flow, check any state transitions, and verify all assumptions are grounded.',
+    'Pause and review the last response before continuing: identify any part that was generated but not read, any assumption that was not confirmed, and any error handling that may be missing.',
   ],
   L2: [
-    'Rapid-fire prompting without verifying AI output is a documented flow-state trap: subjective productivity (prompt throughput) is high while actual output quality (verified correctness) degrades. Deliberate practice requires intentional engagement with each response — the cost of review is always lower than the cost of debugging compounded unverified output.',
+    'Read the last AI response carefully before sending the next prompt — is there anything unread or unverified?',
+    'Check the last generated output for any assumptions or errors before continuing.',
   ],
   L3: [
-    'Pause. Verify the last AI response before proceeding. If you haven\'t read it fully, read it now before sending the next prompt.',
+    'Pause — read the last response before sending the next message.',
   ],
 };
 
@@ -2984,41 +3005,50 @@ export const ABSENCE_FOCUS_DRIFT_DETECTION_FORMAL: DecisionContent = {
   question:      'Multiple areas open — completed any end-to-end?',
   pinchFallback: 'Focus drift.',
   L1: [
-    'Session context fragmentation: N distinct domains active, none complete.',
+    'Sequence your work: identify the highest-priority open concern in this session, complete it end-to-end, and define done for that domain before opening any additional concerns.',
+    'Close one open concern completely before touching another: list the current open concerns, pick the most critical, and do not touch the others until it is resolved.',
+    'Audit the current session\'s open concerns: name them all, rank them by criticality, and commit to completing the top one before any other context switch.',
   ],
   L2: [
-    'Cognitive load theory establishes that simultaneous tracking of multiple unrelated concerns degrades reasoning quality for each. Context switching between unrelated development domains is not parallel productivity — it is serial underperformance. Each unfinished context is an open loop carrying cognitive residue. Single-focus task completion produces higher quality output and fewer integration defects.',
+    'Pick the single most important open concern in this session and complete it before starting anything else.',
+    'What is the one thing in this session that must be finished before anything else can be safely started?',
   ],
   L3: [
-    'Sequence your work: close one concern completely before opening the next. Define done for the current domain before moving to another.',
+    'Complete one open concern end-to-end before opening another.',
   ],
 };
 
 export const ABSENCE_SESSION_LENGTH_CHECKPOINT_FORMAL: DecisionContent = {
-  question:      '25+ prompts — context checkpoint done?',
+  question:      'Extended session — context checkpoint done?',
   pinchFallback: 'Checkpoint due.',
   L1: [
-    'Session exceeds 25 prompts without context reanchoring.',
+    'Summarize the current state of what was just built: what decisions have been made, what is working, what remains incomplete, and what has changed since the session started — use this as a re-anchor before continuing.',
+    'Reconstruct the decision log for this session: what tradeoffs were made, what constraints were identified, and what is still unresolved — so the next phase starts with explicit context, not implicit state.',
+    'Audit the current build state against the original goal: what was actually completed, what was deferred, and what decisions may need revisiting before continuing.',
   ],
   L2: [
-    'Extended AI-pair-programming sessions suffer from context window degradation: the AI\'s recall of earlier architectural decisions, constraints, and completed work weakens as conversation depth grows. Periodic context reanchoring — summarizing current build state and remaining scope — is a documented best practice for maintaining alignment in AI-assisted development workflows.',
+    'What is the current state of what was just built — what is working, what is still in progress, and what is the immediate next step?',
+    'What is the most important technical decision made this session that must be explicitly carried forward before continuing?',
   ],
   L3: [
-    'Establish a context checkpoint: summarize current build state, outstanding decisions, and remaining scope before continuing.',
+    'What is the one piece of context about this project that must not be lost before continuing — the single most important thing to anchor right now?',
   ],
 };
 
 export const ABSENCE_PROGRESS_CONSOLIDATION_GAP_FORMAL: DecisionContent = {
-  question:      '20+ implementation prompts — progress documented?',
+  question:      'Extended implementation — progress documented?',
   pinchFallback: 'Document now.',
   L1: [
-    'Implementation progress without consolidation checkpoint (20 prompts).',
+    'Consolidate the current build state: document what has been implemented, capture the key decisions made, and record any outstanding work before continuing.',
+    'Update the project documentation to reflect the current state: what was built, why it was designed this way, and what has been deferred — make the implicit state explicit.',
+    'Write a progress summary covering what was built in this session, what technical decisions were made, and what remains before the feature is complete.',
   ],
   L2: [
-    'The project state must be explicit in the codebase, not implicit in the AI\'s session context. Documentation as practice: consolidating build progress into explicit documentation preserves decision context that would otherwise be lost to conversation history. AI conversation history is session-scoped and non-persistent — what was built must exist outside it.',
+    'Update documentation or comments to reflect the current implementation state before continuing.',
+    'Write a brief note on what was built and what key technical decisions were made.',
   ],
   L3: [
-    'Consolidate the current build state: update documentation, add implementation notes, or write a progress summary before continuing.',
+    'Write one sentence documenting the most important thing about what was just built before continuing.',
   ],
 };
 

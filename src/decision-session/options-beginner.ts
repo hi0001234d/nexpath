@@ -939,13 +939,15 @@ export const ABSENCE_DECISION_FATIGUE_PATTERN_BEGINNER: DecisionContent = {
   question:      'Accepting without reviewing — applied critical check recently?',
   pinchFallback: 'Streak alert.',
   L1: [
-    'You haven\'t questioned any of Claude\'s suggestions in a while.',
+    'Look back at the last few things Claude suggested — is there anything that looks right but you have not double-checked?',
+    'Review what Claude built recently and identify one thing to verify or question before continuing.',
+    'Check the last few Claude responses: is there anything you would like to confirm is correct before continuing?',
   ],
   L2: [
-    'Even good suggestions can be wrong or not quite right for your specific situation. It\'s healthy to occasionally say \'wait, is this actually correct?\' before accepting. Checking suggestions helps you catch mistakes before they build up.',
+    'Is there anything in Claude\'s recent suggestions you would like to double-check before continuing?',
   ],
   L3: [
-    'Look back at the last few suggestions Claude made — is there anything you\'d like to double-check or question before continuing?',
+    'Pick one thing from Claude\'s recent responses to verify before continuing.',
   ],
 };
 
@@ -953,13 +955,15 @@ export const ABSENCE_WORK_RHYTHM_CHECK_BEGINNER: DecisionContent = {
   question:      'Sending fast — read the last response fully before continuing?',
   pinchFallback: 'Slow down.',
   L1: [
-    'You\'re sending messages very quickly.',
+    'Read Claude\'s last response carefully before continuing — is there anything that looks right but you have not actually checked?',
+    'Go back and read the last thing Claude wrote — does everything look correct?',
+    'Before continuing: read the last Claude response and verify that everything there is correct.',
   ],
   L2: [
-    'When you send messages faster than you have time to read the responses, it\'s easy to miss errors or misunderstand what Claude built. Taking a moment to read each response fully before sending the next one leads to better results and fewer mistakes to fix later.',
+    'Read Claude\'s last response carefully before sending the next message.',
   ],
   L3: [
-    'Pause and read through Claude\'s last response before continuing.',
+    'Pause and read the last response before continuing.',
   ],
 };
 
@@ -967,13 +971,15 @@ export const ABSENCE_FOCUS_DRIFT_DETECTION_BEGINNER: DecisionContent = {
   question:      'Working on many things — finished any of them yet?',
   pinchFallback: 'Focus drift.',
   L1: [
-    'You\'ve started a lot of different things in this session.',
+    'Let us focus on one thing at a time — what is the most important thing to finish in this session before we start anything new?',
+    'Pick the most important thing that is not finished yet and complete it before we continue with anything else.',
+    'What is the one thing we should complete right now before starting something else?',
   ],
   L2: [
-    'Working on too many different things at once without finishing any of them makes it harder to do any of them well. Every time you switch to something new, it takes time to get back into what you were doing before. Finishing one thing completely before starting the next leads to better results.',
+    'What is the most important thing to finish before we start anything new?',
   ],
   L3: [
-    'Pick the most important thing from this session and focus on finishing it before starting anything else.',
+    'Complete one thing before we open anything else.',
   ],
 };
 
@@ -981,13 +987,15 @@ export const ABSENCE_SESSION_LENGTH_CHECKPOINT_BEGINNER: DecisionContent = {
   question:      'Working for a while — what have you built so far?',
   pinchFallback: 'Checkpoint due.',
   L1: [
-    'You\'ve been working for a while — what have you built so far?',
+    'Summarize what we have built so far in this session — what is working, what is still in progress, and what we still need to do.',
+    'Write a quick update on where we are — what has been done and what still needs to happen.',
+    'What is the current state of what we are building and what comes next?',
   ],
   L2: [
-    'After a long session, it\'s easy to lose track of what was done and what still needs doing. Writing a quick summary helps you and Claude stay in sync for the rest of the session.',
+    'What is the current state of what we are building — what works and what still needs to be done?',
   ],
   L3: [
-    'Tell Claude: here\'s what we\'ve built so far, and here\'s what we still need to do.',
+    'What is the most important thing to remember about where we are right now?',
   ],
 };
 
@@ -995,13 +1003,15 @@ export const ABSENCE_PROGRESS_CONSOLIDATION_GAP_BEGINNER: DecisionContent = {
   question:      'Built a lot — have you written down what you made?',
   pinchFallback: 'Document now.',
   L1: [
-    'You\'ve built a lot — have you written down what you made?',
+    'Write a short note about what we built in this session, even just a few sentences, before we continue.',
+    'Add a quick update to the README or a comment in the code describing what was just built.',
+    'Summarize what was built in this session so the progress is captured somewhere.',
   ],
   L2: [
-    'When you build a lot without documenting it, it gets hard to remember what was done and why it was done that way. A short README update or code comment keeps the project understandable later.',
+    'Add a brief comment or note describing what was just built.',
   ],
   L3: [
-    'Take a moment to write down what you built in this session, even just a few sentences.',
+    'Write one sentence about what was just built before continuing.',
   ],
 };
 
