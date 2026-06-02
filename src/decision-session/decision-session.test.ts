@@ -5142,6 +5142,87 @@ describe('Phase 7 content — no count-literal tokens in L1/L2/L3', () => {
   }
 });
 
+// ── Phase 5 D10-D12 — academic-register content invariants ────────────────────
+// Locks pinch-UI labels (question + pinchFallback) and bans academic-citation /
+// tool-callout patterns in the L1 / L2 option arrays for the 12 hardcore_pro
+// FORMAL signals rewritten under Sub-Issue 3.
+
+describe('D10-D12 academic-register — question + pinchFallback invariants', () => {
+  const pinchLabels: Array<{ name: string; c: import('./options.js').DecisionContent; q: string; pf: string }> = [
+    { name: 'ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL',      c: ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL,      q: 'External dependencies integrated — failure modes enumerated?', pf: 'Enumerate failure modes for each dependency.' },
+    { name: 'ABSENCE_CONTRACT_TESTING_GAP_FORMAL',       c: ABSENCE_CONTRACT_TESTING_GAP_FORMAL,       q: 'Service boundary established — contract tests defined?',      pf: 'Define consumer-driven contract tests for this boundary.' },
+    { name: 'ABSENCE_CAPACITY_PLANNING_GAP_FORMAL',      c: ABSENCE_CAPACITY_PLANNING_GAP_FORMAL,      q: 'Load-adding feature — capacity estimate done?',                pf: 'Complete a capacity estimate before shipping.' },
+    { name: 'ABSENCE_SECURITY_THREAT_MODELING_FORMAL',   c: ABSENCE_SECURITY_THREAT_MODELING_FORMAL,   q: 'Security-sensitive feature — STRIDE threat model completed?',  pf: 'Complete a STRIDE threat model before shipping.' },
+    { name: 'ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL',  c: ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL,  q: 'Schema change — expand-migrate-contract pattern applied?',     pf: 'Apply backwards-compatible phased migration.' },
+    { name: 'ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL', c: ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL, q: 'Significant feature shipping — deployment strategy defined?', pf: 'Define deployment strategy and rollback plan before shipping.' },
+    { name: 'ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL',    c: ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL,    q: 'New service/feature shipping — operational runbook written?',  pf: 'Write the runbook before shipping.' },
+    { name: 'ABSENCE_SLO_DEFINITION_GAP_FORMAL',         c: ABSENCE_SLO_DEFINITION_GAP_FORMAL,         q: 'User-facing feature/service — SLOs defined?',                  pf: 'Define SLOs before shipping.' },
+    { name: 'ABSENCE_DECISION_RECORD_ABSENCE_FORMAL',    c: ABSENCE_DECISION_RECORD_ABSENCE_FORMAL,    q: 'Architectural decision made — ADR recorded?',                  pf: 'Record the decision with context and consequences.' },
+    { name: 'ABSENCE_OVER_ENGINEERING_CHECK_FORMAL',     c: ABSENCE_OVER_ENGINEERING_CHECK_FORMAL,     q: 'Is this abstraction required by current requirements?',        pf: 'Apply YAGNI — build only what current requirements require.' },
+    { name: 'ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL',        c: ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL,        q: 'Critical implementation complete — review plan established?',  pf: 'Establish a review plan before merging.' },
+    { name: 'ABSENCE_OBSERVABILITY_FIRST_FORMAL',        c: ABSENCE_OBSERVABILITY_FIRST_FORMAL,        q: 'Feature shipping — observability instrumented?',               pf: 'Add logging, metrics, and tracing before shipping.' },
+  ];
+
+  for (const { name, c, q, pf } of pinchLabels) {
+    it(`${name} question is preserved verbatim`, () => {
+      expect(c.question).toBe(q);
+    });
+    it(`${name} pinchFallback is preserved verbatim`, () => {
+      expect(c.pinchFallback).toBe(pf);
+    });
+  }
+});
+
+describe('D10-D12 academic-register — no citation patterns or tool callouts in L1/L2', () => {
+  const constants: Array<{ name: string; c: import('./options.js').DecisionContent }> = [
+    { name: 'ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL',      c: ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL },
+    { name: 'ABSENCE_CONTRACT_TESTING_GAP_FORMAL',       c: ABSENCE_CONTRACT_TESTING_GAP_FORMAL },
+    { name: 'ABSENCE_CAPACITY_PLANNING_GAP_FORMAL',      c: ABSENCE_CAPACITY_PLANNING_GAP_FORMAL },
+    { name: 'ABSENCE_SECURITY_THREAT_MODELING_FORMAL',   c: ABSENCE_SECURITY_THREAT_MODELING_FORMAL },
+    { name: 'ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL',  c: ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL },
+    { name: 'ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL', c: ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL },
+    { name: 'ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL',    c: ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL },
+    { name: 'ABSENCE_SLO_DEFINITION_GAP_FORMAL',         c: ABSENCE_SLO_DEFINITION_GAP_FORMAL },
+    { name: 'ABSENCE_DECISION_RECORD_ABSENCE_FORMAL',    c: ABSENCE_DECISION_RECORD_ABSENCE_FORMAL },
+    { name: 'ABSENCE_OVER_ENGINEERING_CHECK_FORMAL',     c: ABSENCE_OVER_ENGINEERING_CHECK_FORMAL },
+    { name: 'ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL',        c: ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL },
+    { name: 'ABSENCE_OBSERVABILITY_FIRST_FORMAL',        c: ABSENCE_OBSERVABILITY_FIRST_FORMAL },
+  ];
+
+  // Forbidden patterns: opener citations, URL citations, et-al citations, MIL-STD
+  // identifiers, and standalone "Tools: " list-callouts. Regex set narrowed to avoid
+  // false positives on inline engineering terms (STRIDE, RPS, SLO, ADR, etc.) which
+  // are acceptable inside the action-first prose.
+  const forbidden: Array<{ pattern: RegExp; description: string }> = [
+    // "(Nygard, 2011)" or "(Fowler/Sadalage, 2003)"-style paren-citation.
+    { pattern: /\([A-Z][a-z]+(?:\/[A-Z][a-z]+)?(?:,| et al\.,?) \d{4}\)/, description: 'opener paren-citation like (Author, year) or (Author et al., year)' },
+    // "Beyer et al., 2016"-style inline et-al citation.
+    { pattern: /\b[A-Z][a-z]+ et al\.,? \d{4}\b/, description: 'inline et-al citation like Author et al., year' },
+    // "Adam Shostack, 'Title' (Publisher YYYY)"-style attribution.
+    { pattern: /\b[A-Z][a-z]+ [A-Z][a-z]+, '[^']+' \(/, description: 'attribution like "First Last, \'Title\' (Publisher...)"' },
+    // Year-tag opener like "Author Name (2011):" — note the colon after the paren.
+    { pattern: /\b[A-Z][a-z]+(?: [A-Z][a-z]+)? \(\d{4}\):/, description: 'opener attribution like "Author (YYYY):"' },
+    // martinfowler.com URL citation.
+    { pattern: /martinfowler\.com/, description: 'martinfowler.com URL citation' },
+    // MIL-STD identifier (FMEA opener).
+    { pattern: /\bMIL-STD-\d+[A-Z]?\b/, description: 'MIL-STD identifier (citation)' },
+    // Standalone "Tools: X, Y, Z" list-callout at the start of a clause.
+    { pattern: /(?:^|\. )Tools: [A-Z]/, description: 'standalone "Tools: X, Y, Z" list-callout' },
+  ];
+
+  for (const { name, c } of constants) {
+    it(`${name} L1/L2 entries contain no academic citation or tool-callout patterns`, () => {
+      const checkable: string[] = [...c.L1, ...c.L2];
+      for (let i = 0; i < checkable.length; i++) {
+        const text = checkable[i];
+        for (const { pattern, description } of forbidden) {
+          expect(text, `entry index ${i} matches ${description}: "${text}"`).not.toMatch(pattern);
+        }
+      }
+    });
+  }
+});
+
 describe('Phase 7 content routing', () => {
   function makeProfile(nature: import('../classifier/types.js').UserNature, role?: import('../classifier/types.js').UserRole): import('../classifier/types.js').UserProfile {
     return {
