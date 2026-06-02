@@ -5223,6 +5223,86 @@ describe('D10-D12 academic-register — no citation patterns or tool callouts in
   }
 });
 
+// ── Phase 6 E1-E3 — founder role content invariants ──────────────────────────
+// Locks pinch-UI labels (question + pinchFallback) and bans the definitional /
+// attributional opener forms that the §12.7 rewrites removed. Inline references
+// to product-management concepts (MVP, OKR, north star, hypothesis) inside an
+// instruction remain acceptable; the original educational openers do not.
+
+describe('Founder role — question + pinchFallback invariants', () => {
+  const pinchLabels: Array<{ name: string; c: import('./options.js').DecisionContent; q: string; pf: string }> = [
+    { name: 'ABSENCE_OUTCOME_DEFINITION_CASUAL',                c: ABSENCE_OUTCOME_DEFINITION_CASUAL,                q: 'What does success look like for this feature?',                                    pf: 'Define the success metric before building starts.' },
+    { name: 'ABSENCE_FEATURE_PRIORITIZATION_CASUAL',            c: ABSENCE_FEATURE_PRIORITIZATION_CASUAL,            q: 'Why is this the highest-priority thing to build right now?',                       pf: 'Confirm this is the highest-impact item before building.' },
+    { name: 'ABSENCE_USER_PERSONA_CLARITY_CASUAL',              c: ABSENCE_USER_PERSONA_CLARITY_CASUAL,              q: 'Who specifically is this feature for?',                                            pf: 'Name the specific user this feature is designed for.' },
+    { name: 'ABSENCE_COMPETITIVE_AWARENESS_CASUAL',             c: ABSENCE_COMPETITIVE_AWARENESS_CASUAL,             q: 'Have you checked how competitors handle this?',                                    pf: 'Run a quick competitive check before committing to this build.' },
+    { name: 'ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL',           c: ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL,           q: 'Is this addition within MVP scope?',                                               pf: 'Check whether this is needed to test the core hypothesis.' },
+    { name: 'ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL',    c: ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL,    q: 'How will target users find and access this feature?',                              pf: 'Define the acquisition path before building.' },
+    { name: 'ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL',         c: ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL,         q: 'How does this feature bring users back?',                                          pf: 'Consider the retention angle before building.' },
+    { name: 'ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL',       c: ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL,       q: 'How will you know if this feature is working after you ship it?',                  pf: 'Add a feedback mechanism before shipping.' },
+    { name: 'ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL',           c: ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL,           q: 'What hypothesis does this feature test?',                                          pf: 'Define the hypothesis before starting the build.' },
+    { name: 'ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL', c: ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL, q: 'When did you last check product direction — not just implementation?',             pf: 'Take a product perspective before continuing to build.' },
+    { name: 'ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL',              c: ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL,              q: 'How does this feature connect to your product\'s core metric?',                    pf: 'Check north star alignment before adding this feature.' },
+  ];
+
+  for (const { name, c, q, pf } of pinchLabels) {
+    it(`${name} question is preserved verbatim`, () => {
+      expect(c.question).toBe(q);
+    });
+    it(`${name} pinchFallback is preserved verbatim`, () => {
+      expect(c.pinchFallback).toBe(pf);
+    });
+  }
+});
+
+describe('Founder role — no opener-attribution patterns in rewritten L1 slots', () => {
+  // Affected slots per analysis §12.7 / dev plan §5.1 table.
+  const affectedSlots: Array<{ name: string; c: import('./options.js').DecisionContent; slots: number[] }> = [
+    { name: 'ABSENCE_USER_PERSONA_CLARITY_CASUAL',              c: ABSENCE_USER_PERSONA_CLARITY_CASUAL,              slots: [0, 1, 2] },
+    { name: 'ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL',              c: ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL,              slots: [0, 1, 2] },
+    { name: 'ABSENCE_OUTCOME_DEFINITION_CASUAL',                c: ABSENCE_OUTCOME_DEFINITION_CASUAL,                slots: [1, 2] },
+    { name: 'ABSENCE_FEATURE_PRIORITIZATION_CASUAL',            c: ABSENCE_FEATURE_PRIORITIZATION_CASUAL,            slots: [2] },
+    { name: 'ABSENCE_COMPETITIVE_AWARENESS_CASUAL',             c: ABSENCE_COMPETITIVE_AWARENESS_CASUAL,             slots: [1, 2] },
+    { name: 'ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL',           c: ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL,           slots: [0] },
+    { name: 'ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL',    c: ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL,    slots: [1, 2] },
+    { name: 'ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL',         c: ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL,         slots: [1] },
+    { name: 'ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL',       c: ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL,       slots: [1] },
+    { name: 'ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL',           c: ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL,           slots: [0, 2] },
+    { name: 'ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL', c: ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL, slots: [0] },
+  ];
+
+  // Forbidden patterns: opener-attribution forms and definitional-statement openers
+  // that the §12.7 rewrites removed. Inline references to product-management
+  // concepts (the word "MVP", "OKR", "north star", "hypothesis") inside an
+  // instruction remain acceptable — these patterns target opener-style usage only.
+  const forbidden: Array<{ pattern: RegExp; description: string }> = [
+    // Attribution openers like "Alan Cooper's persona principle:" or "Nir Eyal's Hook model:"
+    { pattern: /\b(?:Alan Cooper|Nir Eyal|Eric Ries|Steve Blank)'s [A-Z][a-z]+/, description: 'attribution opener referencing a named thinker' },
+    // Framework-as-opener like "Lean Startup core loop:"
+    { pattern: /\bLean Startup core loop\b/, description: 'Lean Startup framework opener' },
+    // Definitional opener form: "MVP stands for minimum viable product" / similar acronym expansion
+    { pattern: /\b[A-Z]{2,4} stands for [a-z]/, description: 'acronym-expansion definitional opener' },
+    // Observational opener about founders ("Founders who code face a structural bias...")
+    { pattern: /^Founders who code face a structural bias/, description: 'observational opener about founders\' bias' },
+    // Definitional opener about feature builds ("Every feature build is an experiment.")
+    { pattern: /^Every feature build is an experiment\b/, description: 'definitional opener about feature builds' },
+    // Definitional opener about the north star metric
+    { pattern: /^The north star metric is the single number\b/, description: 'definitional opener about the north star metric' },
+    // Definitional opener about persona principle
+    { pattern: /^Building for "users" in the abstract\b/, description: 'definitional opener about users in the abstract' },
+  ];
+
+  for (const { name, c, slots } of affectedSlots) {
+    for (const slotIndex of slots) {
+      it(`${name} L1[${slotIndex}] (rewritten) contains no opener-attribution patterns`, () => {
+        const text = c.L1[slotIndex];
+        for (const { pattern, description } of forbidden) {
+          expect(text, `L1[${slotIndex}] matches ${description}: "${text}"`).not.toMatch(pattern);
+        }
+      });
+    }
+  }
+});
+
 // ── Phase 6 E7-E9 — PM role content invariants ────────────────────────────────
 // Locks pinch-UI labels (question + pinchFallback) and bans citation / framework
 // reference patterns in the affected L1 slots for the 12 PM-role FORMAL signals
