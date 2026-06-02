@@ -2678,8 +2678,8 @@ export const ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL: DecisionContent = {
   question: 'Are acceptance criteria defined for this story before development begins?',
   pinchFallback: 'Define acceptance criteria for this story before starting implementation.',
   L1: [
-    'Scrum\'s Definition of Ready requires that acceptance criteria exist before a story enters development. AC serves two functions: it tells developers what "done" means (reducing implementation ambiguity), and it gives the product owner testable conditions to evaluate the work against. Without AC, developers build to their imagination and product owners evaluate against their expectations — and these rarely match. Rework caused by missing AC is one of the most expensive and preventable failure modes in sprint delivery.',
-    'Well-formed acceptance criteria follow the INVEST model\'s testability requirement: each criterion should be independently verifiable. AC format options: Given/When/Then (BDD-style, most precise for testable behavior); bulleted completion conditions ("This story is done when: [a], [b], [c]"); or user-facing outcomes ("A user can [accomplish X] without [friction Y]"). The format matters less than the testability: if a tester cannot write a test case from the AC, the AC is too vague.',
+    'Write the acceptance criteria for this story before any implementation prompt: state each criterion as an independently verifiable condition, in Given/When/Then or "this is done when [X]" form. List at least three covering the primary scenario and the most likely edge case.',
+    'Apply the INVEST testability rule to this story\'s acceptance criteria: for each criterion, confirm a tester could write a test case from it. Rewrite any criterion that is too vague to be testable — use Given/When/Then or completion-condition form.',
     'Before writing any implementation prompt: name the acceptance criteria. One sentence minimum: "This is done when [condition]." This 30-second discipline prevents the most expensive rework scenario: building the wrong thing correctly.',
   ],
   L2: [
@@ -2695,8 +2695,8 @@ export const ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL: DecisionContent = {
   question: 'Have relevant stakeholders been aligned on this feature before development begins?',
   pinchFallback: 'Verify stakeholder alignment before proceeding with significant development work.',
   L1: [
-    'PMBOK stakeholder management (Ch.13) requires continuous engagement, not point-in-time sign-off. For PMs using AI coding tools, the risk is speed: AI reduces the effort to build features to minutes, which means significant decisions that previously required stakeholder conversations before implementation can now be implemented before the conversation happens. Speed is the mechanism that converts alignment assumptions into demo-time surprises.',
-    'The cost asymmetry of stakeholder alignment: a 15-minute conversation before development costs one scheduled touchpoint. Discovery at demo that a feature doesn\'t match stakeholder expectations costs rework time, relationship repair, potential sprint replanning, and a process culture that has learned building before aligning is acceptable. The last cost is the most expensive — process culture is set by what PMs do under time pressure.',
+    'Identify every stakeholder with a legitimate opinion on this feature, name the alignment touchpoint required for each (sign-off, design review, security review, eng-lead consult), and confirm each is completed or scheduled before implementation begins. Document the date and outcome.',
+    'Run a 15-minute stakeholder alignment pass for this feature before implementation: list the stakeholders, send the alignment request, capture responses, and document the result in the sprint item. State explicitly any assumption being made about a stakeholder\'s position.',
     'Alignment threshold: not every feature requires formal sign-off. The question is: who has a legitimate opinion about this feature that, if unvalidated, could cause rejection at demo? If the answer is "anyone," alignment before development is required. Document who was aligned and when.',
   ],
   L2: [
@@ -2712,9 +2712,9 @@ export const ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL: DecisionContent = {
   question: 'Are there ambiguous quality attributes in these requirements that need a measurable definition?',
   pinchFallback: 'Resolve ambiguous quality attributes to measurable criteria before implementation.',
   L1: [
-    'Requirements ambiguity is the leading cause of rework in software development (Wiegers, SEI). Words like "better," "faster," "more intuitive," "improved," and "user-friendly" are quality attribute placeholders — they communicate direction without specifying a testable target. They survive into implementation because they feel precise enough to build toward, but fail at acceptance because no test condition exists. The PM who builds on ambiguous requirements is building toward a subjective evaluation that will always be wrong for someone.',
-    'Ambiguity resolution is a one-time cost: 15 minutes to define "faster" as "API response time under 200ms at P95" before development. The measurable definition can be referenced in acceptance criteria, automated in tests, and communicated to stakeholders without interpretation. The alternative — building "faster" as-is — generates a post-implementation negotiation about whether the improvement was sufficient, which is always slower and more expensive than the 15-minute definition cost.',
-    'SMART criteria applied to requirements: Specific (quantifiable), Measurable (testable), Achievable (within scope), Relevant (connected to user value), Time-bound (when measured). Every quality attribute should pass SMART before implementation begins. SMART is not process overhead — it is the difference between requirements that can be accepted and requirements that cannot.',
+    'Audit this feature\'s requirements for ambiguity: identify every quality-attribute placeholder ("better", "faster", "improved", "user-friendly") and replace each with a measurable target — name the metric, the measurement method, and the success threshold.',
+    'Convert every ambiguous phrase in this requirement set to a measurable equivalent before implementation begins. Example: "faster" → "API p95 response time under 200 ms"; "intuitive" → "primary task completed by a new user in under 90 seconds without help." List the rewrites.',
+    'Apply SMART to every quality attribute in this feature\'s requirements: confirm each is Specific, Measurable, Achievable, Relevant, Time-bound. Reject or rewrite any criterion that does not pass all five before development starts.',
   ],
   L2: [
     'Replace each quality attribute placeholder ("better," "faster," "improved") with a specific, measurable target. State the measurement method and success threshold.',
@@ -2730,8 +2730,8 @@ export const ABSENCE_DEPENDENCY_MAPPING_FORMAL: DecisionContent = {
   pinchFallback: 'Map dependencies before beginning this work to prevent blocked integration.',
   L1: [
     'Dependency identification is a foundational project management discipline (WBS, critical path method). Before any work begins: what does this work depend on (upstream), and what depends on this work completing (downstream)? Unmapped upstream dependencies create blocked work discovered mid-sprint; unmapped downstream dependencies create integration surprises at the worst time — when another team has built against an unstated assumption.',
-    'Agile dependency taxonomy: technical dependencies (APIs, data, infrastructure that must exist); team dependencies (work being done by another squad); external dependencies (third-party services, vendor deliverables); knowledge dependencies (decisions not yet made that block implementation). Each type has a different resolution path. Technical and team dependencies require coordination; external require timeline negotiation; knowledge dependencies require a decision before development can begin.',
-    'Dependency mapping cost asymmetry: typically 30-60 minutes distributed across relevant teams. Discovery cost when unmapped dependencies surface at integration: typically 2-5x the original estimate for affected work, plus timeline impact on dependent items. The PM\'s role is to have the 30-minute conversation before development, not the 5x recovery conversation after.',
+    'Classify every dependency for this work item: technical, team, external, or knowledge. For each, name the specific dependency, its current status, and the resolution path (coordination, timeline negotiation, decision needed). Flag the longest-resolution dependency for immediate attention.',
+    'Run the 30-minute dependency-mapping conversation now for this work item: convene the relevant teams, list upstream and downstream items, capture each in the sprint item with owner and resolution date. The alternative is the 2-5× recovery cost when a dependency surfaces mid-sprint — pre-empt it.',
   ],
   L2: [
     'List all upstream dependencies (what this work requires to proceed) and downstream impacts (what depends on this work completing). Who needs to be notified?',
@@ -2746,9 +2746,9 @@ export const ABSENCE_DEFINITION_OF_DONE_FORMAL: DecisionContent = {
   question: 'Is there an explicit Definition of Done for this sprint item?',
   pinchFallback: 'Define the completion criteria for this item before starting work.',
   L1: [
-    'The Scrum Definition of Done is the shared understanding of what "complete" means for a sprint item. Without it, done is subjective: the developer, the QA, and the PM all have different implicit definitions — and sprint review becomes a negotiation about whether work is finished rather than a verification against agreed criteria. A DoD converts subjective completion into an objective check.',
-    'DoD composition for a PM-managed sprint item: (1) functional acceptance — the behavior the system should exhibit; (2) quality gate — what testing or review must pass; (3) documentation requirement — what must be documented or updated; (4) deployment state — what environment must the change reach. Not every item requires all four — but each element should be explicitly addressed or explicitly excluded.',
-    'One-line DoD minimum: "This item is done when [functional condition] AND [quality gate]." The one-line DoD is better than no DoD. It creates a shared target, surfaces disagreement before work starts, and makes sprint review a verification rather than a debate.',
+    'Write the Definition of Done for this sprint item before work begins: state the functional condition, the quality gate (testing or review pass), the documentation requirement, and the target deployment state. Use the form "this item is done when [X] AND [Y]."',
+    'Compose this item\'s DoD with all four required elements: (1) functional acceptance — what the system should do, (2) quality gate — what testing or review must pass, (3) documentation requirement, (4) deployment state. Address or explicitly exclude each before development starts.',
+    'Write the one-line DoD for this item now: "This item is done when [functional condition] AND [quality gate]." Add it to the sprint item — a one-line DoD prevents the sprint-review debate over whether work is finished.',
   ],
   L2: [
     'Write the Definition of Done for this item now — "this is done when [condition]." State both the functional condition and the quality gate.',
@@ -2763,8 +2763,8 @@ export const ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL: DecisionContent = {
   question: 'Have teams affected by this change been notified before development begins?',
   pinchFallback: 'Identify and notify affected teams before building this change to shared systems.',
   L1: [
-    'Changes to shared infrastructure, APIs, or data models have downstream effects on every team that depends on those systems. The cost of notification before the change is a Slack message and a brief alignment conversation. The cost of discovering the impact after the change is built — through a broken integration, a failed deployment, or a downstream sprint disrupted — is measured in team-days of recovery work.',
-    'Cross-team impact taxonomy: API contract changes (endpoint behavior, response schema, authentication) affect all API consumers; database schema changes affect all services reading or writing those tables; shared service behavior changes affect all callers; infrastructure changes affect deployment pipelines across teams. Each category requires a different notification path — the API contract change requires consumer teams, the schema change requires the data team and downstream services.',
+    'Identify every team affected by this change to a shared system (API, schema, infrastructure), draft the notification message, send it, and document delivery in the sprint item before implementation begins. A pre-change Slack message costs minutes; a post-change broken integration costs team-days.',
+    'Classify this shared-system change by impact category — API contract, database schema, shared service behaviour, infrastructure — then route the notification to the affected consumers for each category. Confirm each team has received and acknowledged the change before this work proceeds.',
     'Minimum notification standard: before building any change to a shared system, name the affected teams, send a notification, and document that notification in the sprint item. "Notified Team X on [date] — no blocking concerns raised" is sufficient. The documentation creates accountability and a paper trail for sprint retrospectives.',
   ],
   L2: [
@@ -2780,9 +2780,9 @@ export const ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL: DecisionContent = {
   question: 'Is there a success metric defined for this feature before development begins?',
   pinchFallback: 'Define how success will be measured for this feature before starting implementation.',
   L1: [
-    'Outcome-driven development (OKRs, product management best practice) requires that the outcome be defined before the output is built. A feature without a success metric is a feature whose value cannot be evaluated after it ships — it exists in an evaluation vacuum where users may or may not use it and metrics may or may not move, with no basis for the post-ship retrospective conversation.',
+    'Define the success metric for this feature before development: name the metric, the measurement method, the success threshold, and the measurement timeline — e.g. "feature adoption rate, tracked via feature_used analytics event, threshold 30% of active users within 30 days." Add to the sprint item.',
     'Success metric format: name the metric, the measurement method, the success threshold, and the measurement timeline. Example: "Success metric: feature adoption rate. Method: track feature_used events in analytics. Threshold: 30% of active users within 30 days of launch. Timeline: 60-day measurement window." A metric without a threshold is not a metric — it\'s an observation. A metric without a timeline is not actionable.',
-    'The pre-development success metric serves three functions: it aligns the team on what value the feature is supposed to deliver; it creates the basis for the post-ship evaluation; and it forces the product question before development: if we can\'t define how success would be measured, should we be building this at all?',
+    'Confirm the three pre-ship functions of this feature\'s success metric are in place: (1) team alignment on what value the feature delivers, (2) the basis for the post-ship retrospective, (3) the forcing question — "if we cannot measure success, should we build this at all?" Resolve any of the three that is missing.',
   ],
   L2: [
     'Define the success metric now: name the metric, measurement method, success threshold, and measurement timeline. Write it in the sprint item before coding begins.',
@@ -2797,7 +2797,7 @@ export const ABSENCE_PRIORITY_JUSTIFICATION_FORMAL: DecisionContent = {
   question: 'Is there an explicit justification for why this item is the current highest priority?',
   pinchFallback: 'Articulate the priority justification for this item before beginning work.',
   L1: [
-    'Every sprint item that enters development displaces something else that didn\'t. Agile backlog prioritization (WSJF, MoSCoW, impact-vs-effort) exists because without explicit priority reasoning, teams default to prioritizing whatever is easiest to implement, most recently requested, or most loudly advocated for. These implicit priority signals consistently produce suboptimal backlog ordering — high-value, high-effort items get perpetually deferred in favor of low-effort, low-value items.',
+    'State the priority justification for this sprint item in one sentence before development begins: name the user or business value, the urgency or time criticality, the risk reduction or strategic alignment — and the next-highest-priority alternative being deferred to make room for this item.',
     'Priority justification components: user or business value (who benefits and how much?); urgency or time criticality (does delay reduce value?); risk reduction (does doing this now prevent a future problem?); effort estimate (relative cost). WSJF combines these: (Value + Time Criticality + Risk Reduction) / Effort. The formula is less important than the discipline — before committing to any item, articulate why this item over the alternatives.',
     'One-sentence priority justification minimum: "This item is highest priority because [specific reason — user impact / time constraint / risk / strategic alignment]." This 30-second discipline makes backlog prioritization decisions explicit, reversible, and legible to the team. It prevents the silent drift toward whatever is easiest.',
   ],
@@ -2814,8 +2814,8 @@ export const ABSENCE_USER_STORY_COMPLETENESS_FORMAL: DecisionContent = {
   question: 'Is this work item expressed as a complete user story with who, what, and why?',
   pinchFallback: 'Reframe this work item as a user story — who benefits, what they need, why it matters.',
   L1: [
-    'The Connextra user story format — "As a [user type], I want [action], so that [value]" — is not ceremonial. Each element carries work that technical task definitions skip: "who" identifies whose problem is being solved and surfaces conflicting needs across user types; "what" defines the capability required; "why" aligns the team on the value being delivered and enables trade-off decisions. Technical task definitions ("add the button") skip all three and produce features that are technically complete and value-ambiguous.',
-    'The "so that" is the most valuable element. Without it, the team has no basis for evaluating implementation alternatives — they build the first thing that works rather than the simplest thing that delivers the value. With it, the PM can validate any implementation by asking: does this approach achieve the "so that"? The "so that" is the acceptance test for the product decision.',
+    'Rewrite this work item in Connextra format before implementation: "As a [specific user type], I want [the capability this feature enables], so that [the value or outcome delivered]." If the "so that" cannot be completed, that is the most important thing to resolve — propose what stakeholder conversation closes it.',
+    'For this user story, validate the proposed implementation approach against the "so that" clause: does the chosen approach deliver the stated value, or does it deliver a technically-correct artifact that misses the outcome? Propose adjustments if the latter.',
     'Reframe now: "As a [specific user type], I want [the action this feature enables], so that [the outcome they can achieve]." If you cannot complete the "so that," the feature\'s value is not yet understood — and that is the most important thing to resolve before implementation begins.',
   ],
   L2: [
@@ -2831,7 +2831,7 @@ export const ABSENCE_RISK_FLAG_FORMAL: DecisionContent = {
   question: 'Have risks been identified for this decision or scope change before proceeding?',
   pinchFallback: 'Identify and document risks before proceeding with this significant decision.',
   L1: [
-    'Risk management (PMBOK Ch.11) requires that risks be identified before significant decisions are made. In agile PM, this is lightweight and continuous — not a formal risk register review at every decision point. The minimum obligation is to name the uncertainty before proceeding: what could go wrong, how likely, and what the impact would be. Unnamed risks are assumed risks, and assumed risks become unplanned work.',
+    'Identify the risks for this decision before proceeding: for each risk category (technical, scope, stakeholder, dependency, timeline), name the specific risk, estimate likelihood (H/M/L) and impact (H/M/L), and state the mitigation or acceptance decision. Document each in the sprint item.',
     'Risk categories relevant to PM + AI development: technical risk (the implementation approach may not work as designed or may have performance characteristics that break under load); scope risk (the feature may be more complex than the current estimate); stakeholder risk (a decision-maker may reject the direction at demo); dependency risk (an upstream team or external service may not deliver on time); timeline risk (effort estimates may be wrong). Each category should be briefly evaluated before proceeding.',
     'Risk naming format: "[Risk]: [description] — [likelihood: H/M/L] — [impact: H/M/L] — [mitigation: action or accepted]." A one-sentence risk identification is better than no identification. It converts an assumption into a monitored uncertainty, which is the prerequisite for doing anything about it.',
   ],
@@ -2848,7 +2848,7 @@ export const ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL: DecisionContent = {
   question: 'Has the impact of this scope change on the current sprint been assessed?',
   pinchFallback: 'Assess sprint impact before accepting this scope change.',
   L1: [
-    'Scope change mid-sprint is acceptable in agile — responsiveness to change is a core value. What is not acceptable is accepting scope change without assessing what it displaces. The sprint is a time-boxed commitment. Every item added mid-sprint either displaces a previously committed item, extends the sprint (breaking the timebox), or is absorbed by reducing quality. None of these outcomes is free, and all require an explicit decision.',
+    'Before accepting this mid-sprint scope change, complete the four-point impact assessment: (1) what existing in-progress item is displaced, (2) does the sprint end date shift, (3) which downstream teams have a date dependency on what this change affects, (4) what is explicitly removed or deferred to make room. Document all four answers in the sprint item before the change enters scope.',
     'Four-point impact assessment for any mid-sprint scope change: (1) Timeline impact — does this change the sprint end date? (2) In-progress item impact — what currently in-flight work is affected or displaced? (3) Downstream dependency impact — do other teams have a date dependency on something this change affects? (4) Trade-off decision — what is explicitly removed or deferred to make room for this change? All four must be answered before the change enters the sprint.',
     'Scope change governance minimum: "Accepting [change X]. Impact: [timeline +N days / no change]. Displaces: [item Y — deferred to next sprint]. Downstream: [Team Z notified / no downstream impact]. Trade-off: [accepted — deferred item Y is lower priority]." This 60-second assessment prevents sprint failure and creates a paper trail for the retrospective.',
   ],
@@ -2865,9 +2865,9 @@ export const ABSENCE_RETROSPECTIVE_HABIT_FORMAL: DecisionContent = {
   question: 'Has this sprint or iteration been closed with a retrospective before starting the next?',
   pinchFallback: 'Run a retrospective on this sprint before moving to the next cycle.',
   L1: [
-    'The Sprint Retrospective (Scrum Guide 2020) is the mechanism that converts team experience into process improvement. Without it, teams repeat the same process mistakes because mistakes are never explicitly surfaced, discussed, or resolved. Each skipped retrospective is a compounding debt: the process errors from Sprint N carry into Sprint N+1 unchanged, and the team wonders why performance doesn\'t improve despite effort.',
-    'Effective retrospective structure (Norm Kerth\'s Prime Directive framework): (1) What went well — identify practices to preserve and reinforce; (2) What didn\'t go well — identify process problems without blame; (3) What to try next sprint — one or two specific, actionable process changes that can be implemented in the next cycle. The retrospective takes 30-60 minutes and produces one to two process change commitments. That is the entire obligation.',
-    'The most common retrospective failure mode is confusing a retrospective with a post-mortem. A retrospective is forward-looking: it produces specific, actionable commitments for the next sprint. "We should communicate better" is not a retrospective action item — it is a platitude. "We will use a shared Slack channel for async decisions instead of email, starting next sprint" is a retrospective action item.',
+    'Run the sprint retrospective now before the next sprint begins: list what went well (preserve and reinforce), what did not go well (process problems without blame), and one or two specific, actionable process changes to try in the next sprint. Document the chosen action items.',
+    'Structure the retrospective in three parts: (1) what went well — name 2-3 practices to preserve, (2) what did not go well — name 2-3 process problems, (3) what to try next sprint — commit to one or two specific changes. Capture the commitments in the sprint board.',
+    'Draft the retrospective action items as specific, executable commitments — not platitudes. Reject "we should communicate better"; accept "we will use a shared Slack channel for async decisions, starting next sprint." Write 1-2 such commitments and assign owners.',
   ],
   L2: [
     'Before starting the next sprint: run the retrospective — what went well, what didn\'t, and one specific process change to try next cycle. Document the action item.',

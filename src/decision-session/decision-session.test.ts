@@ -5223,6 +5223,88 @@ describe('D10-D12 academic-register — no citation patterns or tool callouts in
   }
 });
 
+// ── Phase 6 E7-E9 — PM role content invariants ────────────────────────────────
+// Locks pinch-UI labels (question + pinchFallback) and bans citation / framework
+// reference patterns in the affected L1 slots for the 12 PM-role FORMAL signals
+// where surgical slot rewrites were applied. Unaffected L1 slots, L2, and L3
+// are NOT covered by the sweep below (they may legitimately contain framework
+// references in casual prose); only the affected slots are locked.
+
+describe('PM role — question + pinchFallback invariants', () => {
+  const pinchLabels: Array<{ name: string; c: import('./options.js').DecisionContent; q: string; pf: string }> = [
+    { name: 'ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL',  c: ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL,  q: 'Are acceptance criteria defined for this story before development begins?',                                pf: 'Define acceptance criteria for this story before starting implementation.' },
+    { name: 'ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL',     c: ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL,     q: 'Have relevant stakeholders been aligned on this feature before development begins?',                       pf: 'Verify stakeholder alignment before proceeding with significant development work.' },
+    { name: 'ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL',     c: ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL,     q: 'Are there ambiguous quality attributes in these requirements that need a measurable definition?',          pf: 'Resolve ambiguous quality attributes to measurable criteria before implementation.' },
+    { name: 'ABSENCE_DEPENDENCY_MAPPING_FORMAL',              c: ABSENCE_DEPENDENCY_MAPPING_FORMAL,              q: 'Have upstream and downstream dependencies for this work been identified before starting?',                 pf: 'Map dependencies before beginning this work to prevent blocked integration.' },
+    { name: 'ABSENCE_DEFINITION_OF_DONE_FORMAL',              c: ABSENCE_DEFINITION_OF_DONE_FORMAL,              q: 'Is there an explicit Definition of Done for this sprint item?',                                            pf: 'Define the completion criteria for this item before starting work.' },
+    { name: 'ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL',         c: ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL,         q: 'Have teams affected by this change been notified before development begins?',                              pf: 'Identify and notify affected teams before building this change to shared systems.' },
+    { name: 'ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL',       c: ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL,       q: 'Is there a success metric defined for this feature before development begins?',                            pf: 'Define how success will be measured for this feature before starting implementation.' },
+    { name: 'ABSENCE_PRIORITY_JUSTIFICATION_FORMAL',          c: ABSENCE_PRIORITY_JUSTIFICATION_FORMAL,          q: 'Is there an explicit justification for why this item is the current highest priority?',                    pf: 'Articulate the priority justification for this item before beginning work.' },
+    { name: 'ABSENCE_USER_STORY_COMPLETENESS_FORMAL',         c: ABSENCE_USER_STORY_COMPLETENESS_FORMAL,         q: 'Is this work item expressed as a complete user story with who, what, and why?',                            pf: 'Reframe this work item as a user story — who benefits, what they need, why it matters.' },
+    { name: 'ABSENCE_RISK_FLAG_FORMAL',                       c: ABSENCE_RISK_FLAG_FORMAL,                       q: 'Have risks been identified for this decision or scope change before proceeding?',                          pf: 'Identify and document risks before proceeding with this significant decision.' },
+    { name: 'ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL',  c: ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL,  q: 'Has the impact of this scope change on the current sprint been assessed?',                                 pf: 'Assess sprint impact before accepting this scope change.' },
+    { name: 'ABSENCE_RETROSPECTIVE_HABIT_FORMAL',             c: ABSENCE_RETROSPECTIVE_HABIT_FORMAL,             q: 'Has this sprint or iteration been closed with a retrospective before starting the next?',                  pf: 'Run a retrospective on this sprint before moving to the next cycle.' },
+  ];
+
+  for (const { name, c, q, pf } of pinchLabels) {
+    it(`${name} question is preserved verbatim`, () => {
+      expect(c.question).toBe(q);
+    });
+    it(`${name} pinchFallback is preserved verbatim`, () => {
+      expect(c.pinchFallback).toBe(pf);
+    });
+  }
+});
+
+describe('PM role — no opener-citation or framework-only opener tokens in rewritten L1 entries', () => {
+  // Affected slots per analysis §12.8. Sweep ONLY these specific slot indices —
+  // unaffected L1 entries are out of scope (may legitimately contain framework
+  // references in casual prose).
+  const affectedSlots: Array<{ name: string; c: import('./options.js').DecisionContent; slots: number[] }> = [
+    { name: 'ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL',  c: ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL,  slots: [0, 1] },
+    { name: 'ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL',     c: ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL,     slots: [0, 1] },
+    { name: 'ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL',     c: ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL,     slots: [0, 1, 2] },
+    { name: 'ABSENCE_DEPENDENCY_MAPPING_FORMAL',              c: ABSENCE_DEPENDENCY_MAPPING_FORMAL,              slots: [1, 2] },
+    { name: 'ABSENCE_DEFINITION_OF_DONE_FORMAL',              c: ABSENCE_DEFINITION_OF_DONE_FORMAL,              slots: [0, 1, 2] },
+    { name: 'ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL',         c: ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL,         slots: [0, 1] },
+    { name: 'ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL',       c: ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL,       slots: [0, 2] },
+    { name: 'ABSENCE_PRIORITY_JUSTIFICATION_FORMAL',          c: ABSENCE_PRIORITY_JUSTIFICATION_FORMAL,          slots: [0] },
+    { name: 'ABSENCE_USER_STORY_COMPLETENESS_FORMAL',         c: ABSENCE_USER_STORY_COMPLETENESS_FORMAL,         slots: [0, 1] },
+    { name: 'ABSENCE_RISK_FLAG_FORMAL',                       c: ABSENCE_RISK_FLAG_FORMAL,                       slots: [0] },
+    { name: 'ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL',  c: ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL,  slots: [0] },
+    { name: 'ABSENCE_RETROSPECTIVE_HABIT_FORMAL',             c: ABSENCE_RETROSPECTIVE_HABIT_FORMAL,             slots: [0, 1, 2] },
+  ];
+
+  // Forbidden patterns: opener attributions and framework-only openers that the
+  // §12.8 rewrites removed. Inline references to a framework name (e.g. "Apply
+  // INVEST to..." or "SMART criteria" inside an instruction) are acceptable; the
+  // patterns below catch only opener-style citations and bare "(Wiegers, SEI)"-
+  // style citations.
+  const forbidden: Array<{ pattern: RegExp; description: string }> = [
+    // "(Wiegers, SEI)" / "(Beyer et al., 2016)" paren-citations
+    { pattern: /\([A-Z][a-z]+(?:\/[A-Z][a-z]+)?(?:,| et al\.,?) [A-Z0-9]/, description: 'paren-citation like (Author, Org/Year)' },
+    // "PMBOK ... (Ch.NN)" framework-reference opener
+    { pattern: /\bPMBOK [a-z][a-z\s]+\(Ch\.\d+\)/, description: 'PMBOK chapter-reference opener' },
+    // "Scrum Guide 2020"-style version citation
+    { pattern: /\bScrum Guide \d{4}\b/, description: 'Scrum Guide year-version citation' },
+    // "Norm Kerth's Prime Directive framework" — opener attribution to a named person+framework
+    { pattern: /\bNorm Kerth's [A-Z][a-z]+ [A-Z][a-z]+\b/, description: 'Norm Kerth attribution opener' },
+    // Inline et-al style citation
+    { pattern: /\b[A-Z][a-z]+ et al\.,? \d{4}\b/, description: 'inline et-al citation' },
+  ];
+
+  for (const { name, c, slots } of affectedSlots) {
+    for (const slotIndex of slots) {
+      it(`${name} L1[${slotIndex}] (rewritten) contains no citation or framework-opener patterns`, () => {
+        const text = c.L1[slotIndex];
+        for (const { pattern, description } of forbidden) {
+          expect(text, `L1[${slotIndex}] matches ${description}: "${text}"`).not.toMatch(pattern);
+        }
+      });
+    }
+  }
+});
+
 describe('Phase 7 content routing', () => {
   function makeProfile(nature: import('../classifier/types.js').UserNature, role?: import('../classifier/types.js').UserRole): import('../classifier/types.js').UserProfile {
     return {
