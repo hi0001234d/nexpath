@@ -190,11 +190,15 @@ const picked = await select({
   message: 'Advisory frequency',
   initialValue: ${JSON.stringify(currentFreq)},
   options: [
-    { value: 'optimum',          label: 'Optimum \\u2014 frequent advisories' },
-    { value: 'every_event',      label: 'Every qualifying event' },
-    { value: 'major_only',       label: 'Major transitions only' },
-    { value: 'once_per_session', label: 'Once per coding session' },
-    { value: 'off',              label: 'Off \\u2014 disable all advisories' },
+    // Active popup options: simple High / Medium / Low labels.
+    { value: 'optimum',          label: 'High' },
+    { value: 'every_event',      label: 'Medium' },
+    { value: 'major_only',       label: 'Low' },
+    // The two entries below stay valid via the CLI (nexpath config set
+    // advisory_frequency once_per_session / off) and are still honoured by
+    // the gating logic — they are intentionally hidden from this popup.
+    // { value: 'once_per_session', label: 'Once per coding session' },
+    // { value: 'off',              label: 'Off \\u2014 disable all advisories' },
   ],
 });
 
@@ -902,11 +906,15 @@ export function runFrequencySubMenu(
 ): void {
   const currentFreq = readCurrentFreq(store, projectRoot);
   const freqOptions = [
-    { num: 1, value: 'optimum',          label: 'Optimum — frequent advisories' },
-    { num: 2, value: 'every_event',      label: 'Every qualifying event' },
-    { num: 3, value: 'major_only',       label: 'Major transitions only' },
-    { num: 4, value: 'once_per_session', label: 'Once per coding session' },
-    { num: 5, value: 'off',              label: 'Off — disable all advisories' },
+    // Active popup options: simple High / Medium / Low labels.
+    { num: 1, value: 'optimum',     label: 'High' },
+    { num: 2, value: 'every_event', label: 'Medium' },
+    { num: 3, value: 'major_only',  label: 'Low' },
+    // The two entries below stay valid via the CLI (nexpath config set
+    // advisory_frequency once_per_session / off) and are still honoured by
+    // the gating logic — they are intentionally hidden from this menu.
+    // { num: 4, value: 'once_per_session', label: 'Once per coding session' },
+    // { num: 5, value: 'off',              label: 'Off — disable all advisories' },
   ];
   const menuLines = [
     pc.cyan('│'),
@@ -918,7 +926,7 @@ export function runFrequencySubMenu(
     pc.cyan('│'),
   ];
   streams.output.write(menuLines.join('\n') + '\n');
-  streams.output.write(`${pc.cyan('└')}  Select (1-5): `);
+  streams.output.write(`${pc.cyan('└')}  Select (1-3): `);
 
   iface.once('line', (answer) => {
     const num = parseInt(answer.trim(), 10);

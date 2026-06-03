@@ -451,11 +451,15 @@ const defaultFreqPrompt: FreqPromptFn = async (currentValue) =>
     message: 'Advisory frequency — choose how often nexpath should surface advisories',
     initialValue: currentValue,
     options: [
-      { value: 'optimum',          label: 'Optimum — frequent advisories' },
-      { value: 'every_event',      label: 'Every qualifying event' },
-      { value: 'major_only',       label: 'Major transitions only' },
-      { value: 'once_per_session', label: 'Once per coding session' },
-      { value: 'off',              label: 'Off — disable all advisories' },
+      // Active picker options: simple High / Medium / Low labels.
+      { value: 'optimum',     label: 'High' },
+      { value: 'every_event', label: 'Medium' },
+      { value: 'major_only',  label: 'Low' },
+      // The two entries below stay valid via the CLI (nexpath config set
+      // advisory_frequency once_per_session / off) and are still honoured by
+      // the gating logic — they are intentionally hidden from this picker.
+      // { value: 'once_per_session', label: 'Once per coding session' },
+      // { value: 'off',              label: 'Off — disable all advisories' },
     ],
   });
 

@@ -1308,7 +1308,7 @@ describe('runCtrlTRootChooser (Unix path)', () => {
     trigger('1');
     const rendered = writes.join('');
     expect(rendered).toContain('Advisory frequency');
-    expect(rendered).toContain('Optimum');
+    expect(rendered).toContain('High');
     expect(cleanup).not.toHaveBeenCalled();
   });
 
@@ -1356,7 +1356,7 @@ describe('runCtrlTRootChooser (Unix path)', () => {
 });
 
 describe('runFrequencySubMenu (Unix path)', () => {
-  it('renders all five frequency options including optimum and excludes the legacy role entry', async () => {
+  it('renders the three visible frequency options including the High rung and excludes the legacy role entry', async () => {
     const store = await openStore(':memory:');
     try {
       const { writes, streams } = makeFakeStreams();
@@ -1364,19 +1364,19 @@ describe('runFrequencySubMenu (Unix path)', () => {
       const cleanup = vi.fn();
       runFrequencySubMenu(streams, iface, store, '/proj/freq', cleanup);
       const rendered = writes.join('');
-      expect(rendered).toContain('Every qualifying event');
-      expect(rendered).toContain('Optimum');
-      expect(rendered).toContain('Major transitions only');
-      expect(rendered).toContain('Once per coding session');
-      expect(rendered).toContain('Off');
+      expect(rendered).toContain('High');
+      expect(rendered).toContain('Medium');
+      expect(rendered).toContain('Low');
+      expect(rendered).not.toContain('Once per coding session');
+      expect(rendered).not.toContain('Off — disable all advisories');
       expect(rendered).not.toContain('Configure role');
-      expect(rendered).toContain('Select (1-5)');
-      // optimum is the first option; every_event is second
+      expect(rendered).toContain('Select (1-3)');
+      // High (optimum) is the first option; Medium (every_event) is second
       const lines = rendered.split('\n');
-      const optimumIdx = lines.findIndex((l) => l.includes('Optimum'));
-      const everyIdx = lines.findIndex((l) => l.includes('Every qualifying event'));
-      expect(optimumIdx).toBeGreaterThanOrEqual(0);
-      expect(everyIdx).toBeGreaterThan(optimumIdx);
+      const highIdx = lines.findIndex((l) => l.includes('High'));
+      const mediumIdx = lines.findIndex((l) => l.includes('Medium'));
+      expect(highIdx).toBeGreaterThanOrEqual(0);
+      expect(mediumIdx).toBeGreaterThan(highIdx);
       // parenthetical descriptors removed from labels
       expect(rendered).not.toContain('(3–5 prompts)');
       expect(rendered).not.toContain('(stage changes)');
@@ -1394,9 +1394,9 @@ describe('runFrequencySubMenu (Unix path)', () => {
       const { iface } = makeFakeInterface();
       runFrequencySubMenu(streams, iface, store, '/proj/freq2', vi.fn());
       const rendered = writes.join('');
-      const optimumLine = rendered.split('\n').find((line) => line.includes('Optimum'));
-      expect(optimumLine).toBeDefined();
-      expect(optimumLine).toContain('(current)');
+      const highLine = rendered.split('\n').find((line) => line.includes('High'));
+      expect(highLine).toBeDefined();
+      expect(highLine).toContain('(current)');
     } finally {
       store.db.close();
     }
@@ -1440,9 +1440,37 @@ describe('runFrequencySubMenu (Unix path)', () => {
       const { iface } = makeFakeInterface();
       runFrequencySubMenu(streams, iface, store, '/proj/freq5', vi.fn());
       const rendered = writes.join('');
-      const majorLine = rendered.split('\n').find((line) => line.includes('Major transitions only'));
-      expect(majorLine).toBeDefined();
-      expect(majorLine).toContain('(current)');
+      const lowLine = rendered.split('\n').find((line) => line.includes('Low'));
+      expect(lowLine).toBeDefined();
+      expect(lowLine).toContain('(current)');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('hides once_per_session and off labels from the visible popup options', async () => {
+    const store = await openStore(':memory:');
+    try {
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      runFrequencySubMenu(streams, iface, store, '/proj/freq_hidden', vi.fn());
+      const rendered = writes.join('');
+      expect(rendered).not.toContain('Once per coding session');
+      expect(rendered).not.toContain('Off — disable all advisories');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('preserves a CLI-set once_per_session value even though the popup hides that option', async () => {
+    const store = await openStore(':memory:');
+    try {
+      setConfig(store, 'advisory_frequency:/proj/freq_cliset', 'once_per_session');
+      const { iface } = makeFakeInterface();
+      const { streams } = makeFakeStreams();
+      const onDone = vi.fn();
+      runFrequencySubMenu(streams, iface, store, '/proj/freq_cliset', onDone);
+      expect(getConfig(store.db, 'advisory_frequency:/proj/freq_cliset')).toBe('once_per_session');
     } finally {
       store.db.close();
     }
