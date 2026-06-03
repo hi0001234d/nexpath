@@ -15,6 +15,7 @@ import { logger, initLogger } from '../../logger.js';
 import type { LogLevel } from '../../logger.js';
 import { writeHookStats } from '../../store/hook-stats.js';
 import { writeTelemetry } from '../../telemetry/index.js';
+import { triggerOpportunisticSync } from '../../telemetry/OpportunisticSync.js';
 import { recentPromptMetadata } from '../../telemetry/recent-prompts.js';
 import { readStdin } from './auto.js';
 import { resolveDecisionContent } from '../../decision-session/options.js';
@@ -261,6 +262,7 @@ export function registerStopCommand(program: import('commander').Command): void 
             process.stderr.write('\n[nexpath] Copied to clipboard — paste and edit in Claude terminal\n');
           }
         }
+        void triggerOpportunisticSync(store).catch(() => {});
         // All other outcomes → exit 0 (Claude stops normally)
       } finally {
         closeStore(store);

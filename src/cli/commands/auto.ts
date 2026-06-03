@@ -27,6 +27,7 @@ import { writeHookStats } from '../../store/hook-stats.js';
 import { upsertPendingAdvisory } from '../../store/pending-advisories.js';
 import { insertSkippedSession } from '../../store/skipped-sessions.js';
 import { writeTelemetry } from '../../telemetry/index.js';
+import { triggerOpportunisticSync } from '../../telemetry/OpportunisticSync.js';
 import { resolveFrequencyConfig, type AdvisoryFrequencyLevel } from '../../config/GlobalConfig.js';
 import { recentPromptMetadata } from '../../telemetry/recent-prompts.js';
 
@@ -509,6 +510,7 @@ export function registerAutoCommand(program: import('commander').Command): void 
         );
 
         writeHookStats(opts.project, result.outcome);
+        void triggerOpportunisticSync(store).catch(() => {});
         // 'no_action' and 'pending' → exit silently (Stop hook handles UI)
       } finally {
         closeStore(store);
