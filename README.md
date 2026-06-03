@@ -56,6 +56,10 @@ Built during AI Hackfest 2026 by MLH.
 
 ---
 
+![Nexpath CLI demo](assets/nexpath.gif)
+
+---
+
 ## Nexpath CLI Features & Capabilities
 
 ### The Decision Session
