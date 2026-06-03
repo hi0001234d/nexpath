@@ -2261,8 +2261,8 @@ describe('NEXPATH_HEADER', () => {
     expect(NEXPATH_HEADER).toContain('▲');
   });
 
-  it('contains the tracked wordmark "N E X P A T H"', () => {
-    expect(NEXPATH_HEADER).toContain('N E X P A T H');
+  it('contains the tracked wordmark "N E X P A T H  C L I"', () => {
+    expect(NEXPATH_HEADER).toContain('N E X P A T H  C L I');
   });
 
   it('contains a dim-gray horizontal rule line', () => {
