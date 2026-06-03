@@ -180,24 +180,31 @@ function line(char: string, label: string, detail: string): string {
 export function renderStatus(result: StatusResult): string {
   const lines: string[] = [];
 
-  // ── MCP connections ──────────────────────────────────────────────────────
-  lines.push('MCP connections');
-  for (const a of result.agents) {
-    const sym    = a.registered ? TICK : CROSS;
-    const detail = a.registered
-      ? `registered  (${a.configPath})`
-      : `not registered`;
-    lines.push(line(sym, a.label, detail));
-  }
-
-  // Advisory hook line (Claude Code only)
-  const sym    = result.hook.registered ? TICK : DASH;
-  const detail = result.hook.registered
-    ? `advisory hook registered  (${result.hook.settingsPath})`
-    : `advisory hook not registered  (run: nexpath install)`;
-  lines.push(line(sym, 'Claude Code', detail));
-
-  lines.push('');
+  // ── MCP connections (temporarily disabled) ─────────────────────────────────
+  // The block below renders each detected agent's MCP registration plus the
+  // Claude Code advisory-hook status. It is commented out for now. To bring the
+  // `nexpath status` MCP view back in the future: un-comment this block and
+  // re-enable the matching tests in status.test.ts (the "renderStatus — agent
+  // lines" describe and the "MCP connections" section assertions). The data is
+  // still gathered in runStatus(), so apply any other necessary changes there.
+  //
+  // lines.push('MCP connections');
+  // for (const a of result.agents) {
+  //   const sym    = a.registered ? TICK : CROSS;
+  //   const detail = a.registered
+  //     ? `registered  (${a.configPath})`
+  //     : `not registered`;
+  //   lines.push(line(sym, a.label, detail));
+  // }
+  //
+  // // Advisory hook line (Claude Code only)
+  // const sym    = result.hook.registered ? TICK : DASH;
+  // const detail = result.hook.registered
+  //   ? `advisory hook registered  (${result.hook.settingsPath})`
+  //   : `advisory hook not registered  (run: nexpath install)`;
+  // lines.push(line(sym, 'Claude Code', detail));
+  //
+  // lines.push('');
 
   // ── Prompt store ──────────────────────────────────────────────────────────
   if (result.store.exists) {

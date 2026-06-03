@@ -2,7 +2,7 @@ import { select, isCancel } from '@clack/prompts';
 import type { Stage, UserProfile } from '../classifier/types.js';
 import type { FlagType } from '../classifier/Stage2Trigger.js';
 import type { Store } from '../store/db.js';
-import { insertSkippedSession } from '../store/skipped-sessions.js';
+import { insertSkippedSession, getSkippedSessions } from '../store/skipped-sessions.js';
 import { incrementDecisionSessionCount } from '../store/projects.js';
 import { setConfig } from '../store/config.js';
 import {
@@ -14,6 +14,7 @@ import {
 } from './options.js';
 import type { GeneratedOptions } from './OptionGenerator.js';
 import { writeTelemetry } from '../telemetry/index.js';
+import { type RecentPromptMetadata } from '../telemetry/recent-prompts.js';
 
 /**
  * Decision session terminal UI (per decision-session-ux-research.md).
@@ -46,6 +47,23 @@ const ITALIC_DIM   = '\x1b[3;2m';
 const ITALIC_AMBER = '\x1b[3;33m';
 const BOLD         = '\x1b[1m';
 
+/**
+ * Branded Nexpath wordmark, shown at the top of every popup window.
+ *
+ *   ▲  N E X P A T H  C L I
+ *   ────────────────────────
+ *
+ * Triangle bold bright cyan, wordmark bold bright white with 2-space
+ * tracking, rule dim gray. Trailing blank line gives breathing room
+ * before the clack prompt area starts rendering.
+ */
+export const NEXPATH_HEADER =
+  `${BOLD_CYAN}▲${RESET}  ${BOLD_WHITE}N E X P A T H  C L I${RESET}\n` +
+  `${DIM_GRAY}────────────────────────${RESET}\n\n`;
+
+/** Visible row count the header consumes — wordmark (1) + rule (1) + blank (1). */
+export const NEXPATH_HEADER_LINES = 3;
+
 const SKIP_NOW_LABEL =
   `${BOLD}Skip for now${RESET}${DIM_GRAY}  — nexpath optimize will remind you${RESET}`;
 const SHOW_SIMPLER_LABEL =
@@ -61,7 +79,7 @@ const MOD_KEY = process.platform === 'darwin' ? 'Cmd' : 'Ctrl';
 
 const HELP_LABEL =
   `${ITALIC_DIM}  don't need nexpath here?  press ${RESET}${ITALIC_AMBER}${MOD_KEY}+X${RESET}${ITALIC_DIM} to disable for this project` +
-  `  ·  press ${RESET}${ITALIC_AMBER}${MOD_KEY}+T${RESET}${ITALIC_DIM} to adjust frequency${RESET}`;
+  `  ·  press ${RESET}${ITALIC_AMBER}${MOD_KEY}+T${RESET}${ITALIC_DIM} to adjust frequency or role${RESET}`;
 
 export function formatPinchLabel(label: string): string {
   return `${BOLD_CYAN}${label}${RESET}`;
@@ -92,6 +110,8 @@ export interface DecisionSessionInput {
   generatedOptions?:    GeneratedOptions;
   /** User profile — used to route beginner/cool_geek to BEGINNER content blocks. */
   profile?:             UserProfile | null;
+  /** Last-5 prompt metadata for the `decision_session_started` telemetry event (Item B). */
+  recentPrompts?:       RecentPromptMetadata[];
 }
 
 /**
@@ -167,6 +187,7 @@ export async function runLevel(
   input:     DecisionSessionInput,
   level:     1 | 2 | 3,
   selectFn:  SelectFn,
+  store?:    Store,
 ): Promise<'skip' | 'next' | 'clipboard_only' | string> {
   const content  = resolveDecisionContent(input.stage, input.flagType, input.profile);
   const gen      = input.generatedOptions;
@@ -201,7 +222,7 @@ export async function runLevel(
     });
   }
   // Help hint — 2 blank lines of breathing room then the styled hint row
-  if (input.decisionSessionCount < 3) {
+  if (input.decisionSessionCount < 12) {
     clackOptions.push({ value: `${OPTION_SEPARATOR}${sepIdx++}`, label: '' });
     clackOptions.push({ value: `${OPTION_SEPARATOR}${sepIdx++}`, label: '' });
     clackOptions.push({ value: `${OPTION_SEPARATOR}help`, label: HELP_LABEL });
@@ -210,7 +231,7 @@ export async function runLevel(
   writeTelemetry(input.projectRoot, 'level_rendered', {
     level,
     optionCount: clackOptions.filter(o => !o.value.startsWith(OPTION_SEPARATOR)).length,
-  });
+  }, store);
 
   if (process.env['NEXPATH_SIM'] === '1') {
     const first = clackOptions.find(o => !o.value.startsWith(OPTION_SEPARATOR));
@@ -225,28 +246,53 @@ export async function runLevel(
     await new Promise<void>(r => setTimeout(r, 400));
     writeTelemetry(input.projectRoot, 'decision_session_sim_dismissed', {
       level, autoSelectedText: label.slice(0, 120),
-    });
+    }, store);
     return value as string;
   }
 
   const result = await selectFn({ message, options: clackOptions });
 
+  // Item A: 5 context fields from input (no lookups) + Item I: skip count from store.
+  // Snapshot once; reused across whichever dismissal branch fires.
+  const dismissPayloadBase = {
+    flagType:           input.flagType,
+    stage:              input.stage,
+    pinchLabel:         input.pinchLabel,
+    sessionId:          input.sessionId,
+    promptCount:        input.promptCount,
+    skipCountInProject: store
+      ? getSkippedSessions(store, input.projectRoot).length
+      : null,
+  };
+
   if (isCancel(result) || typeof result === 'symbol') {
-    writeTelemetry(input.projectRoot, 'decision_session_dismissed', { level, reason: 'cancel' });
+    writeTelemetry(input.projectRoot, 'decision_session_dismissed', {
+      level,
+      reason: 'cancel',
+      ...dismissPayloadBase,
+    }, store);
     return 'skip';
   }
   if (typeof result === 'string' && result.startsWith(OPTION_SEPARATOR)) {
-    writeTelemetry(input.projectRoot, 'decision_session_dismissed', { level, reason: 'skip' });
+    writeTelemetry(input.projectRoot, 'decision_session_dismissed', {
+      level,
+      reason: 'skip',
+      ...dismissPayloadBase,
+    }, store);
     return 'skip';
   }
   if (result === CLIPBOARD_ONLY) return 'clipboard_only';
   if (result === SKIP_NOW) {
-    writeTelemetry(input.projectRoot, 'decision_session_dismissed', { level, reason: 'skip' });
+    writeTelemetry(input.projectRoot, 'decision_session_dismissed', {
+      level,
+      reason: 'skip',
+      ...dismissPayloadBase,
+    }, store);
     return 'skip';
   }
   if (result === SHOW_SIMPLER) return 'next';
 
-  writeTelemetry(input.projectRoot, 'option_selected', { level, selectedText: (result as string).slice(0, 120) });
+  writeTelemetry(input.projectRoot, 'option_selected', { level, selectedText: (result as string).slice(0, 120) }, store);
   return result as string;
 }
 
@@ -274,26 +320,36 @@ export async function runDecisionSession(
   }
 
   writeTelemetry(input.projectRoot, 'decision_session_started', {
-    flagType:   input.flagType,
-    stage:      input.stage,
-    pinchLabel: input.pinchLabel,
-    sessionId:  input.sessionId,
-  });
+    flagType:                      input.flagType,
+    stage:                         input.stage,
+    pinchLabel:                    input.pinchLabel,
+    sessionId:                     input.sessionId,
+    // Item J — project counter, populated by the call site (stop.ts).
+    decisionSessionCountInProject: input.decisionSessionCount ?? 0,
+    // Item B — last-5 prompt metadata, populated by the call site.
+    recentPrompts:                 input.recentPrompts ?? [],
+  }, store);
 
   let level: 1 | 2 | 3 = 1;
 
   while (true) {
-    const levelResult = await runLevel(input, level, selectFn);
+    const levelResult = await runLevel(input, level, selectFn, store);
 
     // Windows sentinel: Ctrl+X opt-out — write config and skip (no skipped_sessions entry)
     if (levelResult === OPT_OUT_SENTINEL) {
       if (store) setConfig(store, `advisory_frequency:${input.projectRoot}`, 'off');
       return { outcome: 'skipped' };
     }
-    // Windows sentinel: Ctrl+T frequency change — write config and skip
+    // Sentinel: Ctrl+T → root chooser → frequency selected — write config and skip
     if (typeof levelResult === 'string' && levelResult.startsWith('__FREQ__:')) {
       const newFreq = levelResult.slice('__FREQ__:'.length);
       if (store) setConfig(store, `advisory_frequency:${input.projectRoot}`, newFreq);
+      return { outcome: 'skipped' };
+    }
+    // Sentinel: Ctrl+T → root chooser → role selected — write config and skip
+    if (typeof levelResult === 'string' && levelResult.startsWith('__ROLE__:')) {
+      const roleValue = levelResult.slice('__ROLE__:'.length);
+      if (store) setConfig(store, `role:${input.projectRoot}`, roleValue);
       return { outcome: 'skipped' };
     }
 

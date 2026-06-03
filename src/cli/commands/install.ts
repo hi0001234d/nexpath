@@ -2,9 +2,24 @@ import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
-import { confirm, isCancel } from '@clack/prompts';
+import { confirm, isCancel, select, password, note, intro, outro, cancel as clackCancel } from '@clack/prompts';
+import { SelectPrompt } from '@clack/core';
+import pc from 'picocolors';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
-import { isConfigSet, setConfig } from '../../store/config.js';
+import { isConfigSet, setConfig, getConfig } from '../../store/config.js';
+import {
+  VALID_ROLES,
+  setAdvisoryFrequency,
+  setRole,
+} from '../shared/config-setters.js';
+import { ROLE_OPTIONS, buildRoleDescriptionLines } from '../shared/role-description.js';
+import {
+  storeApiKey,
+  removeApiKey,
+  isValidApiKey,
+  getKeySource,
+  type KeySource,
+} from '../../config/ApiKeyResolver.js';
 
 export const MCP_SERVER_NAME = 'nexpath-prompt-store';
 
@@ -103,17 +118,52 @@ export type DetectedAgent = {
 };
 
 /**
- * Determine which agents are installed by checking whether the parent
- * directory of each agent's config file exists.
+ * Officially-supported agents in the current nexpath version — single source
+ * of truth for the registration allow-list AND the "Not found" notice.
+ *
+ * Only entries here appear in `detectAgents()` output, get nexpath registration
+ * written during install, and show up in `nexpath status`. Agents present on
+ * disk but not listed here are silently filtered out.
+ *
+ * During install, any supported agent NOT detected on disk produces a
+ * "Not found: <label>" line so users know which expected agent is missing.
+ *
+ * To officially support a new agent in a future version:
+ *   1. Add { id, label } to this array.
+ *   2. Verify the matching push site in detectAgentsForCleanup() builds
+ *      the correct DetectedAgent.
+ *   3. Verify the registration path (writeMcpEntry / writeOpenCodeEntry / …)
+ *      is wired in installAction's per-agent loop.
+ *
+ * Uninstall uses detectAgentsForCleanup() directly so it can still remove
+ * registration entries written by older nexpath versions, even for IDs no
+ * longer listed here.
+ */
+export const SUPPORTED_AGENTS: ReadonlyArray<{ id: string; label: string }> = [
+  { id: 'claude', label: 'Claude Code' },
+];
+
+/** Derived ID set used by the detectAgents filter. Mirrors SUPPORTED_AGENTS. */
+export const SUPPORTED_AGENT_IDS: ReadonlySet<string> = new Set(
+  SUPPORTED_AGENTS.map((a) => a.id),
+);
+
+/**
+ * Detect every agent whose config directory exists on disk, without applying
+ * the SUPPORTED_AGENT_IDS filter. Used by the uninstall flow so that legacy
+ * registration entries written by older nexpath versions can still be removed.
  *
  * Claude Code is always included — home dir is always present, and the CLI
- * command (claude mcp add) will be attempted first regardless.
+ * command (claude mcp add) is attempted first regardless.
  */
-export function detectAgents(paths: AgentPaths): DetectedAgent[] {
+export function detectAgentsForCleanup(paths: AgentPaths): DetectedAgent[] {
   const found: DetectedAgent[] = [];
 
-  // Claude Code — always detected; CLI install attempted first
-  found.push({ id: 'claude', label: 'Claude Code', configPath: paths.claudeJson, type: 'claude-cli' });
+  // Claude Code — detected when its user-level config file (~/.claude.json) or
+  // settings dir (~/.claude/) exists. Both are created on first interactive run.
+  if (existsSync(paths.claudeJson) || existsSync(dirname(paths.claudeSettings))) {
+    found.push({ id: 'claude', label: 'Claude Code', configPath: paths.claudeJson, type: 'claude-cli' });
+  }
 
   if (existsSync(dirname(paths.cursor))) {
     found.push({ id: 'cursor', label: 'Cursor', configPath: paths.cursor, type: 'standard' });
@@ -144,6 +194,16 @@ export function detectAgents(paths: AgentPaths): DetectedAgent[] {
   }
 
   return found;
+}
+
+/**
+ * Determine which agents to register on install / surface in status.
+ *
+ * Returns only agents whose `id` appears in SUPPORTED_AGENT_IDS. Agents
+ * present on disk but not officially supported are silently filtered out.
+ */
+export function detectAgents(paths: AgentPaths): DetectedAgent[] {
+  return detectAgentsForCleanup(paths).filter((a) => SUPPORTED_AGENT_IDS.has(a.id));
 }
 
 // ── Config read / write helpers ───────────────────────────────────────────────
@@ -380,6 +440,177 @@ const defaultConfirm: ConfirmFn = async () => {
   return !isCancel(answer) && answer === true;
 };
 
+export type FreqPromptFn = (currentValue: string) => Promise<string | symbol>;
+export type RolePromptFn = (currentValue: string) => Promise<string | symbol>;
+
+const DEFAULT_FREQUENCY = 'every_event';
+const DEFAULT_ROLE      = 'founder';
+
+const defaultFreqPrompt: FreqPromptFn = async (currentValue) =>
+  select({
+    message: 'Advisory frequency — choose how often nexpath should surface advisories',
+    initialValue: currentValue,
+    options: [
+      // Active picker options: simple High / Medium / Low labels.
+      { value: 'optimum',     label: 'High' },
+      { value: 'every_event', label: 'Medium' },
+      { value: 'major_only',  label: 'Low' },
+      // The two entries below stay valid via the CLI (nexpath config set
+      // advisory_frequency once_per_session / off) and are still honoured by
+      // the gating logic — they are intentionally hidden from this picker.
+      // { value: 'once_per_session', label: 'Once per coding session' },
+      // { value: 'off',              label: 'Off — disable all advisories' },
+    ],
+  });
+
+// Radio-button role picker whose gray "why" description sits BELOW the options
+// (a plain select() only renders its message above them). Mirrors the popup.
+const defaultRolePrompt: RolePromptFn = async (currentValue) => {
+  const descLines = buildRoleDescriptionLines();
+  const p = new SelectPrompt<{ value: string; label: string }>({
+    options: ROLE_OPTIONS.map((o) => ({ value: o.value as string, label: o.label })),
+    initialValue: currentValue,
+    render() {
+      const sym = this.state === 'submit' ? pc.green('◇')
+                : this.state === 'cancel' ? pc.red('■')
+                : pc.cyan('◆');
+      const head = `${pc.gray('│')}\n${sym}  ${pc.bold('Project role')}\n`;
+      if (this.state === 'submit' || this.state === 'cancel') {
+        return `${head}${pc.gray('│')}  ${pc.dim(this.options[this.cursor].label)}`;
+      }
+      const optLines = this.options
+        .map((o, i) =>
+          i === this.cursor
+            ? `${pc.cyan('│')}  ${pc.green('●')} ${o.label}`
+            : `${pc.cyan('│')}  ${pc.dim('○')} ${pc.dim(o.label)}`,
+        )
+        .join('\n');
+      return `${head}${optLines}\n${pc.cyan('│')}\n${descLines.join('\n')}\n${pc.cyan('└')}\n`;
+    },
+  });
+  return p.prompt();
+};
+
+/** Read the currently configured advisory_frequency, default 'every_event'. */
+function readInstallFreq(db: import('sql.js').Database): string {
+  const v = getConfig(db, 'advisory_frequency');
+  return v && v !== '' ? v : DEFAULT_FREQUENCY;
+}
+
+/** Read the currently configured role, default 'founder'; reject legacy 'clear' / ''. */
+function readInstallRole(db: import('sql.js').Database): string {
+  const v = getConfig(db, 'role');
+  if (!v || v === 'clear') return DEFAULT_ROLE;
+  return (VALID_ROLES as readonly string[]).includes(v) ? v : DEFAULT_ROLE;
+}
+
+// ── 3-step install UX prompt interface ───────────────────────────────────────
+
+export type ApiKeyPromptContext = {
+  hasEnvKey:    boolean;
+  hasStoredKey: boolean;
+  keychainName: string;
+};
+
+export type ApiKeyPromptResult =
+  | { kind: 'use_env' }
+  | { kind: 'keep_existing' }
+  | { kind: 'new_key'; value: string }
+  | { kind: 'skip' }
+  | { kind: 'cancel' };
+
+export type TelemetryConsentResult =
+  | { kind: 'enable' }
+  | { kind: 'disable' }
+  | { kind: 'cancel' };
+
+export interface InstallPrompts {
+  apiKeyPrompt:     (ctx: ApiKeyPromptContext) => Promise<ApiKeyPromptResult>;
+  telemetryConsent: () => Promise<TelemetryConsentResult>;
+}
+
+export function getKeychainName(platform: NodeJS.Platform = process.platform): string {
+  switch (platform) {
+    case 'darwin': return 'macOS Keychain';
+    case 'linux':  return 'Secret Service (libsecret)';
+    case 'win32':  return 'Credential Manager';
+    default:       return 'Encrypted file at ~/.nexpath/config.json';
+  }
+}
+
+const defaultInstallPrompts: InstallPrompts = {
+  apiKeyPrompt: async (ctx) => {
+    note(
+      [
+        'Nexpath needs an OpenAI API key to generate advisories.',
+        'Enter it once here — it will be stored securely and used',
+        'for all your projects until you run `nexpath uninstall`.',
+        '',
+        'Get a key: https://platform.openai.com/api-keys',
+      ].join('\n'),
+      'Step 1 of 3 — OpenAI API Key (required)',
+    );
+
+    if (ctx.hasEnvKey) {
+      const useEnv = await confirm({
+        message:      'Detected existing API key in environment. Use it?',
+        initialValue: true,
+      });
+      if (isCancel(useEnv)) return { kind: 'cancel' };
+      if (useEnv === true)  return { kind: 'use_env' };
+    }
+    const promptMsg = ctx.hasStoredKey
+      ? `API Key (Enter to keep existing key stored in ${ctx.keychainName}):`
+      : `API Key (will be stored in ${ctx.keychainName}):`;
+    const input = await password({
+      message:  promptMsg,
+      validate: (value) => {
+        if (ctx.hasStoredKey && value === '') return undefined;
+        if (!isValidApiKey(value)) return 'Invalid OpenAI API key format (expected sk-...)';
+        return undefined;
+      },
+    });
+    if (isCancel(input)) return { kind: 'cancel' };
+    if (input === '' && ctx.hasStoredKey) return { kind: 'keep_existing' };
+    if (input === '') return { kind: 'skip' };
+    return { kind: 'new_key', value: String(input) };
+  },
+  telemetryConsent: async () => {
+    note(
+      [
+        'We highly recommend you provide us logs so we can',
+        'get better information to improve nexpath as much',
+        'as possible.',
+        '',
+        "What's collected:  anonymous usage events (command",
+        '                   names, timings, error types)',
+        "What's NOT sent:   your code, prompts, API key,",
+        '                   file paths, personal information',
+        '',
+        'If you select:',
+        'Yes  → events captured locally AND auto-synced to our server',
+        'No   → no capture, no sync — full stop',
+        '',
+        'Change anytime: `nexpath config set telemetry.enabled true|false`',
+      ].join('\n'),
+      'Step 2 of 3 — Telemetry',
+    );
+    const answer = await confirm({
+      message:      'Enable telemetry?',
+      initialValue: true,
+    });
+    if (isCancel(answer)) return { kind: 'cancel' };
+    return answer === true ? { kind: 'enable' } : { kind: 'disable' };
+  },
+};
+
+export interface InstallSummary {
+  apiKey:    { source: 'keychain' | 'file' | 'kept' | 'skipped' };
+  telemetry: { enabled: boolean };
+  agents:    { registered: string[]; failed: string[] };
+  extras:    { clipboardInstalled: boolean; clipboardTool: string | null };
+}
+
 export async function installAction(
   opts: { yes?: boolean } = {},
   {
@@ -387,54 +618,121 @@ export async function installAction(
     paths = resolveAgentPaths(),
     execFn,
     confirmFn = defaultConfirm,
+    freqPromptFn = defaultFreqPrompt,
+    rolePromptFn = defaultRolePrompt,
+    promptFn  = defaultInstallPrompts,
     dbPath = ':memory:',
     skipClipboardCheck = false,
+    platformForKeychain = process.platform,
   }: {
-    isWin?: boolean;
-    paths?: AgentPaths;
-    execFn?: ExecFn;
-    confirmFn?: ConfirmFn;
-    dbPath?: string;
-    skipClipboardCheck?: boolean;
+    isWin?:               boolean;
+    paths?:               AgentPaths;
+    execFn?:              ExecFn;
+    confirmFn?:           ConfirmFn;
+    freqPromptFn?:        FreqPromptFn;
+    rolePromptFn?:        RolePromptFn;
+    promptFn?:            InstallPrompts;
+    dbPath?:              string;
+    skipClipboardCheck?:  boolean;
+    platformForKeychain?: NodeJS.Platform;
   } = {},
-): Promise<void> {
-  // ── First-run disclosure ───────────────────────────────────────────────────
-  const disclosureStore = await openStore(dbPath);
+): Promise<InstallSummary | null> {
+  intro('Installing nexpath');
+
+  const store = await openStore(dbPath);
+
+  let apiKeySource:  InstallSummary['apiKey']['source'] = 'skipped';
+  let telemetryEnabled = true;
+
   try {
-    if (!isConfigSet(disclosureStore.db, 'first_run_shown')) {
-      console.log('');
-      console.log('Before installing nexpath, a few things to know:');
-      console.log('  1. An OpenAI API key is required (OPENAI_API_KEY) for advisory generation');
-      console.log(`  2. Prompts are stored locally at ${DEFAULT_DB_PATH} — nothing leaves your machine`);
-      console.log(`  3. To opt out at any time: press ${process.platform === 'darwin' ? 'Cmd' : 'Ctrl'}+X during an advisory, or run nexpath uninstall`);
-      console.log('');
-      setConfig(disclosureStore, 'first_run_shown', 'true');
+    // ── Step 1: API key ───────────────────────────────────────────────────────
+    if (!opts.yes) {
+      const envKey       = process.env.OPENAI_API_KEY ?? '';
+      const hasEnvKey    = envKey !== '' && isValidApiKey(envKey);
+      const storedSource = await getKeySource(process.cwd());
+      const hasStoredKey = !hasEnvKey && (storedSource === 'keychain' || storedSource === 'file');
+      const keychainName = getKeychainName(platformForKeychain);
+
+      const result = await promptFn.apiKeyPrompt({ hasEnvKey, hasStoredKey, keychainName });
+
+      if (result.kind === 'cancel') {
+        clackCancel('Setup aborted — no changes made');
+        closeStore(store);
+        return null;
+      }
+      if (result.kind === 'new_key') {
+        const stored = await storeApiKey(result.value);
+        apiKeySource = stored.source;
+        console.log(`✓ Stored in ${stored.source === 'keychain' ? keychainName : 'fallback file (~/.nexpath/config.json)'}`);
+      } else if (result.kind === 'use_env') {
+        const stored = await storeApiKey(envKey);
+        apiKeySource = stored.source;
+        console.log(`✓ Stored in ${stored.source === 'keychain' ? keychainName : 'fallback file (~/.nexpath/config.json)'}`);
+      } else if (result.kind === 'keep_existing') {
+        apiKeySource = 'kept';
+      } else {
+        apiKeySource = 'skipped';
+      }
+    } else {
+      apiKeySource = 'skipped';
     }
+
+    // ── Step 2: Telemetry ─────────────────────────────────────────────────────
+    if (!opts.yes) {
+      const consent = await promptFn.telemetryConsent();
+      if (consent.kind === 'cancel') {
+        clackCancel('Setup aborted — no changes made');
+        closeStore(store);
+        return null;
+      }
+      telemetryEnabled = consent.kind === 'enable';
+    }
+    setConfig(store, 'telemetry.enabled',      String(telemetryEnabled));
+    setConfig(store, 'telemetry_sync_enabled', String(telemetryEnabled));
   } finally {
-    closeStore(disclosureStore);
+    if (store.dbPath !== ':memory:' || telemetryEnabled !== true) {
+      // close happens at end of step 3 path; nothing to do here
+    }
   }
 
-  const agents = detectAgents(paths);
+  // ── Step 3: Agent detection + registration ────────────────────────────────
+  const agents      = detectAgents(paths);
+  const detectedIds = new Set(agents.map((a) => a.id));
+  const missing     = SUPPORTED_AGENTS.filter((sa) => !detectedIds.has(sa.id));
+
+  if (agents.length > 0) {
+    console.log(`Detected: ${agents.map((a) => a.label).join(', ')}`);
+  }
+  if (missing.length > 0) {
+    console.log(`Not found: ${missing.map((sa) => sa.label).join(', ')}`);
+    console.log('nexpath currently supports Claude Code only — support for Cursor, Windsurf, and other agents is coming in future updates.');
+  }
 
   if (agents.length === 0) {
-    console.log('No supported agents detected. Run nexpath install --help for details.');
-    return;
+    closeStore(store);
+    return {
+      apiKey:    { source: apiKeySource },
+      telemetry: { enabled: telemetryEnabled },
+      agents:    { registered: [], failed: [] },
+      extras:    { clipboardInstalled: false, clipboardTool: null },
+    };
   }
-
-  const detectedNames = agents.map((a) => a.label).join(', ');
-  console.log(`Detected: ${detectedNames}`);
 
   if (!opts.yes) {
     const ok = await confirmFn();
     if (!ok) {
       console.log('Cancelled.');
-      return;
+      closeStore(store);
+      return null;
     }
   }
 
   // NOTE: Enable REGISTER_MCP_SERVER when MCP tools are added to src/server/tools.ts.
   // Currently TOOLS is empty — no reason to spin up the MCP server process yet.
   const REGISTER_MCP_SERVER = false;
+
+  const registered: string[] = [];
+  const failed:     string[] = [];
 
   for (const agent of agents) {
     try {
@@ -453,8 +751,10 @@ export async function installAction(
         try {
           writeHookEntry(paths.claudeSettings, homedir(), isWin ? 'win32' : process.platform);
           console.log(`\u2713 ${'Claude Code'.padEnd(12)} \u2014 advisory hook written to ${paths.claudeSettings}`);
+          registered.push('Claude Code');
         } catch (err) {
           console.log(`\u26a0 ${'Claude Code'.padEnd(12)} \u2014 hook write failed: ${(err as Error).message}`);
+          failed.push('Claude Code');
         }
       } else if (REGISTER_MCP_SERVER) {
         if (agent.type === 'cline') {
@@ -470,20 +770,78 @@ export async function installAction(
           writeMcpEntry(agent.configPath, buildStandardEntry(isWin));
           console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
         }
+        registered.push(agent.label);
       }
     } catch (err) {
       console.log(`\u2717 ${agent.label.padEnd(12)} \u2014 failed: ${(err as Error).message}`);
+      failed.push(agent.label);
+    }
+  }
+
+  // ── Frequency + role prompts ───────────────────────────────────────────────
+  // Reuse the already-open `store` — opening a second store on the same dbPath
+  // would deadlock on the exclusive file lock and clobber these writes when the
+  // first store is closed afterwards.
+  const currentFreq = readInstallFreq(store.db);
+  if (opts.yes) {
+    if (!isConfigSet(store.db, 'advisory_frequency')) {
+      setAdvisoryFrequency(store, 'advisory_frequency', currentFreq);
+    }
+  } else {
+    const picked = await freqPromptFn(currentFreq);
+    if (!isCancel(picked) && typeof picked === 'string') {
+      setAdvisoryFrequency(store, 'advisory_frequency', picked);
+      console.log(`✓ advisory_frequency = ${picked}`);
+    }
+  }
+
+  const currentRole = readInstallRole(store.db);
+  if (opts.yes) {
+    if (!isConfigSet(store.db, 'role')) {
+      setRole(store, 'role', currentRole);
+    }
+  } else {
+    const picked = await rolePromptFn(currentRole);
+    if (!isCancel(picked) && typeof picked === 'string') {
+      setRole(store, 'role', picked);
+      console.log(`✓ role = ${picked}`);
     }
   }
 
   console.log('');
   console.log('Restart your agents to activate nexpath-prompt-store.');
-  console.log('Note: advisory pipeline (nexpath auto) auto-wired for Claude Code only.');
-  console.log('Run: nexpath status  to verify connections.');
 
+  closeStore(store);
+
+  let clipboardResult: ClipboardEnsureResult = { installed: false, toolName: null, alreadyHad: false };
   if (!skipClipboardCheck) {
-    await ensureLinuxClipboard({ autoConfirm: opts.yes });
+    clipboardResult = await ensureLinuxClipboard({ autoConfirm: opts.yes });
   }
+
+  // ── Final summary (note + outro) ─────────────────────────────────────────
+  const summary: InstallSummary = {
+    apiKey:    { source: apiKeySource },
+    telemetry: { enabled: telemetryEnabled },
+    agents:    { registered, failed },
+    extras:    {
+      clipboardInstalled: clipboardResult.installed,
+      clipboardTool:      clipboardResult.toolName,
+    },
+  };
+  const extrasLine = clipboardResult.installed
+    ? `Extras:     ${clipboardResult.toolName} installed for clipboard`
+    : null;
+  const summaryLines = [
+    `API key:    ${apiKeySource}`,
+    `Telemetry:  ${telemetryEnabled ? 'enabled' : 'disabled'}`,
+    `Agents:     ${registered.length > 0 ? registered.join(', ') : 'none'}`,
+    failed.length > 0 ? `Failed:     ${failed.join(', ')}` : null,
+    extrasLine,
+  ].filter((l): l is string => l !== null).join('\n');
+  note(summaryLines, 'Setup Complete');
+  outro('Done!');
+
+  return summary;
 }
 
 // ── Linux clipboard tool auto-install ─────────────────────────────────────────
@@ -509,6 +867,12 @@ const PKG_MANAGERS: PkgManager[] = [
  * Clipboard is optional — if install is skipped or fails, decision sessions
  * still work but "Copy to clipboard" silently does nothing.
  */
+export interface ClipboardEnsureResult {
+  installed:    boolean;
+  toolName:     string | null;
+  alreadyHad:   boolean;
+}
+
 export async function ensureLinuxClipboard(
   deps: {
     platform?: string;
@@ -518,15 +882,17 @@ export async function ensureLinuxClipboard(
     autoConfirm?: boolean;
     waylandDisplay?: string;
   } = {},
-): Promise<void> {
+): Promise<ClipboardEnsureResult> {
   const plat  = deps.platform ?? process.platform;
   const spawn = deps.spawnFn  ?? spawnSync;
   const exec  = deps.execFn   ?? execSync;
 
-  if (plat !== 'linux') return;
+  if (plat !== 'linux') return { installed: false, toolName: null, alreadyHad: false };
 
   for (const cmd of ['xclip', 'wl-copy', 'xsel']) {
-    if (spawn('which', [cmd], { stdio: 'pipe' }).status === 0) return;
+    if (spawn('which', [cmd], { stdio: 'pipe' }).status === 0) {
+      return { installed: false, toolName: cmd, alreadyHad: true };
+    }
   }
 
   // Wayland prefers wl-clipboard (provides wl-copy); X11 prefers xclip
@@ -543,7 +909,7 @@ export async function ensureLinuxClipboard(
   const pm = pkgManagers.find((p) => spawn('which', [p.cmd], { stdio: 'pipe' }).status === 0);
   if (!pm) {
     console.log(`\u26a0 No clipboard tool (xclip/wl-copy/xsel) found. Install one manually for clipboard support.`);
-    return;
+    return { installed: false, toolName: null, alreadyHad: false };
   }
 
   console.log('');
@@ -557,7 +923,7 @@ export async function ensureLinuxClipboard(
     const ok = await confirmFn();
     if (!ok) {
       console.log('\u26a0 Skipped \u2014 "Copy to clipboard" in decision sessions will not work.');
-      return;
+      return { installed: false, toolName: null, alreadyHad: false };
     }
   }
 
@@ -566,26 +932,49 @@ export async function ensureLinuxClipboard(
     // Verify installation succeeded
     if (spawn('which', [toolName], { stdio: 'pipe' }).status === 0) {
       console.log(`\u2713 ${pkgName} installed successfully`);
-    } else {
-      console.log(`\u26a0 ${pkgName} install command ran but ${toolName} not found \u2014 check output above`);
+      return { installed: true, toolName, alreadyHad: false };
     }
+    console.log(`\u26a0 ${pkgName} install command ran but ${toolName} not found \u2014 check output above`);
+    return { installed: false, toolName: null, alreadyHad: false };
   } catch {
     console.log(`\u26a0 ${pkgName} installation failed \u2014 install manually: sudo ${pm.cmd} install ${pkgName}`);
+    return { installed: false, toolName: null, alreadyHad: false };
   }
 }
 
 // ── uninstallAction ────────────────────────────────────────────────────────────
 
+export type UninstallApiKeyConfirmFn = () => Promise<boolean>;
+
+const defaultUninstallApiKeyConfirm: UninstallApiKeyConfirmFn = async () => {
+  const answer = await confirm({
+    message:      'Remove stored API key?',
+    initialValue: true,
+  });
+  return !isCancel(answer) && answer === true;
+};
+
 export async function uninstallAction(
   {
     paths = resolveAgentPaths(),
     execFn,
+    apiKeyConfirmFn = defaultUninstallApiKeyConfirm,
+    yes = false,
+    projectRoot = process.cwd(),
+    dbPath,
   }: {
-    paths?: AgentPaths;
-    execFn?: ExecFn;
+    paths?:           AgentPaths;
+    execFn?:          ExecFn;
+    apiKeyConfirmFn?: UninstallApiKeyConfirmFn;
+    yes?:             boolean;
+    projectRoot?:     string;
+    dbPath?:          string;
   } = {},
 ): Promise<void> {
-  const agents = detectAgents(paths);
+  // Uninstall must clean up registration entries from agents that may have
+  // been written by an older nexpath version, so it bypasses the support
+  // filter and walks every agent present on disk.
+  const agents = detectAgentsForCleanup(paths);
 
   for (const agent of agents) {
     try {
@@ -622,6 +1011,36 @@ export async function uninstallAction(
 
   console.log('');
   console.log('MCP registration removed from all agents.');
+
+  // ── API key cleanup ──────────────────────────────────────────────────────
+  const currentSource = await getKeySource(projectRoot);
+  if (currentSource === 'none') {
+    console.log('No stored API key found, nothing to remove.');
+  } else {
+    const shouldRemove = yes || await apiKeyConfirmFn();
+    if (shouldRemove) {
+      await removeApiKey();
+      console.log(`✓ API key removed (was in ${currentSource}).`);
+    } else {
+      console.log('- API key retained; remove later with `nexpath config remove-api-key`.');
+    }
+  }
+
+  // ── Telemetry config cleanup ─────────────────────────────────────────────
+  try {
+    const store = await openStore(dbPath ?? DEFAULT_DB_PATH);
+    try {
+      setConfig(store, 'telemetry.enabled',      'false');
+      setConfig(store, 'telemetry_sync_enabled', 'false');
+      console.log('✓ Telemetry disabled in local config.');
+    } finally {
+      closeStore(store);
+    }
+  } catch {
+    // Best-effort — never crash uninstall over a config write failure.
+  }
+
+  console.log('');
   console.log('Prompt history retained at ~/.nexpath/prompt-store.db');
   console.log('To delete it: nexpath store delete');
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { matchKeywords } from './KeywordMatcher.js';
 import { classifyWithTFIDF, resetTFIDFModel } from './TFIDFClassifier.js';
 import { createEmbeddingClassifier } from './EmbeddingClassifier.js';
@@ -9,6 +9,7 @@ import { detectSignals, initialSignalCounters, SIGNAL_DEFINITIONS, SIGNAL_MAP } 
 import { openStore, closeStore } from '../store/index.js';
 import { upsertProject, setDetectedLanguage } from '../store/projects.js';
 import type { SessionState, ClassificationResult } from './types.js';
+import type { StreamBPresenceResult } from './StreamBPresenceClassifier.js';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -18,21 +19,22 @@ function makeResult(stage: import('./types.js').Stage, confidence: number): Clas
 
 function makeState(overrides: Partial<SessionState> = {}): SessionState {
   return {
-    sessionId:              'test-session',
-    projectRoot:            '/test/project',
-    startedAt:              1000,
-    lastPromptAt:           1000,
-    currentStage:           'implementation',
-    stageConfidence:        0.80,
-    stageConfirmedAt:       0,
-    promptsInCurrentStage:  20,
-    promptCount:            20,
-    promptHistory:          [],
-    signalCounters:         initialSignalCounters(),
-    absenceFlags:           [],
-    firedDecisionSessions:  [],
-    profile:                null,
-    detectedLanguage:       undefined,
+    sessionId:                    'test-session',
+    projectRoot:                  '/test/project',
+    startedAt:                    1000,
+    lastPromptAt:                 1000,
+    currentStage:                 'implementation',
+    stageConfidence:              0.80,
+    stageConfirmedAt:             0,
+    promptsInCurrentStage:        20,
+    promptCount:                  20,
+    promptHistory:                [],
+    signalCounters:               initialSignalCounters(),
+    absenceFlags:                 [],
+    firedDecisionSessions:        [],
+    profile:                      null,
+    detectedLanguage:             undefined,
+    consecutiveAcceptanceStreak:  0,
     ...overrides,
   };
 }
@@ -574,9 +576,9 @@ describe('detectSignals', () => {
     expect(counters['behaviour_testing'].lastSeenAt).toBeNull();
   });
 
-  it('initialSignalCounters covers exactly 31 signals', () => {
+  it('initialSignalCounters covers exactly 129 signals', () => {
     const counters = initialSignalCounters();
-    expect(Object.keys(counters)).toHaveLength(31);
+    expect(Object.keys(counters)).toHaveLength(129);
   });
 
   // ── vibeKeywords — 0.5-weight detection ──────────────────────────────────────
@@ -972,6 +974,1471 @@ describe('detectSignals', () => {
   it('no_agent_pushback: full keyword still detects after vibeKeyword expansion', () => {
     expect(detectSignals("i don't agree with this approach at all")).toContain('no_agent_pushback');
   });
+
+  // ── Sub-7: new advisory signals ───────────────────────────────────────────
+
+  // scope_creep
+  it("detects 'scope creep' → scope_creep", () => {
+    expect(detectSignals('we need to watch out for scope creep here')).toContain('scope_creep');
+  });
+
+  it("detects 'let\\'s focus on' → scope_creep", () => {
+    expect(detectSignals("let's focus on the login feature before adding anything new")).toContain('scope_creep');
+  });
+
+  it('scope_creep: 2 vibe keywords detect signal', () => {
+    expect(detectSignals("one thing at a time — don't get sidetracked by extra features")).toContain('scope_creep');
+  });
+
+  it('scope_creep: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('one thing at a time for now')).not.toContain('scope_creep');
+  });
+
+  it('scope_creep has absenceThreshold of 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'scope_creep');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it("scope_creep expectedStages includes 'implementation' and 'review_testing'", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'scope_creep');
+    expect(sig?.expectedStages).toContain('implementation');
+    expect(sig?.expectedStages).toContain('review_testing');
+  });
+
+  it('SIGNAL_MAP contains scope_creep', () => {
+    expect(SIGNAL_MAP.has('scope_creep')).toBe(true);
+  });
+
+  it('initialSignalCounters contains scope_creep and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('scope_creep' in counters).toBe(true);
+    expect(counters['scope_creep'].present).toBe(false);
+    expect(counters['scope_creep'].lastSeenAt).toBeNull();
+  });
+
+  // context_loss
+  it("detects 'to recap' → context_loss", () => {
+    expect(detectSignals('to recap what we have done so far in this session')).toContain('context_loss');
+  });
+
+  it("detects 'here\\'s where we are' → context_loss", () => {
+    expect(detectSignals("here's where we are before continuing the implementation")).toContain('context_loss');
+  });
+
+  it('context_loss: 2 vibe keywords detect signal', () => {
+    expect(detectSignals("just to recap — here's where we're at with this project")).toContain('context_loss');
+  });
+
+  it('context_loss: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('let me catch you up on the project status')).not.toContain('context_loss');
+  });
+
+  it('context_loss has absenceThreshold of 30', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'context_loss');
+    expect(sig?.absenceThreshold).toBe(30);
+  });
+
+  it("context_loss expectedStages includes 'implementation', 'review_testing', and 'architecture'", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'context_loss');
+    expect(sig?.expectedStages).toContain('implementation');
+    expect(sig?.expectedStages).toContain('review_testing');
+    expect(sig?.expectedStages).toContain('architecture');
+  });
+
+  it('SIGNAL_MAP contains context_loss', () => {
+    expect(SIGNAL_MAP.has('context_loss')).toBe(true);
+  });
+
+  it('initialSignalCounters contains context_loss and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('context_loss' in counters).toBe(true);
+    expect(counters['context_loss'].present).toBe(false);
+    expect(counters['context_loss'].lastSeenAt).toBeNull();
+  });
+
+  // api_design_review
+  it("detects 'api contract' → api_design_review", () => {
+    expect(detectSignals('we need to define the api contract before adding more endpoints')).toContain('api_design_review');
+  });
+
+  it("detects 'backwards compatible' → api_design_review", () => {
+    expect(detectSignals('is this change backwards compatible with v1 clients')).toContain('api_design_review');
+  });
+
+  it('api_design_review: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what if the api changes — will this break anything using the api')).toContain('api_design_review');
+  });
+
+  it('api_design_review: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what if the api changes for mobile clients')).not.toContain('api_design_review');
+  });
+
+  it('api_design_review has absenceThreshold of 20', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'api_design_review');
+    expect(sig?.absenceThreshold).toBe(20);
+  });
+
+  it("api_design_review expectedStages is ['implementation']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'api_design_review');
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains api_design_review', () => {
+    expect(SIGNAL_MAP.has('api_design_review')).toBe(true);
+  });
+
+  it('initialSignalCounters contains api_design_review and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('api_design_review' in counters).toBe(true);
+    expect(counters['api_design_review'].present).toBe(false);
+    expect(counters['api_design_review'].lastSeenAt).toBeNull();
+  });
+
+  it('api_design_review relevantProjectTypes is exactly [api, web-app, library]', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'api_design_review');
+    expect(sig?.relevantProjectTypes).toEqual(expect.arrayContaining(['api', 'web-app', 'library']));
+    expect(sig?.relevantProjectTypes).toHaveLength(3);
+  });
+
+  // accessibility
+  it("detects 'wcag' → accessibility", () => {
+    expect(detectSignals('does this component meet wcag AA standards')).toContain('accessibility');
+  });
+
+  it("detects 'keyboard navigation' → accessibility", () => {
+    expect(detectSignals('we need keyboard navigation support for this modal')).toContain('accessibility');
+  });
+
+  it('accessibility: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('can someone use this without a mouse — is this keyboard accessible')).toContain('accessibility');
+  });
+
+  it('accessibility: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('can someone use this without a mouse')).not.toContain('accessibility');
+  });
+
+  it('accessibility has absenceThreshold of 20', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'accessibility');
+    expect(sig?.absenceThreshold).toBe(20);
+  });
+
+  it("accessibility expectedStages includes 'implementation' and 'review_testing'", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'accessibility');
+    expect(sig?.expectedStages).toContain('implementation');
+    expect(sig?.expectedStages).toContain('review_testing');
+  });
+
+  it('SIGNAL_MAP contains accessibility', () => {
+    expect(SIGNAL_MAP.has('accessibility')).toBe(true);
+  });
+
+  it('initialSignalCounters contains accessibility and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('accessibility' in counters).toBe(true);
+    expect(counters['accessibility'].present).toBe(false);
+    expect(counters['accessibility'].lastSeenAt).toBeNull();
+  });
+
+  it('accessibility relevantProjectTypes is exactly [web-app, mobile, desktop]', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'accessibility');
+    expect(sig?.relevantProjectTypes).toEqual(expect.arrayContaining(['web-app', 'mobile', 'desktop']));
+    expect(sig?.relevantProjectTypes).toHaveLength(3);
+  });
+
+  // environment_and_secrets
+  it("detects 'dotenv' → environment_and_secrets", () => {
+    expect(detectSignals('we should use dotenv to load the config values')).toContain('environment_and_secrets');
+  });
+
+  it("detects 'secrets management' → environment_and_secrets", () => {
+    expect(detectSignals('we need a proper secrets management solution for production')).toContain('environment_and_secrets');
+  });
+
+  it('environment_and_secrets: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('where do the api keys go — should the key be in the code')).toContain('environment_and_secrets');
+  });
+
+  it('environment_and_secrets: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('where do the api keys go in this repo')).not.toContain('environment_and_secrets');
+  });
+
+  it('environment_and_secrets has absenceThreshold of 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'environment_and_secrets');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it("environment_and_secrets expectedStages is ['implementation']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'environment_and_secrets');
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains environment_and_secrets', () => {
+    expect(SIGNAL_MAP.has('environment_and_secrets')).toBe(true);
+  });
+
+  it('initialSignalCounters contains environment_and_secrets and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('environment_and_secrets' in counters).toBe(true);
+    expect(counters['environment_and_secrets'].present).toBe(false);
+    expect(counters['environment_and_secrets'].lastSeenAt).toBeNull();
+  });
+
+  it("'environment variables' does NOT fire environment_and_secrets (that's deployment_planning)", () => {
+    expect(detectSignals('set the environment variables in the deployment config')).not.toContain('environment_and_secrets');
+  });
+
+  // data_validation
+  it("detects 'zod' → data_validation", () => {
+    expect(detectSignals('we should use zod to validate the request body')).toContain('data_validation');
+  });
+
+  it("detects 'schema validation' → data_validation", () => {
+    expect(detectSignals('we need schema validation before saving to the database')).toContain('data_validation');
+  });
+
+  it('data_validation: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what if someone sends bad data — what if the input is wrong')).toContain('data_validation');
+  });
+
+  it('data_validation: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what if someone sends bad data to the server')).not.toContain('data_validation');
+  });
+
+  it('data_validation has absenceThreshold of 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'data_validation');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it("data_validation expectedStages is ['implementation']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'data_validation');
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains data_validation', () => {
+    expect(SIGNAL_MAP.has('data_validation')).toBe(true);
+  });
+
+  it('initialSignalCounters contains data_validation and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('data_validation' in counters).toBe(true);
+    expect(counters['data_validation'].present).toBe(false);
+    expect(counters['data_validation'].lastSeenAt).toBeNull();
+  });
+
+  it("'validate input' does NOT fire data_validation (that's security_check)", () => {
+    expect(detectSignals('make sure to validate input from the user')).not.toContain('data_validation');
+  });
+
+  // ci_pipeline
+  it("detects 'github actions' → ci_pipeline", () => {
+    expect(detectSignals('we should set up github actions to run tests on each push')).toContain('ci_pipeline');
+  });
+
+  it("detects 'ci/cd' → ci_pipeline", () => {
+    expect(detectSignals('the ci/cd pipeline needs to be configured before release')).toContain('ci_pipeline');
+  });
+
+  it('ci_pipeline: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('does this run automatically — can we automate the build')).toContain('ci_pipeline');
+  });
+
+  it('ci_pipeline: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('does this run automatically on every push')).not.toContain('ci_pipeline');
+  });
+
+  it('ci_pipeline has absenceThreshold of 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'ci_pipeline');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it("ci_pipeline expectedStages includes 'review_testing' and 'release'", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'ci_pipeline');
+    expect(sig?.expectedStages).toContain('review_testing');
+    expect(sig?.expectedStages).toContain('release');
+  });
+
+  it('SIGNAL_MAP contains ci_pipeline', () => {
+    expect(SIGNAL_MAP.has('ci_pipeline')).toBe(true);
+  });
+
+  it('initialSignalCounters contains ci_pipeline and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('ci_pipeline' in counters).toBe(true);
+    expect(counters['ci_pipeline'].present).toBe(false);
+    expect(counters['ci_pipeline'].lastSeenAt).toBeNull();
+  });
+
+  // rate_limiting
+  it("detects 'throttle requests' → rate_limiting", () => {
+    expect(detectSignals('we need to throttle requests to avoid overloading the server')).toContain('rate_limiting');
+  });
+
+  it("detects '429 handling' → rate_limiting", () => {
+    expect(detectSignals('the client needs proper 429 handling with exponential backoff')).toContain('rate_limiting');
+  });
+
+  it('rate_limiting: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what if someone calls this too many times — limiting how often this can be called')).toContain('rate_limiting');
+  });
+
+  it('rate_limiting: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what if someone calls this too many times by accident')).not.toContain('rate_limiting');
+  });
+
+  it('rate_limiting has absenceThreshold of 20', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'rate_limiting');
+    expect(sig?.absenceThreshold).toBe(20);
+  });
+
+  it("rate_limiting expectedStages is ['implementation']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'rate_limiting');
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains rate_limiting', () => {
+    expect(SIGNAL_MAP.has('rate_limiting')).toBe(true);
+  });
+
+  it('initialSignalCounters contains rate_limiting and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('rate_limiting' in counters).toBe(true);
+    expect(counters['rate_limiting'].present).toBe(false);
+    expect(counters['rate_limiting'].lastSeenAt).toBeNull();
+  });
+
+  it('rate_limiting relevantProjectTypes is exactly [api, web-app]', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'rate_limiting');
+    expect(sig?.relevantProjectTypes).toEqual(expect.arrayContaining(['api', 'web-app']));
+    expect(sig?.relevantProjectTypes).toHaveLength(2);
+  });
+
+  it("'rate limit' does NOT fire rate_limiting (that's security_check)", () => {
+    expect(detectSignals('we should add rate limit to this endpoint')).not.toContain('rate_limiting');
+  });
+
+  // ── feature_scope_before_build (R01) ──────────────────────────────────────────
+
+  it('detects "define the scope" → feature_scope_before_build', () => {
+    expect(detectSignals('let me define the scope of this feature before we start')).toContain('feature_scope_before_build');
+  });
+
+  it('detects "acceptance criteria for this" → feature_scope_before_build', () => {
+    expect(detectSignals('what are the acceptance criteria for this feature')).toContain('feature_scope_before_build');
+  });
+
+  it('detects "let me spec this feature" → feature_scope_before_build', () => {
+    expect(detectSignals('let me spec this feature before we code anything')).toContain('feature_scope_before_build');
+  });
+
+  it('feature_scope_before_build has absenceThreshold of 3', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'feature_scope_before_build');
+    expect(sig?.absenceThreshold).toBe(3);
+  });
+
+  it("feature_scope_before_build expectedStages is ['implementation']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'feature_scope_before_build');
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains feature_scope_before_build', () => {
+    expect(SIGNAL_MAP.has('feature_scope_before_build')).toBe(true);
+  });
+
+  it('initialSignalCounters contains feature_scope_before_build and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('feature_scope_before_build' in counters).toBe(true);
+    expect(counters['feature_scope_before_build'].present).toBe(false);
+    expect(counters['feature_scope_before_build'].lastSeenAt).toBeNull();
+  });
+
+  // ── implementation_checkpoint (R02) ───────────────────────────────────────────
+
+  it('detects "smoke test this" → implementation_checkpoint', () => {
+    expect(detectSignals('let me smoke test this before continuing')).toContain('implementation_checkpoint');
+  });
+
+  it('detects "verify this works before continuing" → implementation_checkpoint', () => {
+    expect(detectSignals('verify this works before continuing with the next step')).toContain('implementation_checkpoint');
+  });
+
+  it('detects "quick check before moving on" → implementation_checkpoint', () => {
+    expect(detectSignals('quick check before moving on to the next feature')).toContain('implementation_checkpoint');
+  });
+
+  it('implementation_checkpoint has absenceThreshold of 4', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'implementation_checkpoint');
+    expect(sig?.absenceThreshold).toBe(4);
+  });
+
+  it("implementation_checkpoint expectedStages is ['implementation']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'implementation_checkpoint');
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains implementation_checkpoint', () => {
+    expect(SIGNAL_MAP.has('implementation_checkpoint')).toBe(true);
+  });
+
+  it('initialSignalCounters contains implementation_checkpoint and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('implementation_checkpoint' in counters).toBe(true);
+    expect(counters['implementation_checkpoint'].present).toBe(false);
+    expect(counters['implementation_checkpoint'].lastSeenAt).toBeNull();
+  });
+
+  // ── spec_before_code (R03) ────────────────────────────────────────────────────
+
+  it('detects "spec this out first" → spec_before_code', () => {
+    expect(detectSignals('let me spec this out first before writing any code')).toContain('spec_before_code');
+  });
+
+  it('detects "write the behavior first" → spec_before_code', () => {
+    expect(detectSignals('write the behavior first then we will implement it')).toContain('spec_before_code');
+  });
+
+  it('detects "behavior spec for this" → spec_before_code', () => {
+    expect(detectSignals('I need a behavior spec for this before we build it')).toContain('spec_before_code');
+  });
+
+  it('spec_before_code has absenceThreshold of 3', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'spec_before_code');
+    expect(sig?.absenceThreshold).toBe(3);
+  });
+
+  it("spec_before_code expectedStages is ['implementation']", () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'spec_before_code');
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains spec_before_code', () => {
+    expect(SIGNAL_MAP.has('spec_before_code')).toBe(true);
+  });
+
+  it('initialSignalCounters contains spec_before_code and starts absent', () => {
+    const counters = initialSignalCounters();
+    expect('spec_before_code' in counters).toBe(true);
+    expect(counters['spec_before_code'].present).toBe(false);
+    expect(counters['spec_before_code'].lastSeenAt).toBeNull();
+  });
+
+  // ── Phase 5 D1 — incremental_build ───────────────────────────────────────────
+
+  it('detects "incremental build" → incremental_build', () => {
+    expect(detectSignals('incremental build is the right approach here')).toContain('incremental_build');
+  });
+
+  it('detects "build and verify step by step" → incremental_build', () => {
+    expect(detectSignals('build and verify step by step before adding more')).toContain('incremental_build');
+  });
+
+  it('incremental_build has no nature field (universal)', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'incremental_build');
+    expect(sig?.nature).toBeUndefined();
+  });
+
+  it('incremental_build has absenceThreshold 5, expectedStages [implementation]', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'incremental_build');
+    expect(sig?.absenceThreshold).toBe(5);
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains incremental_build', () => {
+    expect(SIGNAL_MAP.has('incremental_build')).toBe(true);
+  });
+
+  it('detects "root cause of this error" → error_understanding', () => {
+    expect(detectSignals('let me find the root cause of this error before fixing it')).toContain('error_understanding');
+  });
+
+  it('error_understanding has nature "beginner", absenceThreshold 6', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'error_understanding');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(6);
+    expect(sig?.expectedStages).toEqual(['implementation']);
+  });
+
+  it('SIGNAL_MAP contains error_understanding', () => {
+    expect(SIGNAL_MAP.has('error_understanding')).toBe(true);
+  });
+
+  it('detects "i checked the docs and" → documentation_before_ask', () => {
+    expect(detectSignals('i checked the docs and it says to use this pattern')).toContain('documentation_before_ask');
+  });
+
+  it('documentation_before_ask has nature "beginner", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'documentation_before_ask');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains documentation_before_ask', () => {
+    expect(SIGNAL_MAP.has('documentation_before_ask')).toBe(true);
+  });
+
+  it('detects "i ran this and it works" → output_verification', () => {
+    expect(detectSignals('i ran this and it works the way we expected')).toContain('output_verification');
+  });
+
+  it('output_verification has nature "beginner", absenceThreshold 5', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'output_verification');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(5);
+  });
+
+  it('SIGNAL_MAP contains output_verification', () => {
+    expect(SIGNAL_MAP.has('output_verification')).toBe(true);
+  });
+
+  // ── Phase 5 D2 — beginner cluster 2 ──────────────────────────────────────────
+
+  it('detects "the requirement is" → requirement_clarity_before_ask', () => {
+    expect(detectSignals('the requirement is that it saves on every keystroke')).toContain('requirement_clarity_before_ask');
+  });
+
+  it('requirement_clarity_before_ask has nature "beginner", absenceThreshold 4', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'requirement_clarity_before_ask');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(4);
+  });
+
+  it('SIGNAL_MAP contains requirement_clarity_before_ask', () => {
+    expect(SIGNAL_MAP.has('requirement_clarity_before_ask')).toBe(true);
+  });
+
+  it('detects "i understand what this code does" → copy_paste_awareness', () => {
+    expect(detectSignals('i understand what this code does — the hook runs on mount and clears on unmount')).toContain('copy_paste_awareness');
+  });
+
+  it('copy_paste_awareness has nature "beginner", absenceThreshold 7', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'copy_paste_awareness');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(7);
+  });
+
+  it('SIGNAL_MAP contains copy_paste_awareness', () => {
+    expect(SIGNAL_MAP.has('copy_paste_awareness')).toBe(true);
+  });
+
+  it('detects "expected vs actual" → debugging_observation_gap', () => {
+    expect(detectSignals('the expected vs actual here is confusing me')).toContain('debugging_observation_gap');
+  });
+
+  it('debugging_observation_gap has nature "beginner", absenceThreshold 5', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'debugging_observation_gap');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(5);
+  });
+
+  it('SIGNAL_MAP contains debugging_observation_gap', () => {
+    expect(SIGNAL_MAP.has('debugging_observation_gap')).toBe(true);
+  });
+
+  it('detects "so to summarize what i learned" → learning_consolidation', () => {
+    expect(detectSignals('so to summarize what i learned, the useEffect runs after render')).toContain('learning_consolidation');
+  });
+
+  it('learning_consolidation has nature "beginner", absenceThreshold 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'learning_consolidation');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it('SIGNAL_MAP contains learning_consolidation', () => {
+    expect(SIGNAL_MAP.has('learning_consolidation')).toBe(true);
+  });
+
+  // ── Phase 5 D3 — beginner cluster 3 ──────────────────────────────────────────
+
+  it('detects "simplest solution here" → simple_solution_first', () => {
+    expect(detectSignals('what is the simplest solution here that would actually work')).toContain('simple_solution_first');
+  });
+
+  it('simple_solution_first has nature "beginner", absenceThreshold 6', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'simple_solution_first');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(6);
+  });
+
+  it('SIGNAL_MAP contains simple_solution_first', () => {
+    expect(SIGNAL_MAP.has('simple_solution_first')).toBe(true);
+  });
+
+  it('detects "one thing at a time" → single_responsibility_prompting', () => {
+    expect(detectSignals('one thing at a time — let us do the form first')).toContain('single_responsibility_prompting');
+  });
+
+  it('single_responsibility_prompting has nature "beginner", absenceThreshold 4', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'single_responsibility_prompting');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(4);
+  });
+
+  it('SIGNAL_MAP contains single_responsibility_prompting', () => {
+    expect(SIGNAL_MAP.has('single_responsibility_prompting')).toBe(true);
+  });
+
+  it('single_responsibility_prompting: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('just this one thing for now, only this for now please')).toContain('single_responsibility_prompting');
+  });
+
+  it('single_responsibility_prompting: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('just this one thing')).not.toContain('single_responsibility_prompting');
+  });
+
+  it('detects "i can revert this if needed" → rollback_awareness', () => {
+    expect(detectSignals('i can revert this if needed since we committed earlier')).toContain('rollback_awareness');
+  });
+
+  it('rollback_awareness has nature "beginner", absenceThreshold 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'rollback_awareness');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it('SIGNAL_MAP contains rollback_awareness', () => {
+    expect(SIGNAL_MAP.has('rollback_awareness')).toBe(true);
+  });
+
+  it('rollback_awareness: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('let me commit first before i change this so i have a checkpoint')).toContain('rollback_awareness');
+  });
+
+  it('rollback_awareness: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('let me commit first')).not.toContain('rollback_awareness');
+  });
+
+  it('detects "walk me through what we built" → build_vs_understand_ratio', () => {
+    expect(detectSignals('walk me through what we built so far before adding more')).toContain('build_vs_understand_ratio');
+  });
+
+  it('build_vs_understand_ratio has nature "beginner", absenceThreshold 12', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'build_vs_understand_ratio');
+    expect(sig?.nature).toBe('beginner');
+    expect(sig?.absenceThreshold).toBe(12);
+  });
+
+  it('SIGNAL_MAP contains build_vs_understand_ratio', () => {
+    expect(SIGNAL_MAP.has('build_vs_understand_ratio')).toBe(true);
+  });
+
+  // ── Phase 5 D4 — cool_geek cluster 1 ─────────────────────────────────────────
+
+  it('detects "this feature is done and tested" → feature_completion_check', () => {
+    expect(detectSignals('this feature is done and tested — ready to move on')).toContain('feature_completion_check');
+  });
+
+  it('feature_completion_check has nature "cool_geek", absenceThreshold 5', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'feature_completion_check');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(5);
+  });
+
+  it('SIGNAL_MAP contains feature_completion_check', () => {
+    expect(SIGNAL_MAP.has('feature_completion_check')).toBe(true);
+  });
+
+  it('feature_completion_check: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('is this feature done? let me finish this first before moving on')).toContain('feature_completion_check');
+  });
+
+  it('feature_completion_check: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('is this feature done')).not.toContain('feature_completion_check');
+  });
+
+  it('detects "end-to-end working" → finishing_line_awareness', () => {
+    expect(detectSignals('end-to-end working now from login to dashboard')).toContain('finishing_line_awareness');
+  });
+
+  it('finishing_line_awareness has nature "cool_geek", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'finishing_line_awareness');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains finishing_line_awareness', () => {
+    expect(SIGNAL_MAP.has('finishing_line_awareness')).toBe(true);
+  });
+
+  it('finishing_line_awareness: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('almost done with this, just need to wrap this up before anything else')).toContain('finishing_line_awareness');
+  });
+
+  it('finishing_line_awareness: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('almost done with this')).not.toContain('finishing_line_awareness');
+  });
+
+  it('detects "core functionality is working first" → polish_vs_function', () => {
+    expect(detectSignals('core functionality is working first before we style anything')).toContain('polish_vs_function');
+  });
+
+  it('polish_vs_function has nature "cool_geek", absenceThreshold 5', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'polish_vs_function');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(5);
+  });
+
+  it('SIGNAL_MAP contains polish_vs_function', () => {
+    expect(SIGNAL_MAP.has('polish_vs_function')).toBe(true);
+  });
+
+  it('polish_vs_function: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('get it working first, make sure the core works before any styling')).toContain('polish_vs_function');
+  });
+
+  it('polish_vs_function: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('get it working first')).not.toContain('polish_vs_function');
+  });
+
+  it('detects "is this mvp scope" → mvp_scope_discipline', () => {
+    expect(detectSignals('is this mvp scope or can we defer it')).toContain('mvp_scope_discipline');
+  });
+
+  it('mvp_scope_discipline has nature "cool_geek", absenceThreshold 5', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'mvp_scope_discipline');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(5);
+  });
+
+  it('SIGNAL_MAP contains mvp_scope_discipline', () => {
+    expect(SIGNAL_MAP.has('mvp_scope_discipline')).toBe(true);
+  });
+
+  it('mvp_scope_discipline: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('do we need this for mvp? is this in scope for the first version?')).toContain('mvp_scope_discipline');
+  });
+
+  it('mvp_scope_discipline: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('do we need this for mvp')).not.toContain('mvp_scope_discipline');
+  });
+
+  // ── Phase 5 D5 — cool_geek cluster 2 ─────────────────────────────────────────
+
+  it('detects "boundaries of this idea" → idea_to_spec_bridge', () => {
+    expect(detectSignals('let me define the boundaries of this idea before we build')).toContain('idea_to_spec_bridge');
+  });
+
+  it('idea_to_spec_bridge has nature "cool_geek", absenceThreshold 4', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'idea_to_spec_bridge');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(4);
+  });
+
+  it('SIGNAL_MAP contains idea_to_spec_bridge', () => {
+    expect(SIGNAL_MAP.has('idea_to_spec_bridge')).toBe(true);
+  });
+
+  it('idea_to_spec_bridge: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('how would this actually work? let me think through this idea before building')).toContain('idea_to_spec_bridge');
+  });
+
+  it('idea_to_spec_bridge: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('how would this actually work')).not.toContain('idea_to_spec_bridge');
+  });
+
+  it('detects "production-ready" → demo_vs_product', () => {
+    expect(detectSignals('this needs to be production-ready before we ship')).toContain('demo_vs_product');
+  });
+
+  it('demo_vs_product has nature "cool_geek", absenceThreshold 6', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'demo_vs_product');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(6);
+  });
+
+  it('SIGNAL_MAP contains demo_vs_product', () => {
+    expect(SIGNAL_MAP.has('demo_vs_product')).toBe(true);
+  });
+
+  it('demo_vs_product: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('this needs to work with real data, remove the hardcoded values before shipping')).toContain('demo_vs_product');
+  });
+
+  it('demo_vs_product: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('this needs to work with real data')).not.toContain('demo_vs_product');
+  });
+
+  it('detects "full user journey for this" → user_journey_check', () => {
+    expect(detectSignals('let me think through the full user journey for this feature')).toContain('user_journey_check');
+  });
+
+  it('user_journey_check has nature "cool_geek", absenceThreshold 6', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'user_journey_check');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(6);
+  });
+
+  it('SIGNAL_MAP contains user_journey_check', () => {
+    expect(SIGNAL_MAP.has('user_journey_check')).toBe(true);
+  });
+
+  it('user_journey_check: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what does the user see when there\'s no data, what happens when there\'s nothing there')).toContain('user_journey_check');
+  });
+
+  it('user_journey_check: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what does the user see when the page loads')).not.toContain('user_journey_check');
+  });
+
+  // ── Phase 5 D6 — cool_geek cluster 3 ─────────────────────────────────────────
+
+  it('detects "this was a spike to learn" → technical_spike_treatment', () => {
+    expect(detectSignals('this was a spike to learn if the approach was feasible')).toContain('technical_spike_treatment');
+  });
+
+  it('technical_spike_treatment has nature "cool_geek", absenceThreshold 7', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'technical_spike_treatment');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(7);
+  });
+
+  it('SIGNAL_MAP contains technical_spike_treatment', () => {
+    expect(SIGNAL_MAP.has('technical_spike_treatment')).toBe(true);
+  });
+
+  it('technical_spike_treatment: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('just exploring here, this is throwaway code to learn the API')).toContain('technical_spike_treatment');
+  });
+
+  it('technical_spike_treatment: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('just exploring here')).not.toContain('technical_spike_treatment');
+  });
+
+  it('detects "evaluated alternatives before adding" → dependency_adventure', () => {
+    expect(detectSignals('evaluated alternatives before adding this library and nothing else fit')).toContain('dependency_adventure');
+  });
+
+  it('dependency_adventure has nature "cool_geek", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'dependency_adventure');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains dependency_adventure', () => {
+    expect(SIGNAL_MAP.has('dependency_adventure')).toBe(true);
+  });
+
+  it('dependency_adventure: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('do we need this library? is this dependency worth it for what we get?')).toContain('dependency_adventure');
+  });
+
+  it('dependency_adventure: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('do we need this library')).not.toContain('dependency_adventure');
+  });
+
+  it('detects "debugging this before starting over" → restart_impulse_check', () => {
+    expect(detectSignals('debugging this before starting over to understand what went wrong')).toContain('restart_impulse_check');
+  });
+
+  it('restart_impulse_check has nature "cool_geek", absenceThreshold 5', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'restart_impulse_check');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(5);
+  });
+
+  it('SIGNAL_MAP contains restart_impulse_check', () => {
+    expect(SIGNAL_MAP.has('restart_impulse_check')).toBe(true);
+  });
+
+  it('restart_impulse_check: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('let me figure out what went wrong, what exactly is broken here before we rewrite')).toContain('restart_impulse_check');
+  });
+
+  it('restart_impulse_check: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('let me figure out what went wrong')).not.toContain('restart_impulse_check');
+  });
+
+  it('detects "this serves the core product" → creative_vs_core_ratio', () => {
+    expect(detectSignals('this serves the core product by letting users do the main thing faster')).toContain('creative_vs_core_ratio');
+  });
+
+  it('creative_vs_core_ratio has nature "cool_geek", absenceThreshold 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'creative_vs_core_ratio');
+    expect(sig?.nature).toBe('cool_geek');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it('SIGNAL_MAP contains creative_vs_core_ratio', () => {
+    expect(SIGNAL_MAP.has('creative_vs_core_ratio')).toBe(true);
+  });
+
+  it('creative_vs_core_ratio: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what actually matters here? focus on the main thing before extras')).toContain('creative_vs_core_ratio');
+  });
+
+  it('creative_vs_core_ratio: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what actually matters here')).not.toContain('creative_vs_core_ratio');
+  });
+
+  // ── Phase 5 D7 — pro_geek_soul cluster 1 ─────────────────────────────────────
+
+  it('detects "docstring for this" → code_documentation_gap', () => {
+    expect(detectSignals('adding a docstring for this function to explain the invariant')).toContain('code_documentation_gap');
+  });
+
+  it('code_documentation_gap has nature "pro_geek_soul", absenceThreshold 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'code_documentation_gap');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it('SIGNAL_MAP contains code_documentation_gap', () => {
+    expect(SIGNAL_MAP.has('code_documentation_gap')).toBe(true);
+  });
+
+  it('code_documentation_gap: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('let me add a comment here, explaining what this does for future readers')).toContain('code_documentation_gap');
+  });
+
+  it('code_documentation_gap: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('let me add a comment here')).not.toContain('code_documentation_gap');
+  });
+
+  it('detects "noting this as tech debt" → technical_debt_acknowledgment', () => {
+    expect(detectSignals('noting this as tech debt — the proper solution would use a queue')).toContain('technical_debt_acknowledgment');
+  });
+
+  it('technical_debt_acknowledgment has nature "pro_geek_soul", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'technical_debt_acknowledgment');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains technical_debt_acknowledgment', () => {
+    expect(SIGNAL_MAP.has('technical_debt_acknowledgment')).toBe(true);
+  });
+
+  it('technical_debt_acknowledgment: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('todo here to clean this up, will need to revisit this before release')).toContain('technical_debt_acknowledgment');
+  });
+
+  it('technical_debt_acknowledgment: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('will need to revisit this')).not.toContain('technical_debt_acknowledgment');
+  });
+
+  it('technical_debt_acknowledgment detects new detection keyword "todo: clean this up"', () => {
+    expect(detectSignals('TODO: clean this up — this is a workaround for the rate limit')).toContain('technical_debt_acknowledgment');
+  });
+
+  it('detects "edge case test" → test_depth_check', () => {
+    expect(detectSignals('adding an edge case test for the zero-item list state')).toContain('test_depth_check');
+  });
+
+  it('test_depth_check has nature "pro_geek_soul", absenceThreshold 10, stage review_testing', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'test_depth_check');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(10);
+    expect(sig?.expectedStages).toEqual(['review_testing']);
+  });
+
+  it('SIGNAL_MAP contains test_depth_check', () => {
+    expect(SIGNAL_MAP.has('test_depth_check')).toBe(true);
+  });
+
+  it('test_depth_check: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('test the edge cases, what if the input is empty or null')).toContain('test_depth_check');
+  });
+
+  it('test_depth_check: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('test the edge cases')).not.toContain('test_depth_check');
+  });
+
+  it('detects "why this pattern was chosen" → architecture_note_absence', () => {
+    expect(detectSignals('adding a comment explaining why this pattern was chosen over alternatives')).toContain('architecture_note_absence');
+  });
+
+  it('architecture_note_absence has nature "pro_geek_soul", absenceThreshold 12', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'architecture_note_absence');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(12);
+  });
+
+  it('SIGNAL_MAP contains architecture_note_absence', () => {
+    expect(SIGNAL_MAP.has('architecture_note_absence')).toBe(true);
+  });
+
+  it('architecture_note_absence: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('documenting why we chose this approach, note on this decision for the team')).toContain('architecture_note_absence');
+  });
+
+  it('architecture_note_absence: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('note on this decision')).not.toContain('architecture_note_absence');
+  });
+
+  // ── Phase 5 D8 — pro_geek_soul cluster 2 ─────────────────────────────────────
+
+  it('detects "checked maintenance status" → dependency_audit_gap', () => {
+    expect(detectSignals('checked maintenance status and last commit was 3 months ago')).toContain('dependency_audit_gap');
+  });
+
+  it('dependency_audit_gap has nature "pro_geek_soul", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'dependency_audit_gap');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains dependency_audit_gap', () => {
+    expect(SIGNAL_MAP.has('dependency_audit_gap')).toBe(true);
+  });
+
+  it('dependency_audit_gap: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('checking if this is maintained, what\'s the license on this before we add it')).toContain('dependency_audit_gap');
+  });
+
+  it('dependency_audit_gap: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('checking if this is maintained')).not.toContain('dependency_audit_gap');
+  });
+
+  it('detects "owasp check" → security_review_gap', () => {
+    expect(detectSignals('running owasp check on this endpoint before merging')).toContain('security_review_gap');
+  });
+
+  it('security_review_gap has nature "pro_geek_soul", absenceThreshold 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'security_review_gap');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it('SIGNAL_MAP contains security_review_gap', () => {
+    expect(SIGNAL_MAP.has('security_review_gap')).toBe(true);
+  });
+
+  it('security_review_gap: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('input validation for this endpoint, making sure this is secure before merge')).toContain('security_review_gap');
+  });
+
+  it('security_review_gap: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('input validation for this')).not.toContain('security_review_gap');
+  });
+
+  it('security_review_gap detects new detection keyword "input validation added"', () => {
+    expect(detectSignals('input validation added for all user-supplied fields')).toContain('security_review_gap');
+  });
+
+  it('detects "api contract defined" → api_contract_definition', () => {
+    expect(detectSignals('api contract defined — POST /users returns 201 with id and createdAt')).toContain('api_contract_definition');
+  });
+
+  it('api_contract_definition has nature "pro_geek_soul", absenceThreshold 6', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'api_contract_definition');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(6);
+  });
+
+  it('SIGNAL_MAP contains api_contract_definition', () => {
+    expect(SIGNAL_MAP.has('api_contract_definition')).toBe(true);
+  });
+
+  it('api_contract_definition: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what should this endpoint return, let me define what this returns before implementing')).toContain('api_contract_definition');
+  });
+
+  it('api_contract_definition: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what should this endpoint return')).not.toContain('api_contract_definition');
+  });
+
+  it('detects "error state handled" → error_handling_coverage', () => {
+    expect(detectSignals('error state handled — network failure returns a user-visible message')).toContain('error_handling_coverage');
+  });
+
+  it('error_handling_coverage has nature "pro_geek_soul", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'error_handling_coverage');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains error_handling_coverage', () => {
+    expect(SIGNAL_MAP.has('error_handling_coverage')).toBe(true);
+  });
+
+  it('error_handling_coverage: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('handle the error case here, what if this doesn\'t work in production')).toContain('error_handling_coverage');
+  });
+
+  it('error_handling_coverage: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('handle the error case')).not.toContain('error_handling_coverage');
+  });
+
+  it('error_handling_coverage detects moved detection keywords "what happens when this fails" and "error boundary"', () => {
+    expect(detectSignals('what happens when this fails — we need an error boundary here')).toContain('error_handling_coverage');
+  });
+
+  // ── Phase 5 D9 — pro_geek_soul cluster 3 ─────────────────────────────────────
+
+  it('detects "refactored this before adding" → refactoring_checkpoint', () => {
+    expect(detectSignals('refactored this before adding the next feature to keep it clean')).toContain('refactoring_checkpoint');
+  });
+
+  it('refactoring_checkpoint has nature "pro_geek_soul", absenceThreshold 12', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'refactoring_checkpoint');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(12);
+  });
+
+  it('SIGNAL_MAP contains refactoring_checkpoint', () => {
+    expect(SIGNAL_MAP.has('refactoring_checkpoint')).toBe(true);
+  });
+
+  it('refactoring_checkpoint: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('cleaning this up before continuing, refactoring this first then we add the feature')).toContain('refactoring_checkpoint');
+  });
+
+  it('refactoring_checkpoint: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('cleaning this up before continuing')).not.toContain('refactoring_checkpoint');
+  });
+
+  it('detects "backwards compatible change" → backwards_compatibility_check', () => {
+    expect(detectSignals('backwards compatible change — existing callers see the same interface')).toContain('backwards_compatibility_check');
+  });
+
+  it('backwards_compatibility_check has nature "pro_geek_soul", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'backwards_compatibility_check');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains backwards_compatibility_check', () => {
+    expect(SIGNAL_MAP.has('backwards_compatibility_check')).toBe(true);
+  });
+
+  it('backwards_compatibility_check: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('checking what uses this function, what else calls this before we rename it')).toContain('backwards_compatibility_check');
+  });
+
+  it('backwards_compatibility_check: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('checking what uses this')).not.toContain('backwards_compatibility_check');
+  });
+
+  it('detects "checking the diff" → self_review_habit', () => {
+    expect(detectSignals('checking the diff before committing to make sure nothing extra got in')).toContain('self_review_habit');
+  });
+
+  it('self_review_habit has nature "pro_geek_soul", absenceThreshold 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'self_review_habit');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it('SIGNAL_MAP contains self_review_habit', () => {
+    expect(SIGNAL_MAP.has('self_review_habit')).toBe(true);
+  });
+
+  it('self_review_habit: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('read through this before committing, let me check what we built end to end')).toContain('self_review_habit');
+  });
+
+  it('self_review_habit: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('read through this')).not.toContain('self_review_habit');
+  });
+
+  it('detects "n+1 query check" → performance_awareness', () => {
+    expect(detectSignals('running n+1 query check on this endpoint before shipping')).toContain('performance_awareness');
+  });
+
+  it('performance_awareness has nature "pro_geek_soul", absenceThreshold 12', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'performance_awareness');
+    expect(sig?.nature).toBe('pro_geek_soul');
+    expect(sig?.absenceThreshold).toBe(12);
+  });
+
+  it('SIGNAL_MAP contains performance_awareness', () => {
+    expect(SIGNAL_MAP.has('performance_awareness')).toBe(true);
+  });
+
+  it('performance_awareness: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('checking the performance here, is this going to be slow with large datasets')).toContain('performance_awareness');
+  });
+
+  it('performance_awareness: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('checking the performance here')).not.toContain('performance_awareness');
+  });
+
+  it('performance_awareness detects new detection keyword "memo/cache this"', () => {
+    expect(detectSignals('memo/cache this component to avoid expensive re-renders')).toContain('performance_awareness');
+  });
+
+  // ── Phase 5 D10 — hardcore_pro cluster 1 ─────────────────────────────────────
+
+  it('detects "adr for this" → decision_record_absence', () => {
+    expect(detectSignals('writing an adr for this choice between REST and GraphQL')).toContain('decision_record_absence');
+  });
+
+  it('decision_record_absence has nature "hardcore_pro", absenceThreshold 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'decision_record_absence');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it('SIGNAL_MAP contains decision_record_absence', () => {
+    expect(SIGNAL_MAP.has('decision_record_absence')).toBe(true);
+  });
+
+  it('decision_record_absence: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('documenting this decision, noting the rationale here for the team')).toContain('decision_record_absence');
+  });
+  it('decision_record_absence: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('documenting this decision for the team')).not.toContain('decision_record_absence');
+  });
+
+  it('detects "yagni check" → over_engineering_check', () => {
+    expect(detectSignals('yagni check — do we actually need this abstraction today')).toContain('over_engineering_check');
+  });
+
+  it('over_engineering_check has nature "hardcore_pro", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'over_engineering_check');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains over_engineering_check', () => {
+    expect(SIGNAL_MAP.has('over_engineering_check')).toBe(true);
+  });
+
+  it('over_engineering_check: 2 vibe keywords detect signal', () => {
+    expect(detectSignals("do we actually need this now — only what's needed for now")).toContain('over_engineering_check');
+  });
+  it('over_engineering_check: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('do we actually need this now')).not.toContain('over_engineering_check');
+  });
+
+  it('detects "diff review before merge" → pair_review_absence', () => {
+    expect(detectSignals('diff review before merge — want a second set of eyes on the auth path')).toContain('pair_review_absence');
+  });
+
+  it('pair_review_absence has nature "hardcore_pro", absenceThreshold 15', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'pair_review_absence');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(15);
+  });
+
+  it('SIGNAL_MAP contains pair_review_absence', () => {
+    expect(SIGNAL_MAP.has('pair_review_absence')).toBe(true);
+  });
+
+  it('pair_review_absence: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('getting eyes on this before merging — pairing on this change')).toContain('pair_review_absence');
+  });
+  it('pair_review_absence: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('getting eyes on this before merging')).not.toContain('pair_review_absence');
+  });
+
+  // ── Phase 5 D11 — hardcore_pro cluster 2 ─────────────────────────────────────
+
+  it('detects "metrics instrumented" → observability_first', () => {
+    expect(detectSignals('metrics instrumented for request count and latency on this endpoint')).toContain('observability_first');
+  });
+
+  it('observability_first has nature "hardcore_pro", absenceThreshold 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'observability_first');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it('SIGNAL_MAP contains observability_first', () => {
+    expect(SIGNAL_MAP.has('observability_first')).toBe(true);
+  });
+
+  it('observability_first: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('adding logging for this endpoint and metrics for this feature')).toContain('observability_first');
+  });
+  it('observability_first: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('adding logging for this endpoint')).not.toContain('observability_first');
+  });
+
+  it('detects "circuit breaker for" → failure_mode_analysis', () => {
+    expect(detectSignals('adding a circuit breaker for the payment provider call')).toContain('failure_mode_analysis');
+  });
+
+  it('failure_mode_analysis has nature "hardcore_pro", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'failure_mode_analysis');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains failure_mode_analysis', () => {
+    expect(SIGNAL_MAP.has('failure_mode_analysis')).toBe(true);
+  });
+
+  it('failure_mode_analysis detects moved detection keyword "what happens when x fails"', () => {
+    expect(detectSignals('what happens when x fails — need to think this through')).toContain('failure_mode_analysis');
+  });
+  it('failure_mode_analysis: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('what if this service is down — handling when this fails gracefully')).toContain('failure_mode_analysis');
+  });
+  it('failure_mode_analysis: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('what if this service is down')).not.toContain('failure_mode_analysis');
+  });
+
+  it('detects "consumer-driven contract" → contract_testing_gap', () => {
+    expect(detectSignals('setting up a consumer-driven contract test for this integration')).toContain('contract_testing_gap');
+  });
+
+  it('contract_testing_gap has nature "hardcore_pro", absenceThreshold 12, stage review_testing', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'contract_testing_gap');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(12);
+    expect(sig?.expectedStages).toEqual(['review_testing']);
+  });
+
+  it('SIGNAL_MAP contains contract_testing_gap', () => {
+    expect(SIGNAL_MAP.has('contract_testing_gap')).toBe(true);
+  });
+
+  it('contract_testing_gap: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('verifying the contract here — checking the api contract for this service')).toContain('contract_testing_gap');
+  });
+  it('contract_testing_gap: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('verifying the contract here')).not.toContain('contract_testing_gap');
+  });
+
+  // ── Phase 5 D12 — hardcore_pro clusters 3+4 ──────────────────────────────────
+
+  it('detects "rps estimate" → capacity_planning_gap', () => {
+    expect(detectSignals('running an rps estimate to see where the current design breaks')).toContain('capacity_planning_gap');
+  });
+
+  it('capacity_planning_gap has nature "hardcore_pro", absenceThreshold 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'capacity_planning_gap');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it('SIGNAL_MAP contains capacity_planning_gap', () => {
+    expect(SIGNAL_MAP.has('capacity_planning_gap')).toBe(true);
+  });
+
+  it('capacity_planning_gap: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('estimating the load here — how much traffic will this handle')).toContain('capacity_planning_gap');
+  });
+  it('capacity_planning_gap: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('estimating the load here')).not.toContain('capacity_planning_gap');
+  });
+
+  it('detects "stride analysis" → security_threat_modeling', () => {
+    expect(detectSignals('running a stride analysis on this before we finalise the auth design')).toContain('security_threat_modeling');
+  });
+
+  it('security_threat_modeling has nature "hardcore_pro", absenceThreshold 8', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'security_threat_modeling');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(8);
+  });
+
+  it('SIGNAL_MAP contains security_threat_modeling', () => {
+    expect(SIGNAL_MAP.has('security_threat_modeling')).toBe(true);
+  });
+
+  it('security_threat_modeling: 2 vibe keywords detect signal', () => {
+    expect(detectSignals("what's the attack surface here — potential vulnerabilities here to review")).toContain('security_threat_modeling');
+  });
+  it('security_threat_modeling: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals("what's the attack surface here")).not.toContain('security_threat_modeling');
+  });
+
+  it('detects "expand-migrate-contract" → database_migration_safety', () => {
+    expect(detectSignals('using expand-migrate-contract to keep this migration backwards compatible')).toContain('database_migration_safety');
+  });
+
+  it('database_migration_safety has nature "hardcore_pro", absenceThreshold 6', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'database_migration_safety');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(6);
+  });
+
+  it('SIGNAL_MAP contains database_migration_safety', () => {
+    expect(SIGNAL_MAP.has('database_migration_safety')).toBe(true);
+  });
+
+  it('database_migration_safety: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('phasing this migration — is this migration backwards compatible')).toContain('database_migration_safety');
+  });
+  it('database_migration_safety: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('phasing this migration carefully')).not.toContain('database_migration_safety');
+  });
+
+  it('detects "canary deployment" → deployment_strategy_absence', () => {
+    expect(detectSignals('using canary deployment to ship this to 5% of users first')).toContain('deployment_strategy_absence');
+  });
+
+  it('deployment_strategy_absence has nature "hardcore_pro", absenceThreshold 6, stage release', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'deployment_strategy_absence');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(6);
+    expect(sig?.expectedStages).toEqual(['release']);
+  });
+
+  it('SIGNAL_MAP contains deployment_strategy_absence', () => {
+    expect(SIGNAL_MAP.has('deployment_strategy_absence')).toBe(true);
+  });
+
+  it('deployment_strategy_absence detects new detection keyword "rollback plan"', () => {
+    expect(detectSignals('rollback plan in place before we ship this')).toContain('deployment_strategy_absence');
+  });
+  it('deployment_strategy_absence: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('deployment strategy for this feature — canary this release to 5%')).toContain('deployment_strategy_absence');
+  });
+  it('deployment_strategy_absence: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('deployment strategy for this feature')).not.toContain('deployment_strategy_absence');
+  });
+
+  it('detects "runbook for this" → operational_runbook_gap', () => {
+    expect(detectSignals('writing the runbook for this service before we go live')).toContain('operational_runbook_gap');
+  });
+
+  it('operational_runbook_gap has nature "hardcore_pro", absenceThreshold 8, stage release', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'operational_runbook_gap');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(8);
+    expect(sig?.expectedStages).toEqual(['release']);
+  });
+
+  it('SIGNAL_MAP contains operational_runbook_gap', () => {
+    expect(SIGNAL_MAP.has('operational_runbook_gap')).toBe(true);
+  });
+
+  it('operational_runbook_gap: 2 vibe keywords detect signal', () => {
+    expect(detectSignals('operational notes for this service and on-call notes for this')).toContain('operational_runbook_gap');
+  });
+  it('operational_runbook_gap: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals('operational notes for this service')).not.toContain('operational_runbook_gap');
+  });
+
+  it('detects "error rate budget" → slo_definition_gap', () => {
+    expect(detectSignals('defining an error rate budget of 0.1% before this ships')).toContain('slo_definition_gap');
+  });
+
+  it('slo_definition_gap has nature "hardcore_pro", absenceThreshold 10', () => {
+    const sig = SIGNAL_DEFINITIONS.find((s) => s.key === 'slo_definition_gap');
+    expect(sig?.nature).toBe('hardcore_pro');
+    expect(sig?.absenceThreshold).toBe(10);
+  });
+
+  it('SIGNAL_MAP contains slo_definition_gap', () => {
+    expect(SIGNAL_MAP.has('slo_definition_gap')).toBe(true);
+  });
+
+  it('slo_definition_gap: 2 vibe keywords detect signal', () => {
+    expect(detectSignals("what's the uptime target — acceptable error rate for this service")).toContain('slo_definition_gap');
+  });
+  it('slo_definition_gap: 1 vibe keyword alone does NOT detect signal', () => {
+    expect(detectSignals("what's the uptime target for this")).not.toContain('slo_definition_gap');
+  });
+
+  // ── §15 overlap audit — regression + co-fire guards ──────────────────────────
+
+  it('"according to the spec" does NOT fire spec_before_code', () => {
+    expect(detectSignals('according to the spec')).not.toContain('spec_before_code');
+  });
+
+  it('"per the requirements" does NOT fire spec_before_code', () => {
+    expect(detectSignals('per the requirements')).not.toContain('spec_before_code');
+  });
+
+  it('co-fires feature_scope_before_build + spec_acceptance_check on "acceptance criteria for this"', () => {
+    const signals = detectSignals('acceptance criteria for this feature');
+    expect(signals).toContain('feature_scope_before_build');
+    expect(signals).toContain('spec_acceptance_check');
+  });
+
 });
 
 // ── SessionStateManager ────────────────────────────────────────────────────────
@@ -1303,6 +2770,87 @@ describe('SessionStateManager', () => {
     expect(mgr.current.promptsInCurrentStage).toBe(1);       // counter still advanced
     closeStore(store);
   });
+
+  // ── streamBOverrides parameter ────────────────────────────────────────────────
+
+  it('streamBOverrides=false: signal stays absent when LLM says absent', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/sb-false');
+    const overrides: StreamBPresenceResult = {
+      feature_scope_before_build: false,
+      implementation_checkpoint:  false,
+      spec_before_code:           false,
+    };
+    mgr.processPrompt(
+      store,
+      'does this actually work? try this out and see',
+      makeResult('implementation', 0.8),
+      Date.now(),
+      MIN_STAGE_CHANGE_CONFIDENCE,
+      overrides,
+    );
+    expect(mgr.current.signalCounters['implementation_checkpoint'].lastSeenAt).toBeNull();
+    closeStore(store);
+  });
+
+  it('streamBOverrides=true injects Stream B signal as seen even when keywords miss', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/sb-true');
+    const overrides: StreamBPresenceResult = {
+      feature_scope_before_build: false,
+      implementation_checkpoint:  true,
+      spec_before_code:           false,
+    };
+    mgr.processPrompt(
+      store,
+      'does this actually work? try this out and see',
+      makeResult('implementation', 0.8),
+      Date.now(),
+      MIN_STAGE_CHANGE_CONFIDENCE,
+      overrides,
+    );
+    expect(mgr.current.signalCounters['implementation_checkpoint'].lastSeenAt).toBe(0);
+    closeStore(store);
+  });
+
+  it('streamBOverrides does not affect correction_seeking streak (uses original detected)', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/sb-streak');
+    mgr.processPrompt(store, 'add feature x', makeResult('implementation', 0.8));
+    mgr.processPrompt(store, 'add feature y', makeResult('implementation', 0.8));
+    expect(mgr.current.consecutiveAcceptanceStreak).toBe(2);
+    // Prompt triggers correction_seeking ('something is off'); overrides suppress implementation_checkpoint
+    const overrides: StreamBPresenceResult = {
+      feature_scope_before_build: false,
+      implementation_checkpoint:  false,
+      spec_before_code:           false,
+    };
+    mgr.processPrompt(
+      store,
+      'something is off here, does this actually work? try this out and see',
+      makeResult('implementation', 0.8),
+      Date.now(),
+      MIN_STAGE_CHANGE_CONFIDENCE,
+      overrides,
+    );
+    // correction_seeking still resets streak (uses original detected, not effectiveDetected)
+    expect(mgr.current.consecutiveAcceptanceStreak).toBe(0);
+    // implementation_checkpoint is suppressed by the override
+    expect(mgr.current.signalCounters['implementation_checkpoint'].lastSeenAt).toBeNull();
+    closeStore(store);
+  });
+
+  it('streamBOverrides=undefined: detectionKeyword still marks signal as seen', async () => {
+    const store = await openStore(':memory:');
+    const mgr = SessionStateManager.load(store, '/project/sb-undef');
+    mgr.processPrompt(
+      store,
+      'smoke test this before we continue to the next step',
+      makeResult('implementation', 0.8),
+    );
+    expect(mgr.current.signalCounters['implementation_checkpoint'].lastSeenAt).toBe(0);
+    closeStore(store);
+  });
 });
 
 // ── AbsenceDetector ────────────────────────────────────────────────────────────
@@ -1326,14 +2874,56 @@ describe('AbsenceDetector', () => {
     expect(detectAbsenceFlags(state)).toHaveLength(0);
   });
 
-  it('returns no flags when below Gate 3 effectiveMinPrompts (no profile → threshold=10)', () => {
-    // no profile → effectiveMinPrompts=10; promptsInCurrentStage=9 < 10 → Gate 3 blocks
+  it('Gate 2 respects absenceMinFloor — every_event behavior unchanged: absenceMinFloor=5, promptsInCurrentStage=4 returns []', () => {
+    // Explicit confirmation that every_event (absenceMinFloor=5) is unaffected by the fix
+    const state = makeState({ promptsInCurrentStage: 4, stageConfidence: 0.8 });
+    expect(detectAbsenceFlags(state, undefined, undefined, 1.0, 5)).toHaveLength(0);
+  });
+
+  it('Gate 2 respects absenceMinFloor — returns flags at promptsInCurrentStage=2 when absenceMinFloor=2', () => {
+    // At optimum level absenceMinFloor=2: Gate 2 passes when promptsInCurrentStage >= 2.
+    // test_creation threshold=15, cool_geek profileMultiplier=0.5, thresholdMultiplier=0.25:
+    // effectiveThreshold = max(2, ceil(15 × 0.5 × 0.25)) = 2 → Gate 3 passes too.
+    const profile: import('./types.js').UserProfile = {
+      nature: 'cool_geek', mood: 'casual', depth: 'low', role: null,
+      precisionOrdinal: 'low', playfulnessOrdinal: 'low',
+      precisionScore: 2, playfulnessScore: 2, depthScore: 1, computedAt: 0,
+    };
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 2,
+      currentStage:          'implementation',
+      profile,
+    });
+    const flags = detectAbsenceFlags(state, state.profile, undefined, 0.25, 2);
+    expect(flags.length).toBeGreaterThan(0);
+  });
+
+  it('Gate 2 respects absenceMinFloor — returns no flags at promptsInCurrentStage=1 when absenceMinFloor=2', () => {
+    // promptsInCurrentStage=1 < absenceMinFloor=2 → Gate 2 still blocks
+    const profile: import('./types.js').UserProfile = {
+      nature: 'cool_geek', mood: 'casual', depth: 'low', role: null,
+      precisionOrdinal: 'low', playfulnessOrdinal: 'low',
+      precisionScore: 2, playfulnessScore: 2, depthScore: 1, computedAt: 0,
+    };
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 1,
+      currentStage:          'implementation',
+      profile,
+    });
+    const flags = detectAbsenceFlags(state, state.profile, undefined, 0.25, 2);
+    expect(flags).toHaveLength(0);
+  });
+
+  it('test_creation not flagged below its threshold (no profile, promptsInCurrentStage=9, threshold=15)', () => {
+    // test_creation threshold=15; effectiveThreshold=15; 9 < 15 → Gate 3 blocks test_creation
     const state = makeState({
       stageConfidence:       0.85,
       promptsInCurrentStage: 9,
       currentStage:          'implementation',
     });
-    expect(detectAbsenceFlags(state)).toHaveLength(0);
+    expect(detectAbsenceFlags(state).map((f) => f.signalKey)).not.toContain('test_creation');
   });
 
   it('raises a flag when all conditions are met and signal never seen', () => {
@@ -1418,15 +3008,15 @@ describe('AbsenceDetector', () => {
     expect(flags.map((f) => f.signalKey)).toContain('test_creation');
   });
 
-  it('passes Gate 2 at exactly 5 prompts but Gate 3 blocks without profile (effectiveMinPrompts=10)', () => {
-    // Gate 2 (promptsInCurrentStage ≥ 5) passes, but Gate 3 (≥10 for no profile) still blocks
+  it('Gate 3 blocks test_creation at promptsInCurrentStage=5 (threshold=15, effective=15 > 5)', () => {
+    // Gate 3 per-signal threshold still blocks high-threshold signals at 5 prompts
     const state2 = makeState({
       stageConfidence:       0.85,
       promptsInCurrentStage: 5,
       currentStage:          'implementation',
       signalCounters:        initialSignalCounters(),
     });
-    expect(detectAbsenceFlags(state2)).toHaveLength(0); // Gate 3 blocks (5 < 10)
+    expect(detectAbsenceFlags(state2).map((f) => f.signalKey)).not.toContain('test_creation');
     // Confirm signals fire when both the gate and the signal threshold are met
     const state3 = makeState({
       stageConfidence:       0.85,
@@ -1529,11 +3119,11 @@ describe('AbsenceDetector', () => {
     }
   });
 
-  it('beginner profile: promptsInCurrentStage=6 fires signals (effectiveMinPrompts=5)', () => {
+  it('beginner profile: promptsInCurrentStage=8 fires signals (vibe×min-threshold=8)', () => {
     const state = makeState({
       stageConfidence:       0.85,
-      promptsInCurrentStage: 6,
-      promptCount:           6,
+      promptsInCurrentStage: 8,
+      promptCount:           8,
       currentStage:          'implementation',
       signalCounters:        initialSignalCounters(),
     });
@@ -1558,7 +3148,7 @@ describe('AbsenceDetector', () => {
     expect(detectAbsenceFlags(state, profile)).toHaveLength(0);
   });
 
-  it('hardcore_pro profile: promptsInCurrentStage=6 fires no signals (effectiveMinPrompts=10)', () => {
+  it('hardcore_pro profile: test_creation not flagged at promptsInCurrentStage=6 (threshold=15)', () => {
     const state = makeState({
       stageConfidence:       0.85,
       promptsInCurrentStage: 6,
@@ -1569,14 +3159,14 @@ describe('AbsenceDetector', () => {
     const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
       precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const,
       mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1 };
-    expect(detectAbsenceFlags(state, profile)).toHaveLength(0);
+    expect(detectAbsenceFlags(state, profile).map((f) => f.signalKey)).not.toContain('test_creation');
   });
 
-  it('hardcore_pro profile: promptsInCurrentStage=11 fires signals (11 ≥ effectiveMinPrompts=10)', () => {
+  it('hardcore_pro profile: promptsInCurrentStage=15 fires signals (pro×min-threshold=15)', () => {
     const state = makeState({
       stageConfidence:       0.85,
-      promptsInCurrentStage: 11,
-      promptCount:           11,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
       currentStage:          'implementation',
       signalCounters:        initialSignalCounters(),
     });
@@ -1587,7 +3177,7 @@ describe('AbsenceDetector', () => {
     expect(flags.length).toBeGreaterThan(0);
   });
 
-  it('profile=null uses effectiveMinPrompts=10 — no signals at promptsInCurrentStage=9', () => {
+  it('profile=null: test_creation not flagged at promptsInCurrentStage=9 (threshold=15)', () => {
     const state = makeState({
       stageConfidence:       0.85,
       promptsInCurrentStage: 9,
@@ -1595,7 +3185,423 @@ describe('AbsenceDetector', () => {
       currentStage:          'implementation',
       signalCounters:        initialSignalCounters(),
     });
-    expect(detectAbsenceFlags(state, null)).toHaveLength(0);
+    expect(detectAbsenceFlags(state, null).map((f) => f.signalKey)).not.toContain('test_creation');
+  });
+
+  // ── Per-signal threshold — context_loss (absenceThreshold=30) ─────────────
+
+  it('context_loss not flagged at promptsInCurrentStage=29 for pro (30×1.0=30)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 29,
+      promptCount:           29,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state);
+    expect(flags.map((f) => f.signalKey)).not.toContain('context_loss');
+  });
+
+  it('context_loss flagged at promptsInCurrentStage=30 for pro (30×1.0=30)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 30,
+      promptCount:           30,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state);
+    expect(flags.map((f) => f.signalKey)).toContain('context_loss');
+  });
+
+  it('context_loss flagged at promptsInCurrentStage=15 for vibe (30×0.5=15)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      promptCount:           30,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const profile = { nature: 'beginner' as const, precisionScore: 1, playfulnessScore: 1,
+      precisionOrdinal: 'low' as const, playfulnessOrdinal: 'low' as const,
+      mood: 'casual' as const, depth: 'low' as const, depthScore: 1, computedAt: 1 };
+    const flags = detectAbsenceFlags(state, profile);
+    expect(flags.map((f) => f.signalKey)).toContain('context_loss');
+  });
+
+  // ── Project-type gate — Element 3 ─────────────────────────────────────────
+
+  it('projectType=cli: accessibility suppressed (cli not in web-app/mobile/desktop)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, 'cli');
+    expect(flags.map((f) => f.signalKey)).not.toContain('accessibility');
+  });
+
+  it('projectType=web-app: accessibility fires (web-app in relevant list)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, 'web-app');
+    expect(flags.map((f) => f.signalKey)).toContain('accessibility');
+  });
+
+  it('projectType=cli: rate_limiting suppressed (cli not in api/web-app)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, 'cli');
+    expect(flags.map((f) => f.signalKey)).not.toContain('rate_limiting');
+  });
+
+  it('projectType=api: rate_limiting fires (api in relevant list)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, 'api');
+    expect(flags.map((f) => f.signalKey)).toContain('rate_limiting');
+  });
+
+  it('projectType=other: bypasses filter — accessibility and rate_limiting both fire', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, 'other');
+    const keys = flags.map((f) => f.signalKey);
+    expect(keys).toContain('accessibility');
+    expect(keys).toContain('rate_limiting');
+  });
+
+  it('projectType=undefined: bypasses filter — accessibility and rate_limiting both fire', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, undefined);
+    const keys = flags.map((f) => f.signalKey);
+    expect(keys).toContain('accessibility');
+    expect(keys).toContain('rate_limiting');
+  });
+
+  it('projectType=desktop: accessibility fires, rate_limiting suppressed', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, 'desktop');
+    const keys = flags.map((f) => f.signalKey);
+    expect(keys).toContain('accessibility');
+    expect(keys).not.toContain('rate_limiting');
+  });
+
+  it('projectType=library: api_design_review fires; accessibility and rate_limiting suppressed', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, 'library');
+    const keys = flags.map((f) => f.signalKey);
+    expect(keys).toContain('api_design_review');
+    expect(keys).not.toContain('accessibility');
+    expect(keys).not.toContain('rate_limiting');
+  });
+
+  it('projectType=mobile: api_design_review suppressed (mobile not in api/web-app/library)', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    const flags = detectAbsenceFlags(state, null, 'mobile');
+    expect(flags.map((f) => f.signalKey)).not.toContain('api_design_review');
+  });
+
+  it('universal signal (scope_creep has no relevantProjectTypes): fires for any projectType', () => {
+    const makeImpl = (promptsInCurrentStage: number) => makeState({
+      stageConfidence: 0.85, promptsInCurrentStage, promptCount: promptsInCurrentStage,
+      currentStage: 'implementation', signalCounters: initialSignalCounters(),
+    });
+    expect(detectAbsenceFlags(makeImpl(15), null, 'cli').map((f) => f.signalKey)).toContain('scope_creep');
+    expect(detectAbsenceFlags(makeImpl(15), null, 'mobile').map((f) => f.signalKey)).toContain('scope_creep');
+    expect(detectAbsenceFlags(makeImpl(15), null, 'library').map((f) => f.signalKey)).toContain('scope_creep');
+  });
+
+  // ── Nature gate (Dim1) ────────────────────────────────────────────────────
+
+  const TEST_NATURE_SIG: import('./types.js').SignalDefinition = {
+    key: '__test_nature_beginner__',
+    description: 'Test signal: fires only for beginner nature',
+    expectedStages: ['implementation'],
+    detectionKeywords: ['__never_matches_xyz__'],
+    absenceThreshold: 10,
+    nature: 'beginner',
+  };
+
+  beforeEach(() => { SIGNAL_MAP.set(TEST_NATURE_SIG.key, TEST_NATURE_SIG); });
+  afterEach(()  => { SIGNAL_MAP.delete(TEST_NATURE_SIG.key); });
+
+  const withNatureCounter = () => ({
+    ...initialSignalCounters(),
+    [TEST_NATURE_SIG.key]: { present: false, lastSeenAt: null as null, windowsSinceLastSeen: 0 },
+  });
+
+  it('nature gate: Dim1 signal does NOT fire when profile.nature differs', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
+      currentStage:          'implementation',
+      signalCounters:        withNatureCounter(),
+    });
+    const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
+      precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const,
+      mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1 };
+    const keys = detectAbsenceFlags(state, profile).map((f) => f.signalKey);
+    expect(keys).not.toContain(TEST_NATURE_SIG.key);
+  });
+
+  it('nature gate: Dim1 signal fires when profile.nature matches', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
+      currentStage:          'implementation',
+      signalCounters:        withNatureCounter(),
+    });
+    const profile = { nature: 'beginner' as const, precisionScore: 1, playfulnessScore: 1,
+      precisionOrdinal: 'low' as const, playfulnessOrdinal: 'low' as const,
+      mood: 'casual' as const, depth: 'low' as const, depthScore: 1, computedAt: 1 };
+    const keys = detectAbsenceFlags(state, profile).map((f) => f.signalKey);
+    expect(keys).toContain(TEST_NATURE_SIG.key);
+  });
+
+  it('nature gate: Dim1 signal does NOT fire when profile is null', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
+      currentStage:          'implementation',
+      signalCounters:        withNatureCounter(),
+    });
+    const keys = detectAbsenceFlags(state, null).map((f) => f.signalKey);
+    expect(keys).not.toContain(TEST_NATURE_SIG.key);
+  });
+
+  // ── Role gate (Dim2) ──────────────────────────────────────────────────────
+
+  const TEST_ROLE_SIG: import('./types.js').SignalDefinition = {
+    key: '__test_role_founder__',
+    description: 'Test signal: fires only for founder role',
+    expectedStages: ['implementation'],
+    detectionKeywords: ['__never_matches_xyz__'],
+    absenceThreshold: 10,
+    role: 'founder',
+  };
+
+  beforeEach(() => { SIGNAL_MAP.set(TEST_ROLE_SIG.key, TEST_ROLE_SIG); });
+  afterEach(()  => { SIGNAL_MAP.delete(TEST_ROLE_SIG.key); });
+
+  const withRoleCounter = () => ({
+    ...initialSignalCounters(),
+    [TEST_ROLE_SIG.key]: { present: false, lastSeenAt: null as null, windowsSinceLastSeen: 0 },
+  });
+
+  it('role gate: Dim2 signal does NOT fire when profile.role differs', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
+      currentStage:          'implementation',
+      signalCounters:        withRoleCounter(),
+    });
+    const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
+      precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const,
+      mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1,
+      role: 'pm' as const };
+    const keys = detectAbsenceFlags(state, profile).map((f) => f.signalKey);
+    expect(keys).not.toContain(TEST_ROLE_SIG.key);
+  });
+
+  it('role gate: Dim2 signal fires when profile.role matches', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
+      currentStage:          'implementation',
+      signalCounters:        withRoleCounter(),
+    });
+    const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
+      precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const,
+      mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1,
+      role: 'founder' as const };
+    const keys = detectAbsenceFlags(state, profile).map((f) => f.signalKey);
+    expect(keys).toContain(TEST_ROLE_SIG.key);
+  });
+
+  it('role gate: Dim2 signal does NOT fire when profile.role is null', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 15,
+      promptCount:           15,
+      currentStage:          'implementation',
+      signalCounters:        withRoleCounter(),
+    });
+    const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
+      precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const,
+      mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1,
+      role: null };
+    const keys = detectAbsenceFlags(state, profile).map((f) => f.signalKey);
+    expect(keys).not.toContain(TEST_ROLE_SIG.key);
+  });
+
+  // ── thresholdMultiplier ───────────────────────────────────────────────────
+
+  it('thresholdMultiplier=0.5: signal with absenceThreshold=20 fires at ceil(20*0.5)=10 prompts', () => {
+    // Without multiplier: needs 20 prompts. With 0.5: needs ceil(20*0.5)=10.
+    const makeImpl = (pInStage: number) => makeState({
+      stageConfidence: 0.85, promptsInCurrentStage: pInStage, promptCount: pInStage,
+      currentStage: 'implementation', signalCounters: initialSignalCounters(),
+    });
+    const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
+      precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const,
+      mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1 };
+    // At 9 prompts with multiplier 0.5: 9 < 10 → no fire
+    const keys9 = detectAbsenceFlags(makeImpl(9), profile, undefined, 0.5).map((f) => f.signalKey);
+    expect(keys9).not.toContain('context_loss'); // context_loss has absenceThreshold=30; 30*0.5=15 > 9
+    // At 10 prompts with multiplier 0.5: context_loss still needs 15; use test_creation (threshold=15): 15*0.5=8 → fires at 8
+    // Let's verify test_creation (absenceThreshold=15) fires at ceil(15*0.5)=8 prompts
+    const keys8 = detectAbsenceFlags(makeImpl(8), profile, undefined, 0.5).map((f) => f.signalKey);
+    expect(keys8).toContain('test_creation');
+  });
+
+  it('thresholdMultiplier=0.5: signal does NOT fire below the halved threshold', () => {
+    // test_creation absenceThreshold=15; with multiplier 0.5: needs ceil(15*0.5)=8
+    // At 7 prompts: 7 < 8 → no fire
+    const state = makeState({
+      stageConfidence: 0.85, promptsInCurrentStage: 7, promptCount: 7,
+      currentStage: 'implementation', signalCounters: initialSignalCounters(),
+    });
+    const profile = { nature: 'hardcore_pro' as const, precisionScore: 9, playfulnessScore: 2,
+      precisionOrdinal: 'very_high' as const, playfulnessOrdinal: 'low' as const,
+      mood: 'focused' as const, depth: 'high' as const, depthScore: 8, computedAt: 1 };
+    const keys = detectAbsenceFlags(state, profile, undefined, 0.5).map((f) => f.signalKey);
+    expect(keys).not.toContain('test_creation');
+  });
+
+  // ── Semantic precondition gates ───────────────────────────────────────────
+
+  it('problem_correction: no bug language in history → signal blocked', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+      promptHistory:         [],
+    });
+    expect(detectAbsenceFlags(state).map((f) => f.signalKey)).not.toContain('problem_correction');
+  });
+
+  it('problem_correction: bug language in history → signal qualifies', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+      promptHistory:         [{ index: 0, text: 'there is a bug in the login form', capturedAt: 1000, classifiedStage: 'implementation', confidence: 0.85 }],
+    });
+    expect(detectAbsenceFlags(state).map((f) => f.signalKey)).toContain('problem_correction');
+  });
+
+  it('problem_correction: bug language present but lastSeenAt set → signal blocked', () => {
+    const counters = initialSignalCounters();
+    counters['problem_correction'] = { present: true, lastSeenAt: 5, windowsSinceLastSeen: 0 };
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        counters,
+      promptHistory:         [{ index: 0, text: 'there is a bug in the login form', capturedAt: 1000, classifiedStage: 'implementation', confidence: 0.85 }],
+    });
+    expect(detectAbsenceFlags(state).map((f) => f.signalKey)).not.toContain('problem_correction');
+  });
+
+  it('deployment_planning: implementation stage → signal blocked by precondition', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    expect(detectAbsenceFlags(state).map((f) => f.signalKey)).not.toContain('deployment_planning');
+  });
+
+  it('deployment_planning: release stage → signal qualifies', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 20,
+      promptCount:           20,
+      currentStage:          'release',
+      signalCounters:        initialSignalCounters(),
+    });
+    expect(detectAbsenceFlags(state).map((f) => f.signalKey)).toContain('deployment_planning');
+  });
+
+  it('context_loss: promptCount=12 → signal blocked by precondition', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 30,
+      promptCount:           12,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    expect(detectAbsenceFlags(state).map((f) => f.signalKey)).not.toContain('context_loss');
+  });
+
+  it('context_loss: promptCount=25 and promptsInCurrentStage=30 → signal qualifies', () => {
+    const state = makeState({
+      stageConfidence:       0.85,
+      promptsInCurrentStage: 30,
+      promptCount:           30,
+      currentStage:          'implementation',
+      signalCounters:        initialSignalCounters(),
+    });
+    expect(detectAbsenceFlags(state).map((f) => f.signalKey)).toContain('context_loss');
   });
 });
 
@@ -1882,5 +3888,271 @@ describe('SessionStateManager — detectedLanguage survives session gap', () => 
     const mgr2 = SessionStateManager.load(store, '/project/gap-e', soonNow);
     expect(mgr2.current.detectedLanguage).toBe('de'); // session value preserved
     closeStore(store);
+  });
+});
+
+// ── Phase 7 F0 — consecutiveAcceptanceStreak ──────────────────────────────────
+
+describe('SessionStateManager — consecutiveAcceptanceStreak', () => {
+  it('initializes streak to 0 in new session', async () => {
+    const store = await openStore(':memory:');
+    upsertProject(store, { projectRoot: '/project/streak-a', name: 'A' });
+    const mgr = SessionStateManager.load(store, '/project/streak-a');
+    expect(mgr.current.consecutiveAcceptanceStreak).toBe(0);
+    closeStore(store);
+  });
+
+  it('increments streak on each non-correction-seeking prompt', async () => {
+    const store = await openStore(':memory:');
+    upsertProject(store, { projectRoot: '/project/streak-b', name: 'B' });
+    const mgr = SessionStateManager.load(store, '/project/streak-b');
+    await mgr.processPrompt(store, 'implement the login feature', makeResult('implementation', 0.8));
+    expect(mgr.current.consecutiveAcceptanceStreak).toBe(1);
+    await mgr.processPrompt(store, 'add a signup page', makeResult('implementation', 0.8));
+    expect(mgr.current.consecutiveAcceptanceStreak).toBe(2);
+    await mgr.processPrompt(store, 'create the dashboard', makeResult('implementation', 0.8));
+    expect(mgr.current.consecutiveAcceptanceStreak).toBe(3);
+    closeStore(store);
+  });
+
+  it('resets streak to 0 when correction_seeking is detected', async () => {
+    const store = await openStore(':memory:');
+    upsertProject(store, { projectRoot: '/project/streak-c', name: 'C' });
+    const mgr = SessionStateManager.load(store, '/project/streak-c');
+    // Build up a streak
+    await mgr.processPrompt(store, 'add feature x', makeResult('implementation', 0.8));
+    await mgr.processPrompt(store, 'add feature y', makeResult('implementation', 0.8));
+    expect(mgr.current.consecutiveAcceptanceStreak).toBe(2);
+    // correction_seeking keyword ('something is off') resets streak
+    await mgr.processPrompt(store, 'something is off here, this seems wrong', makeResult('implementation', 0.8));
+    expect(mgr.current.consecutiveAcceptanceStreak).toBe(0);
+    closeStore(store);
+  });
+
+  it('streak resumes incrementing after a reset', async () => {
+    const store = await openStore(':memory:');
+    upsertProject(store, { projectRoot: '/project/streak-d', name: 'D' });
+    const mgr = SessionStateManager.load(store, '/project/streak-d');
+    await mgr.processPrompt(store, 'build the thing', makeResult('implementation', 0.8));
+    await mgr.processPrompt(store, 'wait that is wrong, let me rethink this', makeResult('implementation', 0.8));
+    expect(mgr.current.consecutiveAcceptanceStreak).toBe(0);
+    await mgr.processPrompt(store, 'add another feature', makeResult('implementation', 0.8));
+    expect(mgr.current.consecutiveAcceptanceStreak).toBe(1);
+    closeStore(store);
+  });
+});
+
+// ── Phase 7 F1-F2 — signal definitions ───────────────────────────────────────
+
+describe('Phase 7 signals — SIGNAL_MAP and SIGNAL_DEFINITIONS', () => {
+  it('decision_fatigue_pattern exists in SIGNAL_MAP', () => {
+    expect(SIGNAL_MAP.has('decision_fatigue_pattern')).toBe(true);
+  });
+
+  it('decision_fatigue_pattern has empty detectionKeywords and absenceThreshold=8', () => {
+    const sig = SIGNAL_MAP.get('decision_fatigue_pattern');
+    expect(sig?.detectionKeywords).toHaveLength(0);
+    expect(sig?.absenceThreshold).toBe(8);
+    expect(sig?.expectedStages).toContain('implementation');
+  });
+
+  it('work_rhythm_check exists in SIGNAL_MAP', () => {
+    expect(SIGNAL_MAP.has('work_rhythm_check')).toBe(true);
+  });
+
+  it('work_rhythm_check has empty detectionKeywords and absenceThreshold=10', () => {
+    const sig = SIGNAL_MAP.get('work_rhythm_check');
+    expect(sig?.detectionKeywords).toHaveLength(0);
+    expect(sig?.absenceThreshold).toBe(10);
+    expect(sig?.expectedStages).toContain('implementation');
+  });
+
+  it('focus_drift_detection exists in SIGNAL_MAP', () => {
+    expect(SIGNAL_MAP.has('focus_drift_detection')).toBe(true);
+  });
+
+  it('focus_drift_detection has empty detectionKeywords and absenceThreshold=5', () => {
+    const sig = SIGNAL_MAP.get('focus_drift_detection');
+    expect(sig?.detectionKeywords).toHaveLength(0);
+    expect(sig?.absenceThreshold).toBe(5);
+    expect(sig?.expectedStages).toContain('implementation');
+  });
+
+  it('session_length_checkpoint exists in SIGNAL_MAP', () => {
+    expect(SIGNAL_MAP.has('session_length_checkpoint')).toBe(true);
+  });
+
+  it('session_length_checkpoint has detectionKeywords and absenceThreshold=25', () => {
+    const sig = SIGNAL_MAP.get('session_length_checkpoint');
+    expect(sig?.detectionKeywords.length).toBeGreaterThan(0);
+    expect(sig?.absenceThreshold).toBe(25);
+    expect(sig?.expectedStages).toContain('implementation');
+    expect(sig?.expectedStages).toContain('review_testing');
+  });
+
+  it('progress_consolidation_gap exists in SIGNAL_MAP', () => {
+    expect(SIGNAL_MAP.has('progress_consolidation_gap')).toBe(true);
+  });
+
+  it('progress_consolidation_gap has detectionKeywords and absenceThreshold=20', () => {
+    const sig = SIGNAL_MAP.get('progress_consolidation_gap');
+    expect(sig?.detectionKeywords.length).toBeGreaterThan(0);
+    expect(sig?.absenceThreshold).toBe(20);
+    expect(sig?.expectedStages).toContain('implementation');
+  });
+
+  it('session_length_checkpoint detected by keyword "context checkpoint"', () => {
+    expect(detectSignals('context checkpoint done')).toContain('session_length_checkpoint');
+  });
+
+  it('session_length_checkpoint detected by vibe keywords (2 hits)', () => {
+    expect(detectSignals('so where we are is good, recap: done')).toContain('session_length_checkpoint');
+  });
+
+  it('progress_consolidation_gap detected by keyword "summarizing what we built"', () => {
+    expect(detectSignals('summarizing what we built so far')).toContain('progress_consolidation_gap');
+  });
+
+  it('progress_consolidation_gap detected by vibe keywords (2 hits)', () => {
+    expect(detectSignals('so we have everything, summary of progress done')).toContain('progress_consolidation_gap');
+  });
+
+  it('decision_fatigue_pattern NOT detected by detectSignals (streak-based, no keywords)', () => {
+    expect(detectSignals('looks good, approved, next task please')).not.toContain('decision_fatigue_pattern');
+  });
+
+  it('work_rhythm_check NOT detected by detectSignals (velocity-based, no keywords)', () => {
+    expect(detectSignals('quick question: how do i do this')).not.toContain('work_rhythm_check');
+  });
+
+  it('focus_drift_detection NOT detected by detectSignals (domain-bucket-based, no keywords)', () => {
+    expect(detectSignals('login database component endpoint test deploy cache refactor')).not.toContain('focus_drift_detection');
+  });
+});
+
+// ── Phase 7 F1 — AbsenceDetector custom detection ────────────────────────────
+
+describe('AbsenceDetector — Phase 7 custom detection', () => {
+  it('decision_fatigue_pattern fires when consecutiveAcceptanceStreak >= 8', () => {
+    const state = makeState({
+      promptsInCurrentStage:       20,
+      consecutiveAcceptanceStreak: 8,
+    });
+    const flags = detectAbsenceFlags(state);
+    expect(flags.map((f) => f.signalKey)).toContain('decision_fatigue_pattern');
+  });
+
+  it('decision_fatigue_pattern does NOT fire when streak < 8', () => {
+    const state = makeState({
+      promptsInCurrentStage:       20,
+      consecutiveAcceptanceStreak: 7,
+    });
+    const flags = detectAbsenceFlags(state);
+    expect(flags.map((f) => f.signalKey)).not.toContain('decision_fatigue_pattern');
+  });
+
+  it('work_rhythm_check fires when avg inter-prompt interval < 30,000ms over last 10 prompts', () => {
+    const now = Date.now();
+    const history = Array.from({ length: 10 }, (_, i) => ({
+      index:           i,
+      text:            'quick prompt',
+      capturedAt:      now + i * 5_000,  // 5 seconds apart — way below 30,000ms threshold
+      classifiedStage: 'implementation' as const,
+      confidence:      0.8,
+    }));
+    const state = makeState({
+      promptsInCurrentStage: 20,
+      promptHistory:         history,
+    });
+    const flags = detectAbsenceFlags(state);
+    expect(flags.map((f) => f.signalKey)).toContain('work_rhythm_check');
+  });
+
+  it('work_rhythm_check does NOT fire when avg interval >= 30,000ms', () => {
+    const now = Date.now();
+    const history = Array.from({ length: 11 }, (_, i) => ({
+      index:           i,
+      text:            'deliberate prompt',
+      capturedAt:      now + i * 60_000,  // 60 seconds apart — above 30,000ms threshold
+      classifiedStage: 'implementation' as const,
+      confidence:      0.8,
+    }));
+    const state = makeState({
+      promptsInCurrentStage: 20,
+      promptHistory:         history,
+    });
+    const flags = detectAbsenceFlags(state);
+    expect(flags.map((f) => f.signalKey)).not.toContain('work_rhythm_check');
+  });
+
+  it('work_rhythm_check does NOT fire when fewer than 10 history entries', () => {
+    const now = Date.now();
+    const history = Array.from({ length: 9 }, (_, i) => ({
+      index:           i,
+      text:            'prompt',
+      capturedAt:      now + i * 1_000,
+      classifiedStage: 'implementation' as const,
+      confidence:      0.8,
+    }));
+    const state = makeState({
+      promptsInCurrentStage: 20,
+      promptHistory:         history,
+    });
+    const flags = detectAbsenceFlags(state);
+    expect(flags.map((f) => f.signalKey)).not.toContain('work_rhythm_check');
+  });
+
+  it('focus_drift_detection fires when >= 5 distinct domains active and no completion keyword', () => {
+    const domains = [
+      'login authentication jwt',        // auth
+      'database query migration schema',  // database
+      'component frontend react css',     // ui
+      'endpoint route rest graphql',      // api
+      'test spec mock jest',              // testing
+    ];
+    const history = domains.map((text, i) => ({
+      index:           i,
+      text,
+      capturedAt:      Date.now() + i * 1_000,
+      classifiedStage: 'implementation' as const,
+      confidence:      0.8,
+    }));
+    const state = makeState({
+      promptsInCurrentStage: 20,
+      promptHistory:         history,
+    });
+    const flags = detectAbsenceFlags(state);
+    expect(flags.map((f) => f.signalKey)).toContain('focus_drift_detection');
+  });
+
+  it('focus_drift_detection does NOT fire when completion keyword present', () => {
+    const history = [
+      { index: 0, text: 'login authentication jwt token',    capturedAt: Date.now(),         classifiedStage: 'implementation' as const, confidence: 0.8 },
+      { index: 1, text: 'database query migration schema',   capturedAt: Date.now() + 1_000, classifiedStage: 'implementation' as const, confidence: 0.8 },
+      { index: 2, text: 'component frontend react css',      capturedAt: Date.now() + 2_000, classifiedStage: 'implementation' as const, confidence: 0.8 },
+      { index: 3, text: 'endpoint route rest graphql fetch', capturedAt: Date.now() + 3_000, classifiedStage: 'implementation' as const, confidence: 0.8 },
+      { index: 4, text: 'test spec mock jest done',          capturedAt: Date.now() + 4_000, classifiedStage: 'implementation' as const, confidence: 0.8 },
+    ];
+    const state = makeState({
+      promptsInCurrentStage: 20,
+      promptHistory:         history,
+    });
+    const flags = detectAbsenceFlags(state);
+    expect(flags.map((f) => f.signalKey)).not.toContain('focus_drift_detection');
+  });
+
+  it('focus_drift_detection does NOT fire when fewer than 5 distinct domains', () => {
+    const history = [
+      { index: 0, text: 'login authentication jwt',      capturedAt: Date.now(),         classifiedStage: 'implementation' as const, confidence: 0.8 },
+      { index: 1, text: 'database query migration',      capturedAt: Date.now() + 1_000, classifiedStage: 'implementation' as const, confidence: 0.8 },
+      { index: 2, text: 'component frontend react',      capturedAt: Date.now() + 2_000, classifiedStage: 'implementation' as const, confidence: 0.8 },
+      { index: 3, text: 'endpoint route rest',           capturedAt: Date.now() + 3_000, classifiedStage: 'implementation' as const, confidence: 0.8 },
+    ];
+    const state = makeState({
+      promptsInCurrentStage: 20,
+      promptHistory:         history,
+    });
+    const flags = detectAbsenceFlags(state);
+    expect(flags.map((f) => f.signalKey)).not.toContain('focus_drift_detection');
   });
 });

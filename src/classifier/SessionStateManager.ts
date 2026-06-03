@@ -5,6 +5,7 @@ import type { SessionState, Stage, PromptRecord, ClassificationResult, UserProfi
 import { detectSignals, initialSignalCounters } from './signals.js';
 import { buildSafeDefaults } from './LLMProfileClassifier.js';
 import { getProject } from '../store/projects.js';
+import type { StreamBPresenceResult } from './StreamBPresenceClassifier.js';
 
 /** Gap in ms after which the session resets (30 minutes per research). */
 export const SESSION_GAP_MS = 30 * 60 * 1000;
@@ -70,9 +71,10 @@ function newSession(projectRoot: string, now: number): SessionState {
     profile:                 null,
     mood:                    undefined,
     detectedLanguage:        undefined,
-    lastInjectedPrompt:      null,
-    lastAdvisoryPromptIndex: -1,
-    advisoryCount:           0,
+    lastInjectedPrompt:           null,
+    lastAdvisoryPromptIndex:      -1,
+    advisoryCount:                0,
+    consecutiveAcceptanceStreak:  0,
   };
 }
 
@@ -112,6 +114,8 @@ export class SessionStateManager {
     promptText: string,
     classification: ClassificationResult,
     now = Date.now(),
+    minStageChangeConfidence = MIN_STAGE_CHANGE_CONFIDENCE,
+    streamBOverrides?: StreamBPresenceResult,
   ): void {
     const s = this.state;
 
@@ -154,7 +158,7 @@ export class SessionStateManager {
     // stageConfirmedAt is kept for the EMA / epoch logic below — it is just no
     // longer used as the absence-detection anchor.
     if (classification.stage !== s.currentStage
-        && classification.confidence >= MIN_STAGE_CHANGE_CONFIDENCE) {
+        && classification.confidence >= minStageChangeConfidence) {
       s.currentStage          = classification.stage;
       s.stageConfidence       = classification.confidence;
       s.stageConfirmedAt      = classification.confidence >= STAGE_CONFIRM_THRESHOLD
@@ -187,11 +191,37 @@ export class SessionStateManager {
 
     // ── Signal counters ───────────────────────────────────────────────────────
     const detected = detectSignals(promptText);
+
+    // Inject or suppress Stream B signals based on LLM result.
+    // `effectiveDetected` is used ONLY for signalCounters — NOT for correction_seeking below.
+    const effectiveDetected = [...detected];
+    if (streamBOverrides) {
+      const streamBMap: Record<string, boolean> = {
+        feature_scope_before_build: streamBOverrides.feature_scope_before_build,
+        implementation_checkpoint:  streamBOverrides.implementation_checkpoint,
+        spec_before_code:           streamBOverrides.spec_before_code,
+      };
+      for (const [key, present] of Object.entries(streamBMap)) {
+        const idx = effectiveDetected.indexOf(key);
+        if (present && idx === -1) effectiveDetected.push(key);
+        else if (!present && idx !== -1) effectiveDetected.splice(idx, 1);
+      }
+    }
+
     for (const key of Object.keys(s.signalCounters)) {
-      if (detected.includes(key)) {
+      if (effectiveDetected.includes(key)) {
         s.signalCounters[key].present    = true;
         s.signalCounters[key].lastSeenAt = promptIndex;
       }
+    }
+
+    // ── Consecutive acceptance streak ─────────────────────────────────────────
+    // Uses original `detected`, NOT effectiveDetected — correction_seeking is not a
+    // Stream B signal and must not be affected by the LLM override.
+    if (detected.includes('correction_seeking')) {
+      s.consecutiveAcceptanceStreak = 0;
+    } else {
+      s.consecutiveAcceptanceStreak = (s.consecutiveAcceptanceStreak ?? 0) + 1;
     }
 
     // ── Advance counter ───────────────────────────────────────────────────────
@@ -272,6 +302,22 @@ export class SessionStateManager {
    */
   clearInjectedPrompt(store: Store): void {
     this.state.lastInjectedPrompt = null;
+    saveState(store, this.state);
+  }
+
+  /**
+   * Feed Stage 2 signal assessments back into signal counters.
+   * Called in auto.ts after runStage2 confirms an advisory, before Step 8 dedup write.
+   * Only updates keys that exist in signalCounters — unknown LLM-returned keys are ignored.
+   */
+  applyStage2SignalUpdates(store: Store, signalsPresent: string[]): void {
+    const promptIndex = this.state.promptCount - 1;
+    for (const key of signalsPresent) {
+      if (key in this.state.signalCounters) {
+        this.state.signalCounters[key].present    = true;
+        this.state.signalCounters[key].lastSeenAt = promptIndex;
+      }
+    }
     saveState(store, this.state);
   }
 

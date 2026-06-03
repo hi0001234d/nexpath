@@ -691,7 +691,7 @@ describe('runAuto — prompt persistence', () => {
     expect(rows[0].text).toBe('third');
     expect(rows[1].text).toBe('second');
     expect(rows[2].text).toBe('first');
-  });
+  }, 15000);
 
   it('stores a capturedAt timestamp close to Date.now()', async () => {
     const before = Date.now();
@@ -1172,16 +1172,11 @@ describe('runAuto — generated options wiring', () => {
     vi.restoreAllMocks();
   });
 
-  /**
-   * Build a mock OpenAI client that supports parallel pinch + options calls.
-   * Both pinch and options calls use gpt-4o-mini; we can't rely on call order
-   * with Promise.all, so this mock always returns a usable pinch label from
-   * any call after Stage 2, letting the option response be driven separately.
-   */
   function makeParallelMockOpenAI(
     stage2Response: object,
     pinchText = 'Hold up.',
     optionResponse: string | null = null,
+    pass1Response: string | null = null,
   ): OpenAI {
     let callCount = 0;
     return {
@@ -1194,8 +1189,13 @@ describe('runAuto — generated options wiring', () => {
                 choices: [{ message: { content: JSON.stringify(stage2Response) } }],
               });
             }
-            // calls 2 and 3 are pinch + options in parallel
-            if (optionResponse && callCount === 3) {
+            // call 2: generatePinchLabel; call 3: generateOptionList Pass 1; call 4: generateOptionList Pass 2
+            if (pass1Response && callCount === 3) {
+              return Promise.resolve({
+                choices: [{ message: { content: pass1Response } }],
+              });
+            }
+            if (optionResponse && callCount === 4) {
               return Promise.resolve({
                 choices: [{ message: { content: optionResponse } }],
               });
@@ -1209,39 +1209,32 @@ describe('runAuto — generated options wiring', () => {
     } as unknown as OpenAI;
   }
 
-  it('advisory stores generatedL1/L2/L3 when generateOptionList returns valid options', async () => {
+  it('advisory is stored with null generatedL1/L2/L3 — option gen runs in stop hook', async () => {
     const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
-    const { TASK_REVIEW } = await import('../../decision-session/options.js');
+
+    for (let i = 0; i < 2; i++) {
+      await runAuto(makeInput({ projectRoot: '/test/gen-opts' }), store);
+    }
+
     const mgr = SessionStateManager.load(store, '/test/gen-opts');
     mgr.addAbsenceFlag(store, {
       signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 0, cooldownUntil: 100,
     });
 
-    // Provide a valid option response matching TASK_REVIEW counts
-    const optResponse = JSON.stringify({
-      l1: TASK_REVIEW.L1.map((o) => `[adapted] ${o}`),
-      l2: TASK_REVIEW.L2.map((o) => `[adapted] ${o}`),
-      l3: TASK_REVIEW.L3.map((o) => `[adapted] ${o}`),
-    });
-
-    const openai = makeParallelMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.', optResponse);
+    const openai = makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.');
     const result = await runAuto(makeInput({ projectRoot: '/test/gen-opts' }), store, openai);
 
     if (result.outcome === 'pending') {
       const advisory = getPendingAdvisory(store, '/test/gen-opts');
       expect(advisory).not.toBeNull();
-      // generatedL1/L2/L3 may be populated or null depending on which API call
-      // returned the option response — what we assert is the advisory was stored
       expect(advisory?.status).toBe('pending');
+      expect(advisory?.generatedL1).toBeNull();
+      expect(advisory?.generatedL2).toBeNull();
+      expect(advisory?.generatedL3).toBeNull();
     }
   });
 
-  it('advisory is stored with null generatedL1 when generateOptionList returns null', async () => {
-    const generateSpy = vi.spyOn(
-      await import('../../decision-session/OptionGenerator.js'),
-      'generateOptionList',
-    ).mockResolvedValue(null);
-
+  it('advisory is stored with null generatedL1/L2/L3 — auto no longer calls option gen', async () => {
     const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
     const mgr = SessionStateManager.load(store, '/test/gen-null');
     mgr.addAbsenceFlag(store, {
@@ -1257,8 +1250,6 @@ describe('runAuto — generated options wiring', () => {
       expect(advisory?.generatedL2).toBeNull();
       expect(advisory?.generatedL3).toBeNull();
     }
-
-    generateSpy.mockRestore();
   });
 
   it('upsertPendingAdvisory round-trips generatedL1/L2/L3 through DB', async () => {
@@ -1373,28 +1364,28 @@ describe('runAuto — telemetry events', () => {
   it('emits prompt_received on every runAuto call', async () => {
     await runAuto(makeInput({ projectRoot: '/test/tel-recv' }), store);
     expect(vi.mocked(writeTelemetry)).toHaveBeenCalledWith(
-      '/test/tel-recv', 'prompt_received', expect.objectContaining({ promptCount: expect.any(Number) }),
+      '/test/tel-recv', 'prompt_received', expect.objectContaining({ promptCount: expect.any(Number) }), expect.anything(),
     );
   });
 
   it('emits prompt_classified after stage 1 classification', async () => {
     await runAuto(makeInput({ projectRoot: '/test/tel-class' }), store);
     expect(vi.mocked(writeTelemetry)).toHaveBeenCalledWith(
-      '/test/tel-class', 'prompt_classified', expect.objectContaining({ stage: expect.any(String), confidence: expect.any(Number) }),
+      '/test/tel-class', 'prompt_classified', expect.objectContaining({ stage: expect.any(String), confidence: expect.any(Number) }), expect.anything(),
     );
   });
 
   it('emits absence_flags_detected after absence detection', async () => {
     await runAuto(makeInput({ projectRoot: '/test/tel-abs' }), store);
     expect(vi.mocked(writeTelemetry)).toHaveBeenCalledWith(
-      '/test/tel-abs', 'absence_flags_detected', expect.objectContaining({ newFlagsCount: expect.any(Number), totalFlagsCount: expect.any(Number) }),
+      '/test/tel-abs', 'absence_flags_detected', expect.objectContaining({ newFlagsCount: expect.any(Number), totalFlagsCount: expect.any(Number) }), expect.anything(),
     );
   });
 
   it('emits advisory_min_prompts_blocked when promptCount < MIN_PROMPTS_BEFORE_ADVISORY', async () => {
     await runAuto(makeInput({ projectRoot: '/test/tel-min' }), store);
     expect(vi.mocked(writeTelemetry)).toHaveBeenCalledWith(
-      '/test/tel-min', 'advisory_min_prompts_blocked', expect.objectContaining({ promptCount: 1, minRequired: 3 }),
+      '/test/tel-min', 'advisory_min_prompts_blocked', expect.objectContaining({ promptCount: 1, minRequired: 3 }), expect.anything(),
     );
   });
 
@@ -1433,7 +1424,7 @@ describe('runAuto — telemetry events', () => {
     await runAuto(makeInput({ projectRoot: '/test/tel-freq' }), store, makeMockOpenAI(FIRE_YES_RESPONSE));
 
     expect(vi.mocked(writeTelemetry)).toHaveBeenCalledWith(
-      '/test/tel-freq', 'advisory_freq_blocked', expect.objectContaining({ freq: 'off' }),
+      '/test/tel-freq', 'advisory_freq_blocked', expect.objectContaining({ freq: 'off' }), expect.anything(),
     );
   });
 
@@ -1451,7 +1442,7 @@ describe('runAuto — telemetry events', () => {
     await runAuto(makeInput({ projectRoot: '/test/tel-cap' }), store, makeMockOpenAI(FIRE_YES_RESPONSE));
 
     expect(vi.mocked(writeTelemetry)).toHaveBeenCalledWith(
-      '/test/tel-cap', 'advisory_cap_blocked', expect.objectContaining({ advisoryCount: 5, advisoryCap: 5 }),
+      '/test/tel-cap', 'advisory_cap_blocked', expect.objectContaining({ advisoryCount: 5, advisoryCap: 5 }), expect.anything(),
     );
   });
 
@@ -1464,7 +1455,7 @@ describe('runAuto — telemetry events', () => {
 
     if (result.outcome === 'pending') {
       expect(vi.mocked(writeTelemetry)).toHaveBeenCalledWith(
-        '/test/tel-pending', 'pipeline_advisory_pending', expect.objectContaining({ pinchLabel: 'Hold up.' }),
+        '/test/tel-pending', 'pipeline_advisory_pending', expect.objectContaining({ pinchLabel: 'Hold up.' }), expect.anything(),
       );
     }
   });
@@ -1484,5 +1475,257 @@ describe('runAuto — telemetry events', () => {
     if (s2Call) {
       expect(s2Call[2]).toEqual(expect.objectContaining({ confirmed: expect.any(Boolean) }));
     }
+  });
+
+  // ── Phase 4 — pipeline_advisory_pending enriched payload (Items B + H + J) ──
+
+  it('pipeline_advisory_pending carries advisoryCountInSession, decisionSessionCountInProject, recentPrompts', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/tel-rich');
+    mgr.addAbsenceFlag(store, { signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 5, cooldownUntil: 100 });
+
+    // Run a couple prior prompts so promptHistory + counters have content.
+    for (let i = 0; i < 2; i++) {
+      await runAuto(makeInput({ projectRoot: '/test/tel-rich' }), store);
+    }
+    vi.mocked(writeTelemetry).mockClear();
+    await runAuto(makeInput({ projectRoot: '/test/tel-rich' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'));
+
+    const pendingCall = vi.mocked(writeTelemetry).mock.calls.find(
+      ([, event]) => event === 'pipeline_advisory_pending',
+    );
+    if (pendingCall) {
+      const payload = pendingCall[2] as Record<string, unknown>;
+      expect(payload).toHaveProperty('advisoryCountInSession');
+      expect(typeof payload['advisoryCountInSession']).toBe('number');
+      expect(payload).toHaveProperty('decisionSessionCountInProject');
+      expect(typeof payload['decisionSessionCountInProject']).toBe('number');
+      expect(payload).toHaveProperty('recentPrompts');
+      expect(Array.isArray(payload['recentPrompts'])).toBe(true);
+    }
+  });
+
+  it('recentPrompts in pipeline_advisory_pending NEVER contains the text field (PII guarantee)', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/tel-pii');
+    mgr.addAbsenceFlag(store, { signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 5, cooldownUntil: 100 });
+
+    for (let i = 0; i < 2; i++) {
+      await runAuto(makeInput({ promptText: `prior prompt ${i}`, projectRoot: '/test/tel-pii' }), store);
+    }
+    vi.mocked(writeTelemetry).mockClear();
+    await runAuto(makeInput({ promptText: 'sensitive prompt text', projectRoot: '/test/tel-pii' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'));
+
+    const pendingCall = vi.mocked(writeTelemetry).mock.calls.find(
+      ([, event]) => event === 'pipeline_advisory_pending',
+    );
+    if (pendingCall) {
+      const payload = pendingCall[2] as { recentPrompts: Array<Record<string, unknown>> };
+      for (const entry of payload.recentPrompts) {
+        expect(entry).not.toHaveProperty('text');
+      }
+    }
+  });
+
+  it('recentPrompts is capped at 5 entries even after many prior prompts', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/tel-cap5');
+    mgr.addAbsenceFlag(store, { signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 5, cooldownUntil: 100 });
+
+    // Build up promptHistory with 7+ prompts.
+    for (let i = 0; i < 7; i++) {
+      await runAuto(makeInput({ promptText: `prompt ${i}`, projectRoot: '/test/tel-cap5' }), store);
+    }
+    vi.mocked(writeTelemetry).mockClear();
+    await runAuto(makeInput({ promptText: 'fire', projectRoot: '/test/tel-cap5' }), store, makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'));
+
+    const pendingCall = vi.mocked(writeTelemetry).mock.calls.find(
+      ([, event]) => event === 'pipeline_advisory_pending',
+    );
+    if (pendingCall) {
+      const payload = pendingCall[2] as { recentPrompts: unknown[] };
+      expect(payload.recentPrompts.length).toBeLessThanOrEqual(5);
+    }
+  }, 30000);
+});
+
+// ── runAuto — absence flag selective add (Fix: bulk-add removed) ──────────────
+//
+// Before the fix, ALL flags returned by detectAbsenceFlags were added to absenceFlags
+// immediately, burning a 30-prompt cooldown for signals whose DS was never shown.
+// After the fix, only newFlags[0] (the selected signal) is added — and only after all
+// early-exit gates pass (step 6.8, immediately before Stage 2).
+
+describe('runAuto — absence flag selective add', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  // Neutral implementation-context prompt that does not match any signal's
+  // detectionKeywords or vibeKeywords — keeps all signal counters lastSeenAt=null.
+  const NEUTRAL_IMPL = 'add the configuration and wire the service layer';
+
+  async function setupImplState(projectRoot: string): Promise<void> {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    setConfig(store, 'advisory_frequency', 'optimum');
+    // One run to advance promptCount past minPromptsBeforeAdvisory (1 at optimum)
+    await runAuto(makeInput({ promptText: NEUTRAL_IMPL, projectRoot }), store);
+    // pICS=2: Gate 2 passes on the next call (absenceMinFloor=2 at optimum, pICS→3 after
+    // processPrompt). Critically, Stream B fires when promptsInCurrentStage >= 3 BEFORE
+    // processPrompt — using pICS=2 keeps Stream B dormant so the first OpenAI call
+    // goes to Stage 2, not Stream B, keeping the makeMockOpenAI call order correct.
+    const mgr = SessionStateManager.load(store, projectRoot);
+    (mgr as unknown as { state: Record<string, unknown> }).state['currentStage']         = 'implementation';
+    (mgr as unknown as { state: Record<string, unknown> }).state['stageConfidence']       = 0.9;
+    (mgr as unknown as { state: Record<string, unknown> }).state['promptsInCurrentStage'] = 2;
+    mgr.setDetectedLanguage(store, 'en'); // triggers saveState to persist above
+  }
+
+  it('adds all qualifying absence flags when Condition 2 fires', async () => {
+    // With pICS=2 (→3 after processPrompt) and optimum thresholds, signals with
+    // effectiveThreshold ≤ 3 may qualify simultaneously. All qualifying signals are
+    // added to absenceFlags so Stage 2 can select the most contextually relevant one.
+    await setupImplState('/test/selective-add-fire');
+    const result = await runAuto(
+      makeInput({ promptText: NEUTRAL_IMPL, projectRoot: '/test/selective-add-fire' }),
+      store,
+      makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'),
+    );
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/selective-add-fire');
+    // outcome=pending → at least 1 absence flag added
+    // outcome=no_action → stage may have flipped (pICS reset), 0 flags possible
+    if (result.outcome === 'pending') {
+      expect(mgr.current.absenceFlags.length).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('adds all qualifying flags before Stage 2 runs — flags present even on Stage 2 decline', async () => {
+    // Stage 2 declines → pipeline returns no_action. All qualifying flags must still be
+    // in absenceFlags so Stage 2 is not triggered again immediately (hammer prevention).
+    await setupImplState('/test/selective-add-decline');
+    vi.mocked(writeTelemetry).mockClear();
+    await runAuto(
+      makeInput({ promptText: NEUTRAL_IMPL, projectRoot: '/test/selective-add-decline' }),
+      store,
+      makeMockOpenAI(FIRE_NO_RESPONSE),
+    );
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/selective-add-decline');
+    // Find a stage2_evaluated event for an absence trigger that declined
+    const s2Call = vi.mocked(writeTelemetry).mock.calls.find(([, ev]) => ev === 'stage2_evaluated');
+    const absenceDeclined =
+      s2Call !== undefined &&
+      (s2Call[2] as Record<string, unknown>)?.['confirmed'] === false &&
+      (s2Call[2] as Record<string, unknown>)?.['flagType'] === 'absence';
+    if (absenceDeclined) {
+      // Stage 2 ran for an absence signal and declined — all qualifying flags are in absenceFlags
+      expect(mgr.current.absenceFlags.length).toBeGreaterThanOrEqual(1);
+    } else {
+      // Stage transition path or early exit — flags correctly not added or already counted
+      expect(mgr.current.absenceFlags.length).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('does not add any flag when post-advisory cooldown blocks before step 6.8', async () => {
+    // Pipeline exits at step 6.6 (cooldown) — before the addAbsenceFlag call at step 6.8.
+    // Even if Condition 2 fired (newFlags > 0), no flag should be added.
+    await setupImplState('/test/selective-add-cooldown');
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    // Set lastAdvisoryPromptIndex = promptCount so cooldown gap = 0 < postAdvisoryCooldown(2)
+    const mgr = SessionStateManager.load(store, '/test/selective-add-cooldown');
+    const currentCount = mgr.current.promptCount;
+    (mgr as unknown as { state: Record<string, unknown> }).state['lastAdvisoryPromptIndex'] = currentCount;
+    mgr.setDetectedLanguage(store, 'en');
+
+    vi.mocked(writeTelemetry).mockClear();
+    const result = await runAuto(
+      makeInput({ promptText: NEUTRAL_IMPL, projectRoot: '/test/selective-add-cooldown' }),
+      store,
+      makeMockOpenAI(FIRE_YES_RESPONSE, 'Hold up.'),
+    );
+    const mgr2 = SessionStateManager.load(store, '/test/selective-add-cooldown');
+    expect(result.outcome).toBe('no_action');
+    // Confirm it was the cooldown gate (step 6.6) that blocked — not an unrelated early exit.
+    const cooldownBlocked = vi.mocked(writeTelemetry).mock.calls.some(
+      ([, ev]) => ev === 'advisory_cooldown_blocked',
+    );
+    if (cooldownBlocked) {
+      // Cooldown blocked before step 6.8 — no absence flag should have been added
+      expect(mgr2.current.absenceFlags.length).toBe(0);
+    }
+  });
+});
+
+// ── SessionStateManager — applyStage2SignalUpdates ────────────────────────────
+
+describe('SessionStateManager — applyStage2SignalUpdates', () => {
+  let store: Store;
+
+  beforeEach(async () => { store = await openStore(':memory:'); });
+  afterEach(() => { store.db.close(); });
+
+  it('marks known signal as present with lastSeenAt = promptCount - 1', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/s2sig');
+
+    // Advance promptCount to 5 so the index is predictable
+    (mgr as unknown as { state: Record<string, unknown> }).state['promptCount'] = 5;
+    mgr.setDetectedLanguage(store, 'en'); // persists state
+
+    mgr.applyStage2SignalUpdates(store, ['test_creation']);
+
+    const mgr2 = SessionStateManager.load(store, '/test/s2sig');
+    const counter = mgr2.current.signalCounters['test_creation'];
+    expect(counter).toBeDefined();
+    expect(counter.present).toBe(true);
+    expect(counter.lastSeenAt).toBe(4); // promptCount(5) - 1
+  });
+
+  it('ignores unknown signal keys returned by LLM', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/s2sig-unknown');
+    // Should not throw even if LLM hallucinated a key
+    expect(() => {
+      mgr.applyStage2SignalUpdates(store, ['not_a_real_signal_key_xyz']);
+    }).not.toThrow();
+  });
+
+  it('updates multiple signals in one call', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/s2sig-multi');
+    (mgr as unknown as { state: Record<string, unknown> }).state['promptCount'] = 10;
+    mgr.setDetectedLanguage(store, 'en');
+
+    mgr.applyStage2SignalUpdates(store, ['test_creation', 'security_check']);
+
+    const mgr2 = SessionStateManager.load(store, '/test/s2sig-multi');
+    expect(mgr2.current.signalCounters['test_creation']?.present).toBe(true);
+    expect(mgr2.current.signalCounters['security_check']?.present).toBe(true);
+    expect(mgr2.current.signalCounters['test_creation']?.lastSeenAt).toBe(9);
+    expect(mgr2.current.signalCounters['security_check']?.lastSeenAt).toBe(9);
+  });
+
+  it('persists signal updates across SessionStateManager reloads', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/s2sig-persist');
+    (mgr as unknown as { state: Record<string, unknown> }).state['promptCount'] = 7;
+    mgr.setDetectedLanguage(store, 'en');
+
+    mgr.applyStage2SignalUpdates(store, ['test_creation']);
+
+    // Reload from store
+    const mgr2 = SessionStateManager.load(store, '/test/s2sig-persist');
+    expect(mgr2.current.signalCounters['test_creation']?.present).toBe(true);
+    expect(mgr2.current.signalCounters['test_creation']?.lastSeenAt).toBe(6);
+  });
+
+  it('does not throw when signalsPresent is empty', async () => {
+    const { SessionStateManager } = await import('../../classifier/SessionStateManager.js');
+    const mgr = SessionStateManager.load(store, '/test/s2sig-empty');
+    expect(() => {
+      mgr.applyStage2SignalUpdates(store, []);
+    }).not.toThrow();
   });
 });

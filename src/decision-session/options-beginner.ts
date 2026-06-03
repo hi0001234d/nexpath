@@ -294,14 +294,14 @@ export const ABSENCE_CORRECTION_SEEKING_BEGINNER: DecisionContent = {
   question:      'Has the AI checked its own work?',
   pinchFallback: 'No verification.',
   L1: [
-    '1. Ask the AI to look at what was just built again — but this time, ask it to find what might be wrong with it.\n2. Share with me what it says.\n3. Then tell me: does its answer make sense to you, or does something still seem off?',
-    'Ask the AI: "what\'s the part of what was just built you\'re least sure about?" — then share what it says with me so we can check together.',
+    '1. Look at what was just built again — but this time, find what might be wrong with it.\n2. Share what you find with me.\n3. Then tell me: does what you found make sense, or does something still seem off?',
+    'What\'s the part of what was just built you\'re least sure about? — share what you find with me so we can check together.',
   ],
   L2: [
-    'Ask the AI to point out any part of what was just built that might not be right — then share what it says with me.',
+    'Point out any part of what was just built that might not be right — then share what you find with me.',
   ],
   L3: [
-    'Ask the AI to find one thing in what was just built that might be wrong or could be done better.',
+    'Find one thing in what was just built that might be wrong or could be done better.',
   ],
 };
 
@@ -354,14 +354,14 @@ export const ABSENCE_PROMPT_CONTEXT_BEGINNER: DecisionContent = {
   question:      'Sending prompts — have you shared the spec?',
   pinchFallback: 'Missing context.',
   L1: [
-    '1. Think about what you\'ve been asking the AI to build in this session.\n2. Share with me: has it seen the original plan for what we\'re building, or has it just been following each instruction without knowing the bigger picture?\n3. Then paste the plan or the task description into the conversation and ask it to check that what was just built matches what was planned.',
-    'Walk me through what the AI has been working from in this session — has it seen the full plan, or just individual instructions? Share the original plan with it now and ask it to check if what was just built matches up, then share what it says with me.',
+    '1. Think about what you\'ve been building in this session.\n2. Share with me: have you seen the original plan for what we\'re building, or have you just been following each instruction without knowing the bigger picture?\n3. Then paste the plan or the task description into the conversation and check that what was just built matches what was planned.',
+    'Walk me through what you\'ve been working from in this session — have you seen the full plan, or just individual instructions? Check whether what was just built matches the original plan if you have it, and share what you find with me.',
   ],
   L2: [
-    'Has the AI seen the plan or the description of what this feature is supposed to do? If not, share it now and ask it to check that what was just built matches — then share what it says with me.',
+    'Have you seen the plan or the description of what this feature is supposed to do? If not, ask me for it — then check that what was just built matches and share what you find.',
   ],
   L3: [
-    'Does the AI know what the full plan says for this feature, or has it been building without seeing it?',
+    'Do you know what the full plan says for this feature, or have you been building without seeing it?',
   ],
 };
 
@@ -583,6 +583,438 @@ export const ABSENCE_ITERATION_PLANNING_BEGINNER: DecisionContent = {
   ],
 };
 
+// ── Phase 5 D1-D3 — beginner signals (BEGINNER register) ─────────────────────
+
+export const ABSENCE_INCREMENTAL_BUILD_BEGINNER: DecisionContent = {
+  question:      'Building something — verifying each piece as you go?',
+  pinchFallback: 'One piece at a time.',
+  L1: [
+    '1. Before adding the next thing — quickly test what was just built.\n2. Share with me: does it do what you expected, or is something off?\n3. Then tell me: is it safe to move on, or should we fix something first?',
+    'Test the part that was just built before adding anything else — tell me if it works the way you expected, and share what you find.',
+  ],
+  L2: [
+    'Does what was just built work the way it should? Try it and tell me before we add anything else.',
+  ],
+  L3: [
+    'Is what was just built working before we continue?',
+  ],
+};
+
+export const ABSENCE_ERROR_UNDERSTANDING_BEGINNER: DecisionContent = {
+  question:      'Got an error — do you know what it means?',
+  pinchFallback: 'Understand the error.',
+  L1: [
+    '1. Before asking to fix this error — read the error message carefully.\n2. Share with me: what do you think it\'s saying went wrong?\n3. Then tell me: does your explanation match where the problem is in the code?',
+    'Walk me through the error message — what does it say, where is it pointing, and what do you think caused it? Share your understanding before we fix anything.',
+  ],
+  L2: [
+    'What do you think this error means? Share your best guess with me — even if you\'re not sure — before we fix it.',
+  ],
+  L3: [
+    'Do you understand what this error is telling you, or does it need more explaining before we fix it?',
+  ],
+};
+
+export const ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER: DecisionContent = {
+  question:      'About to ask — have you checked the docs?',
+  pinchFallback: 'Docs first.',
+  L1: [
+    '1. Before asking me this question — check the official documentation for this library or API.\n2. Share with me: what did you find, and is the answer there?\n3. Then ask me what you still couldn\'t find in the docs.',
+    'Look up the official docs for what you\'re asking about, then share what you found — I\'ll fill in anything the docs didn\'t make clear.',
+  ],
+  L2: [
+    'Is there official documentation for what you\'re asking about? Check it first and share what you find — then tell me what\'s still unclear.',
+  ],
+  L3: [
+    'Have you checked the documentation for this before asking?',
+  ],
+};
+
+export const ABSENCE_OUTPUT_VERIFICATION_BEGINNER: DecisionContent = {
+  question:      'Code generated — have you actually tried it?',
+  pinchFallback: 'Test it first.',
+  L1: [
+    '1. Before moving on from what was just built — actually run it or try it.\n2. Share with me: does it behave the way you expected?\n3. If anything looks off, tell me what happened and we\'ll look at it together.',
+    'Try what was just built and share what happens — does it do what you expected, or is something different?',
+  ],
+  L2: [
+    'Have you run or tried what was just built? Tell me what it does when you use it.',
+  ],
+  L3: [
+    'Have you actually tested what was just built to see if it works?',
+  ],
+};
+
+export const ABSENCE_REQUIREMENT_CLARITY_BEGINNER: DecisionContent = {
+  question:      'About to build — is the requirement clear?',
+  pinchFallback: 'Clarify first.',
+  L1: [
+    '1. Before I build this — tell me specifically what you want it to do.\n2. Share with me: what does it look like when it\'s working correctly?\n3. Then tell me: what should NOT happen — is there anything it should avoid doing?',
+    'Describe what you want built in your own words — what it should do, and how you\'d know it\'s working right. Share that with me before we start.',
+  ],
+  L2: [
+    'What exactly should this do, and how will you know when it\'s working? Be specific — not just "make it work" but what does "working" look like.',
+  ],
+  L3: [
+    'What do you want this to do? In plain words — what\'s the goal?',
+  ],
+};
+
+export const ABSENCE_COPY_PASTE_AWARENESS_BEGINNER: DecisionContent = {
+  question:      'Code generated — do you understand it before using it?',
+  pinchFallback: 'Understand first.',
+  L1: [
+    '1. Before adding the generated code to your project — read through it.\n2. Share with me: what does each part do in plain words?\n3. If there\'s a part you\'re not sure about, point it out and we\'ll go through it together before it goes in.',
+    'Walk me through the code that was just generated — what does it do and how does it work? Share your understanding before we add it to the project.',
+  ],
+  L2: [
+    'Is there any part of the code that was just generated that you\'re not sure you understand? Point it out and we\'ll go through it.',
+  ],
+  L3: [
+    'Do you understand what the generated code does before adding it to your project?',
+  ],
+};
+
+export const ABSENCE_DEBUGGING_OBSERVATION_BEGINNER: DecisionContent = {
+  question:      'Something\'s broken — what did you actually see?',
+  pinchFallback: 'Describe it first.',
+  L1: [
+    '1. Before I look at the bug — describe what happened.\n2. Share with me: what did you expect to happen, and what actually happened instead?\n3. Then tell me: is there an error message, and if so, what does it say?',
+    'Walk me through what\'s broken — what did you expect to happen, what actually happened, and what error or weird behaviour did you see? Share that with me and we\'ll figure it out.',
+  ],
+  L2: [
+    'What happened when you ran this? Describe what you expected vs what you actually saw — I need to know the difference before we fix it.',
+  ],
+  L3: [
+    'What exactly went wrong — what did you see happen, and what were you expecting?',
+  ],
+};
+
+export const ABSENCE_LEARNING_CONSOLIDATION_BEGINNER: DecisionContent = {
+  question:      'We\'ve built a lot — do you feel like you understood it?',
+  pinchFallback: 'Recap learning.',
+  L1: [
+    '1. We\'ve covered a lot in this session — take a moment and think about what you actually learned.\n2. Share with me: what\'s the most important thing you now understand that you didn\'t before?\n3. Then tell me: is there anything we covered that still feels unclear or confusing?',
+    'Recap what you learned in this session in your own words — what did we build, how does it work, and what new thing do you understand now that you didn\'t before? Share that with me.',
+  ],
+  L2: [
+    'What\'s the one thing from this session that you feel like you actually understood — not just copied, but actually understood? Share it with me.',
+  ],
+  L3: [
+    'Is there something we built in this session that you\'re confident you understand well enough to explain to someone else?',
+  ],
+};
+
+export const ABSENCE_SIMPLE_SOLUTION_FIRST_BEGINNER: DecisionContent = {
+  question:      'Building this — is there a simpler way to do it?',
+  pinchFallback: 'Simplest first.',
+  L1: [
+    '1. Before building something complex — ask: is there a simpler way to get the same result? The simplest solution that works is almost always the right one to start with.\n2. Share what you\'re trying to do in plain terms. Let\'s find the simple version first.',
+    'The KISS principle in engineering: if the simple solution works, use it. You can always make things more complex later — you can\'t unsimplify them. What\'s the simplest version of what you\'re building?',
+  ],
+  L2: [
+    'Is there a simpler way to do this? Describe what you need — let\'s find the smallest solution.',
+  ],
+  L3: [
+    'What\'s the simplest way to get this done? Start there.',
+  ],
+};
+
+export const ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER: DecisionContent = {
+  question:      'Asking a lot at once — let\'s do one thing at a time',
+  pinchFallback: 'One thing at a time.',
+  L1: [
+    '1. When you send several things at once, the results get messy and hard to check. Try focusing on just one thing per message.\n2. What\'s the most important thing to do right now? Start with that — then we\'ll move to the next.',
+    'One task per message works better than many — it\'s easier to see if it worked, easier to fix if it didn\'t, and easier to understand what happened. What\'s the single next step?',
+  ],
+  L2: [
+    'What\'s the one thing to do right now? Focus on that first — we\'ll do the rest after.',
+  ],
+  L3: [
+    'One thing at a time — what\'s the most important next step?',
+  ],
+};
+
+export const ABSENCE_ROLLBACK_AWARENESS_BEGINNER: DecisionContent = {
+  question:      'About to change things — do you know how to undo it?',
+  pinchFallback: 'Save before changing.',
+  L1: [
+    '1. Before making a big change to your code — do a git commit first. This saves a snapshot you can always go back to if something breaks.\n2. Not sure how? Try: git add . then git commit -m \'working before change\'. Then make your change safely.',
+    'Git is your safety net. Always commit a working version of your code before changing something significant. If the change breaks everything, you can get back to where things worked with one command.',
+  ],
+  L2: [
+    'Do a git commit before making this change — save a working snapshot first, then change.',
+  ],
+  L3: [
+    'Commit your current code before changing it — so you can get back if needed.',
+  ],
+};
+
+export const ABSENCE_BUILD_VS_UNDERSTAND_RATIO_BEGINNER: DecisionContent = {
+  question:      'We\'ve been building — do you understand what we\'ve built?',
+  pinchFallback: 'Pause and understand.',
+  L1: [
+    '1. We\'ve added a lot of code — can you explain in your own words what it does? Even a rough description is fine.\n2. Understanding what you\'ve built is as important as building it. Code you don\'t understand becomes a problem you can\'t fix later.',
+    'Pick one part of what we just built and walk me through what it does. Not how I explained it — how YOU understand it. This is how you turn building into learning.',
+  ],
+  L2: [
+    'Can you explain in your own words what the code we just wrote does? Take a moment.',
+  ],
+  L3: [
+    'Walk me through what we just built — in your own words.',
+  ],
+};
+
+
+// ── Sub-7 — beginner content sets ─────────────────────────────────────────────
+
+export const ABSENCE_SCOPE_CREEP_BEGINNER: DecisionContent = {
+  question:      'Scope expanding — still on original plan?',
+  pinchFallback: 'Scope check?',
+  L1: [
+    '1. Look at what was just built and make a list of everything it does now. 2. Compare that list to what you originally planned to build. 3. Share anything that wasn\'t in the original plan with me before we continue.',
+    'Go through this feature and check — did anything extra get added that wasn\'t part of the original plan? Share what you find with me before we keep going.',
+  ],
+  L2: [
+    'Is there anything in this feature that you didn\'t originally plan to build? Tell me what it is and we\'ll decide what to do with it.',
+  ],
+  L3: [
+    'Can you name one thing in this feature that ended up there but wasn\'t part of the original plan?',
+  ],
+};
+
+export const ABSENCE_CONTEXT_LOSS_BEGINNER: DecisionContent = {
+  question:      'Long session — context recapped?',
+  pinchFallback: 'Context recap?',
+  L1: [
+    '1. Think about everything we\'ve done with what was just built this session. 2. Write down what\'s working and what still needs to be done. 3. Share that with me before we keep going — it\'ll help us stay on track.',
+    'Take a moment and catch up on this project — what have we built so far, what choices did we make, and what\'s next? Share your summary with me before we continue.',
+  ],
+  L2: [
+    'Can you tell me where this feature is right now in your own words — what\'s done and what still needs to happen?',
+  ],
+  L3: [
+    'What\'s one thing you want to make sure we don\'t forget about where this project is right now?',
+  ],
+};
+
+export const ABSENCE_API_DESIGN_REVIEW_BEGINNER: DecisionContent = {
+  question:      'API being built — design reviewed?',
+  pinchFallback: 'API design?',
+  L1: [
+    '1. Look at what was just built and check whether it could break anything that\'s already using this API. 2. List any changes to how it works — what it expects and what it sends back. 3. Share your list with me before we continue.',
+    'Go through this feature\'s API and check — could anything about how it works change after other code starts depending on it? Share what you find with me before we move on.',
+  ],
+  L2: [
+    'Does what was just built change the API in a way that might break something that\'s already using it? Tell me what changed and we\'ll figure out if it\'s a problem.',
+  ],
+  L3: [
+    'What\'s one thing about how this feature\'s API works that might need to change later — and could that cause a problem for anything depending on it?',
+  ],
+};
+
+export const ABSENCE_ACCESSIBILITY_BEGINNER: DecisionContent = {
+  question:      'UI being built — accessibility checked?',
+  pinchFallback: 'Accessibility?',
+  L1: [
+    '1. Go through what was just built and check that every button and link has a clear label describing what it does. 2. Try tabbing through the whole feature using only the keyboard — no mouse. 3. Share what you find with me before we continue.',
+    'Think about someone who can\'t see the screen trying to use this feature — would a screen reader be able to tell them what everything does? Go through it and share what you notice with me before we move on.',
+  ],
+  L2: [
+    'Can you go through this feature and find one thing that someone with a disability might struggle to use — and tell me what it is?',
+  ],
+  L3: [
+    'Is there anything in what was just built that someone might have trouble using if they couldn\'t use a mouse or couldn\'t see the screen clearly?',
+  ],
+};
+
+export const ABSENCE_ENV_AND_SECRETS_BEGINNER: DecisionContent = {
+  question:      'Credentials in use — secrets management reviewed?',
+  pinchFallback: 'Secrets setup?',
+  L1: [
+    '1. Go through what was just built and check — are any passwords, API keys, or other secrets written directly in the code? 2. If they are, those need to be moved to a separate `.env` file. 3. Share what you find with me before we continue.',
+    'Check whether this feature has a `.env.example` file that lists every secret or config value it needs to run — without the real values. Share what you find with me before we move on.',
+  ],
+  L2: [
+    'Is there a password, API key, or any other secret in what was just built that\'s written directly into the code? Tell me what it is and we\'ll figure out how to move it somewhere safe.',
+  ],
+  L3: [
+    'What\'s one secret or password this feature uses — and where is it stored right now?',
+  ],
+};
+
+export const ABSENCE_DATA_VALIDATION_BEGINNER: DecisionContent = {
+  question:      'Accepting input — data validation in place?',
+  pinchFallback: 'Input validation?',
+  L1: [
+    '1. Think about what happens in this feature if someone sends the wrong data — a missing field, a number where text is expected, or something completely unexpected. 2. Try sending some bad data and see what happens. 3. Share what you find with me before we continue.',
+    'Go through what was just built and check — is there anything checking that the data coming in is actually in the right format before the app tries to use it? Share what you find with me before we move on.',
+  ],
+  L2: [
+    'What happens in this feature if someone sends a missing or wrong value — does it give a clear error message, or does it just break? Try it and tell me what you see.',
+  ],
+  L3: [
+    'What\'s one piece of data this feature accepts that isn\'t being checked before it gets used?',
+  ],
+};
+
+export const ABSENCE_CI_PIPELINE_BEGINNER: DecisionContent = {
+  question:      'Moving toward release — CI pipeline configured?',
+  pinchFallback: 'CI pipeline?',
+  L1: [
+    '1. Check whether this project has anything set up to run the tests automatically whenever code is pushed. 2. If not, this is a good time to set that up so mistakes get caught before they reach the final code. 3. Share what you find with me before we continue.',
+    'Go through what happens when code gets pushed to this feature — do the tests run automatically, or does someone have to remember to run them by hand? Share what you find with me before we move on.',
+  ],
+  L2: [
+    'Does this project have something that automatically runs the tests whenever code is pushed — and does it stop bad code from getting merged if the tests fail?',
+  ],
+  L3: [
+    'Is there anything that runs automatically when new code is added to this project — like the tests? Tell me what happens and we\'ll figure out if anything is missing.',
+  ],
+};
+
+export const ABSENCE_RATE_LIMITING_BEGINNER: DecisionContent = {
+  question:      'API endpoint built — rate limiting designed?',
+  pinchFallback: 'Rate limiting?',
+  L1: [
+    '1. Think about what would happen if someone sent a huge number of requests to this feature very quickly. 2. Check whether the app has any limit on how many times it can be called in a short period. 3. Share what you find with me before we continue.',
+    'Go through what was just built and check — if someone calls this API endpoint hundreds of times in a row, does the app handle that, or would it start having problems? Share what you find with me before we move on.',
+  ],
+  L2: [
+    'Does this feature have any kind of limit on how many times someone can call it in a short period — and what happens if they go over that limit?',
+  ],
+  L3: [
+    'What\'s one way someone could use this feature too much — and is there anything currently stopping that from happening?',
+  ],
+};
+
+export const ABSENCE_FEATURE_SCOPE_BEGINNER: DecisionContent = {
+  question:      'Building this — what should it actually do?',
+  pinchFallback: 'Scope first.',
+  L1: [
+    '1. Before we keep going — help me describe in plain words what this part of the app should do and what \'finished\' looks like for it.\n2. Share that back with me so we\'re both on the same page.\n3. Then tell me: is there anything about what I want that is still unclear to you?',
+    'Help me write one sentence about what we\'re building right now and how I\'d know it\'s done — then share it with me before continuing.',
+  ],
+  L2: [
+    'What is the one thing this part of the app is supposed to do — and how will I know when it\'s working the way I want? Share your answer with me first.',
+  ],
+  L3: [
+    'In plain words — what exactly are we building here and how will we know it\'s done?',
+  ],
+};
+
+export const ABSENCE_IMPLEMENTATION_CHECKPOINT_BEGINNER: DecisionContent = {
+  question:      'Built something new — does it actually work?',
+  pinchFallback: 'Quick check.',
+  L1: [
+    '1. Before adding anything else — can you quickly try out what was just built?\n2. Tell me: does it do what we expected, or is something not working yet?\n3. If something\'s off, let\'s fix it before we keep going — it\'s easier to catch now than after more code is added on top.',
+    'Try what was just built and share what happens — does it work the way we want it to? One quick test before we continue building.',
+  ],
+  L2: [
+    'Does what was just built actually work? Try it and tell me what you see before we add anything else.',
+  ],
+  L3: [
+    'Does this work yet? Quick check before we keep building.',
+  ],
+};
+
+export const ABSENCE_SPEC_BEFORE_CODE_BEGINNER: DecisionContent = {
+  question:      'Coding this — what\'s it supposed to do?',
+  pinchFallback: 'Spec first.',
+  L1: [
+    '1. Before we write more code — describe in plain words what this is supposed to do.\n2. What should happen when it works correctly? Share that with me first.\n3. Then we\'ll write it — having that clear makes the code much simpler.',
+    'Tell me what you want this to do — in plain English, step by step — before we start coding it. What happens when it works? Share that first.',
+  ],
+  L2: [
+    'What should this do and how will I know it\'s working? Describe it in plain words before we write the code.',
+  ],
+  L3: [
+    'In plain words — what should this do? Tell me before we start coding.',
+  ],
+};
+
+// ── Phase 7 F1-F2 — session-quality signals (BEGINNER register) ───────────────
+
+export const ABSENCE_DECISION_FATIGUE_PATTERN_BEGINNER: DecisionContent = {
+  question:      'Accepting without reviewing — applied critical check recently?',
+  pinchFallback: 'Streak alert.',
+  L1: [
+    'Look back at the last few things Claude suggested — is there anything that looks right but you have not double-checked?',
+    'Review what Claude built recently and identify one thing to verify or question before continuing.',
+    'Check the last few Claude responses: is there anything you would like to confirm is correct before continuing?',
+  ],
+  L2: [
+    'Is there anything in Claude\'s recent suggestions you would like to double-check before continuing?',
+  ],
+  L3: [
+    'Pick one thing from Claude\'s recent responses to verify before continuing.',
+  ],
+};
+
+export const ABSENCE_WORK_RHYTHM_CHECK_BEGINNER: DecisionContent = {
+  question:      'Sending fast — read the last response fully before continuing?',
+  pinchFallback: 'Slow down.',
+  L1: [
+    'Read Claude\'s last response carefully before continuing — is there anything that looks right but you have not actually checked?',
+    'Go back and read the last thing Claude wrote — does everything look correct?',
+    'Before continuing: read the last Claude response and verify that everything there is correct.',
+  ],
+  L2: [
+    'Read Claude\'s last response carefully before sending the next message.',
+  ],
+  L3: [
+    'Pause and read the last response before continuing.',
+  ],
+};
+
+export const ABSENCE_FOCUS_DRIFT_DETECTION_BEGINNER: DecisionContent = {
+  question:      'Working on many things — finished any of them yet?',
+  pinchFallback: 'Focus drift.',
+  L1: [
+    'Let us focus on one thing at a time — what is the most important thing to finish in this session before we start anything new?',
+    'Pick the most important thing that is not finished yet and complete it before we continue with anything else.',
+    'What is the one thing we should complete right now before starting something else?',
+  ],
+  L2: [
+    'What is the most important thing to finish before we start anything new?',
+  ],
+  L3: [
+    'Complete one thing before we open anything else.',
+  ],
+};
+
+export const ABSENCE_SESSION_LENGTH_CHECKPOINT_BEGINNER: DecisionContent = {
+  question:      'Working for a while — what have you built so far?',
+  pinchFallback: 'Checkpoint due.',
+  L1: [
+    'Summarize what we have built so far in this session — what is working, what is still in progress, and what we still need to do.',
+    'Write a quick update on where we are — what has been done and what still needs to happen.',
+    'What is the current state of what we are building and what comes next?',
+  ],
+  L2: [
+    'What is the current state of what we are building — what works and what still needs to be done?',
+  ],
+  L3: [
+    'What is the most important thing to remember about where we are right now?',
+  ],
+};
+
+export const ABSENCE_PROGRESS_CONSOLIDATION_GAP_BEGINNER: DecisionContent = {
+  question:      'Built a lot — have you written down what you made?',
+  pinchFallback: 'Document now.',
+  L1: [
+    'Write a short note about what we built in this session, even just a few sentences, before we continue.',
+    'Add a quick update to the README or a comment in the code describing what was just built.',
+    'Summarize what was built in this session so the progress is captured somewhere.',
+  ],
+  L2: [
+    'Add a brief comment or note describing what was just built.',
+  ],
+  L3: [
+    'Write one sentence about what was just built before continuing.',
+  ],
+};
+
 export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> = {
   test_creation:         ABSENCE_TEST_CREATION_BEGINNER,
   regression_check:      ABSENCE_REGRESSION_CHECK_BEGINNER,
@@ -615,6 +1047,34 @@ export const ABSENCE_CONTENT_BEGINNER: Partial<Record<string, DecisionContent>> 
   task_definition_of_done: ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER,
   user_feedback_review:    ABSENCE_USER_FEEDBACK_REVIEW_BEGINNER,
   iteration_planning:      ABSENCE_ITERATION_PLANNING_BEGINNER,
+  scope_creep:             ABSENCE_SCOPE_CREEP_BEGINNER,
+  context_loss:            ABSENCE_CONTEXT_LOSS_BEGINNER,
+  api_design_review:       ABSENCE_API_DESIGN_REVIEW_BEGINNER,
+  accessibility:           ABSENCE_ACCESSIBILITY_BEGINNER,
+  environment_and_secrets: ABSENCE_ENV_AND_SECRETS_BEGINNER,
+  data_validation:         ABSENCE_DATA_VALIDATION_BEGINNER,
+  ci_pipeline:             ABSENCE_CI_PIPELINE_BEGINNER,
+  rate_limiting:           ABSENCE_RATE_LIMITING_BEGINNER,
+  feature_scope_before_build:    ABSENCE_FEATURE_SCOPE_BEGINNER,
+  implementation_checkpoint:     ABSENCE_IMPLEMENTATION_CHECKPOINT_BEGINNER,
+  spec_before_code:              ABSENCE_SPEC_BEFORE_CODE_BEGINNER,
+  incremental_build:              ABSENCE_INCREMENTAL_BUILD_BEGINNER,
+  error_understanding:            ABSENCE_ERROR_UNDERSTANDING_BEGINNER,
+  documentation_before_ask:       ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER,
+  output_verification:            ABSENCE_OUTPUT_VERIFICATION_BEGINNER,
+  requirement_clarity_before_ask: ABSENCE_REQUIREMENT_CLARITY_BEGINNER,
+  copy_paste_awareness:           ABSENCE_COPY_PASTE_AWARENESS_BEGINNER,
+  debugging_observation_gap:      ABSENCE_DEBUGGING_OBSERVATION_BEGINNER,
+  learning_consolidation:         ABSENCE_LEARNING_CONSOLIDATION_BEGINNER,
+  simple_solution_first:          ABSENCE_SIMPLE_SOLUTION_FIRST_BEGINNER,
+  single_responsibility_prompting: ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER,
+  rollback_awareness:             ABSENCE_ROLLBACK_AWARENESS_BEGINNER,
+  build_vs_understand_ratio:      ABSENCE_BUILD_VS_UNDERSTAND_RATIO_BEGINNER,
+  decision_fatigue_pattern:       ABSENCE_DECISION_FATIGUE_PATTERN_BEGINNER,
+  work_rhythm_check:              ABSENCE_WORK_RHYTHM_CHECK_BEGINNER,
+  focus_drift_detection:          ABSENCE_FOCUS_DRIFT_DETECTION_BEGINNER,
+  session_length_checkpoint:      ABSENCE_SESSION_LENGTH_CHECKPOINT_BEGINNER,
+  progress_consolidation_gap:     ABSENCE_PROGRESS_CONSOLIDATION_GAP_BEGINNER,
 };
 
 export const TRANSITION_CONTENT_BEGINNER: Partial<Record<Stage, DecisionContent>> = {

@@ -1,18 +1,18 @@
 import OpenAI from 'openai';
 import { readFileSync, existsSync } from 'node:fs';
-import { join, basename } from 'node:path';
-import { config as loadDotenv } from 'dotenv';
+import { basename, join } from 'node:path';
+import { resolveOpenAIKey, getKeySource } from '../../config/ApiKeyResolver.js';
 import type { Store } from '../../store/db.js';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
 import { classifyPrompt } from '../../classifier/PromptClassifier.js';
 import { SessionStateManager } from '../../classifier/SessionStateManager.js';
-import { detectAbsenceFlags } from '../../classifier/AbsenceDetector.js';
+import { detectAbsenceFlags, ABSENCE_MIN_PROMPTS } from '../../classifier/AbsenceDetector.js';
+import { classifyStreamBPresence } from '../../classifier/StreamBPresenceClassifier.js';
+import type { StreamBPresenceResult } from '../../classifier/StreamBPresenceClassifier.js';
 import { shouldFireStage2, runStage2 } from '../../classifier/Stage2Trigger.js';
 import { generatePinchLabel } from '../../decision-session/PinchGenerator.js';
-import { generateOptionList } from '../../decision-session/OptionGenerator.js';
-import { resolveDecisionContent } from '../../decision-session/options.js';
 import type { Stage } from '../../classifier/types.js';
-import type { FlagType } from '../../classifier/Stage2Trigger.js';
+import type { FlagType, Stage2TriggerResult } from '../../classifier/Stage2Trigger.js';
 import { resolveLanguage } from '../../classifier/LanguageDetector.js';
 import { insertPrompt } from '../../store/prompts.js';
 import { getConfig } from '../../store/config.js';
@@ -27,6 +27,9 @@ import { writeHookStats } from '../../store/hook-stats.js';
 import { upsertPendingAdvisory } from '../../store/pending-advisories.js';
 import { insertSkippedSession } from '../../store/skipped-sessions.js';
 import { writeTelemetry } from '../../telemetry/index.js';
+import { triggerOpportunisticSync } from '../../telemetry/OpportunisticSync.js';
+import { resolveFrequencyConfig, type AdvisoryFrequencyLevel } from '../../config/GlobalConfig.js';
+import { recentPromptMetadata } from '../../telemetry/recent-prompts.js';
 
 /**
  * nexpath auto — orchestration command (per decision-session-ux-research.md).
@@ -48,9 +51,6 @@ import { writeTelemetry } from '../../telemetry/index.js';
  * If no action is needed, returns silently in < 50ms with no output.
  */
 
-const MIN_PROMPTS_BEFORE_ADVISORY = 3;
-/** Prompts to suppress after any advisory fires — prevents rapid back-to-back advisories. */
-const POST_ADVISORY_COOLDOWN = 5;
 
 function resolveProjectName(projectRoot: string): string {
   try {
@@ -138,12 +138,26 @@ export async function runAuto(
   const mgr = SessionStateManager.load(store, input.projectRoot);
   const prevStage: Stage = mgr.current.currentStage;
   logger.debug('session_loaded', { promptCount: mgr.current.promptCount, stage: prevStage, project: input.projectRoot });
-  writeTelemetry(input.projectRoot, 'prompt_received', { promptCount: mgr.current.promptCount });
+  writeTelemetry(input.projectRoot, 'prompt_received', { promptCount: mgr.current.promptCount }, store);
+
+  // ── 1.5. Resolve frequency config and role — used throughout the pipeline ────
+  const freq = (
+    getConfig(store.db, `advisory_frequency:${input.projectRoot}`) ??
+    getConfig(store.db, 'advisory_frequency') ??
+    'every_event'
+  ) as AdvisoryFrequencyLevel;
+  const freqConfig = resolveFrequencyConfig(freq);
+
+  const configuredRole = (
+    getConfig(store.db, `role:${input.projectRoot}`) ??
+    getConfig(store.db, 'role') ??
+    null
+  ) as import('../../classifier/types.js').UserRole | null;
 
   // ── 2. Stage 1 classifier ────────────────────────────────────────────────────
   const classification = await classifyPrompt(input.promptText);
   logger.debug('stage1_result', { classified: classification.stage, confidence: classification.confidence });
-  writeTelemetry(input.projectRoot, 'prompt_classified', { stage: classification.stage, confidence: classification.confidence });
+  writeTelemetry(input.projectRoot, 'prompt_classified', { stage: classification.stage, confidence: classification.confidence }, store);
 
   // ── 2.5. LLM profile classification — async, before processPrompt ────────────
   if (isProfileStale(mgr.current.profile, mgr.current.promptCount) &&
@@ -163,16 +177,37 @@ export async function runAuto(
       precisionOrdinal:   updatedProfile.precisionOrdinal,
       playfulnessOrdinal: updatedProfile.playfulnessOrdinal,
       computedAt:         updatedProfile.computedAt,
-    });
+    }, store);
+  }
+
+  // ── 2.7. Inject configured role into profile ────────────────────────────────
+  const currentProfileForRole = mgr.current.profile;
+  if (currentProfileForRole !== null) {
+    mgr.setProfile({ ...currentProfileForRole, role: configuredRole });
+  }
+
+  // ── 2.8. Stream B presence classification ────────────────────────────────────
+  // Start from prompt 3 — the earliest any Stream B absence threshold can fire.
+  let streamBOverrides: StreamBPresenceResult | undefined;
+  if (mgr.current.currentStage === 'implementation'
+      && mgr.current.promptsInCurrentStage >= 3) {
+    streamBOverrides = await classifyStreamBPresence(input.promptText, openai)
+      .catch(() => {
+        logger.debug('stream_b_presence_failed', { prompt: input.promptText.slice(0, 60) });
+        return undefined; // fallback: vibeKeyword detection stands
+      });
   }
 
   // ── 3. Process prompt → updates state (stage, history, counters) ─────────────
-  mgr.processPrompt(store, input.promptText, classification);
+  mgr.processPrompt(store, input.promptText, classification, Date.now(),
+    freqConfig.minStageChangeConfidence, streamBOverrides);
   logger.debug('after_process', { stage: mgr.current.currentStage, stageConfidence: mgr.current.stageConfidence });
 
   // ── 3.5. Effective language — read from projects table (detection runs in nexpath stop) ──
   const langOverride  = getConfig(store.db, 'language_override');
-  const detectedLang  = getProject(store, input.projectRoot)?.detectedLanguage ?? undefined;
+  const project       = getProject(store, input.projectRoot);
+  const detectedLang  = project?.detectedLanguage ?? undefined;
+  const projectType   = project?.projectType ?? undefined;
   const effectiveLang = resolveLanguage(langOverride, detectedLang);
   logger.debug('language', { effectiveLang: effectiveLang ?? null });
 
@@ -180,78 +215,77 @@ export async function runAuto(
   const newFlags = detectAbsenceFlags(
     mgr.current as import('../../classifier/types.js').SessionState,
     mgr.current.profile,
+    projectType,
+    freqConfig.signalAbsenceThresholdMultiplier,
+    freqConfig.signalAbsenceMinFloor,
   );
-  for (const flag of newFlags) {
-    mgr.addAbsenceFlag(store, flag);
-  }
   logger.debug('absence_flags', { new: newFlags.length, total: mgr.current.absenceFlags.length });
   writeTelemetry(input.projectRoot, 'absence_flags_detected', {
     newFlagsCount:   newFlags.length,
     totalFlagsCount: mgr.current.absenceFlags.length,
     flagKeys:        newFlags.map((f) => f.signalKey),
-  });
+  }, store);
 
-  // ── 4.5. Minimum prompt guard ────────────────────────────────────────────────
-  if (mgr.current.promptCount < MIN_PROMPTS_BEFORE_ADVISORY) {
-    writeTelemetry(input.projectRoot, 'advisory_min_prompts_blocked', { promptCount: mgr.current.promptCount, minRequired: MIN_PROMPTS_BEFORE_ADVISORY });
+  // ── 4.5. Frequency off fast-exit + minimum prompt guard ────────────────────
+  if (freq === 'off') {
+    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq }, store);
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_off' });
+    return { outcome: 'no_action' };
+  }
+  if (mgr.current.promptCount < freqConfig.minPromptsBeforeAdvisory) {
+    writeTelemetry(input.projectRoot, 'advisory_min_prompts_blocked', { promptCount: mgr.current.promptCount, minRequired: freqConfig.minPromptsBeforeAdvisory }, store);
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'min_prompts_not_reached' });
     return { outcome: 'no_action' };
   }
 
   // ── 5. Should Stage 2 fire? ──────────────────────────────────────────────────
-  const flagType = shouldFireStage2(
+  const triggerResult: Stage2TriggerResult = shouldFireStage2(
     mgr.current as import('../../classifier/types.js').SessionState,
     prevStage,
     newFlags,
+    freqConfig.stage2S1LowConfidence,
   );
-  logger.debug('should_fire', { flagType: flagType ?? null });
+  logger.debug('should_fire', { trigger: triggerResult?.kind ?? null });
 
-  if (!flagType) {
-    writeTelemetry(input.projectRoot, 'pipeline_no_action', { reason: 'no_flag' });
+  if (!triggerResult) {
+    writeTelemetry(input.projectRoot, 'pipeline_no_action', { reason: 'no_flag' }, store);
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'no_flag' });
     return { outcome: 'no_action' };
   }
 
   // ── 6. Deduplication — already fired this session? ──────────────────────────
-  const firedKey     = buildFiredKey(flagType, prevStage, mgr.current.currentStage);
-  const alreadyFired = mgr.hasFiredDecisionSession(firedKey);
-  logger.debug('dedup', { firedKey, alreadyFired });
+  // For absence: use first qualifying flag as the pre-Stage-2 guard proxy.
+  const preCheckFiredKey = triggerResult.kind === 'stage_transition'
+    ? buildFiredKey('stage_transition', prevStage, mgr.current.currentStage)
+    : buildFiredKey(`absence:${triggerResult.qualifyingFlags[0]!.signalKey}` as FlagType, prevStage, mgr.current.currentStage);
+  const alreadyFired = mgr.hasFiredDecisionSession(preCheckFiredKey);
+  logger.debug('dedup', { firedKey: preCheckFiredKey, alreadyFired });
   if (alreadyFired) {
-    writeTelemetry(input.projectRoot, 'advisory_dedup_blocked', { firedKey });
-    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'already_fired', firedKey });
+    writeTelemetry(input.projectRoot, 'advisory_dedup_blocked', { firedKey: preCheckFiredKey }, store);
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'already_fired', firedKey: preCheckFiredKey });
     return { outcome: 'no_action' };
   }
 
   // ── 6.5. Advisory frequency gate ────────────────────────────────────────────
-  const freq =
-    getConfig(store.db, `advisory_frequency:${input.projectRoot}`) ??
-    getConfig(store.db, 'advisory_frequency') ??
-    'every_event';
-
-  if (freq === 'off') {
-    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType });
-    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_off' });
-    return { outcome: 'no_action' };
-  }
-  if (freq === 'major_only' && flagType !== 'stage_transition') {
-    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType });
-    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_major_only', flagType });
+  if (freq === 'major_only' && triggerResult.kind !== 'stage_transition') {
+    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType: triggerResult.kind }, store);
+    logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_major_only', flagType: triggerResult.kind });
     return { outcome: 'no_action' };
   }
   if (freq === 'once_per_session' && mgr.current.firedDecisionSessions.length > 0) {
-    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType });
+    writeTelemetry(input.projectRoot, 'advisory_freq_blocked', { freq, flagType: triggerResult.kind }, store);
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'freq_once_per_session' });
     return { outcome: 'no_action' };
   }
 
   // ── 6.6. Post-advisory cooldown — suppress rapid back-to-back advisories ─────
   const lastAdvisory = mgr.current.lastAdvisoryPromptIndex ?? -1;
-  if (lastAdvisory >= 0 && mgr.current.promptCount - lastAdvisory < POST_ADVISORY_COOLDOWN) {
+  if (lastAdvisory >= 0 && mgr.current.promptCount - lastAdvisory < freqConfig.postAdvisoryCooldown) {
     writeTelemetry(input.projectRoot, 'advisory_cooldown_blocked', {
       promptCount:       mgr.current.promptCount,
       lastAdvisoryAt:    lastAdvisory,
-      cooldownRemaining: POST_ADVISORY_COOLDOWN - (mgr.current.promptCount - lastAdvisory),
-    });
+      cooldownRemaining: freqConfig.postAdvisoryCooldown - (mgr.current.promptCount - lastAdvisory),
+    }, store);
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'post_advisory_cooldown', promptsSinceLast: mgr.current.promptCount - lastAdvisory });
     return { outcome: 'no_action' };
   }
@@ -260,7 +294,9 @@ export async function runAuto(
   const isVibeProfile =
     mgr.current.profile?.nature === 'beginner' ||
     mgr.current.profile?.nature === 'cool_geek';
-  const advisoryCap   = isVibeProfile ? 10 : 5;
+  const advisoryCap = isVibeProfile
+    ? freqConfig.sessionAdvisoryCapVibe
+    : freqConfig.sessionAdvisoryCapDefault;
   const advisoryCount = mgr.current.advisoryCount ?? 0;
   if (advisoryCount >= advisoryCap) {
     insertSkippedSession(store, {
@@ -271,7 +307,7 @@ export async function runAuto(
       levelReached:         0,
       skippedAtPromptCount: mgr.current.promptCount,
     });
-    writeTelemetry(input.projectRoot, 'advisory_cap_blocked', { advisoryCount, advisoryCap });
+    writeTelemetry(input.projectRoot, 'advisory_cap_blocked', { advisoryCount, advisoryCap }, store);
     logger.info('pipeline_outcome', {
       outcome: 'no_action',
       reason:  'session_cap_reached',
@@ -281,82 +317,87 @@ export async function runAuto(
     return { outcome: 'no_action' };
   }
 
+  // ── 6.8. Persist newly-detected absence flags — all qualify for Stage 2 consideration ──
+  // Guard: Condition 2 only fires when newFlags is non-empty and trigger kind is absence.
+  if (triggerResult.kind === 'absence' && newFlags.length > 0) {
+    for (const flag of newFlags) {
+      mgr.addAbsenceFlag(store, flag);
+    }
+  }
+
   // ── 7. Stage 2 LLM cross-confirmation ───────────────────────────────────────
   const stage2Input = {
-    state:         mgr.current as import('../../classifier/types.js').SessionState,
-    detectedStage: mgr.current.currentStage,
-    confidence:    mgr.current.stageConfidence,
-    flagType,
+    state:          mgr.current as import('../../classifier/types.js').SessionState,
+    detectedStage:  mgr.current.currentStage,
+    confidence:     mgr.current.stageConfidence,
+    flagType:       triggerResult.kind as 'stage_transition' | 'absence',
+    qualifyingFlags: triggerResult.kind === 'absence' ? triggerResult.qualifyingFlags : undefined,
   };
 
   let stage2Output: import('../../classifier/Stage2Trigger.js').Stage2Output;
   try {
-    stage2Output = await runStage2(stage2Input, openai);
+    stage2Output = await runStage2(stage2Input, openai, {
+      minConfidence: freqConfig.stage2MinConfidence,
+      contextWindow: freqConfig.stage2ContextWindow,
+    });
     logger.debug('stage2_result', { fire: stage2Output.fire_decision_session, confidence: stage2Output.stage_confidence, reason: stage2Output.reason });
-    writeTelemetry(input.projectRoot, 'stage2_evaluated', { flagType, confirmed: stage2Output.fire_decision_session });
+    writeTelemetry(input.projectRoot, 'stage2_evaluated', { flagType: triggerResult.kind, confirmed: stage2Output.fire_decision_session }, store);
   } catch (err) {
     logger.warn('stage2_error', { ...extractApiError(err, 'openai'), stage: mgr.current.currentStage });
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'stage2_error' });
-    writeTelemetry(input.projectRoot, 'pipeline_no_action', { reason: 'stage2_error' });
+    writeTelemetry(input.projectRoot, 'pipeline_no_action', { reason: 'stage2_error' }, store);
     return { outcome: 'no_action' };
   }
 
   if (!stage2Output.fire_decision_session) {
-    writeTelemetry(input.projectRoot, 'pipeline_no_action', { reason: 'stage2_declined' });
+    writeTelemetry(input.projectRoot, 'pipeline_no_action', { reason: 'stage2_declined' }, store);
     logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'stage2_declined', stage2Confidence: stage2Output.stage_confidence });
     return { outcome: 'no_action' };
   }
 
-  // ── 8. Mark as fired (before storing — prevents re-entry on restart) ────────
+  // ── 7.5. Feed Stage 2 signal assessments back into signal counters ───────────
+  mgr.applyStage2SignalUpdates(store, stage2Output.signals_present);
+
+  // ── 8. Compute effective flagType from Stage 2 selection, then mark as fired ─
+  const effectiveFlagType: FlagType = triggerResult.kind === 'stage_transition'
+    ? 'stage_transition'
+    : `absence:${stage2Output.selected_signal_key}`;
+  const firedKey = buildFiredKey(effectiveFlagType, prevStage, mgr.current.currentStage);
   mgr.markDecisionSessionFired(store, firedKey);
 
   // ── 8.5. Read user profile (computed in processPrompt, null if < 5 prompts) ──
   const userProfile = mgr.current.profile ?? undefined;
 
-  // ── 9. Pinch label + option text — run concurrently ─────────────────────────
-  const decisionContent = resolveDecisionContent(
+  // ── 9. Pinch label — option gen runs in stop hook after Claude responds ──────
+  const pinchLabel = await generatePinchLabel(
     mgr.current.currentStage,
-    flagType,
-    mgr.current.profile,
-    prevStage,
+    effectiveFlagType,
+    openai,
+    userProfile,
+    effectiveLang,
   );
-
-  const [pinchLabel, generatedOptions] = await Promise.all([
-    generatePinchLabel(
-      mgr.current.currentStage,
-      flagType,
-      openai,
-      userProfile,
-      effectiveLang,
-    ),
-    generateOptionList(
-      decisionContent,
-      userProfile,
-      effectiveLang,
-      mgr.current.promptHistory as import('../../classifier/types.js').PromptRecord[],
-      {
-        flagType,
-        currentStage:          mgr.current.currentStage,
-        prevStage,
-        promptsInCurrentStage: mgr.current.promptsInCurrentStage,
-      },
-      openai,
-    ),
-  ]);
 
   // ── 10. Store pending advisory — Stop hook will show UI after Claude responds
   upsertPendingAdvisory(store, {
     projectRoot: input.projectRoot,
     stage:       mgr.current.currentStage,
-    flagType,
+    flagType:    effectiveFlagType,
     pinchLabel,
     sessionId:   mgr.current.sessionId,
     promptCount: mgr.current.promptCount,
-    generatedL1: generatedOptions?.l1,
-    generatedL2: generatedOptions?.l2,
-    generatedL3: generatedOptions?.l3,
+    prevStage,
   });
-  writeTelemetry(input.projectRoot, 'pipeline_advisory_pending', { flagType, stage: mgr.current.currentStage, pinchLabel });
+  writeTelemetry(input.projectRoot, 'pipeline_advisory_pending', {
+    flagType:                      effectiveFlagType,
+    stage:                         mgr.current.currentStage,
+    pinchLabel,
+    // Item H — session-scoped advisory counter (from session state).
+    advisoryCountInSession:        mgr.current.advisoryCount ?? 0,
+    // Item J — project-scoped decision-session counter (from projects table).
+    decisionSessionCountInProject: getProject(store, input.projectRoot)?.decisionSessionCount ?? 0,
+    // Item B — last-5 prompt metadata, PII-safe (no text).
+    recentPrompts:                 recentPromptMetadata(mgr.current.promptHistory),
+  }, store);
   mgr.markAdvisoryFired(store);
 
   logger.info('pipeline_outcome', { outcome: 'pending', pinchLabel });
@@ -428,25 +469,39 @@ export function registerAutoCommand(program: import('commander').Command): void 
         process.exit(1);
       }
 
-      // Load project .env so OPENAI_API_KEY is available for Stage 2 calls.
-      // Uses override:true so the project key always wins over any ambient env var.
-      const envPath = join(opts.project, '.env');
-      loadDotenv({ path: envPath, override: true });
+      // Resolve OPENAI_API_KEY through the 4-layer chain (env → project .env →
+      // OS keychain → 0600 fallback file). The resolver promotes the first
+      // valid hit into process.env so downstream OpenAI() constructors pick it
+      // up transparently. Order shift from the prior dotenv-with-override
+      // behaviour: a pre-set env var now WINS over project .env.
+      await resolveOpenAIKey(opts.project);
 
       const store = await openStore(opts.db);
       // Initialise logger — level from config key, then NEXPATH_LOG_LEVEL env var
       const logLevel = getConfig(store.db, 'log_level') as LogLevel | undefined;
       initLogger('auto', logLevel);
 
-      // Diagnostic: log env resolution details so CWD mismatches are visible in the log
-      // instead of silently producing a missing-credentials error in Stage 2.
+      // Diagnostic: log the source layer that produced the key so a missing
+      // key (Stage-2 failure) can be traced to the actual fallback chain.
+      const keySource = await getKeySource(opts.project);
+      const keyFound  = !!process.env['OPENAI_API_KEY'];
       logger.debug('env_load', {
-        cwd:      process.cwd(),
-        project:  opts.project,
-        envPath,
-        envExists: existsSync(envPath),
-        keyFound:  !!process.env['OPENAI_API_KEY'],
+        cwd:       process.cwd(),
+        project:   opts.project,
+        keySource,
+        keyFound,
       });
+
+      // Surface a single visible warn line when no source produced a key. We
+      // do NOT exit here — Stage-1-only hook calls (prompt capture, blocking
+      // gates, low-confidence classifications) don't need the key and should
+      // still run. Stage-2 paths surface a richer OpenAI error if they fire.
+      if (!keyFound) {
+        logger.warn('openai_api_key_missing', {
+          project:    opts.project,
+          actionable: 'Set OPENAI_API_KEY in the shell, in the project\'s .env file, or via the OS keychain — Stage 2 calls will fail until a key is configured.',
+        });
+      }
 
       try {
         const result = await runAuto(
@@ -455,6 +510,7 @@ export function registerAutoCommand(program: import('commander').Command): void 
         );
 
         writeHookStats(opts.project, result.outcome);
+        void triggerOpportunisticSync(store).catch(() => {});
         // 'no_action' and 'pending' → exit silently (Stop hook handles UI)
       } finally {
         closeStore(store);

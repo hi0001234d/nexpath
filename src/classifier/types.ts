@@ -105,6 +105,12 @@ export interface SessionState {
    * Optional for backward compatibility with existing persisted state — read as 0 when absent.
    */
   advisoryCount?: number;
+  /**
+   * Number of consecutive prompts processed without a correction_seeking signal being detected.
+   * Resets to 0 whenever correction_seeking is detected in a prompt; increments on every other prompt.
+   * Used by the decision_fatigue_pattern signal detector.
+   */
+  consecutiveAcceptanceStreak: number;
 }
 
 // ── User nature / mood / depth (item 9) ───────────────────────────────────────
@@ -148,7 +154,14 @@ export interface UserProfile {
   depthScore: number;
   /** promptCount when this profile was computed (for stickiness tracking by caller). */
   computedAt: number;
+  /** Configured project role — injected from store config; null = no role configured (Dim2 signals inactive). */
+  role?: UserRole | null;
 }
+
+// ── Role ──────────────────────────────────────────────────────────────────────
+
+/** Explicit project role set via config. Unlocks Dim2 (role-based) signals. */
+export type UserRole = 'founder' | 'indie_hacker' | 'pm' | 'vibe_coder';
 
 // ── Signal definitions ─────────────────────────────────────────────────────────
 
@@ -162,4 +175,10 @@ export interface SignalDefinition {
   vibeKeywords?: string[];
   /** Number of prompts in confirmed stage before checking absence. */
   absenceThreshold: number; // 15–20 per research
+  /** Project types for which this signal is relevant. undefined = all project types. */
+  relevantProjectTypes?: string[];
+  /** Dim1: fire only when profile.nature matches. undefined = all natures (universal signal). */
+  nature?: UserNature;
+  /** Dim2: fire only when configuredRole matches. undefined = all roles (universal signal). */
+  role?: UserRole;
 }

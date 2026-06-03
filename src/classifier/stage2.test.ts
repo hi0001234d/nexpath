@@ -12,7 +12,7 @@ import {
   STAGE_LABEL,
   STAGE_FROM_LABEL,
 } from './Stage2Trigger.js';
-import type { Stage2Input } from './Stage2Trigger.js';
+import type { Stage2Input, Stage2TriggerResult } from './Stage2Trigger.js';
 import type OpenAI from 'openai';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -41,11 +41,12 @@ function makeState(overrides: Partial<SessionState> = {}): SessionState {
     promptHistory:          Array.from({ length: 15 }, (_, i) =>
       makePromptRecord(`implement the auth module step ${i + 1}`, i),
     ),
-    signalCounters:         {},
-    absenceFlags:           [],
-    firedDecisionSessions:  [],
-    profile:                null,
-    detectedLanguage:       undefined,
+    signalCounters:              {},
+    absenceFlags:                [],
+    firedDecisionSessions:       [],
+    profile:                     null,
+    detectedLanguage:            undefined,
+    consecutiveAcceptanceStreak: 0,
     ...overrides,
   };
 }
@@ -66,6 +67,7 @@ const VALID_LLM_RESPONSE = {
   signals_present:       ['test_creation'],
   signals_absent:        ['security_check'],
   fire_decision_session: true,
+  selected_signal_key:   'test_creation',
   reason:                'Developer moved from architecture to implementation without testing signals.',
 };
 
@@ -144,16 +146,40 @@ describe('buildStage2Prompt', () => {
     expect(prompt).toContain('Implementation');
   });
 
-  it('contains the flag type', () => {
+  it('does not contain "Flag raised" line (removed in favour of qualifying signals block)', () => {
     const input = makeStage2Input({ flagType: 'stage_transition' });
     const prompt = buildStage2Prompt(input);
-    expect(prompt).toContain('stage_transition');
+    expect(prompt).not.toContain('Flag raised:');
   });
 
-  it('contains the absence flag type with signal name', () => {
-    const input = makeStage2Input({ flagType: 'absence:test_creation' });
+  it('contains qualifying signals block for absence trigger', () => {
+    const flag: AbsenceFlag = {
+      signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 20, cooldownUntil: 50,
+    };
+    const input = makeStage2Input({ flagType: 'absence', qualifyingFlags: [flag] });
     const prompt = buildStage2Prompt(input);
-    expect(prompt).toContain('absence:test_creation');
+    expect(prompt).toContain('Qualifying absence signals');
+    expect(prompt).toContain('test_creation');
+  });
+
+  it('does not contain qualifying signals block for stage_transition trigger', () => {
+    const input = makeStage2Input({ flagType: 'stage_transition' });
+    const prompt = buildStage2Prompt(input);
+    expect(prompt).not.toContain('Qualifying absence signals');
+  });
+
+  it('qualifying signals block lists ALL qualifying flags — not just the first one', () => {
+    // Confirms Stage 2 is no longer forced to pre-select the first signal (e.g. problem_correction).
+    // When multiple signals qualify, all must appear so Stage 2 can pick the most relevant one.
+    const flags: AbsenceFlag[] = [
+      { signalKey: 'problem_correction', stage: 'implementation', raisedAtIndex: 20, cooldownUntil: 50 },
+      { signalKey: 'deployment_planning', stage: 'implementation', raisedAtIndex: 20, cooldownUntil: 50 },
+    ];
+    const input = makeStage2Input({ flagType: 'absence', qualifyingFlags: flags });
+    const prompt = buildStage2Prompt(input);
+    expect(prompt).toContain('Qualifying absence signals');
+    expect(prompt).toContain('problem_correction');
+    expect(prompt).toContain('deployment_planning');
   });
 
   it('contains classifier confidence formatted to 2 decimal places', () => {
@@ -197,6 +223,7 @@ describe('buildStage2Prompt', () => {
     expect(prompt).toContain('signals_present');
     expect(prompt).toContain('signals_absent');
     expect(prompt).toContain('stage_confidence');
+    expect(prompt).toContain('selected_signal_key');
   });
 
   it('includes signal list for the detected stage', () => {
@@ -269,10 +296,10 @@ describe('buildStage2Prompt', () => {
 // ── shouldFireStage2 ──────────────────────────────────────────────────────────
 
 describe('shouldFireStage2', () => {
-  it('returns stage_transition when stage changed', () => {
+  it('returns stage_transition kind when stage changed', () => {
     const state = makeState({ currentStage: 'implementation' });
     const result = shouldFireStage2(state, 'architecture', []);
-    expect(result).toBe('stage_transition');
+    expect(result).toEqual({ kind: 'stage_transition' });
   });
 
   it('returns null when stage is the same (no transition)', () => {
@@ -287,7 +314,7 @@ describe('shouldFireStage2', () => {
     expect(result).toBeNull();
   });
 
-  it('returns absence:<signalKey> when a new absence flag is raised', () => {
+  it('returns absence kind with qualifying flags when a new absence flag is raised', () => {
     const state = makeState({ currentStage: 'implementation' });
     const flag: AbsenceFlag = {
       signalKey:     'test_creation',
@@ -296,20 +323,20 @@ describe('shouldFireStage2', () => {
       cooldownUntil: 50,
     };
     const result = shouldFireStage2(state, undefined, [flag]);
-    expect(result).toBe('absence:test_creation');
+    expect(result).toEqual({ kind: 'absence', qualifyingFlags: [flag] });
   });
 
-  it('returns first flag key when multiple absence flags raised', () => {
+  it('returns absence kind with all qualifying flags when multiple absence flags raised', () => {
     const state = makeState({ currentStage: 'implementation' });
     const flags: AbsenceFlag[] = [
       { signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 20, cooldownUntil: 50 },
       { signalKey: 'security_check', stage: 'implementation', raisedAtIndex: 20, cooldownUntil: 50 },
     ];
     const result = shouldFireStage2(state, undefined, flags);
-    expect(result).toBe('absence:test_creation');
+    expect(result).toEqual({ kind: 'absence', qualifyingFlags: flags });
   });
 
-  it('returns absence:<signalKey> when low confidence + active absence flag exists', () => {
+  it('returns absence kind with active flags when low confidence + active absence flags exist', () => {
     const activeFlag: AbsenceFlag = {
       signalKey:     'test_creation',
       stage:         'implementation',
@@ -322,7 +349,22 @@ describe('shouldFireStage2', () => {
       absenceFlags:    [activeFlag],
     });
     const result = shouldFireStage2(state, undefined, []);
-    expect(result).toBe('absence:test_creation');
+    expect(result).toEqual({ kind: 'absence', qualifyingFlags: [activeFlag] });
+  });
+
+  it('returns all active flags when multiple active flags exist (condition 3)', () => {
+    const flag1: AbsenceFlag = { signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 10, cooldownUntil: 40 };
+    const flag2: AbsenceFlag = { signalKey: 'security_check', stage: 'implementation', raisedAtIndex: 12, cooldownUntil: 40 };
+    const state = makeState({
+      stageConfidence: 0.40,
+      promptCount:     20,
+      absenceFlags:    [flag1, flag2],
+    });
+    const result = shouldFireStage2(state, undefined, []) as Stage2TriggerResult & { kind: 'absence' };
+    expect(result?.kind).toBe('absence');
+    expect(result?.qualifyingFlags).toHaveLength(2);
+    expect(result?.qualifyingFlags.map(f => f.signalKey)).toContain('test_creation');
+    expect(result?.qualifyingFlags.map(f => f.signalKey)).toContain('security_check');
   });
 
   it('returns null when low confidence but no active absence flag', () => {
@@ -374,8 +416,7 @@ describe('shouldFireStage2', () => {
     };
     const state = makeState({ currentStage: 'review_testing' });
     const result = shouldFireStage2(state, 'implementation', [flag]);
-    // Stage transition fires first
-    expect(result).toBe('stage_transition');
+    expect(result).toEqual({ kind: 'stage_transition' });
   });
 
   it('high confidence + no flags → null (no Stage 2 needed)', () => {
@@ -396,7 +437,20 @@ describe('parseStage2Response', () => {
     expect(result.signals_present).toEqual(['test_creation']);
     expect(result.signals_absent).toEqual(['security_check']);
     expect(result.fire_decision_session).toBe(true);
+    expect(result.selected_signal_key).toBe('test_creation');
     expect(result.reason).toBe('Developer moved from architecture to implementation without testing signals.');
+  });
+
+  it('defaults selected_signal_key to empty string when field is absent', () => {
+    const { selected_signal_key: _sk, ...withoutKey } = VALID_LLM_RESPONSE;
+    const result = parseStage2Response(JSON.stringify(withoutKey));
+    expect(result.selected_signal_key).toBe('');
+  });
+
+  it('defaults selected_signal_key to empty string when field is not a string', () => {
+    const bad = { ...VALID_LLM_RESPONSE, selected_signal_key: 42 };
+    const result = parseStage2Response(JSON.stringify(bad));
+    expect(result.selected_signal_key).toBe('');
   });
 
   it('throws on invalid JSON', () => {
@@ -582,5 +636,40 @@ describe('runStage2', () => {
     const call = createFn.mock.calls[0][0];
     expect(call.messages[0].role).toBe('user');
     expect(call.messages[0].content).toContain('Implementation');
+  });
+
+  it('keeps valid selected_signal_key when it is in qualifyingFlags', async () => {
+    const flag: AbsenceFlag = { signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 20, cooldownUntil: 50 };
+    const resp = { ...VALID_LLM_RESPONSE, selected_signal_key: 'test_creation' };
+    const client = makeMockClient(JSON.stringify(resp));
+    const input  = makeStage2Input({ flagType: 'absence', qualifyingFlags: [flag] });
+    const result = await runStage2(input, client);
+    expect(result.selected_signal_key).toBe('test_creation');
+  });
+
+  it('falls back to first qualifying flag when selected_signal_key is not in qualifying set', async () => {
+    const flag: AbsenceFlag = { signalKey: 'test_creation', stage: 'implementation', raisedAtIndex: 20, cooldownUntil: 50 };
+    const resp = { ...VALID_LLM_RESPONSE, selected_signal_key: 'unknown_signal' };
+    const client = makeMockClient(JSON.stringify(resp));
+    const input  = makeStage2Input({ flagType: 'absence', qualifyingFlags: [flag] });
+    const result = await runStage2(input, client);
+    expect(result.selected_signal_key).toBe('test_creation');
+  });
+
+  it('falls back to first qualifying flag when selected_signal_key is empty', async () => {
+    const flag: AbsenceFlag = { signalKey: 'security_check', stage: 'implementation', raisedAtIndex: 20, cooldownUntil: 50 };
+    const resp = { ...VALID_LLM_RESPONSE, selected_signal_key: '' };
+    const client = makeMockClient(JSON.stringify(resp));
+    const input  = makeStage2Input({ flagType: 'absence', qualifyingFlags: [flag] });
+    const result = await runStage2(input, client);
+    expect(result.selected_signal_key).toBe('security_check');
+  });
+
+  it('does not validate selected_signal_key when qualifyingFlags is absent (stage_transition)', async () => {
+    const resp = { ...VALID_LLM_RESPONSE, selected_signal_key: '' };
+    const client = makeMockClient(JSON.stringify(resp));
+    const input  = makeStage2Input({ flagType: 'stage_transition' });
+    const result = await runStage2(input, client);
+    expect(result.selected_signal_key).toBe('');
   });
 });

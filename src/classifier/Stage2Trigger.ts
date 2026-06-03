@@ -55,11 +55,18 @@ const STAGE_OPTIONS = Object.values(STAGE_LABEL).join(' | ');
 /** What triggered this Stage 2 call. */
 export type FlagType = 'stage_transition' | `absence:${string}`;
 
+/** Return value of `shouldFireStage2`. */
+export type Stage2TriggerResult =
+  | null
+  | { kind: 'stage_transition' }
+  | { kind: 'absence'; qualifyingFlags: AbsenceFlag[] };
+
 export interface Stage2Input {
-  state:          SessionState;
-  detectedStage:  Stage;
-  confidence:     number;
-  flagType:       FlagType;
+  state:            SessionState;
+  detectedStage:    Stage;
+  confidence:       number;
+  flagType:         'stage_transition' | 'absence';
+  qualifyingFlags?: AbsenceFlag[];
 }
 
 export interface Stage2Output {
@@ -68,6 +75,7 @@ export interface Stage2Output {
   signals_present:      string[];
   signals_absent:       string[];
   fire_decision_session: boolean;
+  selected_signal_key:  string;
   reason:               string;
 }
 
@@ -91,12 +99,12 @@ export function buildSignalList(stage: Stage): string {
  * Build the complete LLM confirmation prompt per research spec.
  * Context window: last STAGE2_CONTEXT_WINDOW prompts (oldest first).
  */
-export function buildStage2Prompt(input: Stage2Input): string {
-  const { state, detectedStage, confidence, flagType } = input;
+export function buildStage2Prompt(input: Stage2Input, contextWindow = STAGE2_CONTEXT_WINDOW): string {
+  const { state, detectedStage, confidence, flagType, qualifyingFlags } = input;
   const stageLabel = STAGE_LABEL[detectedStage];
   const profile = state.profile;
 
-  const recentPrompts = state.promptHistory.slice(-STAGE2_CONTEXT_WINDOW);
+  const recentPrompts = state.promptHistory.slice(-contextWindow);
   const promptLines = recentPrompts
     .map((p, i) => `[${i + 1}] ${p.text}`)
     .join('\n');
@@ -110,21 +118,29 @@ export function buildStage2Prompt(input: Stage2Input): string {
 Calibration: assess signal presence by intent and behavior, not by exact SWE keyword match. Low Stage 1 confidence is normal for beginner/cool_geek profiles — weight behavioral patterns over vocabulary precision.`
     : `Developer profile: not yet computed — assess signals without profile context.`;
 
+  const qualifyingSection = flagType === 'absence' && qualifyingFlags && qualifyingFlags.length > 0
+    ? `Qualifying absence signals (select one to raise — all have been detected as absent in this session and qualify for the current stage):\n${
+        qualifyingFlags.map(f => {
+          const sig = SIGNAL_MAP.get(f.signalKey);
+          return `${f.signalKey}: ${sig?.description ?? f.signalKey}`;
+        }).join('\n')
+      }\n\n`
+    : '';
+
   return `You are analysing developer prompts captured from an AI coding agent session to determine the developer's current stage and whether key development practices are being followed.
 
 Current session context:
 - Stage detected by classifier: ${stageLabel}
 - Classifier confidence: ${confidence.toFixed(2)}
-- Flag raised: ${flagType}
 
-${profileBlock}
+${qualifyingSection}${profileBlock}
 
 Last ${recentPrompts.length} developer prompts (oldest first):
 ${promptLines}
 
 Stage options: ${STAGE_OPTIONS}
 
-Signals to check (answer only for signals relevant to the detected stage):
+Signals to check (assess all signals relevant to the detected stage):
 ${signalList}
 
 Return JSON only — no explanation, no markdown:
@@ -134,6 +150,7 @@ Return JSON only — no explanation, no markdown:
   "signals_present": ["<signal_key>"],
   "signals_absent": ["<signal_key>"],
   "fire_decision_session": <true|false>,
+  "selected_signal_key": "<qualifying signal key or empty string>",
   "reason": "<one sentence max>"
 }`;
 }
@@ -143,34 +160,36 @@ Return JSON only — no explanation, no markdown:
 /**
  * Determine whether Stage 2 should fire based on session state and new flags.
  *
- * Returns a FlagType string if Stage 2 should fire, null otherwise.
+ * Returns a Stage2TriggerResult — a discriminated union — or null if Stage 2 should not fire.
  *
  * Conditions (from research table):
- *   1. Stage transition detected → 'stage_transition'
- *   2. New absence flag raised   → 'absence:<signalKey>'
- *   3. S1 confidence < 0.50 AND an active absence flag exists → 'absence:<signalKey>'
+ *   1. Stage transition detected          → { kind: 'stage_transition' }
+ *   2. New absence flags raised           → { kind: 'absence', qualifyingFlags: newAbsenceFlags }
+ *   3. S1 confidence < 0.50 AND at least one active (non-dismissed, non-cooldown) absence flag
+ *                                         → { kind: 'absence', qualifyingFlags: activeFlags }
  */
 export function shouldFireStage2(
-  state:           SessionState,
-  prevStage:       Stage | undefined,
-  newAbsenceFlags: AbsenceFlag[],
-): FlagType | null {
+  state:            SessionState,
+  prevStage:        Stage | undefined,
+  newAbsenceFlags:  AbsenceFlag[],
+  s1LowConfidence = STAGE2_S1_LOW_CONFIDENCE,
+): Stage2TriggerResult {
   // Condition 1 — stage transition
   if (prevStage !== undefined && prevStage !== state.currentStage) {
-    return 'stage_transition';
+    return { kind: 'stage_transition' };
   }
 
-  // Condition 2 — fresh absence flag
+  // Condition 2 — fresh absence flags (all qualify)
   if (newAbsenceFlags.length > 0) {
-    return `absence:${newAbsenceFlags[0].signalKey}`;
+    return { kind: 'absence', qualifyingFlags: newAbsenceFlags };
   }
 
-  // Condition 3 — low-confidence classification AND an active (non-cooldown) absence flag
-  if (state.stageConfidence < STAGE2_S1_LOW_CONFIDENCE) {
-    const active = state.absenceFlags.find(
+  // Condition 3 — low-confidence classification AND active (non-dismissed, non-cooldown) absence flags
+  if (state.stageConfidence < s1LowConfidence) {
+    const activeFlags = state.absenceFlags.filter(
       (f) => f.dismissedAtIndex === undefined && state.promptCount < f.cooldownUntil,
     );
-    if (active) return `absence:${active.signalKey}`;
+    if (activeFlags.length > 0) return { kind: 'absence', qualifyingFlags: activeFlags };
   }
 
   return null;
@@ -186,7 +205,7 @@ export function shouldFireStage2(
  * - Overrides fire_decision_session to false when stage_confidence < STAGE2_LLM_MIN_CONFIDENCE.
  * - Throws descriptive errors on invalid or incomplete JSON.
  */
-export function parseStage2Response(raw: string): Stage2Output {
+export function parseStage2Response(raw: string, minConfidence = STAGE2_LLM_MIN_CONFIDENCE): Stage2Output {
   // Strip optional markdown fencing
   const stripped = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
 
@@ -218,7 +237,9 @@ export function parseStage2Response(raw: string): Stage2Output {
   // Post-processing: low LLM confidence → don't bother user
   const fireDecisionSession =
     (p.fire_decision_session as boolean) &&
-    (p.stage_confidence as number) >= STAGE2_LLM_MIN_CONFIDENCE;
+    (p.stage_confidence as number) >= minConfidence;
+
+  const selectedSignalKey = typeof p.selected_signal_key === 'string' ? p.selected_signal_key : '';
 
   return {
     stage,
@@ -226,6 +247,7 @@ export function parseStage2Response(raw: string): Stage2Output {
     signals_present:       p.signals_present as string[],
     signals_absent:        p.signals_absent as string[],
     fire_decision_session: fireDecisionSession,
+    selected_signal_key:   selectedSignalKey,
     reason:                p.reason as string,
   };
 }
@@ -241,11 +263,14 @@ export function parseStage2Response(raw: string): Stage2Output {
  * @throws  On API failure or unparseable response
  */
 export async function runStage2(
-  input:   Stage2Input,
-  client?: OpenAI,
+  input:        Stage2Input,
+  client?:      OpenAI,
+  stage2Config?: { minConfidence?: number; contextWindow?: number },
 ): Promise<Stage2Output> {
+  const minConfidence = stage2Config?.minConfidence ?? STAGE2_LLM_MIN_CONFIDENCE;
+  const contextWindow = stage2Config?.contextWindow ?? STAGE2_CONTEXT_WINDOW;
   const openai = client ?? new OpenAI();
-  const prompt = buildStage2Prompt(input);
+  const prompt = buildStage2Prompt(input, contextWindow);
 
   const response = await openai.chat.completions.create(
     {
@@ -266,10 +291,20 @@ export async function runStage2(
     logger.debug('stage2_raw', {
       llm_fire:       p.fire_decision_session,
       llm_confidence: p.stage_confidence,
-      threshold:      STAGE2_LLM_MIN_CONFIDENCE,
-      overridden:     p.fire_decision_session === true && (p.stage_confidence as number) < STAGE2_LLM_MIN_CONFIDENCE,
+      threshold:      minConfidence,
+      overridden:     p.fire_decision_session === true && (p.stage_confidence as number) < minConfidence,
     });
   } catch { /* parse failure handled by parseStage2Response below */ }
 
-  return parseStage2Response(raw);
+  const parsed = parseStage2Response(raw, minConfidence);
+
+  // Validate selected_signal_key is in the qualifying set; fall back to first qualifying flag
+  if (input.qualifyingFlags && input.qualifyingFlags.length > 0) {
+    const qualifyingKeys = new Set(input.qualifyingFlags.map(f => f.signalKey));
+    if (!qualifyingKeys.has(parsed.selected_signal_key)) {
+      parsed.selected_signal_key = input.qualifyingFlags[0]!.signalKey;
+    }
+  }
+
+  return parsed;
 }

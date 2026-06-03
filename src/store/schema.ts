@@ -62,7 +62,8 @@ CREATE TABLE IF NOT EXISTS pending_advisories (
   created_at   INTEGER NOT NULL,
   generated_l1 TEXT,
   generated_l2 TEXT,
-  generated_l3 TEXT
+  generated_l3 TEXT,
+  prev_stage   TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_pending_advisories_project
@@ -95,6 +96,9 @@ export function applyIncrementalMigrations(db: Database): void {
   addIfMissing('pending_advisories', 'generated_l1', 'TEXT');
   addIfMissing('pending_advisories', 'generated_l2', 'TEXT');
   addIfMissing('pending_advisories', 'generated_l3', 'TEXT');
+
+  // sub-10 — deferred option gen + cross-session guard
+  addIfMissing('pending_advisories', 'prev_stage', 'TEXT');
 }
 
 /**
@@ -122,4 +126,7 @@ export function runMigrations(db: Database): void {
   addIfMissing('pending_advisories', 'generated_l1', 'TEXT');
   addIfMissing('pending_advisories', 'generated_l2', 'TEXT');
   addIfMissing('pending_advisories', 'generated_l3', 'TEXT');
+
+  // sub-10 — deferred option gen + cross-session guard
+  addIfMissing('pending_advisories', 'prev_stage', 'TEXT');
 }

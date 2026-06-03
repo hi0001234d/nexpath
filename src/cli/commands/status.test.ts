@@ -428,9 +428,9 @@ function makeResult(overrides: Partial<StatusResult> = {}): StatusResult {
 }
 
 describe('renderStatus — sections', () => {
-  it('includes "MCP connections" header', () => {
+  it('omits the "MCP connections" section (temporarily disabled in renderStatus)', () => {
     const out = renderStatus(makeResult());
-    expect(out).toContain('MCP connections');
+    expect(out).not.toContain('MCP connections');
   });
 
   it('includes "Prompt store" header', () => {
@@ -453,13 +453,11 @@ describe('renderStatus — sections', () => {
     expect(out.endsWith('\n')).toBe(true);
   });
 
-  it('sections appear in order: MCP connections → Prompt store → Hook activity → Config', () => {
+  it('sections appear in order: Prompt store → Hook activity → Config', () => {
     const out = renderStatus(makeResult());
-    const mcpIdx   = out.indexOf('MCP connections');
     const storeIdx = out.indexOf('Prompt store');
     const hookIdx  = out.indexOf('Hook activity');
     const cfgIdx   = out.indexOf('Config');
-    expect(mcpIdx).toBeLessThan(storeIdx);
     expect(storeIdx).toBeLessThan(hookIdx);
     expect(hookIdx).toBeLessThan(cfgIdx);
   });
@@ -510,6 +508,10 @@ describe('renderStatus — sections', () => {
   });
 });
 
+// NOTE: These tests validate the "MCP connections" / agent-lines render block,
+// which is temporarily disabled in status.ts. They are commented out alongside
+// that section — re-enable this whole describe when the MCP status view returns.
+/*
 describe('renderStatus — agent lines', () => {
   it('shows ✓ for registered agent', () => {
     const result = makeResult({
@@ -580,6 +582,7 @@ describe('renderStatus — agent lines', () => {
     expect(cursorIdx).toBeLessThan(windsurfIdx);
   });
 });
+*/
 
 describe('renderStatus — store stats', () => {
   it('shows total prompts when store exists', () => {
@@ -685,7 +688,7 @@ describe('renderStatus — config section', () => {
 // ── registerStatusCommand — CLI integration ───────────────────────────────────
 
 describe('registerStatusCommand — CLI integration', () => {
-  it('status output contains MCP connections when run via CLI', async () => {
+  it('status output renders the prompt-store and config sections when run via CLI', async () => {
     const { createProgram } = await import('../index.js');
     const lines: string[] = [];
     const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: unknown) => {
@@ -696,7 +699,8 @@ describe('registerStatusCommand — CLI integration', () => {
     await prog.parseAsync(['node', 'nexpath', 'status', '--db', ':memory:']);
     spy.mockRestore();
     const out = lines.join('');
-    expect(out).toContain('MCP connections');
+    // MCP connections section is temporarily disabled (see status.ts)
+    expect(out).not.toContain('MCP connections');
     expect(out).toContain('Prompt store');
     expect(out).toContain('Config');
   });

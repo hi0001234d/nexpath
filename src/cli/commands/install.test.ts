@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { openStore, closeStore } from '../../store/db.js';
-import { setConfig, isConfigSet } from '../../store/config.js';
+import { setConfig, isConfigSet, getConfig } from '../../store/config.js';
 
 import {
   MCP_SERVER_NAME,
@@ -16,6 +16,9 @@ import {
   getRooCodePath,
   resolveAgentPaths,
   detectAgents,
+  detectAgentsForCleanup,
+  SUPPORTED_AGENT_IDS,
+  SUPPORTED_AGENTS,
   writeMcpEntry,
   removeMcpEntry,
   writeOpenCodeEntry,
@@ -32,6 +35,7 @@ import {
   removeHookEntry,
   ensureLinuxClipboard,
 } from './install.js';
+import { buildRoleMenuLines } from '../shared/role-description.js';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -41,6 +45,16 @@ function tmpDir(): { dir: string; cleanup: () => void } {
   const dir = join(tmpdir(), `nexpath-install-test-${randomUUID()}`);
   mkdirSync(dir, { recursive: true });
   return { dir, cleanup: () => { try { rmSync(dir, { recursive: true }); } catch { /* ignore */ } } };
+}
+
+/**
+ * Mark Claude Code as "installed" inside a tmpDir sandbox by creating the
+ * settings directory the presence gate checks for. Tests that rely on Claude
+ * detection (registration, hook write, post-detection prompts) should call
+ * this immediately after `tmpDir()`.
+ */
+function markClaudeInstalled(dir: string): void {
+  mkdirSync(join(dir, '.claude'), { recursive: true });
 }
 
 function readJson(path: string): Record<string, unknown> {
@@ -222,23 +236,46 @@ describe('resolveAgentPaths', () => {
   });
 });
 
-// ── detectAgents ──────────────────────────────────────────────────────────────
+// ── detectAgentsForCleanup ────────────────────────────────────────────────────
+//
+// detectAgentsForCleanup returns every agent whose config directory exists on
+// disk, without applying the SUPPORTED_AGENT_IDS filter. It is the uninstall
+// flow's detection helper, so the per-agent path-presence assertions live
+// here; the filtered detectAgents() wrapper is exercised separately below.
 
-describe('detectAgents', () => {
-  it('always includes Claude Code (home dir is always present)', () => {
+describe('detectAgentsForCleanup', () => {
+  it('detects Claude Code when ~/.claude.json exists', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      writeFileSync(join(dir, '.claude.json'), '{}');
+      const paths = resolveAgentPaths(dir, dir, dir);
+      expect(detectAgentsForCleanup(paths).some((a) => a.id === 'claude')).toBe(true);
+    } finally { cleanup(); }
+  });
+
+  it('detects Claude Code when ~/.claude/ dir exists', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      mkdirSync(join(dir, '.claude'), { recursive: true });
+      const paths = resolveAgentPaths(dir, dir, dir);
+      expect(detectAgentsForCleanup(paths).some((a) => a.id === 'claude')).toBe(true);
+    } finally { cleanup(); }
+  });
+
+  it('does not detect Claude Code when neither ~/.claude.json nor ~/.claude/ exists', () => {
     const { dir, cleanup } = tmpDir();
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
-      expect(agents.some((a) => a.id === 'claude')).toBe(true);
+      expect(detectAgentsForCleanup(paths).some((a) => a.id === 'claude')).toBe(false);
     } finally { cleanup(); }
   });
 
   it('Claude Code type is claude-cli', () => {
     const { dir, cleanup } = tmpDir();
     try {
+      writeFileSync(join(dir, '.claude.json'), '{}');
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       const claude = agents.find((a) => a.id === 'claude')!;
       expect(claude.type).toBe('claude-cli');
     } finally { cleanup(); }
@@ -249,7 +286,7 @@ describe('detectAgents', () => {
     try {
       mkdirSync(join(dir, '.cursor'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       expect(agents.some((a) => a.id === 'cursor')).toBe(true);
     } finally { cleanup(); }
   });
@@ -258,7 +295,7 @@ describe('detectAgents', () => {
     const { dir, cleanup } = tmpDir();
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       expect(agents.some((a) => a.id === 'cursor')).toBe(false);
     } finally { cleanup(); }
   });
@@ -268,7 +305,7 @@ describe('detectAgents', () => {
     try {
       mkdirSync(join(dir, '.codeium', 'windsurf'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       expect(agents.some((a) => a.id === 'windsurf')).toBe(true);
     } finally { cleanup(); }
   });
@@ -278,7 +315,7 @@ describe('detectAgents', () => {
     try {
       mkdirSync(join(dir, '.kilocode'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       expect(agents.some((a) => a.id === 'kiloCode')).toBe(true);
     } finally { cleanup(); }
   });
@@ -287,7 +324,7 @@ describe('detectAgents', () => {
     const { dir, cleanup } = tmpDir();
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       expect(agents.some((a) => a.id === 'kiloCode')).toBe(false);
     } finally { cleanup(); }
   });
@@ -297,7 +334,7 @@ describe('detectAgents', () => {
     try {
       mkdirSync(join(dir, '.config', 'opencode'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       expect(agents.some((a) => a.id === 'openCode')).toBe(true);
     } finally { cleanup(); }
   });
@@ -307,7 +344,7 @@ describe('detectAgents', () => {
     try {
       writeFileSync(join(dir, 'opencode.json'), '{}');
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       expect(agents.some((a) => a.id === 'openCode')).toBe(true);
     } finally { cleanup(); }
   });
@@ -316,7 +353,7 @@ describe('detectAgents', () => {
     const { dir, cleanup } = tmpDir();
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       expect(agents.some((a) => a.id === 'openCode')).toBe(false);
     } finally { cleanup(); }
   });
@@ -326,8 +363,96 @@ describe('detectAgents', () => {
     try {
       mkdirSync(join(dir, '.cursor'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
-      const cursor = detectAgents(paths).find((a) => a.id === 'cursor')!;
+      const cursor = detectAgentsForCleanup(paths).find((a) => a.id === 'cursor')!;
       expect(cursor.type).toBe('standard');
+    } finally { cleanup(); }
+  });
+});
+
+// ── SUPPORTED_AGENT_IDS ───────────────────────────────────────────────────────
+
+describe('SUPPORTED_AGENT_IDS', () => {
+  it('includes Claude Code (the one officially supported agent in this version)', () => {
+    expect(SUPPORTED_AGENT_IDS.has('claude')).toBe(true);
+  });
+
+  it('does not yet include Cursor, Windsurf, Cline, Roo Code, KiloCode, or OpenCode', () => {
+    for (const id of ['cursor', 'windsurf', 'cline', 'rooCode', 'kiloCode', 'openCode']) {
+      expect(SUPPORTED_AGENT_IDS.has(id)).toBe(false);
+    }
+  });
+});
+
+// ── SUPPORTED_AGENTS (source of truth for filter + Not found notice) ──────────
+
+describe('SUPPORTED_AGENTS', () => {
+  it('contains a Claude Code entry with id "claude" and label "Claude Code"', () => {
+    expect(SUPPORTED_AGENTS).toContainEqual({ id: 'claude', label: 'Claude Code' });
+  });
+
+  it('every entry has non-empty id and label string fields', () => {
+    for (const agent of SUPPORTED_AGENTS) {
+      expect(typeof agent.id).toBe('string');
+      expect(typeof agent.label).toBe('string');
+      expect(agent.id.length).toBeGreaterThan(0);
+      expect(agent.label.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('SUPPORTED_AGENT_IDS is the derived set of SUPPORTED_AGENTS ids (cannot drift)', () => {
+    expect([...SUPPORTED_AGENT_IDS].sort()).toEqual(SUPPORTED_AGENTS.map((a) => a.id).sort());
+  });
+});
+
+// ── detectAgents (filtered wrapper) ───────────────────────────────────────────
+//
+// detectAgents applies SUPPORTED_AGENT_IDS to detectAgentsForCleanup's output.
+// These tests verify the filter is the only difference — every id NOT in the
+// supported set is dropped, regardless of on-disk presence.
+
+describe('detectAgents — SUPPORTED_AGENT_IDS filter', () => {
+  it('returns only Claude Code even when every other agent dir exists on disk', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      writeFileSync(join(dir, '.claude.json'), '{}');
+      mkdirSync(join(dir, '.cursor'),                                            { recursive: true });
+      mkdirSync(join(dir, '.codeium', 'windsurf'),                               { recursive: true });
+      mkdirSync(join(dir, '.config', 'Code', 'User', 'globalStorage',
+                'saoudrizwan.claude-dev', 'settings'),                           { recursive: true });
+      mkdirSync(join(dir, '.config', 'Code', 'User', 'globalStorage',
+                'rooveterinaryinc.roo-cline', 'settings'),                       { recursive: true });
+      mkdirSync(join(dir, '.kilocode'),                                          { recursive: true });
+      mkdirSync(join(dir, '.config', 'opencode'),                                { recursive: true });
+      const paths = resolveAgentPaths(dir, dir, dir);
+      const agents = detectAgents(paths);
+      expect(agents.map((a) => a.id)).toEqual(['claude']);
+    } finally { cleanup(); }
+  });
+
+  it('preserves Claude Code DetectedAgent shape (id, label, type) when filtered', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      writeFileSync(join(dir, '.claude.json'), '{}');
+      const paths = resolveAgentPaths(dir, dir, dir);
+      const claude = detectAgents(paths).find((a) => a.id === 'claude')!;
+      expect(claude.label).toBe('Claude Code');
+      expect(claude.type).toBe('claude-cli');
+      expect(claude.configPath).toBe(paths.claudeJson);
+    } finally { cleanup(); }
+  });
+
+  it('detectAgents is a strict subset of detectAgentsForCleanup', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      mkdirSync(join(dir, '.cursor'),              { recursive: true });
+      mkdirSync(join(dir, '.codeium', 'windsurf'), { recursive: true });
+      const paths = resolveAgentPaths(dir, dir, dir);
+      const filtered = detectAgents(paths).map((a) => a.id);
+      const all      = detectAgentsForCleanup(paths).map((a) => a.id);
+      for (const id of filtered) {
+        expect(all).toContain(id);
+      }
+      expect(filtered.length).toBeLessThanOrEqual(all.length);
     } finally { cleanup(); }
   });
 });
@@ -613,10 +738,19 @@ describe('installAction', () => {
 
   it('cancelled by confirmFn — prints Cancelled and writes nothing', async () => {
     const { dir, cleanup } = tmpDir();
+    markClaudeInstalled(dir);
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({}, { paths, isWin: false, execFn: () => {}, confirmFn: async () => false, skipClipboardCheck: true });
+      await installAction({}, {
+        paths, isWin: false, execFn: () => {},
+        confirmFn: async () => false,
+        promptFn: {
+          apiKeyPrompt:     async () => ({ kind: 'skip' }),
+          telemetryConsent: async () => ({ kind: 'disable' }),
+        },
+        skipClipboardCheck: true,
+      });
       expect(spy.mock.calls.some((c) => (c[0] as string).includes('Cancelled'))).toBe(true);
     } finally {
       cleanup();
@@ -694,15 +828,15 @@ describe('installAction', () => {
     }
   });
 
-  it('prints restart and status instructions on success', async () => {
+  it('prints restart instructions on success', async () => {
     const { dir, cleanup } = tmpDir();
+    markClaudeInstalled(dir);
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
       await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, skipClipboardCheck: true });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('Restart your agents');
-      expect(output).toContain('nexpath status');
     } finally {
       cleanup();
     }
@@ -710,6 +844,7 @@ describe('installAction', () => {
 
   it('still writes advisory hook when isWin is true (REGISTER_MCP_SERVER has no effect on hooks)', async () => {
     const { dir, cleanup } = tmpDir();
+    markClaudeInstalled(dir);
     vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
@@ -725,6 +860,7 @@ describe('installAction', () => {
 
   it('writes advisory hook to claudeSettings when claude CLI succeeds', async () => {
     const { dir, cleanup } = tmpDir();
+    markClaudeInstalled(dir);
     vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
@@ -740,6 +876,7 @@ describe('installAction', () => {
 
   it('writes advisory hook to claudeSettings even when claude CLI falls back', async () => {
     const { dir, cleanup } = tmpDir();
+    markClaudeInstalled(dir);
     vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
@@ -773,17 +910,36 @@ describe('installAction', () => {
     } finally { cleanup(); }
   });
 
-  it('prints advisory pipeline auto-wired note after agent loop', async () => {
+  // ── "Not found:" notice for missing supported agents ──────────────────────
+
+  it('prints "Not found: Claude Code" + support notice when Claude Code is not installed', async () => {
     const { dir, cleanup } = tmpDir();
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
       await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, skipClipboardCheck: true });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
-      expect(output).toContain('advisory pipeline');
-      expect(output).toContain('Claude Code only');
+      expect(output).toContain('Not found: Claude Code');
+      expect(output).toContain('nexpath currently supports Claude Code only');
+      // The "Detected:" line should NOT appear when nothing was detected.
+      expect(output).not.toContain('Detected:');
     } finally { cleanup(); }
   });
+
+  it('does not print "Not found:" notice when every supported agent is present', async () => {
+    const { dir, cleanup } = tmpDir();
+    markClaudeInstalled(dir);
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, skipClipboardCheck: true });
+      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
+      expect(output).toContain('Detected: Claude Code');
+      expect(output).not.toContain('Not found:');
+      expect(output).not.toContain('nexpath currently supports Claude Code only');
+    } finally { cleanup(); }
+  });
+
 });
 
 // ── uninstallAction ───────────────────────────────────────────────────────────
@@ -794,7 +950,7 @@ describe('uninstallAction', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      await uninstallAction({ paths, execFn: () => {} });
+      await uninstallAction({ paths, execFn: () => {}, apiKeyConfirmFn: async () => false });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('Prompt history retained');
       expect(output).toContain('nexpath store delete');
@@ -810,7 +966,7 @@ describe('uninstallAction', () => {
       mkdirSync(join(dir, '.cursor'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
       writeMcpEntry(paths.cursor, buildStandardEntry(false));
-      await uninstallAction({ paths, execFn: () => {} });
+      await uninstallAction({ paths, execFn: () => {}, apiKeyConfirmFn: async () => false });
       const servers = readJson(paths.cursor).mcpServers as Record<string, unknown>;
       expect(servers[MCP_SERVER_NAME]).toBeUndefined();
     } finally {
@@ -825,7 +981,7 @@ describe('uninstallAction', () => {
       mkdirSync(join(dir, '.config', 'opencode'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
       writeOpenCodeEntry(paths.openCodeGlobal, buildOpenCodeEntry(false));
-      await uninstallAction({ paths, execFn: () => {} });
+      await uninstallAction({ paths, execFn: () => {}, apiKeyConfirmFn: async () => false });
       const mcp = readJson(paths.openCodeGlobal).mcp as Record<string, unknown>;
       expect(mcp[MCP_SERVER_NAME]).toBeUndefined();
     } finally {
@@ -840,7 +996,7 @@ describe('uninstallAction', () => {
       mkdirSync(join(dir, '.cursor'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
       // Don't write cursor config — so cursor has no nexpath entry
-      await uninstallAction({ paths, execFn: () => {} });
+      await uninstallAction({ paths, execFn: () => {}, apiKeyConfirmFn: async () => false });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('not registered');
     } finally {
@@ -857,6 +1013,7 @@ describe('uninstallAction', () => {
       await uninstallAction({
         paths,
         execFn: () => { throw new Error('claude not found'); },
+        apiKeyConfirmFn: async () => false,
       });
       const servers = readJson(paths.claudeJson).mcpServers as Record<string, unknown>;
       expect(servers[MCP_SERVER_NAME]).toBeUndefined();
@@ -872,7 +1029,7 @@ describe('uninstallAction', () => {
       const paths = resolveAgentPaths(dir, dir, dir);
       // Pre-write the hook so uninstall has something to remove
       writeHookEntry(paths.claudeSettings, dir, 'linux');
-      await uninstallAction({ paths, execFn: () => {} });
+      await uninstallAction({ paths, execFn: () => {}, apiKeyConfirmFn: async () => false });
       // File should no longer contain the nexpath hook group
       const data  = readJson(paths.claudeSettings) as Record<string, unknown>;
       const hooks = data.hooks as Record<string, unknown>;
@@ -884,11 +1041,14 @@ describe('uninstallAction', () => {
 
   it('reports hook not registered when no settings file exists', async () => {
     const { dir, cleanup } = tmpDir();
+    // .claude.json marks Claude as installed (presence gate), but no .claude/settings.json
+    // → the hook was never registered, which is what this test asserts.
+    writeFileSync(join(dir, '.claude.json'), '{}');
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
       // settings.json never written — hook was never registered
-      await uninstallAction({ paths, execFn: () => {} });
+      await uninstallAction({ paths, execFn: () => {}, apiKeyConfirmFn: async () => false });
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('hook not registered');
     } finally { cleanup(); }
@@ -1232,128 +1392,6 @@ describe('removeHookEntry', () => {
   });
 });
 
-// ── installAction — first-run disclosure (Issue 7 + 1.2) ─────────────────────
-
-describe('installAction — first-run disclosure', () => {
-  it('shows disclosure when first_run_shown is not set in config', async () => {
-    const { dir, cleanup } = tmpDir();
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    try {
-      const paths = resolveAgentPaths(dir, dir, dir);
-      // dbPath ':memory:' = fresh DB, first_run_shown never set
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath: ':memory:', skipClipboardCheck: true });
-      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
-      expect(output).toContain('Before installing nexpath');
-    } finally {
-      spy.mockRestore();
-      cleanup();
-    }
-  });
-
-  it('does NOT show disclosure when first_run_shown is already set', async () => {
-    const { dir, cleanup } = tmpDir();
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const dbPath = join(dir, 'test.db');
-    try {
-      // Pre-seed first_run_shown
-      const store = await openStore(dbPath);
-      setConfig(store, 'first_run_shown', 'true');
-      closeStore(store);
-
-      const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath, skipClipboardCheck: true });
-      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
-      expect(output).not.toContain('Before installing nexpath');
-    } finally {
-      spy.mockRestore();
-      cleanup();
-    }
-  });
-
-  it('disclosure contains OpenAI API key mention', async () => {
-    const { dir, cleanup } = tmpDir();
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    try {
-      const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath: ':memory:', skipClipboardCheck: true });
-      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
-      expect(output).toContain('OPENAI_API_KEY');
-    } finally {
-      spy.mockRestore();
-      cleanup();
-    }
-  });
-
-  it('disclosure contains local storage path mention', async () => {
-    const { dir, cleanup } = tmpDir();
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    try {
-      const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath: ':memory:', skipClipboardCheck: true });
-      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
-      expect(output).toContain('prompt-store.db');
-    } finally {
-      spy.mockRestore();
-      cleanup();
-    }
-  });
-
-  it('disclosure contains opt-out instructions (Ctrl+X and nexpath uninstall)', async () => {
-    const { dir, cleanup } = tmpDir();
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    try {
-      const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath: ':memory:', skipClipboardCheck: true });
-      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
-      expect(output).toContain('Ctrl+X');
-      expect(output).toContain('nexpath uninstall');
-    } finally {
-      spy.mockRestore();
-      cleanup();
-    }
-  });
-
-  it('sets first_run_shown in config after disclosure', async () => {
-    const { dir, cleanup } = tmpDir();
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const dbPath = join(dir, 'test.db');
-    try {
-      const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath, skipClipboardCheck: true });
-
-      // Re-open same DB and check key is set
-      const store = await openStore(dbPath);
-      const result = isConfigSet(store.db, 'first_run_shown');
-      closeStore(store);
-      expect(result).toBe(true);
-    } finally {
-      spy.mockRestore();
-      cleanup();
-    }
-  });
-
-  it('disclosure fires before confirmation — shown even when confirmFn cancels', async () => {
-    const { dir, cleanup } = tmpDir();
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    try {
-      const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({}, {
-        paths, isWin: false, execFn: () => {},
-        confirmFn: async () => false,
-        dbPath: ':memory:',
-        skipClipboardCheck: true,
-      });
-      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
-      // Disclosure appeared even though install was cancelled
-      expect(output).toContain('Before installing nexpath');
-      expect(output).toContain('Cancelled');
-    } finally {
-      spy.mockRestore();
-      cleanup();
-    }
-  });
-});
-
 // ── resolveAgentPaths — claudeSettings field ──────────────────────────────────
 
 describe('resolveAgentPaths — claudeSettings', () => {
@@ -1581,5 +1619,341 @@ describe('ensureLinuxClipboard', () => {
       waylandDisplay: 'wayland-0',
     });
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('wl-copy'));
+  });
+});
+
+// ── installAction frequency + role prompts ────────────────────────────────────
+
+describe('installAction — frequency and role prompts', () => {
+  function tempDbFile() {
+    const path = join(tmpdir(), `nexpath-install-db-${randomUUID()}.db`);
+    return { path, cleanup: () => { try { rmSync(path); } catch { /* ignore */ } } };
+  }
+
+  it('--yes path applies the every_event frequency default when no value is configured', async () => {
+    const { dir, cleanup: cleanupDir } = tmpDir();
+    markClaudeInstalled(dir);
+    const { path: dbPath, cleanup: cleanupDb } = tempDbFile();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath, skipClipboardCheck: true });
+      const store = await openStore(dbPath);
+      expect(getConfig(store.db, 'advisory_frequency')).toBe('every_event');
+      closeStore(store);
+    } finally {
+      cleanupDir();
+      cleanupDb();
+    }
+  });
+
+  it('--yes path applies the founder role default when no value is configured', async () => {
+    const { dir, cleanup: cleanupDir } = tmpDir();
+    markClaudeInstalled(dir);
+    const { path: dbPath, cleanup: cleanupDb } = tempDbFile();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath, skipClipboardCheck: true });
+      const store = await openStore(dbPath);
+      expect(getConfig(store.db, 'role')).toBe('founder');
+      closeStore(store);
+    } finally {
+      cleanupDir();
+      cleanupDb();
+    }
+  });
+
+  it('--yes path preserves an existing advisory_frequency value', async () => {
+    const { dir, cleanup: cleanupDir } = tmpDir();
+    const { path: dbPath, cleanup: cleanupDb } = tempDbFile();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const seedStore = await openStore(dbPath);
+      setConfig(seedStore, 'advisory_frequency', 'optimum');
+      closeStore(seedStore);
+
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath, skipClipboardCheck: true });
+
+      const store = await openStore(dbPath);
+      expect(getConfig(store.db, 'advisory_frequency')).toBe('optimum');
+      closeStore(store);
+    } finally {
+      cleanupDir();
+      cleanupDb();
+    }
+  });
+
+  it('--yes path preserves an existing role value', async () => {
+    const { dir, cleanup: cleanupDir } = tmpDir();
+    const { path: dbPath, cleanup: cleanupDb } = tempDbFile();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const seedStore = await openStore(dbPath);
+      setConfig(seedStore, 'role', 'vibe_coder');
+      closeStore(seedStore);
+
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath, skipClipboardCheck: true });
+
+      const store = await openStore(dbPath);
+      expect(getConfig(store.db, 'role')).toBe('vibe_coder');
+      closeStore(store);
+    } finally {
+      cleanupDir();
+      cleanupDb();
+    }
+  });
+
+  it('--yes path normalises a legacy "clear" role value to the founder default', async () => {
+    const { dir, cleanup: cleanupDir } = tmpDir();
+    const { path: dbPath, cleanup: cleanupDb } = tempDbFile();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const seedStore = await openStore(dbPath);
+      // Legacy stored value from before this work
+      seedStore.db.run(`INSERT INTO config (key, value) VALUES ('role', 'clear')`);
+      // Note: setConfig would also work here; using raw insert to make the "legacy" intent explicit
+      closeStore(seedStore);
+
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, dbPath, skipClipboardCheck: true });
+
+      const store = await openStore(dbPath);
+      // Legacy value remains stored — install --yes only writes the default when isConfigSet is false.
+      // The role-read helper treats 'clear' as unset and surfaces the founder default at sub-menu open.
+      expect(['clear', 'founder']).toContain(getConfig(store.db, 'role'));
+      closeStore(store);
+    } finally {
+      cleanupDir();
+      cleanupDb();
+    }
+  });
+
+  it('interactive path passes the current frequency to the prompt and writes the selection', async () => {
+    const { dir, cleanup: cleanupDir } = tmpDir();
+    markClaudeInstalled(dir);
+    const { path: dbPath, cleanup: cleanupDb } = tempDbFile();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const freqPromptFn = vi.fn(async () => 'optimum');
+      const rolePromptFn = vi.fn(async () => 'founder');
+
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction(
+        {},
+        {
+          paths,
+          isWin: false,
+          execFn: () => {},
+          confirmFn: async () => true,
+          promptFn: {
+            apiKeyPrompt:     async () => ({ kind: 'skip' }),
+            telemetryConsent: async () => ({ kind: 'disable' }),
+          },
+          freqPromptFn,
+          rolePromptFn,
+          dbPath,
+          skipClipboardCheck: true,
+        },
+      );
+
+      expect(freqPromptFn).toHaveBeenCalledWith('every_event');
+      const store = await openStore(dbPath);
+      expect(getConfig(store.db, 'advisory_frequency')).toBe('optimum');
+      closeStore(store);
+    } finally {
+      cleanupDir();
+      cleanupDb();
+    }
+  });
+
+  it('interactive path passes the current role to the prompt and writes the selection', async () => {
+    const { dir, cleanup: cleanupDir } = tmpDir();
+    markClaudeInstalled(dir);
+    const { path: dbPath, cleanup: cleanupDb } = tempDbFile();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const seedStore = await openStore(dbPath);
+      setConfig(seedStore, 'role', 'pm');
+      closeStore(seedStore);
+
+      const freqPromptFn = vi.fn(async () => 'every_event');
+      const rolePromptFn = vi.fn(async () => 'vibe_coder');
+
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction(
+        {},
+        {
+          paths,
+          isWin: false,
+          execFn: () => {},
+          confirmFn: async () => true,
+          promptFn: {
+            apiKeyPrompt:     async () => ({ kind: 'skip' }),
+            telemetryConsent: async () => ({ kind: 'disable' }),
+          },
+          freqPromptFn,
+          rolePromptFn,
+          dbPath,
+          skipClipboardCheck: true,
+        },
+      );
+
+      // initialValue is the current configured role
+      expect(rolePromptFn).toHaveBeenCalledWith('pm');
+      const store = await openStore(dbPath);
+      expect(getConfig(store.db, 'role')).toBe('vibe_coder');
+      closeStore(store);
+    } finally {
+      cleanupDir();
+      cleanupDb();
+    }
+  });
+
+  it('interactive path with a cancelled frequency prompt does not write a new value', async () => {
+    const { dir, cleanup: cleanupDir } = tmpDir();
+    const { path: dbPath, cleanup: cleanupDb } = tempDbFile();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const seedStore = await openStore(dbPath);
+      setConfig(seedStore, 'advisory_frequency', 'optimum');
+      closeStore(seedStore);
+
+      // Cancel: return a Symbol so isCancel() picks it up
+      const freqPromptFn = vi.fn(async () => Symbol('cancel'));
+      const rolePromptFn = vi.fn(async () => 'founder');
+
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction(
+        {},
+        {
+          paths,
+          isWin: false,
+          execFn: () => {},
+          confirmFn: async () => true,
+          promptFn: {
+            apiKeyPrompt:     async () => ({ kind: 'skip' }),
+            telemetryConsent: async () => ({ kind: 'disable' }),
+          },
+          freqPromptFn,
+          rolePromptFn,
+          dbPath,
+          skipClipboardCheck: true,
+        },
+      );
+
+      const store = await openStore(dbPath);
+      expect(getConfig(store.db, 'advisory_frequency')).toBe('optimum');
+      closeStore(store);
+    } finally {
+      cleanupDir();
+      cleanupDb();
+    }
+  });
+
+  it('interactive path with a cancelled role prompt does not write a new value', async () => {
+    const { dir, cleanup: cleanupDir } = tmpDir();
+    const { path: dbPath, cleanup: cleanupDb } = tempDbFile();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const seedStore = await openStore(dbPath);
+      setConfig(seedStore, 'role', 'vibe_coder');
+      closeStore(seedStore);
+
+      const freqPromptFn = vi.fn(async () => 'every_event');
+      // Cancel: return a Symbol so isCancel() picks it up
+      const rolePromptFn = vi.fn(async () => Symbol('cancel'));
+
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction(
+        {},
+        {
+          paths,
+          isWin: false,
+          execFn: () => {},
+          confirmFn: async () => true,
+          promptFn: {
+            apiKeyPrompt:     async () => ({ kind: 'skip' }),
+            telemetryConsent: async () => ({ kind: 'disable' }),
+          },
+          freqPromptFn,
+          rolePromptFn,
+          dbPath,
+          skipClipboardCheck: true,
+        },
+      );
+
+      const store = await openStore(dbPath);
+      expect(getConfig(store.db, 'role')).toBe('vibe_coder');
+      closeStore(store);
+    } finally {
+      cleanupDir();
+      cleanupDb();
+    }
+  });
+
+  it('interactive path passes the founder default to the role prompt for legacy "clear" stored value', async () => {
+    const { dir, cleanup: cleanupDir } = tmpDir();
+    markClaudeInstalled(dir);
+    const { path: dbPath, cleanup: cleanupDb } = tempDbFile();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const seedStore = await openStore(dbPath);
+      seedStore.db.run(`INSERT INTO config (key, value) VALUES ('role', 'clear')`);
+      closeStore(seedStore);
+
+      const freqPromptFn = vi.fn(async () => 'every_event');
+      const rolePromptFn = vi.fn(async () => 'indie_hacker');
+
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction(
+        {},
+        {
+          paths,
+          isWin: false,
+          execFn: () => {},
+          confirmFn: async () => true,
+          promptFn: {
+            apiKeyPrompt:     async () => ({ kind: 'skip' }),
+            telemetryConsent: async () => ({ kind: 'disable' }),
+          },
+          freqPromptFn,
+          rolePromptFn,
+          dbPath,
+          skipClipboardCheck: true,
+        },
+      );
+
+      expect(rolePromptFn).toHaveBeenCalledWith('founder');
+    } finally {
+      cleanupDir();
+      cleanupDb();
+    }
+  });
+
+  it('role menu renders the gray "why" description below the options', () => {
+    const lines = buildRoleMenuLines('founder');
+    const text = lines.join('\n');
+    // all four role options present
+    expect(text).toContain('indie hacker');
+    expect(text).toContain('founder / product creator');
+    expect(text).toContain('product manager');
+    expect(text).toContain('vibe coder');
+    // description opens with a question and emphasises the goal
+    expect(text).toContain('Why a project role?');
+    expect(text).toContain('WHAT YOUR GOAL IS');
+    // the description appears after the role options
+    const lastOptionIdx = lines.findIndex((l) => l.includes('product manager'));
+    const descIdx = lines.findIndex((l) => l.includes('Why a project role?'));
+    expect(lastOptionIdx).toBeGreaterThanOrEqual(0);
+    expect(descIdx).toBeGreaterThan(lastOptionIdx);
+  });
+
+  it('role menu marks the current value with a (current) suffix', () => {
+    const text = buildRoleMenuLines('vibe_coder').join('\n');
+    const vibeLine = text.split('\n').find((l) => l.includes('vibe coder'));
+    expect(vibeLine).toContain('(current)');
   });
 });

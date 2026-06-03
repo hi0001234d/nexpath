@@ -12,10 +12,19 @@ vi.mock('node:child_process', () => ({
 }));
 
 // Deferred import so mocks are in place before module is evaluated
-const { createTtySelectFn, buildUnixMenuLines, detectLinuxTerminal } = await import('./TtySelectFn.js');
-const { OPT_OUT_SENTINEL }   = await import('./DecisionSession.js');
+const {
+  createTtySelectFn,
+  buildUnixMenuLines,
+  detectLinuxTerminal,
+  runCtrlTRootChooser,
+  runFrequencySubMenu,
+  runRoleSubMenu,
+} = await import('./TtySelectFn.js');
+const { OPT_OUT_SENTINEL }       = await import('./DecisionSession.js');
 const { SHOW_SIMPLER, SKIP_NOW } = await import('./options.js');
-const { spawnSync }          = await import('node:child_process');
+const { spawnSync }              = await import('node:child_process');
+const { openStore }              = await import('../store/index.js');
+const { getConfig, setConfig }   = await import('../store/config.js');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -25,7 +34,13 @@ const RESULT_FILE = join(tmpdir(), `nexpath-res-${UUID}.txt`);
 const SCRIPT_FILE = join(tmpdir(), `nexpath-sel-${UUID}.mjs`); // .mjs — ESM Node.js script
 
 function cleanTempFiles(): void {
-  for (const f of [OPT_FILE, RESULT_FILE, SCRIPT_FILE]) {
+  const files = [
+    OPT_FILE, RESULT_FILE, SCRIPT_FILE,
+    join(tmpdir(), `nexpath-root-sel-${UUID}.mjs`), join(tmpdir(), `nexpath-root-res-${UUID}.txt`),
+    join(tmpdir(), `nexpath-freq-sel-${UUID}.mjs`), join(tmpdir(), `nexpath-freq-res-${UUID}.txt`),
+    join(tmpdir(), `nexpath-role-sel-${UUID}.mjs`), join(tmpdir(), `nexpath-role-res-${UUID}.txt`),
+  ];
+  for (const f of files) {
     try { unlinkSync(f); } catch { /* ignore */ }
   }
 }
@@ -41,16 +56,42 @@ function makeOpts() {
   };
 }
 
-// ── Windows SelectFn (these tests run on the win32 platform naturally) ─────────
+/**
+ * Classify which nexpath window a spawnSync call opens, from the script path.
+ * Win/Linux pass the path as a direct arg; macOS embeds it in the AppleScript
+ * (args[1]). The root chooser now loops, so tests inspect each spawn to drive
+ * the multi-step flow (frequency / role / Done) deterministically.
+ */
+function classifyWindow(cmd: string, args: string[]): 'main' | 'root' | 'freq' | 'role' | 'other' {
+  const hay = cmd === 'osascript' ? (args[1] ?? '') : args.join(' ');
+  if (hay.includes('nexpath-root-sel-')) return 'root';
+  if (hay.includes('nexpath-freq-sel-')) return 'freq';
+  if (hay.includes('nexpath-role-sel-')) return 'role';
+  if (hay.includes('nexpath-sel-'))      return 'main';
+  return 'other';
+}
+
+/** Resolve the result-file path a sub-window writes to (sel → res, .mjs → .txt). */
+function windowResultFile(kind: 'root' | 'freq' | 'role', cmd: string, args: string[]): string | null {
+  const hay = cmd === 'osascript' ? (args[1] ?? '') : args.join(' ');
+  const m = hay.match(new RegExp(`nexpath-${kind}-sel-[a-zA-Z0-9-]+\\.mjs`));
+  return m ? join(tmpdir(), m[0].replace('-sel-', '-res-').replace('.mjs', '.txt')) : null;
+}
+
+// ── Windows SelectFn (process.platform spoofed to 'win32' so tests run on any host) ──
 
 describe('createTtySelectFn — Windows (win32)', () => {
+  const origPlatform = process.platform;
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(process.stderr, 'write').mockReturnValue(true as never);
+    Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
     cleanTempFiles();
   });
 
   afterEach(() => {
+    Object.defineProperty(process, 'platform', { value: origPlatform, writable: true });
     vi.restoreAllMocks();
     cleanTempFiles();
   });
@@ -85,7 +126,7 @@ describe('createTtySelectFn — Windows (win32)', () => {
     expect(typeof result).toBe('symbol');
   });
 
-  it('resolves with Symbol on 60s timeout (no result file written)', async () => {
+  it('resolves with Symbol when window exits without selection (no result file written)', async () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({ status: 0 });
     const result = await createTtySelectFn()!(makeOpts());
     expect(typeof result).toBe('symbol');
@@ -138,7 +179,7 @@ describe('createTtySelectFn — Windows (win32)', () => {
     expect(parsed.options[0].label).toContain('\x1b[32m');
   });
 
-  it('.mjs script imports @clack/prompts ESM entry (.mjs not .cjs) and uses Promise.race', async () => {
+  it('.mjs script imports @clack/prompts ESM entry (.mjs not .cjs) and awaits select directly', async () => {
     let capturedScript = '';
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
       if (existsSync(SCRIPT_FILE)) capturedScript = readFileSync(SCRIPT_FILE, 'utf8');
@@ -147,9 +188,9 @@ describe('createTtySelectFn — Windows (win32)', () => {
     // Must point to the ESM entry — CJS entry breaks named imports in .mjs context
     expect(capturedScript).toContain('index.mjs');
     expect(capturedScript).not.toContain('index.cjs');
-    expect(capturedScript).toContain('Promise.race');
-    expect(capturedScript).toContain('60_000');
-    expect(capturedScript).toContain('select(');
+    expect(capturedScript).not.toContain('Promise.race');
+    expect(capturedScript).not.toContain('60_000');
+    expect(capturedScript).toContain('await select(');
     expect(capturedScript).toContain('isCancel(');
   });
 
@@ -228,7 +269,7 @@ describe('createTtySelectFn — Windows (win32)', () => {
     await createTtySelectFn()!(makeOpts());
     expect(capturedScript).toContain('emitKeypressEvents');
     expect(capturedScript).toContain('__NEXPATH_OPT_OUT__');
-    expect(capturedScript).toContain('__FREQ_MENU_PENDING__');
+    expect(capturedScript).toContain('__ROOT_MENU_PENDING__');
   });
 
   it('.mjs script embeds clipboard commands as iterable array (not hardcoded clip)', async () => {
@@ -244,16 +285,23 @@ describe('createTtySelectFn — Windows (win32)', () => {
     expect(capturedScript).toContain('if (_r.status === 0) break');
   });
 
-  it('freq script contains frequency sub-menu options when __FREQ_MENU_PENDING__ is returned', async () => {
+  it('freq script contains frequency sub-menu options after Ctrl+T → root chooser → frequency flow', async () => {
     const FREQ_SCRIPT_FILE = join(tmpdir(), `nexpath-freq-sel-${UUID}.mjs`);
     let capturedFreqScript = '';
     let callCount = 0;
-    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation((_cmd: string, args: string[]) => {
       callCount++;
       if (callCount === 1) {
-        // Main window: user pressed Ctrl+T → trigger freq flow
-        writeFileSync(RESULT_FILE, '__FREQ_MENU_PENDING__', 'utf8');
+        // Main window: user pressed Ctrl+T → emit root chooser sentinel
+        writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
       } else if (callCount === 2) {
+        // Root chooser window: pick "frequency"
+        const rootScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-root-sel-'));
+        if (rootScriptArg) {
+          const rootResultFile = rootScriptArg.replace('-sel-', '-res-').replace('.mjs', '.txt');
+          writeFileSync(rootResultFile, '__FREQ_FLOW__', 'utf8');
+        }
+      } else if (callCount === 3) {
         // Freq window: capture the freq script
         if (existsSync(FREQ_SCRIPT_FILE)) capturedFreqScript = readFileSync(FREQ_SCRIPT_FILE, 'utf8');
       }
@@ -562,7 +610,7 @@ describe('createTtySelectFn — Linux new-window path', () => {
     expect(existsSync(SCRIPT_FILE)).toBe(false);
   });
 
-  it('resolves with Symbol when no result file (timeout/cancel)', async () => {
+  it('resolves with Symbol when no result file (cancel/close)', async () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
       gnomeTerminalMock(() => ({ status: 0 })),
     );
@@ -588,20 +636,262 @@ describe('createTtySelectFn — Linux new-window path', () => {
     expect(stderrCalls.some((msg) => msg.includes('nexpath'))).toBe(true);
   });
 
-  it('spawns second terminal window for __FREQ_MENU_PENDING__', async () => {
+  it('root chooser → freq window → re-opens chooser → exits on Done', async () => {
     const FREQ_SCRIPT_FILE = join(tmpdir(), `nexpath-freq-sel-${UUID}.mjs`);
-    let terminalSpawnCount = 0;
+    let rootVisits = 0;
+    let freqVisits = 0;
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
-      gnomeTerminalMock(() => {
-        terminalSpawnCount++;
-        if (terminalSpawnCount === 1) {
-          writeFileSync(RESULT_FILE, '__FREQ_MENU_PENDING__', 'utf8');
+      gnomeTerminalMock((cmd: string, args: string[]) => {
+        const kind = classifyWindow(cmd, args);
+        if (kind === 'main') {
+          // Main window: emit root chooser sentinel (user pressed Ctrl+T)
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (kind === 'root') {
+          // First chooser visit picks frequency; the re-opened chooser picks Done.
+          rootVisits++;
+          const f = windowResultFile('root', cmd, args);
+          if (f) writeFileSync(f, rootVisits === 1 ? '__FREQ_FLOW__' : '__DONE__', 'utf8');
+        } else if (kind === 'freq') {
+          freqVisits++;
         }
       }),
     );
     await createTtySelectFn()!(makeOpts());
-    expect(terminalSpawnCount).toBe(2);
+    expect(rootVisits).toBe(2);
+    expect(freqVisits).toBe(1);
     try { unlinkSync(FREQ_SCRIPT_FILE); } catch { /* ignore */ }
+  });
+
+  it('root chooser → role window → re-opens chooser → exits on Done', async () => {
+    let rootVisits = 0;
+    let roleVisits = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      gnomeTerminalMock((cmd: string, args: string[]) => {
+        const kind = classifyWindow(cmd, args);
+        if (kind === 'main') {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (kind === 'root') {
+          rootVisits++;
+          const f = windowResultFile('root', cmd, args);
+          if (f) writeFileSync(f, rootVisits === 1 ? '__ROLE_FLOW__' : '__DONE__', 'utf8');
+        } else if (kind === 'role') {
+          roleVisits++;
+        }
+      }),
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(rootVisits).toBe(2);
+    expect(roleVisits).toBe(1);
+  });
+
+  it('root chooser script contains both top-level options and emits __FREQ_FLOW__ / __ROLE_FLOW__', async () => {
+    let capturedRootScript = '';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      gnomeTerminalMock((_cmd: string, args: string[]) => {
+        const rootScriptArg = args.find((a) => a.endsWith('.mjs') && a.includes('nexpath-root-sel-'));
+        if (rootScriptArg && existsSync(rootScriptArg)) {
+          capturedRootScript = readFileSync(rootScriptArg, 'utf8');
+        }
+        if (existsSync(SCRIPT_FILE) && !capturedRootScript) {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        }
+      }),
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(capturedRootScript).toContain('Adjust advisory frequency');
+    expect(capturedRootScript).toContain('Configure role');
+    expect(capturedRootScript).toContain('__FREQ_FLOW__');
+    expect(capturedRootScript).toContain('__ROLE_FLOW__');
+  });
+
+  it('freq script lists optimum option and excludes the legacy "Configure role…" entry', async () => {
+    let capturedFreqScript = '';
+    let callCount = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      gnomeTerminalMock((_cmd: string, args: string[]) => {
+        callCount++;
+        if (callCount === 1) {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (callCount === 2) {
+          const rootScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-root-sel-'));
+          if (rootScriptArg) {
+            const rootResultFile = rootScriptArg.replace('-sel-', '-res-').replace('.mjs', '.txt');
+            writeFileSync(rootResultFile, '__FREQ_FLOW__', 'utf8');
+          }
+        } else if (callCount === 3) {
+          const freqScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-freq-sel-'));
+          if (freqScriptArg && existsSync(freqScriptArg)) {
+            capturedFreqScript = readFileSync(freqScriptArg, 'utf8');
+          }
+        }
+      }),
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(capturedFreqScript).toContain("value: 'optimum'");
+    expect(capturedFreqScript).toContain("value: 'every_event'");
+    expect(capturedFreqScript).toContain("value: 'major_only'");
+    expect(capturedFreqScript).toContain("value: 'once_per_session'");
+    expect(capturedFreqScript).toContain("value: 'off'");
+    expect(capturedFreqScript).not.toContain('__role_menu__');
+    expect(capturedFreqScript).not.toContain('Configure role');
+  });
+
+  it('freq script embeds initialValue derived from currently configured frequency', async () => {
+    let capturedFreqScript = '';
+    let callCount = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      gnomeTerminalMock((_cmd: string, args: string[]) => {
+        callCount++;
+        if (callCount === 1) {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (callCount === 2) {
+          const rootScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-root-sel-'));
+          if (rootScriptArg) {
+            const rootResultFile = rootScriptArg.replace('-sel-', '-res-').replace('.mjs', '.txt');
+            writeFileSync(rootResultFile, '__FREQ_FLOW__', 'utf8');
+          }
+        } else if (callCount === 3) {
+          const freqScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-freq-sel-'));
+          if (freqScriptArg && existsSync(freqScriptArg)) {
+            capturedFreqScript = readFileSync(freqScriptArg, 'utf8');
+          }
+        }
+      }),
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(capturedFreqScript).toContain('initialValue:');
+    expect(capturedFreqScript).toContain('"every_event"');
+  });
+
+  it('role script lists the four predefined roles and excludes the legacy Clear option', async () => {
+    let capturedRoleScript = '';
+    let callCount = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      gnomeTerminalMock((_cmd: string, args: string[]) => {
+        callCount++;
+        if (callCount === 1) {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (callCount === 2) {
+          const rootScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-root-sel-'));
+          if (rootScriptArg) {
+            const rootResultFile = rootScriptArg.replace('-sel-', '-res-').replace('.mjs', '.txt');
+            writeFileSync(rootResultFile, '__ROLE_FLOW__', 'utf8');
+          }
+        } else if (callCount === 3) {
+          const roleScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-role-sel-'));
+          if (roleScriptArg && existsSync(roleScriptArg)) {
+            capturedRoleScript = readFileSync(roleScriptArg, 'utf8');
+          }
+        }
+      }),
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(capturedRoleScript).toContain('indie_hacker');
+    expect(capturedRoleScript).toContain('founder');
+    expect(capturedRoleScript).toContain('pm');
+    expect(capturedRoleScript).toContain('vibe_coder');
+    expect(capturedRoleScript).toContain('indie hacker');
+    expect(capturedRoleScript).toContain('founder / product creator');
+    expect(capturedRoleScript).toContain('product manager');
+    expect(capturedRoleScript).toContain('vibe coder');
+    // radio-button SelectPrompt (not a numbered readline prompt), rendering the
+    // ●/○ markers and carrying the gray "why" description below the options
+    expect(capturedRoleScript).toContain('SelectPrompt');
+    expect(capturedRoleScript).toContain('●');
+    expect(capturedRoleScript).toContain('○');
+    expect(capturedRoleScript).not.toContain('Select (1-4)');
+    expect(capturedRoleScript).toContain('Why a project role?');
+    expect(capturedRoleScript).toContain('WHAT YOUR GOAL IS');
+    expect(capturedRoleScript).not.toContain('clear');
+    expect(capturedRoleScript).not.toContain('Clear role');
+  });
+
+  it('role script pre-selects the current role via initialValue (founder default)', async () => {
+    let capturedRoleScript = '';
+    let callCount = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      gnomeTerminalMock((_cmd: string, args: string[]) => {
+        callCount++;
+        if (callCount === 1) {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (callCount === 2) {
+          const rootScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-root-sel-'));
+          if (rootScriptArg) {
+            const rootResultFile = rootScriptArg.replace('-sel-', '-res-').replace('.mjs', '.txt');
+            writeFileSync(rootResultFile, '__ROLE_FLOW__', 'utf8');
+          }
+        } else if (callCount === 3) {
+          const roleScriptArg = args.find((a) => typeof a === 'string' && a.includes('nexpath-role-sel-'));
+          if (roleScriptArg && existsSync(roleScriptArg)) {
+            capturedRoleScript = readFileSync(roleScriptArg, 'utf8');
+          }
+        }
+      }),
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(capturedRoleScript).toContain('founder / product creator');
+    expect(capturedRoleScript).toContain('initialValue:');
+    expect(capturedRoleScript).toContain('"founder"');
+  });
+
+  it('role flow path produces one role-window spawn and no freq-window spawn', async () => {
+    let rootVisits = 0;
+    let roleSpawnCount = 0;
+    let freqSpawnCount = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      gnomeTerminalMock((cmd: string, args: string[]) => {
+        const kind = classifyWindow(cmd, args);
+        if (kind === 'main') {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (kind === 'root') {
+          // Gate the loop: choose role once, then Done — otherwise the chooser
+          // re-opens forever (the bug that previously OOM'd this suite).
+          rootVisits++;
+          const f = windowResultFile('root', cmd, args);
+          if (f) writeFileSync(f, rootVisits === 1 ? '__ROLE_FLOW__' : '__DONE__', 'utf8');
+        } else if (kind === 'role') {
+          roleSpawnCount++;
+        } else if (kind === 'freq') {
+          freqSpawnCount++;
+        }
+      }),
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(roleSpawnCount).toBe(1);
+    expect(freqSpawnCount).toBe(0);
+  });
+
+  it('loops frequency then role, persisting both, and exits on Done with SKIP_NOW', async () => {
+    const store = await openStore(':memory:');
+    try {
+      let rootVisits = 0;
+      (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+        gnomeTerminalMock((cmd: string, args: string[]) => {
+          const kind = classifyWindow(cmd, args);
+          if (kind === 'main') {
+            writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+          } else if (kind === 'root') {
+            rootVisits++;
+            const f = windowResultFile('root', cmd, args);
+            const sentinel = rootVisits === 1 ? '__FREQ_FLOW__' : rootVisits === 2 ? '__ROLE_FLOW__' : '__DONE__';
+            if (f) writeFileSync(f, sentinel, 'utf8');
+          } else if (kind === 'freq') {
+            const f = windowResultFile('freq', cmd, args);
+            if (f) writeFileSync(f, '__FREQ__:optimum', 'utf8');
+          } else if (kind === 'role') {
+            const f = windowResultFile('role', cmd, args);
+            if (f) writeFileSync(f, '__ROLE__:pm', 'utf8');
+          }
+        }),
+      );
+      const result = await createTtySelectFn(store, '/proj/newwin-loop')!(makeOpts());
+      expect(getConfig(store.db, 'advisory_frequency:/proj/newwin-loop')).toBe('optimum');
+      expect(getConfig(store.db, 'role:/proj/newwin-loop')).toBe('pm');
+      expect(result).toBe(SKIP_NOW);
+      expect(rootVisits).toBe(3); // freq, role, then Done
+    } finally {
+      store.db.close();
+    }
   });
 });
 
@@ -687,7 +977,7 @@ describe('createTtySelectFn — macOS (darwin)', () => {
     expect(result).toBe('option-a-value');
   });
 
-  it('resolves with Symbol when no result file (timeout/cancel)', async () => {
+  it('resolves with Symbol when no result file (cancel/close)', async () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({ status: 0 });
     const result = await createTtySelectFn()!(makeOpts());
     expect(typeof result).toBe('symbol');
@@ -719,22 +1009,52 @@ describe('createTtySelectFn — macOS (darwin)', () => {
     expect(stderrCalls.some((msg) => msg.includes('nexpath'))).toBe(true);
   });
 
-  it('spawns second osascript for __FREQ_MENU_PENDING__', async () => {
+  it('root chooser → freq osascript → re-opens chooser → exits on Done', async () => {
     const FREQ_SCRIPT_FILE = join(tmpdir(), `nexpath-freq-sel-${UUID}.mjs`);
-    let osascriptCount = 0;
+    let rootVisits = 0;
+    let freqVisits = 0;
     (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
-      (cmd: string) => {
-        if (cmd === 'osascript') {
-          osascriptCount++;
-          if (osascriptCount === 1) {
-            writeFileSync(RESULT_FILE, '__FREQ_MENU_PENDING__', 'utf8');
-          }
+      (cmd: string, args: string[]) => {
+        if (cmd !== 'osascript') return;
+        const kind = classifyWindow(cmd, args);
+        if (kind === 'main') {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (kind === 'root') {
+          rootVisits++;
+          const f = windowResultFile('root', cmd, args);
+          if (f) writeFileSync(f, rootVisits === 1 ? '__FREQ_FLOW__' : '__DONE__', 'utf8');
+        } else if (kind === 'freq') {
+          freqVisits++;
         }
       },
     );
     await createTtySelectFn()!(makeOpts());
-    expect(osascriptCount).toBe(2);
+    expect(rootVisits).toBe(2);
+    expect(freqVisits).toBe(1);
     try { unlinkSync(FREQ_SCRIPT_FILE); } catch { /* ignore */ }
+  });
+
+  it('root chooser → role osascript → re-opens chooser → exits on Done', async () => {
+    let rootVisits = 0;
+    let roleVisits = 0;
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+      (cmd: string, args: string[]) => {
+        if (cmd !== 'osascript') return;
+        const kind = classifyWindow(cmd, args);
+        if (kind === 'main') {
+          writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+        } else if (kind === 'root') {
+          rootVisits++;
+          const f = windowResultFile('root', cmd, args);
+          if (f) writeFileSync(f, rootVisits === 1 ? '__ROLE_FLOW__' : '__DONE__', 'utf8');
+        } else if (kind === 'role') {
+          roleVisits++;
+        }
+      },
+    );
+    await createTtySelectFn()!(makeOpts());
+    expect(rootVisits).toBe(2);
+    expect(roleVisits).toBe(1);
   });
 });
 
@@ -839,13 +1159,16 @@ describe('Regression: .mjs script content is platform-consistent', () => {
 
     // Both must contain the same core UI elements
     for (const script of [linuxScript, macScript]) {
-      expect(script).toContain('select(');
+      expect(script).toContain('await select(');
       expect(script).toContain('isCancel(');
-      expect(script).toContain('Promise.race');
-      expect(script).toContain('60_000');
+      expect(script).not.toContain('Promise.race');
+      expect(script).not.toContain('60_000');
       expect(script).toContain('__NEXPATH_OPT_OUT__');
-      expect(script).toContain('__FREQ_MENU_PENDING__');
+      expect(script).toContain('__ROOT_MENU_PENDING__');
       expect(script).toContain('emitKeypressEvents');
+      // Branded Nexpath wordmark header must be written to stdout before the prompt renders.
+      expect(script).toContain('process.stdout.write(');
+      expect(script).toContain('N E X P A T H  C L I');
     }
 
     // Clipboard differs: Linux has xclip chain, macOS has pbcopy
@@ -853,5 +1176,428 @@ describe('Regression: .mjs script content is platform-consistent', () => {
     expect(macScript).toContain('pbcopy');
     expect(linuxScript).not.toContain('pbcopy');
     expect(macScript).not.toContain('xclip');
+  });
+});
+
+// ── Sentinel inventory ───────────────────────────────────────────────────────
+//
+// Static-source audit that guards the contract between the .mjs scripts (which
+// emit sentinels) and the orchestrator handlers (which consume them).
+//
+// Every literal __XXX__ string written to a result file must have at least one
+// consumer site that recognises it. Legacy sentinels that are no longer emitted
+// must be fully purged.
+
+describe('Sentinel inventory — every emitter has a consumer', () => {
+  const ttySource = readFileSync(
+    join(import.meta.dirname ?? __dirname, 'TtySelectFn.ts'),
+    'utf8',
+  );
+  const dsSource = readFileSync(
+    join(import.meta.dirname ?? __dirname, 'DecisionSession.ts'),
+    'utf8',
+  );
+  const combined = ttySource + '\n' + dsSource;
+
+  it('current sentinels are all present in TtySelectFn.ts', () => {
+    const currentSentinels = [
+      '__NEXPATH_OPT_OUT__',
+      '__CLIP__',
+      '__ROOT_MENU_PENDING__',
+      '__FREQ_FLOW__',
+      '__ROLE_FLOW__',
+      '__FREQ__:',
+      '__ROLE__:',
+    ];
+    for (const sentinel of currentSentinels) {
+      expect(ttySource, `${sentinel} should be present in TtySelectFn.ts`).toContain(sentinel);
+    }
+  });
+
+  it('legacy dead sentinels are not present in source', () => {
+    const legacy = ['__FREQ_MENU_PENDING__', '__ROLE_MENU_PENDING__'];
+    for (const sentinel of legacy) {
+      expect(ttySource, `${sentinel} should not appear in TtySelectFn.ts`).not.toContain(sentinel);
+      expect(dsSource, `${sentinel} should not appear in DecisionSession.ts`).not.toContain(sentinel);
+    }
+  });
+
+  it('every literal __SENTINEL__ string written via writeFileSync has at least one consumer reference', () => {
+    // Capture sentinels emitted via writeFileSync('...', '__FOO__', ...) calls.
+    // These appear inside the .mjs script templates as well as in handler bodies.
+    const emitMatches = [...ttySource.matchAll(/writeFileSync\s*\([^,)]+,\s*['"`](__[A-Z_]+__)['"`]/g)];
+    const emitted = new Set(emitMatches.map((m) => m[1]));
+
+    expect(emitted.size, 'at least three literal sentinels should be detected').toBeGreaterThanOrEqual(3);
+
+    for (const sentinel of emitted) {
+      const refPattern = new RegExp(`['"\`]${sentinel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"\`]`, 'g');
+      const refCount = [...combined.matchAll(refPattern)].length;
+      expect(
+        refCount,
+        `sentinel ${sentinel} should appear at least twice across TtySelectFn.ts and DecisionSession.ts (emit + consume)`,
+      ).toBeGreaterThanOrEqual(2);
+    }
+  });
+});
+
+// ── Unix-path sub-menu functions (runCtrlTRootChooser / runFrequencySubMenu / runRoleSubMenu) ──
+//
+// These functions are used when nexpath falls back to the in-line /dev/tty
+// readline interface (no GUI terminal emulator). They mirror the new-window
+// mjs scripts but are tested independently because their stateful readline
+// dispatch logic is not exercised by the script-content tests above.
+
+function makeFakeStreams() {
+  const writes: string[] = [];
+  return {
+    writes,
+    streams: {
+      input: {} as never,
+      output: { write: (s: string) => { writes.push(s); return true; } } as never,
+      sharedFd: false,
+    } as never,
+  };
+}
+
+function makeFakeInterface() {
+  let lineCallback: ((answer: string) => void) | null = null;
+  const iface = {
+    once: vi.fn((event: string, cb: unknown) => {
+      if (event === 'line') lineCallback = cb as (answer: string) => void;
+    }),
+  } as never;
+  return {
+    iface,
+    trigger: (answer: string) => {
+      if (!lineCallback) throw new Error('no line callback was registered before trigger()');
+      const cb = lineCallback;
+      lineCallback = null;
+      cb(answer);
+    },
+  };
+}
+
+describe('runCtrlTRootChooser (Unix path)', () => {
+  it('renders frequency, role, and Done options with a 1-3 selection prompt', () => {
+    const { writes, streams } = makeFakeStreams();
+    const { iface } = makeFakeInterface();
+    const cleanup = vi.fn();
+    runCtrlTRootChooser(streams, iface, undefined, undefined, cleanup);
+    const rendered = writes.join('');
+    expect(rendered).toContain('Adjust advisory frequency');
+    expect(rendered).toContain('Configure role');
+    expect(rendered).toContain('Done!');
+    expect(rendered).toContain('Select (1-3)');
+  });
+
+  it('closes with SKIP_NOW when the user selects Done', () => {
+    const { streams } = makeFakeStreams();
+    const { iface, trigger } = makeFakeInterface();
+    const cleanup = vi.fn();
+    runCtrlTRootChooser(streams, iface, undefined, undefined, cleanup);
+    trigger('3'); // Done!
+    expect(cleanup).toHaveBeenCalledWith(SKIP_NOW);
+  });
+
+  it('dispatches into the frequency sub-menu when the user selects 1', () => {
+    const { writes, streams } = makeFakeStreams();
+    const { iface, trigger } = makeFakeInterface();
+    const cleanup = vi.fn();
+    runCtrlTRootChooser(streams, iface, undefined, undefined, cleanup);
+    trigger('1');
+    const rendered = writes.join('');
+    expect(rendered).toContain('Advisory frequency');
+    expect(rendered).toContain('High');
+    expect(cleanup).not.toHaveBeenCalled();
+  });
+
+  it('dispatches into the role sub-menu when the user selects 2', () => {
+    const { writes, streams } = makeFakeStreams();
+    const { iface, trigger } = makeFakeInterface();
+    const cleanup = vi.fn();
+    runCtrlTRootChooser(streams, iface, undefined, undefined, cleanup);
+    trigger('2');
+    const rendered = writes.join('');
+    expect(rendered).toContain('Project role');
+    expect(rendered).toContain('vibe coder');
+    expect(cleanup).not.toHaveBeenCalled();
+  });
+
+  it('cleans up with SKIP_NOW when the answer is invalid', () => {
+    const { streams } = makeFakeStreams();
+    const { iface, trigger } = makeFakeInterface();
+    const cleanup = vi.fn();
+    runCtrlTRootChooser(streams, iface, undefined, undefined, cleanup);
+    trigger('99');
+    expect(cleanup).toHaveBeenCalledWith(SKIP_NOW);
+  });
+
+  it('re-opens the chooser after a sub-menu so multiple settings can change, then exits on Done', async () => {
+    const store = await openStore(':memory:');
+    try {
+      const { writes, streams } = makeFakeStreams();
+      const { iface, trigger } = makeFakeInterface();
+      const cleanup = vi.fn();
+      runCtrlTRootChooser(streams, iface, store, '/proj/loopback', cleanup);
+      trigger('1'); // frequency
+      trigger('1'); // optimum → saves, then loops back to the chooser
+      expect(getConfig(store.db, 'advisory_frequency:/proj/loopback')).toBe('optimum');
+      // chooser rendered twice (initial + re-opened) and has not closed yet
+      const hubRenders = writes.join('').split('What would you like to adjust?').length - 1;
+      expect(hubRenders).toBe(2);
+      expect(cleanup).not.toHaveBeenCalled();
+      trigger('3'); // Done!
+      expect(cleanup).toHaveBeenCalledWith(SKIP_NOW);
+    } finally {
+      store.db.close();
+    }
+  });
+});
+
+describe('runFrequencySubMenu (Unix path)', () => {
+  it('renders the three visible frequency options including the High rung and excludes the legacy role entry', async () => {
+    const store = await openStore(':memory:');
+    try {
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      const cleanup = vi.fn();
+      runFrequencySubMenu(streams, iface, store, '/proj/freq', cleanup);
+      const rendered = writes.join('');
+      expect(rendered).toContain('High');
+      expect(rendered).toContain('Medium');
+      expect(rendered).toContain('Low');
+      expect(rendered).not.toContain('Once per coding session');
+      expect(rendered).not.toContain('Off — disable all advisories');
+      expect(rendered).not.toContain('Configure role');
+      expect(rendered).toContain('Select (1-3)');
+      // High (optimum) is the first option; Medium (every_event) is second
+      const lines = rendered.split('\n');
+      const highIdx = lines.findIndex((l) => l.includes('High'));
+      const mediumIdx = lines.findIndex((l) => l.includes('Medium'));
+      expect(highIdx).toBeGreaterThanOrEqual(0);
+      expect(mediumIdx).toBeGreaterThan(highIdx);
+      // parenthetical descriptors removed from labels
+      expect(rendered).not.toContain('(3–5 prompts)');
+      expect(rendered).not.toContain('(stage changes)');
+      expect(rendered).not.toContain('Every qualifying event (default)');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('marks the currently configured frequency with a (current) suffix', async () => {
+    const store = await openStore(':memory:');
+    try {
+      setConfig(store, 'advisory_frequency:/proj/freq2', 'optimum');
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      runFrequencySubMenu(streams, iface, store, '/proj/freq2', vi.fn());
+      const rendered = writes.join('');
+      const highLine = rendered.split('\n').find((line) => line.includes('High'));
+      expect(highLine).toBeDefined();
+      expect(highLine).toContain('(current)');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('writes the selected frequency to config and signals completion', async () => {
+    const store = await openStore(':memory:');
+    try {
+      const { streams } = makeFakeStreams();
+      const { iface, trigger } = makeFakeInterface();
+      const onDone = vi.fn();
+      runFrequencySubMenu(streams, iface, store, '/proj/freq3', onDone);
+      trigger('1'); // optimum
+      expect(getConfig(store.db, 'advisory_frequency:/proj/freq3')).toBe('optimum');
+      expect(onDone).toHaveBeenCalled();
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('signals completion without writing when the answer is invalid', async () => {
+    const store = await openStore(':memory:');
+    try {
+      const { streams } = makeFakeStreams();
+      const { iface, trigger } = makeFakeInterface();
+      const onDone = vi.fn();
+      runFrequencySubMenu(streams, iface, store, '/proj/freq4', onDone);
+      trigger('99');
+      expect(getConfig(store.db, 'advisory_frequency:/proj/freq4')).toBeUndefined();
+      expect(onDone).toHaveBeenCalled();
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('falls back to the global advisory_frequency value when no project-scoped value is set', async () => {
+    const store = await openStore(':memory:');
+    try {
+      setConfig(store, 'advisory_frequency', 'major_only');
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      runFrequencySubMenu(streams, iface, store, '/proj/freq5', vi.fn());
+      const rendered = writes.join('');
+      const lowLine = rendered.split('\n').find((line) => line.includes('Low'));
+      expect(lowLine).toBeDefined();
+      expect(lowLine).toContain('(current)');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('hides once_per_session and off labels from the visible popup options', async () => {
+    const store = await openStore(':memory:');
+    try {
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      runFrequencySubMenu(streams, iface, store, '/proj/freq_hidden', vi.fn());
+      const rendered = writes.join('');
+      expect(rendered).not.toContain('Once per coding session');
+      expect(rendered).not.toContain('Off — disable all advisories');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('preserves a CLI-set once_per_session value even though the popup hides that option', async () => {
+    const store = await openStore(':memory:');
+    try {
+      setConfig(store, 'advisory_frequency:/proj/freq_cliset', 'once_per_session');
+      const { iface } = makeFakeInterface();
+      const { streams } = makeFakeStreams();
+      const onDone = vi.fn();
+      runFrequencySubMenu(streams, iface, store, '/proj/freq_cliset', onDone);
+      expect(getConfig(store.db, 'advisory_frequency:/proj/freq_cliset')).toBe('once_per_session');
+    } finally {
+      store.db.close();
+    }
+  });
+});
+
+describe('runRoleSubMenu (Unix path)', () => {
+  it('renders four role options including vibe_coder and excludes the legacy Clear option', async () => {
+    const store = await openStore(':memory:');
+    try {
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      const cleanup = vi.fn();
+      runRoleSubMenu(streams, iface, store, '/proj/role', cleanup);
+      const rendered = writes.join('');
+      expect(rendered).toContain('indie hacker');
+      expect(rendered).toContain('founder / product creator');
+      expect(rendered).toContain('product manager');
+      expect(rendered).toContain('vibe coder');
+      expect(rendered).not.toContain('Clear role');
+      expect(rendered).toContain('Select (1-4)');
+      // gray "why" description appears below the options
+      expect(rendered).toContain('Why a project role?');
+      expect(rendered).toContain('WHAT YOUR GOAL IS');
+      const lines = rendered.split('\n');
+      const lastOptionIdx = lines.findIndex((l) => l.includes('product manager'));
+      const descIdx = lines.findIndex((l) => l.includes('Why a project role?'));
+      expect(descIdx).toBeGreaterThan(lastOptionIdx);
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('marks the currently configured role with a (current) suffix; falls back to founder default', async () => {
+    const store = await openStore(':memory:');
+    try {
+      setConfig(store, 'role:/proj/role2', 'vibe_coder');
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      runRoleSubMenu(streams, iface, store, '/proj/role2', vi.fn());
+      const rendered = writes.join('');
+      const vibeLine = rendered.split('\n').find((line) => line.includes('vibe coder'));
+      expect(vibeLine).toBeDefined();
+      expect(vibeLine).toContain('(current)');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('defaults the current indicator to founder when no role is configured', async () => {
+    const store = await openStore(':memory:');
+    try {
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      runRoleSubMenu(streams, iface, store, '/proj/role3', vi.fn());
+      const rendered = writes.join('');
+      const founderLine = rendered.split('\n').find((line) => line.includes('founder / product creator'));
+      expect(founderLine).toBeDefined();
+      expect(founderLine).toContain('(current)');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('treats legacy "clear" / empty role values as unset → founder default', async () => {
+    const store = await openStore(':memory:');
+    try {
+      setConfig(store, 'role:/proj/role4', 'clear');
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      runRoleSubMenu(streams, iface, store, '/proj/role4', vi.fn());
+      const rendered = writes.join('');
+      const founderLine = rendered.split('\n').find((line) => line.includes('founder / product creator'));
+      expect(founderLine).toContain('(current)');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('writes the selected role to config and signals completion', async () => {
+    const store = await openStore(':memory:');
+    try {
+      const { streams } = makeFakeStreams();
+      const { iface, trigger } = makeFakeInterface();
+      const onDone = vi.fn();
+      runRoleSubMenu(streams, iface, store, '/proj/role5', onDone);
+      trigger('2'); // vibe_coder
+      expect(getConfig(store.db, 'role:/proj/role5')).toBe('vibe_coder');
+      expect(onDone).toHaveBeenCalled();
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('falls back to the global role value when no project-scoped value is set', async () => {
+    const store = await openStore(':memory:');
+    try {
+      setConfig(store, 'role', 'pm');
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      runRoleSubMenu(streams, iface, store, '/proj/role6', vi.fn());
+      const rendered = writes.join('');
+      const pmLine = rendered.split('\n').find((line) => line.includes('product manager'));
+      expect(pmLine).toBeDefined();
+      expect(pmLine).toContain('(current)');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('rejects an invalid stored role value and falls back to founder default', async () => {
+    const store = await openStore(':memory:');
+    try {
+      setConfig(store, 'role:/proj/role7', 'not_a_real_role');
+      const { writes, streams } = makeFakeStreams();
+      const { iface } = makeFakeInterface();
+      runRoleSubMenu(streams, iface, store, '/proj/role7', vi.fn());
+      const rendered = writes.join('');
+      const founderLine = rendered.split('\n').find((line) => line.includes('founder / product creator'));
+      expect(founderLine).toContain('(current)');
+      // None of the legitimate option lines should be tagged with (current) besides founder
+      const otherLines = rendered.split('\n').filter((line) =>
+        line.includes('(current)') && !line.includes('founder / product creator'),
+      );
+      expect(otherLines).toHaveLength(0);
+    } finally {
+      store.db.close();
+    }
   });
 });

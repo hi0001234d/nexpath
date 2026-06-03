@@ -1,3 +1,4 @@
+import OpenAI from 'openai';
 import { platform } from 'node:process';
 import type { Store } from '../../store/db.js';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
@@ -6,7 +7,7 @@ import { runDecisionSession } from '../../decision-session/DecisionSession.js';
 import type { SelectFn } from '../../decision-session/DecisionSession.js';
 import { createTtySelectFn } from '../../decision-session/TtySelectFn.js';
 import { getConfig } from '../../store/config.js';
-import { detectLanguage, LANG_WINDOW, LANG_DETECT_INTERVAL } from '../../classifier/LanguageDetector.js';
+import { detectLanguage, resolveLanguage, LANG_WINDOW, LANG_DETECT_INTERVAL } from '../../classifier/LanguageDetector.js';
 import { SessionStateManager } from '../../classifier/SessionStateManager.js';
 import { getRecentPrompts } from '../../store/prompts.js';
 import { getProject, setDetectedLanguage } from '../../store/projects.js';
@@ -14,7 +15,12 @@ import { logger, initLogger } from '../../logger.js';
 import type { LogLevel } from '../../logger.js';
 import { writeHookStats } from '../../store/hook-stats.js';
 import { writeTelemetry } from '../../telemetry/index.js';
+import { triggerOpportunisticSync } from '../../telemetry/OpportunisticSync.js';
+import { recentPromptMetadata } from '../../telemetry/recent-prompts.js';
 import { readStdin } from './auto.js';
+import { resolveDecisionContent } from '../../decision-session/options.js';
+import { generateOptionList } from '../../decision-session/OptionGenerator.js';
+import { resolveOpenAIKey, getKeySource } from '../../config/ApiKeyResolver.js';
 
 /**
  * nexpath stop — Claude Code Stop hook handler.
@@ -63,6 +69,7 @@ export async function runStop(
   payload:   StopPayload,
   store:     Store,
   selectFn?: SelectFn,
+  openai?:   OpenAI,
 ): Promise<StopOutcome> {
   // 1. Loop guard — Claude is continuing because of a previous Stop block; let it land
   if (payload.stop_hook_active) {
@@ -78,17 +85,20 @@ export async function runStop(
     const detected = detectLanguage(recentPrompts.map((p) => p.text), currentDetected);
     setDetectedLanguage(store, payload.cwd, detected);
     logger.debug('stop_lang_detected', { cwd: payload.cwd, detected: detected ?? null });
-    writeTelemetry(payload.cwd, 'language_detected', { detectedLanguage: detected ?? null });
+    writeTelemetry(payload.cwd, 'language_detected', { detectedLanguage: detected ?? null }, store);
   }
 
   // 1.7. Read decision_session_count for help-line gating in the decision session UI
   const decisionSessionCount = getProject(store, payload.cwd)?.decisionSessionCount ?? 0;
 
-  // 2. Check for a pending advisory stored by the auto hook
-  const advisory = getPendingAdvisory(store, payload.cwd);
+  // 2. Load session state — needed for session filter and option gen
+  const mgr = SessionStateManager.load(store, payload.cwd);
+
+  // 3. Check for a pending advisory stored by the auto hook
+  const advisory = getPendingAdvisory(store, payload.cwd, mgr.current.sessionId);
   if (!advisory) {
     logger.debug('stop_no_pending', { cwd: payload.cwd });
-    writeTelemetry(payload.cwd, 'stop_no_pending');
+    writeTelemetry(payload.cwd, 'stop_no_pending', undefined, store);
     return { outcome: 'no_pending' };
   }
 
@@ -125,19 +135,36 @@ export async function runStop(
     }
   }
 
-  // 5. Render decision session UI
-  const generatedOptions =
-    advisory.generatedL1 && advisory.generatedL2 && advisory.generatedL3
-      ? { l1: advisory.generatedL1, l2: advisory.generatedL2, l3: advisory.generatedL3 }
-      : undefined;
+  // 5. Generate decision options — runs after Claude's response, within stop's 600s window
+  const langOverride  = getConfig(store.db, 'language_override');
+  const detectedLang  = getProject(store, payload.cwd)?.detectedLanguage ?? undefined;
+  const effectiveLang = resolveLanguage(langOverride, detectedLang);
 
-  const mgr = SessionStateManager.load(store, payload.cwd);
+  const content = resolveDecisionContent(
+    advisory.stage,
+    advisory.flagType,
+    mgr.current.profile,
+  );
+
+  const generatedOptions = await generateOptionList(
+    content,
+    mgr.current.profile ?? undefined,
+    effectiveLang,
+    mgr.current.promptHistory as import('../../classifier/types.js').PromptRecord[],
+    {
+      flagType:              advisory.flagType,
+      currentStage:          mgr.current.currentStage,
+      prevStage:             advisory.prevStage,
+      promptsInCurrentStage: mgr.current.promptsInCurrentStage,
+    },
+    openai,
+  );
 
   writeTelemetry(payload.cwd, 'stop_advisory_shown', {
     flagType:         advisory.flagType,
     stage:            advisory.stage,
-    generatedOptions: !!(advisory.generatedL1 && advisory.generatedL2 && advisory.generatedL3),
-  });
+    generatedOptions: !!generatedOptions,
+  }, store);
 
   const dsResult = await runDecisionSession(
     {
@@ -148,8 +175,10 @@ export async function runStop(
       projectRoot:          payload.cwd,
       promptCount:          advisory.promptCount,
       decisionSessionCount,
-      generatedOptions,
+      generatedOptions:     generatedOptions ?? undefined,
       profile:              mgr.current.profile,
+      // Phase 4 — Item B: last-5 prompt metadata for decision_session_started.
+      recentPrompts:        recentPromptMetadata(mgr.current.promptHistory),
     },
     store,
     effectiveSelectFn,
@@ -191,9 +220,25 @@ export function registerStopCommand(program: import('commander').Command): void 
         return;
       }
 
+      // Resolve OPENAI_API_KEY through the 4-layer chain (env → project .env →
+      // OS keychain → 0600 fallback file). Matches the auto hook contract so the
+      // stop hook works for every key source, not just project .env.
+      await resolveOpenAIKey(payload.cwd);
+
       const store = await openStore(opts.db);
       const logLevel = getConfig(store.db, 'log_level') as LogLevel | undefined;
       initLogger('stop', logLevel);
+
+      const keySource = await getKeySource(payload.cwd);
+      const keyFound  = !!process.env['OPENAI_API_KEY'];
+      logger.debug('env_load', { cwd: payload.cwd, keySource, keyFound });
+
+      if (!keyFound) {
+        logger.warn('openai_api_key_missing', {
+          cwd:        payload.cwd,
+          actionable: 'Set OPENAI_API_KEY in the shell, in the project\'s .env file, or via the OS keychain — decision option generation will fall back to static text until a key is configured.',
+        });
+      }
 
       try {
         const result = await runStop(payload, store);
@@ -217,6 +262,7 @@ export function registerStopCommand(program: import('commander').Command): void 
             process.stderr.write('\n[nexpath] Copied to clipboard — paste and edit in Claude terminal\n');
           }
         }
+        void triggerOpportunisticSync(store).catch(() => {});
         // All other outcomes → exit 0 (Claude stops normally)
       } finally {
         closeStore(store);

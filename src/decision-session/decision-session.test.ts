@@ -80,6 +80,110 @@ import {
   ABSENCE_USER_FEEDBACK_REVIEW_CASUAL,
   ABSENCE_ITERATION_PLANNING,
   ABSENCE_ITERATION_PLANNING_CASUAL,
+  ABSENCE_SCOPE_CREEP,
+  ABSENCE_SCOPE_CREEP_CASUAL,
+  ABSENCE_CONTEXT_LOSS,
+  ABSENCE_CONTEXT_LOSS_CASUAL,
+  ABSENCE_API_DESIGN_REVIEW,
+  ABSENCE_API_DESIGN_REVIEW_CASUAL,
+  ABSENCE_ACCESSIBILITY,
+  ABSENCE_ACCESSIBILITY_CASUAL,
+  ABSENCE_ENV_AND_SECRETS,
+  ABSENCE_ENV_AND_SECRETS_CASUAL,
+  ABSENCE_DATA_VALIDATION,
+  ABSENCE_DATA_VALIDATION_CASUAL,
+  ABSENCE_CI_PIPELINE,
+  ABSENCE_CI_PIPELINE_CASUAL,
+  ABSENCE_RATE_LIMITING,
+  ABSENCE_RATE_LIMITING_CASUAL,
+  ABSENCE_FEATURE_SCOPE,
+  ABSENCE_FEATURE_SCOPE_CASUAL,
+  ABSENCE_IMPLEMENTATION_CHECKPOINT,
+  ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL,
+  ABSENCE_SPEC_BEFORE_CODE,
+  ABSENCE_SPEC_BEFORE_CODE_CASUAL,
+  ABSENCE_INCREMENTAL_BUILD,
+  ABSENCE_INCREMENTAL_BUILD_CASUAL,
+  ABSENCE_FEATURE_COMPLETION_CHECK_CASUAL,
+  ABSENCE_FINISHING_LINE_AWARENESS_CASUAL,
+  ABSENCE_POLISH_VS_FUNCTION_CASUAL,
+  ABSENCE_MVP_SCOPE_DISCIPLINE_CASUAL,
+  ABSENCE_IDEA_TO_SPEC_BRIDGE_CASUAL,
+  ABSENCE_DEMO_VS_PRODUCT_CASUAL,
+  ABSENCE_USER_JOURNEY_CHECK_CASUAL,
+  ABSENCE_TECHNICAL_SPIKE_TREATMENT_CASUAL,
+  ABSENCE_DEPENDENCY_ADVENTURE_CASUAL,
+  ABSENCE_RESTART_IMPULSE_CHECK_CASUAL,
+  ABSENCE_CREATIVE_VS_CORE_RATIO_CASUAL,
+  ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL,
+  ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL,
+  ABSENCE_TEST_DEPTH_CHECK_CASUAL,
+  ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL,
+  ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL,
+  ABSENCE_SECURITY_REVIEW_GAP_CASUAL,
+  ABSENCE_API_CONTRACT_DEFINITION_CASUAL,
+  ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL,
+  ABSENCE_REFACTORING_CHECKPOINT_CASUAL,
+  ABSENCE_BACKWARDS_COMPATIBILITY_CHECK_CASUAL,
+  ABSENCE_SELF_REVIEW_HABIT_CASUAL,
+  ABSENCE_PERFORMANCE_AWARENESS_CASUAL,
+  ABSENCE_DECISION_RECORD_ABSENCE_FORMAL,
+  ABSENCE_OVER_ENGINEERING_CHECK_FORMAL,
+  ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL,
+  ABSENCE_OBSERVABILITY_FIRST_FORMAL,
+  ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL,
+  ABSENCE_CONTRACT_TESTING_GAP_FORMAL,
+  ABSENCE_CAPACITY_PLANNING_GAP_FORMAL,
+  ABSENCE_SECURITY_THREAT_MODELING_FORMAL,
+  ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL,
+  ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL,
+  ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL,
+  ABSENCE_SLO_DEFINITION_GAP_FORMAL,
+  ABSENCE_USER_VALUE_CHECK_CASUAL,
+  ABSENCE_OUTCOME_DEFINITION_CASUAL,
+  ABSENCE_FEATURE_PRIORITIZATION_CASUAL,
+  ABSENCE_USER_PERSONA_CLARITY_CASUAL,
+  ABSENCE_COMPETITIVE_AWARENESS_CASUAL,
+  ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL,
+  ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL,
+  ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL,
+  ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL,
+  ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL,
+  ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL,
+  ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL,
+  ABSENCE_TIME_TO_VALUE_CHECK_CASUAL,
+  ABSENCE_SHIP_READINESS_DEFINITION_CASUAL,
+  ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL,
+  ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL,
+  ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL,
+  ABSENCE_EARLY_USER_FEEDBACK_CASUAL,
+  ABSENCE_SOLO_MAINTAINABILITY_CASUAL,
+  ABSENCE_DISTRIBUTION_THINKING_CASUAL,
+  ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL,
+  ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL,
+  ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL,
+  ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL,
+  ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL,
+  ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL,
+  ABSENCE_DEPENDENCY_MAPPING_FORMAL,
+  ABSENCE_DEFINITION_OF_DONE_FORMAL,
+  ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL,
+  ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL,
+  ABSENCE_PRIORITY_JUSTIFICATION_FORMAL,
+  ABSENCE_USER_STORY_COMPLETENESS_FORMAL,
+  ABSENCE_RISK_FLAG_FORMAL,
+  ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL,
+  ABSENCE_RETROSPECTIVE_HABIT_FORMAL,
+  ABSENCE_DECISION_FATIGUE_PATTERN_CASUAL,
+  ABSENCE_WORK_RHYTHM_CHECK_CASUAL,
+  ABSENCE_FOCUS_DRIFT_DETECTION_CASUAL,
+  ABSENCE_SESSION_LENGTH_CHECKPOINT_CASUAL,
+  ABSENCE_PROGRESS_CONSOLIDATION_GAP_CASUAL,
+  ABSENCE_DECISION_FATIGUE_PATTERN_FORMAL,
+  ABSENCE_WORK_RHYTHM_CHECK_FORMAL,
+  ABSENCE_FOCUS_DRIFT_DETECTION_FORMAL,
+  ABSENCE_SESSION_LENGTH_CHECKPOINT_FORMAL,
+  ABSENCE_PROGRESS_CONSOLIDATION_GAP_FORMAL,
 } from './options.js';
 import {
   ABSENCE_CONTENT_BEGINNER,
@@ -115,8 +219,37 @@ import {
   ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER,
   ABSENCE_USER_FEEDBACK_REVIEW_BEGINNER,
   ABSENCE_ITERATION_PLANNING_BEGINNER,
+  ABSENCE_SCOPE_CREEP_BEGINNER,
+  ABSENCE_CONTEXT_LOSS_BEGINNER,
+  ABSENCE_API_DESIGN_REVIEW_BEGINNER,
+  ABSENCE_ACCESSIBILITY_BEGINNER,
+  ABSENCE_ENV_AND_SECRETS_BEGINNER,
+  ABSENCE_DATA_VALIDATION_BEGINNER,
+  ABSENCE_CI_PIPELINE_BEGINNER,
+  ABSENCE_RATE_LIMITING_BEGINNER,
+  ABSENCE_FEATURE_SCOPE_BEGINNER,
+  ABSENCE_IMPLEMENTATION_CHECKPOINT_BEGINNER,
+  ABSENCE_SPEC_BEFORE_CODE_BEGINNER,
+  ABSENCE_INCREMENTAL_BUILD_BEGINNER,
+  ABSENCE_ERROR_UNDERSTANDING_BEGINNER,
+  ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER,
+  ABSENCE_OUTPUT_VERIFICATION_BEGINNER,
+  ABSENCE_REQUIREMENT_CLARITY_BEGINNER,
+  ABSENCE_COPY_PASTE_AWARENESS_BEGINNER,
+  ABSENCE_DEBUGGING_OBSERVATION_BEGINNER,
+  ABSENCE_LEARNING_CONSOLIDATION_BEGINNER,
+  ABSENCE_SIMPLE_SOLUTION_FIRST_BEGINNER,
+  ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER,
+  ABSENCE_ROLLBACK_AWARENESS_BEGINNER,
+  ABSENCE_BUILD_VS_UNDERSTAND_RATIO_BEGINNER,
+  ABSENCE_DECISION_FATIGUE_PATTERN_BEGINNER,
+  ABSENCE_WORK_RHYTHM_CHECK_BEGINNER,
+  ABSENCE_FOCUS_DRIFT_DETECTION_BEGINNER,
+  ABSENCE_SESSION_LENGTH_CHECKPOINT_BEGINNER,
+  ABSENCE_PROGRESS_CONSOLIDATION_GAP_BEGINNER,
 } from './options-beginner.js';
 import type { UserProfile } from '../classifier/types.js';
+import { SIGNAL_DEFINITIONS } from '../classifier/signals.js';
 import {
   buildSelectMessage,
   formatPinchLabel,
@@ -127,6 +260,8 @@ import {
   runDecisionSession,
   OPTION_SEPARATOR,
   OPT_OUT_SENTINEL,
+  NEXPATH_HEADER,
+  NEXPATH_HEADER_LINES,
 } from './DecisionSession.js';
 import type { DecisionSessionInput, SelectFn } from './DecisionSession.js';
 import type { Store } from '../store/db.js';
@@ -323,6 +458,58 @@ describe('buildOptionList', () => {
     const { options } = buildOptionList(BEHAVIOUR_TESTING_CASUAL, 3);
     expect(options[0]).toMatch(/break|tried by hand/);
   });
+
+  // ── Sub-7 — ABSENCE_SCOPE_CREEP buildOptionList (formal, 3 L1 / 2 L2 / 1 L3) ─────────────
+
+  it('ABSENCE_SCOPE_CREEP L1 has exactly 5 options (3 content + Show simpler + Skip)', () => {
+    const { options, hasNextLevel } = buildOptionList(ABSENCE_SCOPE_CREEP, 1);
+    expect(options).toHaveLength(5);
+    expect(hasNextLevel).toBe(true);
+    expect(options.at(-1)).toBe(SKIP_NOW);
+    expect(options.at(-2)).toBe(SHOW_SIMPLER);
+  });
+
+  it('ABSENCE_SCOPE_CREEP L2 has exactly 4 options (2 content + Show simpler + Skip)', () => {
+    const { options, hasNextLevel } = buildOptionList(ABSENCE_SCOPE_CREEP, 2);
+    expect(options).toHaveLength(4);
+    expect(hasNextLevel).toBe(true);
+    expect(options.at(-1)).toBe(SKIP_NOW);
+    expect(options.at(-2)).toBe(SHOW_SIMPLER);
+  });
+
+  it('ABSENCE_SCOPE_CREEP L3 has exactly 2 options (1 content + Skip, no Show simpler)', () => {
+    const { options, hasNextLevel } = buildOptionList(ABSENCE_SCOPE_CREEP, 3);
+    expect(options).toHaveLength(2);
+    expect(hasNextLevel).toBe(false);
+    expect(options.at(-1)).toBe(SKIP_NOW);
+    expect(options).not.toContain(SHOW_SIMPLER);
+  });
+
+  // ── Sub-7 — ABSENCE_SCOPE_CREEP_BEGINNER buildOptionList (beginner, 2 L1 / 1 L2 / 1 L3) ──
+
+  it('ABSENCE_SCOPE_CREEP_BEGINNER L1 has exactly 4 options (2 content + Show simpler + Skip)', () => {
+    const { options, hasNextLevel } = buildOptionList(ABSENCE_SCOPE_CREEP_BEGINNER, 1);
+    expect(options).toHaveLength(4);
+    expect(hasNextLevel).toBe(true);
+    expect(options.at(-1)).toBe(SKIP_NOW);
+    expect(options.at(-2)).toBe(SHOW_SIMPLER);
+  });
+
+  it('ABSENCE_SCOPE_CREEP_BEGINNER L2 has exactly 3 options (1 content + Show simpler + Skip)', () => {
+    const { options, hasNextLevel } = buildOptionList(ABSENCE_SCOPE_CREEP_BEGINNER, 2);
+    expect(options).toHaveLength(3);
+    expect(hasNextLevel).toBe(true);
+    expect(options.at(-1)).toBe(SKIP_NOW);
+    expect(options.at(-2)).toBe(SHOW_SIMPLER);
+  });
+
+  it('ABSENCE_SCOPE_CREEP_BEGINNER L3 has exactly 2 options (1 content + Skip, no Show simpler)', () => {
+    const { options, hasNextLevel } = buildOptionList(ABSENCE_SCOPE_CREEP_BEGINNER, 3);
+    expect(options).toHaveLength(2);
+    expect(hasNextLevel).toBe(false);
+    expect(options.at(-1)).toBe(SKIP_NOW);
+    expect(options).not.toContain(SHOW_SIMPLER);
+  });
 });
 
 // ── resolveDecisionContent ────────────────────────────────────────────────────
@@ -499,10 +686,9 @@ describe('resolveDecisionContent — heuristic variant routing', () => {
     expect(content).toBe(TASK_REVIEW);
   });
 
-  it('cool_geek still uses beginner absence map — absence:test_creation → ABSENCE_TEST_CREATION_BEGINNER', () => {
-    // isVibe=true for cool_geek → absenceMap = ABSENCE_CONTENT_BEGINNER → test_creation → ABSENCE_TEST_CREATION_BEGINNER
+  it('cool_geek + absence:test_creation → ABSENCE_TEST_CREATION_CASUAL', () => {
     const content = resolveDecisionContent('implementation', 'absence:test_creation', makeProfile('cool_geek'));
-    expect(content).toBe(ABSENCE_TEST_CREATION_BEGINNER);
+    expect(content).toBe(ABSENCE_TEST_CREATION_CASUAL);
   });
 
   it('pro_geek_soul + absence:test_creation → ABSENCE_TEST_CREATION_CASUAL', () => {
@@ -952,6 +1138,88 @@ describe('resolveDecisionContent — heuristic variant routing', () => {
     const content = resolveDecisionContent('feedback_loop', 'absence:iteration_planning', makeProfile('beginner'));
     expect(content).toBe(ABSENCE_ITERATION_PLANNING_BEGINNER);
   });
+
+  // ── Sub-7 signal routing — all 8 new signals ──────────────────────────────
+
+  it('hardcore_pro + absence:scope_creep → ABSENCE_SCOPE_CREEP (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:scope_creep', makeProfile('hardcore_pro'))).toBe(ABSENCE_SCOPE_CREEP);
+  });
+  it('pro_geek_soul + absence:scope_creep → ABSENCE_SCOPE_CREEP_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:scope_creep', makeProfile('pro_geek_soul'))).toBe(ABSENCE_SCOPE_CREEP_CASUAL);
+  });
+  it('beginner + absence:scope_creep → ABSENCE_SCOPE_CREEP_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:scope_creep', makeProfile('beginner'))).toBe(ABSENCE_SCOPE_CREEP_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:context_loss → ABSENCE_CONTEXT_LOSS (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:context_loss', makeProfile('hardcore_pro'))).toBe(ABSENCE_CONTEXT_LOSS);
+  });
+  it('pro_geek_soul + absence:context_loss → ABSENCE_CONTEXT_LOSS_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:context_loss', makeProfile('pro_geek_soul'))).toBe(ABSENCE_CONTEXT_LOSS_CASUAL);
+  });
+  it('beginner + absence:context_loss → ABSENCE_CONTEXT_LOSS_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:context_loss', makeProfile('beginner'))).toBe(ABSENCE_CONTEXT_LOSS_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:api_design_review → ABSENCE_API_DESIGN_REVIEW (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:api_design_review', makeProfile('hardcore_pro'))).toBe(ABSENCE_API_DESIGN_REVIEW);
+  });
+  it('pro_geek_soul + absence:api_design_review → ABSENCE_API_DESIGN_REVIEW_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:api_design_review', makeProfile('pro_geek_soul'))).toBe(ABSENCE_API_DESIGN_REVIEW_CASUAL);
+  });
+  it('beginner + absence:api_design_review → ABSENCE_API_DESIGN_REVIEW_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:api_design_review', makeProfile('beginner'))).toBe(ABSENCE_API_DESIGN_REVIEW_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:accessibility → ABSENCE_ACCESSIBILITY (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:accessibility', makeProfile('hardcore_pro'))).toBe(ABSENCE_ACCESSIBILITY);
+  });
+  it('pro_geek_soul + absence:accessibility → ABSENCE_ACCESSIBILITY_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:accessibility', makeProfile('pro_geek_soul'))).toBe(ABSENCE_ACCESSIBILITY_CASUAL);
+  });
+  it('beginner + absence:accessibility → ABSENCE_ACCESSIBILITY_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:accessibility', makeProfile('beginner'))).toBe(ABSENCE_ACCESSIBILITY_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:environment_and_secrets → ABSENCE_ENV_AND_SECRETS (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:environment_and_secrets', makeProfile('hardcore_pro'))).toBe(ABSENCE_ENV_AND_SECRETS);
+  });
+  it('pro_geek_soul + absence:environment_and_secrets → ABSENCE_ENV_AND_SECRETS_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:environment_and_secrets', makeProfile('pro_geek_soul'))).toBe(ABSENCE_ENV_AND_SECRETS_CASUAL);
+  });
+  it('beginner + absence:environment_and_secrets → ABSENCE_ENV_AND_SECRETS_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:environment_and_secrets', makeProfile('beginner'))).toBe(ABSENCE_ENV_AND_SECRETS_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:data_validation → ABSENCE_DATA_VALIDATION (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:data_validation', makeProfile('hardcore_pro'))).toBe(ABSENCE_DATA_VALIDATION);
+  });
+  it('pro_geek_soul + absence:data_validation → ABSENCE_DATA_VALIDATION_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:data_validation', makeProfile('pro_geek_soul'))).toBe(ABSENCE_DATA_VALIDATION_CASUAL);
+  });
+  it('beginner + absence:data_validation → ABSENCE_DATA_VALIDATION_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:data_validation', makeProfile('beginner'))).toBe(ABSENCE_DATA_VALIDATION_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:ci_pipeline → ABSENCE_CI_PIPELINE (formal)', () => {
+    expect(resolveDecisionContent('review_testing', 'absence:ci_pipeline', makeProfile('hardcore_pro'))).toBe(ABSENCE_CI_PIPELINE);
+  });
+  it('pro_geek_soul + absence:ci_pipeline → ABSENCE_CI_PIPELINE_CASUAL', () => {
+    expect(resolveDecisionContent('review_testing', 'absence:ci_pipeline', makeProfile('pro_geek_soul'))).toBe(ABSENCE_CI_PIPELINE_CASUAL);
+  });
+  it('beginner + absence:ci_pipeline → ABSENCE_CI_PIPELINE_BEGINNER', () => {
+    expect(resolveDecisionContent('review_testing', 'absence:ci_pipeline', makeProfile('beginner'))).toBe(ABSENCE_CI_PIPELINE_BEGINNER);
+  });
+
+  it('hardcore_pro + absence:rate_limiting → ABSENCE_RATE_LIMITING (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:rate_limiting', makeProfile('hardcore_pro'))).toBe(ABSENCE_RATE_LIMITING);
+  });
+  it('pro_geek_soul + absence:rate_limiting → ABSENCE_RATE_LIMITING_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:rate_limiting', makeProfile('pro_geek_soul'))).toBe(ABSENCE_RATE_LIMITING_CASUAL);
+  });
+  it('beginner + absence:rate_limiting → ABSENCE_RATE_LIMITING_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:rate_limiting', makeProfile('beginner'))).toBe(ABSENCE_RATE_LIMITING_BEGINNER);
+  });
 });
 
 // ── Content structure validation ──────────────────────────────────────────────
@@ -1011,6 +1279,22 @@ describe('DecisionContent structure', () => {
     ABSENCE_SPEC_CROSS_CONFIRM_CASUAL,
     ABSENCE_SPEC_REVISION,
     ABSENCE_SPEC_REVISION_CASUAL,
+    ABSENCE_SCOPE_CREEP,
+    ABSENCE_SCOPE_CREEP_CASUAL,
+    ABSENCE_CONTEXT_LOSS,
+    ABSENCE_CONTEXT_LOSS_CASUAL,
+    ABSENCE_API_DESIGN_REVIEW,
+    ABSENCE_API_DESIGN_REVIEW_CASUAL,
+    ABSENCE_ACCESSIBILITY,
+    ABSENCE_ACCESSIBILITY_CASUAL,
+    ABSENCE_ENV_AND_SECRETS,
+    ABSENCE_ENV_AND_SECRETS_CASUAL,
+    ABSENCE_DATA_VALIDATION,
+    ABSENCE_DATA_VALIDATION_CASUAL,
+    ABSENCE_CI_PIPELINE,
+    ABSENCE_CI_PIPELINE_CASUAL,
+    ABSENCE_RATE_LIMITING,
+    ABSENCE_RATE_LIMITING_CASUAL,
   ];
 
   it('every content entry has a non-empty question', () => {
@@ -1443,6 +1727,123 @@ describe('DecisionContent structure', () => {
       expect(c.L3[0].length).toBeGreaterThan(0);
     }
   });
+
+  // ── Sub-7 formal/casual option counts ────────────────────────────────────────
+
+  it('ABSENCE_SCOPE_CREEP has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SCOPE_CREEP.L1).toHaveLength(3);
+    expect(ABSENCE_SCOPE_CREEP.L2).toHaveLength(2);
+    expect(ABSENCE_SCOPE_CREEP.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_SCOPE_CREEP_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SCOPE_CREEP_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SCOPE_CREEP_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SCOPE_CREEP_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CONTEXT_LOSS has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CONTEXT_LOSS.L1).toHaveLength(3);
+    expect(ABSENCE_CONTEXT_LOSS.L2).toHaveLength(2);
+    expect(ABSENCE_CONTEXT_LOSS.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CONTEXT_LOSS_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CONTEXT_LOSS_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_CONTEXT_LOSS_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_CONTEXT_LOSS_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_API_DESIGN_REVIEW has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_API_DESIGN_REVIEW.L1).toHaveLength(3);
+    expect(ABSENCE_API_DESIGN_REVIEW.L2).toHaveLength(2);
+    expect(ABSENCE_API_DESIGN_REVIEW.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_API_DESIGN_REVIEW_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_API_DESIGN_REVIEW_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_API_DESIGN_REVIEW_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_API_DESIGN_REVIEW_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ACCESSIBILITY has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ACCESSIBILITY.L1).toHaveLength(3);
+    expect(ABSENCE_ACCESSIBILITY.L2).toHaveLength(2);
+    expect(ABSENCE_ACCESSIBILITY.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ACCESSIBILITY_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ACCESSIBILITY_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_ACCESSIBILITY_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_ACCESSIBILITY_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ENV_AND_SECRETS has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ENV_AND_SECRETS.L1).toHaveLength(3);
+    expect(ABSENCE_ENV_AND_SECRETS.L2).toHaveLength(2);
+    expect(ABSENCE_ENV_AND_SECRETS.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ENV_AND_SECRETS_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ENV_AND_SECRETS_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_ENV_AND_SECRETS_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_ENV_AND_SECRETS_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_DATA_VALIDATION has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DATA_VALIDATION.L1).toHaveLength(3);
+    expect(ABSENCE_DATA_VALIDATION.L2).toHaveLength(2);
+    expect(ABSENCE_DATA_VALIDATION.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_DATA_VALIDATION_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DATA_VALIDATION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_DATA_VALIDATION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_DATA_VALIDATION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CI_PIPELINE has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CI_PIPELINE.L1).toHaveLength(3);
+    expect(ABSENCE_CI_PIPELINE.L2).toHaveLength(2);
+    expect(ABSENCE_CI_PIPELINE.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CI_PIPELINE_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CI_PIPELINE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_CI_PIPELINE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_CI_PIPELINE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_RATE_LIMITING has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_RATE_LIMITING.L1).toHaveLength(3);
+    expect(ABSENCE_RATE_LIMITING.L2).toHaveLength(2);
+    expect(ABSENCE_RATE_LIMITING.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_RATE_LIMITING_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_RATE_LIMITING_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_RATE_LIMITING_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_RATE_LIMITING_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('every Group E formal/casual entry has non-empty L1[0], L1[1], L2[0], L3[0]', () => {
+    const groupEFormalCasual = [
+      ABSENCE_SCOPE_CREEP,          ABSENCE_SCOPE_CREEP_CASUAL,
+      ABSENCE_CONTEXT_LOSS,         ABSENCE_CONTEXT_LOSS_CASUAL,
+      ABSENCE_API_DESIGN_REVIEW,    ABSENCE_API_DESIGN_REVIEW_CASUAL,
+      ABSENCE_ACCESSIBILITY,        ABSENCE_ACCESSIBILITY_CASUAL,
+      ABSENCE_ENV_AND_SECRETS,      ABSENCE_ENV_AND_SECRETS_CASUAL,
+      ABSENCE_DATA_VALIDATION,      ABSENCE_DATA_VALIDATION_CASUAL,
+      ABSENCE_CI_PIPELINE,          ABSENCE_CI_PIPELINE_CASUAL,
+      ABSENCE_RATE_LIMITING,        ABSENCE_RATE_LIMITING_CASUAL,
+    ];
+    for (const c of groupEFormalCasual) {
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L1[1].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
+  });
 });
 
 // ── DecisionContent structure — Group A beginner variants ────────────────────
@@ -1715,6 +2116,98 @@ describe('DecisionContent structure — Group D beginner variants', () => {
   });
 });
 
+// ── DecisionContent structure — Group E beginner variants (sub-7) ─────────────
+
+describe('DecisionContent structure — Group E beginner variants', () => {
+  const groupEBeginner = [
+    ABSENCE_SCOPE_CREEP_BEGINNER,
+    ABSENCE_CONTEXT_LOSS_BEGINNER,
+    ABSENCE_API_DESIGN_REVIEW_BEGINNER,
+    ABSENCE_ACCESSIBILITY_BEGINNER,
+    ABSENCE_ENV_AND_SECRETS_BEGINNER,
+    ABSENCE_DATA_VALIDATION_BEGINNER,
+    ABSENCE_CI_PIPELINE_BEGINNER,
+    ABSENCE_RATE_LIMITING_BEGINNER,
+  ];
+
+  it('every Group E beginner entry has a non-empty question', () => {
+    for (const c of groupEBeginner) {
+      expect(c.question.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('every Group E beginner entry has a non-empty pinchFallback', () => {
+    for (const c of groupEBeginner) {
+      expect(c.pinchFallback.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('every Group E beginner entry has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    for (const c of groupEBeginner) {
+      expect(c.L1).toHaveLength(2);
+      expect(c.L2).toHaveLength(1);
+      expect(c.L3).toHaveLength(1);
+    }
+  });
+
+  it('ABSENCE_SCOPE_CREEP_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_SCOPE_CREEP_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_SCOPE_CREEP_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_SCOPE_CREEP_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CONTEXT_LOSS_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_CONTEXT_LOSS_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_CONTEXT_LOSS_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_CONTEXT_LOSS_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_API_DESIGN_REVIEW_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_API_DESIGN_REVIEW_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_API_DESIGN_REVIEW_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_API_DESIGN_REVIEW_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ACCESSIBILITY_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_ACCESSIBILITY_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_ACCESSIBILITY_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_ACCESSIBILITY_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ENV_AND_SECRETS_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_ENV_AND_SECRETS_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_ENV_AND_SECRETS_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_ENV_AND_SECRETS_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_DATA_VALIDATION_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_DATA_VALIDATION_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_DATA_VALIDATION_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_DATA_VALIDATION_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CI_PIPELINE_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_CI_PIPELINE_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_CI_PIPELINE_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_CI_PIPELINE_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_RATE_LIMITING_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_RATE_LIMITING_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_RATE_LIMITING_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_RATE_LIMITING_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('every Group E beginner entry has non-empty L1[0], L1[1], L2[0], L3[0]', () => {
+    for (const c of groupEBeginner) {
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L1[1].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
+  });
+});
+
 // ── ANSI formatting helpers ───────────────────────────────────────────────────
 
 describe('ANSI formatting helpers', () => {
@@ -1758,6 +2251,53 @@ describe('ANSI formatting helpers', () => {
     expect(pinch).not.toBe(question);
     expect(pinch).not.toBe(subtitle);
     expect(question).not.toBe(subtitle);
+  });
+});
+
+// ── NEXPATH_HEADER ────────────────────────────────────────────────────────────
+
+describe('NEXPATH_HEADER', () => {
+  it('contains the triangle wordmark accent', () => {
+    expect(NEXPATH_HEADER).toContain('▲');
+  });
+
+  it('contains the tracked wordmark "N E X P A T H  C L I"', () => {
+    expect(NEXPATH_HEADER).toContain('N E X P A T H  C L I');
+  });
+
+  it('contains a dim-gray horizontal rule line', () => {
+    expect(NEXPATH_HEADER).toContain('─');
+  });
+
+  it('uses bold bright cyan for the triangle (matches pinch-label brand color)', () => {
+    expect(NEXPATH_HEADER).toContain('\x1b[1;96m');
+  });
+
+  it('uses bold bright white for the wordmark', () => {
+    expect(NEXPATH_HEADER).toContain('\x1b[1;97m');
+  });
+
+  it('ends with a trailing blank line for breathing room before the prompt', () => {
+    expect(NEXPATH_HEADER.endsWith('\n\n')).toBe(true);
+  });
+
+  it('is a 3-row visual block (wordmark + rule + blank)', () => {
+    expect(NEXPATH_HEADER_LINES).toBe(3);
+    // The header string also produces 3 visible lines once ANSI is stripped:
+    // line 1: ▲  N E X P A T H, line 2: rule, line 3: empty (trailing blank).
+    const stripped = NEXPATH_HEADER.replace(/\x1b\[[0-9;]*m/g, '');
+    const lineCount = stripped.split('\n').length - 1; // trailing '\n' creates empty tail
+    expect(lineCount).toBe(NEXPATH_HEADER_LINES);
+  });
+
+  it('triangle appears before the wordmark', () => {
+    const stripped = NEXPATH_HEADER.replace(/\x1b\[[0-9;]*m/g, '');
+    expect(stripped.indexOf('▲')).toBeLessThan(stripped.indexOf('N E X P A T H'));
+  });
+
+  it('wordmark appears before the rule', () => {
+    const stripped = NEXPATH_HEADER.replace(/\x1b\[[0-9;]*m/g, '');
+    expect(stripped.indexOf('N E X P A T H')).toBeLessThan(stripped.indexOf('─'));
   });
 });
 
@@ -1838,7 +2378,7 @@ describe('runLevel', () => {
 
   it('passes the correct option list to selectFn on Level 1', async () => {
     const selectFn = mockSelect(SKIP_NOW);
-    await runLevel(makeInput(), 1, selectFn);
+    await runLevel(makeInput({ decisionSessionCount: 12 }), 1, selectFn);
     const call = (selectFn as ReturnType<typeof vi.fn>).mock.calls[0][0];
     const values = call.options.map((o: { value: string }) => o.value);
     expect(values).toContain(SHOW_SIMPLER);
@@ -2175,9 +2715,9 @@ describe('resolveDecisionContent — behaviour_testing absence profile routing (
     expect(content).toBe(BEHAVIOUR_TESTING);
   });
 
-  it('cool_geek + absence:behaviour_testing → BEHAVIOUR_TESTING_BEGINNER (via isVibe)', () => {
+  it('cool_geek + absence:behaviour_testing → BEHAVIOUR_TESTING_CASUAL', () => {
     const content = resolveDecisionContent('implementation', 'absence:behaviour_testing', coolGeekProfile);
-    expect(content).toBe(ABSENCE_CONTENT_BEGINNER.behaviour_testing);
+    expect(content).toBe(BEHAVIOUR_TESTING_CASUAL);
   });
 
   it('beginner + absence:behaviour_testing → BEHAVIOUR_TESTING_BEGINNER (via isVibe)', () => {
@@ -2238,7 +2778,7 @@ describe('runDecisionSession — decisionSessionCount increment', () => {
 });
 
 describe('runLevel — help line injection', () => {
-  it('injects help item at bottom of options when decisionSessionCount < 3', async () => {
+  it('injects help item at bottom of options when decisionSessionCount < 12', async () => {
     const spy = vi.fn().mockResolvedValue(SKIP_NOW);
     await runLevel(makeInput({ decisionSessionCount: 0 }), 1, spy as SelectFn);
     const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
@@ -2246,11 +2786,13 @@ describe('runLevel — help line injection', () => {
     expect(helpItem).toBeDefined();
     expect(helpItem?.label).toContain('Ctrl+X');
     expect(helpItem?.label).toContain('Ctrl+T');
+    expect(helpItem?.label).toContain('frequency or role');
+    expect(helpItem?.label).not.toContain('configure role');
   });
 
-  it('does NOT inject help item when decisionSessionCount >= 3', async () => {
+  it('does NOT inject help item when decisionSessionCount >= 12', async () => {
     const spy = vi.fn().mockResolvedValue(SKIP_NOW);
-    await runLevel(makeInput({ decisionSessionCount: 3 }), 1, spy as SelectFn);
+    await runLevel(makeInput({ decisionSessionCount: 12 }), 1, spy as SelectFn);
     const opts = (spy as ReturnType<typeof vi.fn>).mock.calls[0][0].options as { value: string; label: string }[];
     const helpItem = opts.find((o) => o.value === `${OPTION_SEPARATOR}help`);
     expect(helpItem).toBeUndefined();
@@ -2404,6 +2946,52 @@ describe('runDecisionSession — __FREQ__ sentinel handling', () => {
       store.db.close();
     }
   });
+
+  it('writes optimum when __FREQ__:optimum is returned', async () => {
+    const store = await openStore(':memory:');
+    try {
+      upsertProject(store, { projectRoot: '/proj/freq4', name: 'freq4' });
+      await runDecisionSession(
+        makeInput({ projectRoot: '/proj/freq4' }),
+        store,
+        mockSelect('__FREQ__:optimum'),
+      );
+      expect(getConfig(store.db, 'advisory_frequency:/proj/freq4')).toBe('optimum');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('writes the chosen role to config on __ROLE__:vibe_coder', async () => {
+    const store = await openStore(':memory:');
+    try {
+      upsertProject(store, { projectRoot: '/proj/role1', name: 'role1' });
+      const result = await runDecisionSession(
+        makeInput({ projectRoot: '/proj/role1' }),
+        store,
+        mockSelect('__ROLE__:vibe_coder'),
+      );
+      expect(result.outcome).toBe('skipped');
+      expect(getConfig(store.db, 'role:/proj/role1')).toBe('vibe_coder');
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('writes the chosen role to config on __ROLE__:founder', async () => {
+    const store = await openStore(':memory:');
+    try {
+      upsertProject(store, { projectRoot: '/proj/role2', name: 'role2' });
+      await runDecisionSession(
+        makeInput({ projectRoot: '/proj/role2' }),
+        store,
+        mockSelect('__ROLE__:founder'),
+      );
+      expect(getConfig(store.db, 'role:/proj/role2')).toBe('founder');
+    } finally {
+      store.db.close();
+    }
+  });
 });
 
 // ── generatedOptions — runLevel and runDecisionSession ────────────────────────
@@ -2545,9 +3133,9 @@ describe('resolveDecisionContent — C-02 profile routing', () => {
     expect(content).toBe(TRANSITION_CONTENT_BEGINNER.prd);
   });
 
-  it('cool_geek profile routes to same beginner path as beginner', () => {
+  it('cool_geek + stage_transition to prd → IDEA_TO_PRD', () => {
     const content = resolveDecisionContent('prd', 'stage_transition', coolGeekProfile);
-    expect(content).toBe(TRANSITION_CONTENT_BEGINNER.prd);
+    expect(content).toBe(IDEA_TO_PRD);
   });
 
   it('hardcore_pro profile → existing pro content (IDEA_TO_PRD)', () => {
@@ -2727,6 +3315,7 @@ describe('runDecisionSession — telemetry: decision_session_started', () => {
         pinchLabel: 'Hold up.',
         sessionId:  'session-test',
       }),
+      undefined,
     );
   });
 
@@ -2736,6 +3325,65 @@ describe('runDecisionSession — telemetry: decision_session_started', () => {
       '/test/project',
       'decision_session_started',
       expect.any(Object),
+      undefined,
+    );
+  });
+
+  // ── Phase 4 — decision_session_started enriched payload (Items B + J) ──────
+
+  it('decision_session_started carries decisionSessionCountInProject from input', async () => {
+    await runDecisionSession(
+      makeInput({ decisionSessionCount: 7 }),
+      undefined,
+      mockSelect(SKIP_NOW),
+    );
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_started',
+      expect.objectContaining({ decisionSessionCountInProject: 7 }),
+      undefined,
+    );
+  });
+
+  it('decision_session_started defaults decisionSessionCountInProject to 0 when input is 0', async () => {
+    await runDecisionSession(
+      makeInput({ decisionSessionCount: 0 }),
+      undefined,
+      mockSelect(SKIP_NOW),
+    );
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_started',
+      expect.objectContaining({ decisionSessionCountInProject: 0 }),
+      undefined,
+    );
+  });
+
+  it('decision_session_started carries recentPrompts from input when provided', async () => {
+    const recentPrompts = [
+      { index: 1, classifiedStage: 'planning',       confidence: 0.7, capturedAt: 100 },
+      { index: 2, classifiedStage: 'implementation', confidence: 0.9, capturedAt: 200 },
+    ];
+    await runDecisionSession(
+      makeInput({ recentPrompts }),
+      undefined,
+      mockSelect(SKIP_NOW),
+    );
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_started',
+      expect.objectContaining({ recentPrompts }),
+      undefined,
+    );
+  });
+
+  it('decision_session_started defaults recentPrompts to [] when input is undefined', async () => {
+    await runDecisionSession(makeInput(), undefined, mockSelect(SKIP_NOW));
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_started',
+      expect.objectContaining({ recentPrompts: [] }),
+      undefined,
     );
   });
 });
@@ -2766,6 +3414,7 @@ describe('runLevel — NEXPATH_SIM=1 support', () => {
         level: 1,
         autoSelectedText: expect.any(String),
       }),
+      undefined,
     );
   }, 2000);
 
@@ -2773,6 +3422,142 @@ describe('runLevel — NEXPATH_SIM=1 support', () => {
     const selectFn = mockSelect(SKIP_NOW);
     await runLevel(makeInput(), 1, selectFn);
     expect(selectFn).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── runLevel — Phase 3 enriched decision_session_dismissed payload ────────────
+
+describe('runLevel — telemetry: decision_session_dismissed enriched payload (Phase 3)', () => {
+  beforeEach(() => { vi.mocked(writeTelemetry).mockClear(); });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  // Common assertion helper — the 6 context fields land verbatim from `input`.
+  const expectRichDismissPayload = (reason: 'cancel' | 'skip', level: 1 | 2 | 3) =>
+    expect.objectContaining({
+      level,
+      reason,
+      flagType:    'stage_transition',
+      stage:       'implementation',
+      pinchLabel:  'Hold up.',
+      sessionId:   'session-test',
+      promptCount: 20,
+    });
+
+  it('emits 6 context fields when user cancels (Ctrl+C) at Level 1', async () => {
+    await runLevel(makeInput(), 1, mockCancel());
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_dismissed',
+      expectRichDismissPayload('cancel', 1),
+      undefined,
+    );
+  });
+
+  it('emits 6 context fields when user clicks SKIP_NOW at Level 2', async () => {
+    await runLevel(makeInput(), 2, mockSelect(SKIP_NOW));
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_dismissed',
+      expectRichDismissPayload('skip', 2),
+      undefined,
+    );
+  });
+
+  it('emits 6 context fields when user clicks a blank separator at Level 3', async () => {
+    // Separator values look like __nexpath_sep__<n> — runLevel treats those as skip.
+    await runLevel(makeInput(), 3, mockSelect(`${OPTION_SEPARATOR}0`));
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_dismissed',
+      expectRichDismissPayload('skip', 3),
+      undefined,
+    );
+  });
+
+  it('skipCountInProject reflects real DB state when store is provided', async () => {
+    const store = await openStore(':memory:');
+    try {
+      // Seed 3 prior skips for this project so the next dismissal observes count=3.
+      const { insertSkippedSession } = await import('../store/skipped-sessions.js');
+      for (let i = 0; i < 3; i++) {
+        insertSkippedSession(store, {
+          projectRoot:          '/proj/skip-count',
+          sessionId:            `prior-${i}`,
+          flagType:             'absence:test_creation',
+          stage:                'implementation',
+          levelReached:         1,
+          skippedAtPromptCount: 5 + i,
+        });
+      }
+
+      vi.mocked(writeTelemetry).mockClear();
+      await runLevel(
+        makeInput({ projectRoot: '/proj/skip-count' }),
+        1,
+        mockSelect(SKIP_NOW),
+        store,
+      );
+
+      expect(writeTelemetry).toHaveBeenCalledWith(
+        '/proj/skip-count',
+        'decision_session_dismissed',
+        expect.objectContaining({ skipCountInProject: 3 }),
+        store,
+      );
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it('skipCountInProject is null when no store is provided (graceful degradation)', async () => {
+    await runLevel(makeInput(), 1, mockSelect(SKIP_NOW));
+    expect(writeTelemetry).toHaveBeenCalledWith(
+      '/test/project',
+      'decision_session_dismissed',
+      expect.objectContaining({ skipCountInProject: null }),
+      undefined,
+    );
+  });
+
+  it('runDecisionSession plumbs store through runLevel — full chain delivers rich payload', async () => {
+    // End-to-end guard: if a future refactor accidentally drops `store` from
+    // the runLevel() call inside runDecisionSession, this test catches it
+    // even though both runLevel and runDecisionSession individually still work.
+    const store = await openStore(':memory:');
+    try {
+      const { insertSkippedSession } = await import('../store/skipped-sessions.js');
+      for (let i = 0; i < 2; i++) {
+        insertSkippedSession(store, {
+          projectRoot:          '/proj/plumb',
+          sessionId:            `prior-${i}`,
+          flagType:             'absence:test_creation',
+          stage:                'implementation',
+          levelReached:         1,
+          skippedAtPromptCount: 5 + i,
+        });
+      }
+
+      vi.mocked(writeTelemetry).mockClear();
+      await runDecisionSession(
+        makeInput({ projectRoot: '/proj/plumb' }),
+        store,
+        mockSelect(SKIP_NOW),
+      );
+
+      expect(writeTelemetry).toHaveBeenCalledWith(
+        '/proj/plumb',
+        'decision_session_dismissed',
+        expect.objectContaining({
+          level:              1,
+          reason:             'skip',
+          flagType:           'stage_transition',
+          skipCountInProject: 2,
+        }),
+        store,
+      );
+    } finally {
+      store.db.close();
+    }
   });
 });
 
@@ -3083,6 +3868,2053 @@ describe('DecisionContent structure — Sub-5 RELEASE_TO_FEEDBACK_BEGINNER', () 
     expect(beginner.L1[1].length).toBeGreaterThan(0);
     expect(beginner.L2[0].length).toBeGreaterThan(0);
     expect(beginner.L3[0].length).toBeGreaterThan(0);
+  });
+});
+
+// ── DecisionContent structure — Sub-7 formal content sets ────────────────────
+
+describe('DecisionContent structure — Sub-7 formal content sets', () => {
+  it('ABSENCE_SCOPE_CREEP has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SCOPE_CREEP.L1).toHaveLength(3);
+    expect(ABSENCE_SCOPE_CREEP.L2).toHaveLength(2);
+    expect(ABSENCE_SCOPE_CREEP.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CONTEXT_LOSS has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CONTEXT_LOSS.L1).toHaveLength(3);
+    expect(ABSENCE_CONTEXT_LOSS.L2).toHaveLength(2);
+    expect(ABSENCE_CONTEXT_LOSS.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_API_DESIGN_REVIEW has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_API_DESIGN_REVIEW.L1).toHaveLength(3);
+    expect(ABSENCE_API_DESIGN_REVIEW.L2).toHaveLength(2);
+    expect(ABSENCE_API_DESIGN_REVIEW.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ACCESSIBILITY has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ACCESSIBILITY.L1).toHaveLength(3);
+    expect(ABSENCE_ACCESSIBILITY.L2).toHaveLength(2);
+    expect(ABSENCE_ACCESSIBILITY.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ENV_AND_SECRETS has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ENV_AND_SECRETS.L1).toHaveLength(3);
+    expect(ABSENCE_ENV_AND_SECRETS.L2).toHaveLength(2);
+    expect(ABSENCE_ENV_AND_SECRETS.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_DATA_VALIDATION has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DATA_VALIDATION.L1).toHaveLength(3);
+    expect(ABSENCE_DATA_VALIDATION.L2).toHaveLength(2);
+    expect(ABSENCE_DATA_VALIDATION.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CI_PIPELINE has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CI_PIPELINE.L1).toHaveLength(3);
+    expect(ABSENCE_CI_PIPELINE.L2).toHaveLength(2);
+    expect(ABSENCE_CI_PIPELINE.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_RATE_LIMITING has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_RATE_LIMITING.L1).toHaveLength(3);
+    expect(ABSENCE_RATE_LIMITING.L2).toHaveLength(2);
+    expect(ABSENCE_RATE_LIMITING.L3).toHaveLength(1);
+  });
+
+  it('every Sub-7 formal entry has non-empty question, pinchFallback, L1[0], L2[0], L3[0]', () => {
+    const entries = [
+      ABSENCE_SCOPE_CREEP,
+      ABSENCE_CONTEXT_LOSS,
+      ABSENCE_API_DESIGN_REVIEW,
+      ABSENCE_ACCESSIBILITY,
+      ABSENCE_ENV_AND_SECRETS,
+      ABSENCE_DATA_VALIDATION,
+      ABSENCE_CI_PIPELINE,
+      ABSENCE_RATE_LIMITING,
+    ];
+    for (const c of entries) {
+      expect(c.question.length).toBeGreaterThan(0);
+      expect(c.pinchFallback.length).toBeGreaterThan(0);
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ── DecisionContent structure — Sub-7 casual content sets ─────────────────────
+
+describe('DecisionContent structure — Sub-7 casual content sets', () => {
+  it('ABSENCE_SCOPE_CREEP_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SCOPE_CREEP_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SCOPE_CREEP_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SCOPE_CREEP_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CONTEXT_LOSS_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CONTEXT_LOSS_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_CONTEXT_LOSS_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_CONTEXT_LOSS_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_API_DESIGN_REVIEW_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_API_DESIGN_REVIEW_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_API_DESIGN_REVIEW_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_API_DESIGN_REVIEW_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ACCESSIBILITY_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ACCESSIBILITY_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_ACCESSIBILITY_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_ACCESSIBILITY_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ENV_AND_SECRETS_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ENV_AND_SECRETS_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_ENV_AND_SECRETS_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_ENV_AND_SECRETS_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_DATA_VALIDATION_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DATA_VALIDATION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_DATA_VALIDATION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_DATA_VALIDATION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CI_PIPELINE_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CI_PIPELINE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_CI_PIPELINE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_CI_PIPELINE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_RATE_LIMITING_CASUAL has exactly 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_RATE_LIMITING_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_RATE_LIMITING_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_RATE_LIMITING_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('every Sub-7 casual entry has non-empty question, pinchFallback, L1[0], L2[0], L3[0]', () => {
+    const entries = [
+      ABSENCE_SCOPE_CREEP_CASUAL,
+      ABSENCE_CONTEXT_LOSS_CASUAL,
+      ABSENCE_API_DESIGN_REVIEW_CASUAL,
+      ABSENCE_ACCESSIBILITY_CASUAL,
+      ABSENCE_ENV_AND_SECRETS_CASUAL,
+      ABSENCE_DATA_VALIDATION_CASUAL,
+      ABSENCE_CI_PIPELINE_CASUAL,
+      ABSENCE_RATE_LIMITING_CASUAL,
+    ];
+    for (const c of entries) {
+      expect(c.question.length).toBeGreaterThan(0);
+      expect(c.pinchFallback.length).toBeGreaterThan(0);
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ── DecisionContent structure — Sub-7 beginner content sets ───────────────────
+
+describe('DecisionContent structure — Sub-7 beginner content sets', () => {
+  it('ABSENCE_SCOPE_CREEP_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_SCOPE_CREEP_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_SCOPE_CREEP_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_SCOPE_CREEP_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CONTEXT_LOSS_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_CONTEXT_LOSS_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_CONTEXT_LOSS_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_CONTEXT_LOSS_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_API_DESIGN_REVIEW_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_API_DESIGN_REVIEW_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_API_DESIGN_REVIEW_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_API_DESIGN_REVIEW_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ACCESSIBILITY_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_ACCESSIBILITY_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_ACCESSIBILITY_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_ACCESSIBILITY_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_ENV_AND_SECRETS_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_ENV_AND_SECRETS_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_ENV_AND_SECRETS_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_ENV_AND_SECRETS_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_DATA_VALIDATION_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_DATA_VALIDATION_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_DATA_VALIDATION_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_DATA_VALIDATION_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CI_PIPELINE_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_CI_PIPELINE_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_CI_PIPELINE_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_CI_PIPELINE_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_RATE_LIMITING_BEGINNER has exactly 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_RATE_LIMITING_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_RATE_LIMITING_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_RATE_LIMITING_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('every Sub-7 beginner entry has non-empty question, pinchFallback, L1[0], L1[1], L2[0], L3[0]', () => {
+    const entries = [
+      ABSENCE_SCOPE_CREEP_BEGINNER,
+      ABSENCE_CONTEXT_LOSS_BEGINNER,
+      ABSENCE_API_DESIGN_REVIEW_BEGINNER,
+      ABSENCE_ACCESSIBILITY_BEGINNER,
+      ABSENCE_ENV_AND_SECRETS_BEGINNER,
+      ABSENCE_DATA_VALIDATION_BEGINNER,
+      ABSENCE_CI_PIPELINE_BEGINNER,
+      ABSENCE_RATE_LIMITING_BEGINNER,
+    ];
+    for (const c of entries) {
+      expect(c.question.length).toBeGreaterThan(0);
+      expect(c.pinchFallback.length).toBeGreaterThan(0);
+      expect(c.L1[0].length).toBeGreaterThan(0);
+      expect(c.L1[1].length).toBeGreaterThan(0);
+      expect(c.L2[0].length).toBeGreaterThan(0);
+      expect(c.L3[0].length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ── Phase 2 — Stream B universal signals content routing ─────────────────────
+
+describe('resolveDecisionContent — Stream B universal signals', () => {
+  const makeProfile = (nature: 'beginner' | 'cool_geek' | 'pro_geek_soul' | 'hardcore_pro') =>
+    ({ nature } as UserProfile);
+
+  // ── feature_scope_before_build routing ────────────────────────────────────────
+
+  it('absence:feature_scope_before_build, no profile → ABSENCE_FEATURE_SCOPE_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:feature_scope_before_build');
+    expect(content).toBe(ABSENCE_FEATURE_SCOPE_CASUAL);
+  });
+
+  it('absence:feature_scope_before_build, pro_geek_soul → ABSENCE_FEATURE_SCOPE_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:feature_scope_before_build', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_FEATURE_SCOPE_CASUAL);
+  });
+
+  it('absence:feature_scope_before_build, hardcore_pro → ABSENCE_FEATURE_SCOPE (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:feature_scope_before_build', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_FEATURE_SCOPE);
+  });
+
+  it('absence:feature_scope_before_build, beginner → ABSENCE_FEATURE_SCOPE_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:feature_scope_before_build', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_FEATURE_SCOPE_BEGINNER);
+  });
+
+  it('absence:feature_scope_before_build, cool_geek → ABSENCE_FEATURE_SCOPE_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:feature_scope_before_build', makeProfile('cool_geek'));
+    expect(content).toBe(ABSENCE_FEATURE_SCOPE_CASUAL);
+  });
+
+  // ── implementation_checkpoint routing ─────────────────────────────────────────
+
+  it('absence:implementation_checkpoint, no profile → ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:implementation_checkpoint');
+    expect(content).toBe(ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL);
+  });
+
+  it('absence:implementation_checkpoint, pro_geek_soul → ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:implementation_checkpoint', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL);
+  });
+
+  it('absence:implementation_checkpoint, hardcore_pro → ABSENCE_IMPLEMENTATION_CHECKPOINT (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:implementation_checkpoint', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_IMPLEMENTATION_CHECKPOINT);
+  });
+
+  it('absence:implementation_checkpoint, beginner → ABSENCE_IMPLEMENTATION_CHECKPOINT_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:implementation_checkpoint', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_IMPLEMENTATION_CHECKPOINT_BEGINNER);
+  });
+
+  it('absence:implementation_checkpoint, cool_geek → ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:implementation_checkpoint', makeProfile('cool_geek'));
+    expect(content).toBe(ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL);
+  });
+
+  // ── spec_before_code routing ──────────────────────────────────────────────────
+
+  it('absence:spec_before_code, no profile → ABSENCE_SPEC_BEFORE_CODE_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:spec_before_code');
+    expect(content).toBe(ABSENCE_SPEC_BEFORE_CODE_CASUAL);
+  });
+
+  it('absence:spec_before_code, pro_geek_soul → ABSENCE_SPEC_BEFORE_CODE_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:spec_before_code', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_SPEC_BEFORE_CODE_CASUAL);
+  });
+
+  it('absence:spec_before_code, hardcore_pro → ABSENCE_SPEC_BEFORE_CODE (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:spec_before_code', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_SPEC_BEFORE_CODE);
+  });
+
+  it('absence:spec_before_code, beginner → ABSENCE_SPEC_BEFORE_CODE_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:spec_before_code', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_SPEC_BEFORE_CODE_BEGINNER);
+  });
+
+  it('absence:spec_before_code, cool_geek → ABSENCE_SPEC_BEFORE_CODE_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:spec_before_code', makeProfile('cool_geek'));
+    expect(content).toBe(ABSENCE_SPEC_BEFORE_CODE_CASUAL);
+  });
+
+  // ── Structure validation ──────────────────────────────────────────────────────
+
+  it('ABSENCE_FEATURE_SCOPE has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_FEATURE_SCOPE.L1).toHaveLength(3);
+    expect(ABSENCE_FEATURE_SCOPE.L2).toHaveLength(2);
+    expect(ABSENCE_FEATURE_SCOPE.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_FEATURE_SCOPE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_FEATURE_SCOPE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_FEATURE_SCOPE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_FEATURE_SCOPE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_FEATURE_SCOPE_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_FEATURE_SCOPE_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_FEATURE_SCOPE_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_FEATURE_SCOPE_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_IMPLEMENTATION_CHECKPOINT has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_IMPLEMENTATION_CHECKPOINT.L1).toHaveLength(3);
+    expect(ABSENCE_IMPLEMENTATION_CHECKPOINT.L2).toHaveLength(2);
+    expect(ABSENCE_IMPLEMENTATION_CHECKPOINT.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_IMPLEMENTATION_CHECKPOINT_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_IMPLEMENTATION_CHECKPOINT_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_IMPLEMENTATION_CHECKPOINT_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_IMPLEMENTATION_CHECKPOINT_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_SPEC_BEFORE_CODE has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SPEC_BEFORE_CODE.L1).toHaveLength(3);
+    expect(ABSENCE_SPEC_BEFORE_CODE.L2).toHaveLength(2);
+    expect(ABSENCE_SPEC_BEFORE_CODE.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_SPEC_BEFORE_CODE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SPEC_BEFORE_CODE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SPEC_BEFORE_CODE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SPEC_BEFORE_CODE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_SPEC_BEFORE_CODE_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_SPEC_BEFORE_CODE_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_SPEC_BEFORE_CODE_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_SPEC_BEFORE_CODE_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CONTENT_BEGINNER contains all 3 Stream B keys', () => {
+    expect('feature_scope_before_build' in ABSENCE_CONTENT_BEGINNER).toBe(true);
+    expect('implementation_checkpoint' in ABSENCE_CONTENT_BEGINNER).toBe(true);
+    expect('spec_before_code' in ABSENCE_CONTENT_BEGINNER).toBe(true);
+  });
+
+  // ── Phase 5 D1 — incremental_build routing (universal) ───────────────────────
+
+  it('absence:incremental_build, no profile → ABSENCE_INCREMENTAL_BUILD_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:incremental_build');
+    expect(content).toBe(ABSENCE_INCREMENTAL_BUILD_CASUAL);
+  });
+
+  it('absence:incremental_build, pro_geek_soul → ABSENCE_INCREMENTAL_BUILD_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:incremental_build', makeProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_INCREMENTAL_BUILD_CASUAL);
+  });
+
+  it('absence:incremental_build, hardcore_pro → ABSENCE_INCREMENTAL_BUILD (formal)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:incremental_build', makeProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_INCREMENTAL_BUILD);
+  });
+
+  it('absence:incremental_build, beginner → ABSENCE_INCREMENTAL_BUILD_BEGINNER', () => {
+    const content = resolveDecisionContent('implementation', 'absence:incremental_build', makeProfile('beginner'));
+    expect(content).toBe(ABSENCE_INCREMENTAL_BUILD_BEGINNER);
+  });
+
+  it('absence:incremental_build, cool_geek → ABSENCE_INCREMENTAL_BUILD_CASUAL', () => {
+    const content = resolveDecisionContent('implementation', 'absence:incremental_build', makeProfile('cool_geek'));
+    expect(content).toBe(ABSENCE_INCREMENTAL_BUILD_CASUAL);
+  });
+
+  it('ABSENCE_INCREMENTAL_BUILD has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_INCREMENTAL_BUILD.L1).toHaveLength(3);
+    expect(ABSENCE_INCREMENTAL_BUILD.L2).toHaveLength(2);
+    expect(ABSENCE_INCREMENTAL_BUILD.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_INCREMENTAL_BUILD_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_INCREMENTAL_BUILD_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_INCREMENTAL_BUILD_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_INCREMENTAL_BUILD_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_INCREMENTAL_BUILD_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_INCREMENTAL_BUILD_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_INCREMENTAL_BUILD_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_INCREMENTAL_BUILD_BEGINNER.L3).toHaveLength(1);
+  });
+
+  // ── Phase 5 D1-D3 — beginner signal routing ───────────────────────────────────
+
+  it('absence:error_understanding, beginner → ABSENCE_ERROR_UNDERSTANDING_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:error_understanding', makeProfile('beginner'))).toBe(ABSENCE_ERROR_UNDERSTANDING_BEGINNER);
+  });
+
+  it('absence:error_understanding, cool_geek → TASK_REVIEW_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:error_understanding', makeProfile('cool_geek'))).toBe(TASK_REVIEW_CASUAL);
+  });
+
+  it('ABSENCE_ERROR_UNDERSTANDING_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_ERROR_UNDERSTANDING_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_ERROR_UNDERSTANDING_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_ERROR_UNDERSTANDING_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:documentation_before_ask, beginner → ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:documentation_before_ask', makeProfile('beginner'))).toBe(ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER);
+  });
+
+  it('absence:documentation_before_ask, cool_geek → TASK_REVIEW_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:documentation_before_ask', makeProfile('cool_geek'))).toBe(TASK_REVIEW_CASUAL);
+  });
+
+  it('ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:output_verification, beginner → ABSENCE_OUTPUT_VERIFICATION_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:output_verification', makeProfile('beginner'))).toBe(ABSENCE_OUTPUT_VERIFICATION_BEGINNER);
+  });
+
+  it('absence:output_verification, cool_geek → TASK_REVIEW_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:output_verification', makeProfile('cool_geek'))).toBe(TASK_REVIEW_CASUAL);
+  });
+
+  it('ABSENCE_OUTPUT_VERIFICATION_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_OUTPUT_VERIFICATION_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_OUTPUT_VERIFICATION_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_OUTPUT_VERIFICATION_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:requirement_clarity_before_ask, beginner → ABSENCE_REQUIREMENT_CLARITY_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:requirement_clarity_before_ask', makeProfile('beginner'))).toBe(ABSENCE_REQUIREMENT_CLARITY_BEGINNER);
+  });
+
+  it('absence:requirement_clarity_before_ask, cool_geek → TASK_REVIEW_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:requirement_clarity_before_ask', makeProfile('cool_geek'))).toBe(TASK_REVIEW_CASUAL);
+  });
+
+  it('ABSENCE_REQUIREMENT_CLARITY_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_REQUIREMENT_CLARITY_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_REQUIREMENT_CLARITY_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_REQUIREMENT_CLARITY_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:copy_paste_awareness, beginner → ABSENCE_COPY_PASTE_AWARENESS_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:copy_paste_awareness', makeProfile('beginner'))).toBe(ABSENCE_COPY_PASTE_AWARENESS_BEGINNER);
+  });
+
+  it('absence:copy_paste_awareness, cool_geek → TASK_REVIEW_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:copy_paste_awareness', makeProfile('cool_geek'))).toBe(TASK_REVIEW_CASUAL);
+  });
+
+  it('ABSENCE_COPY_PASTE_AWARENESS_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_COPY_PASTE_AWARENESS_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_COPY_PASTE_AWARENESS_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_COPY_PASTE_AWARENESS_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:debugging_observation_gap, beginner → ABSENCE_DEBUGGING_OBSERVATION_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:debugging_observation_gap', makeProfile('beginner'))).toBe(ABSENCE_DEBUGGING_OBSERVATION_BEGINNER);
+  });
+
+  it('absence:debugging_observation_gap, cool_geek → TASK_REVIEW_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:debugging_observation_gap', makeProfile('cool_geek'))).toBe(TASK_REVIEW_CASUAL);
+  });
+
+  it('ABSENCE_DEBUGGING_OBSERVATION_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEBUGGING_OBSERVATION_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_DEBUGGING_OBSERVATION_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_DEBUGGING_OBSERVATION_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:learning_consolidation, beginner → ABSENCE_LEARNING_CONSOLIDATION_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:learning_consolidation', makeProfile('beginner'))).toBe(ABSENCE_LEARNING_CONSOLIDATION_BEGINNER);
+  });
+
+  it('absence:learning_consolidation, cool_geek → TASK_REVIEW_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:learning_consolidation', makeProfile('cool_geek'))).toBe(TASK_REVIEW_CASUAL);
+  });
+
+  it('ABSENCE_LEARNING_CONSOLIDATION_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_LEARNING_CONSOLIDATION_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_LEARNING_CONSOLIDATION_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_LEARNING_CONSOLIDATION_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:simple_solution_first, beginner → ABSENCE_SIMPLE_SOLUTION_FIRST_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:simple_solution_first', makeProfile('beginner'))).toBe(ABSENCE_SIMPLE_SOLUTION_FIRST_BEGINNER);
+  });
+
+  it('absence:simple_solution_first, cool_geek → TASK_REVIEW_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:simple_solution_first', makeProfile('cool_geek'))).toBe(TASK_REVIEW_CASUAL);
+  });
+
+  it('ABSENCE_SIMPLE_SOLUTION_FIRST_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_SIMPLE_SOLUTION_FIRST_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_SIMPLE_SOLUTION_FIRST_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_SIMPLE_SOLUTION_FIRST_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:single_responsibility_prompting, beginner → ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:single_responsibility_prompting', makeProfile('beginner'))).toBe(ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER);
+  });
+
+  it('absence:single_responsibility_prompting, cool_geek → TASK_REVIEW_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:single_responsibility_prompting', makeProfile('cool_geek'))).toBe(TASK_REVIEW_CASUAL);
+  });
+
+  it('ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:rollback_awareness, beginner → ABSENCE_ROLLBACK_AWARENESS_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:rollback_awareness', makeProfile('beginner'))).toBe(ABSENCE_ROLLBACK_AWARENESS_BEGINNER);
+  });
+
+  it('absence:rollback_awareness, cool_geek → TASK_REVIEW_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:rollback_awareness', makeProfile('cool_geek'))).toBe(TASK_REVIEW_CASUAL);
+  });
+
+  it('ABSENCE_ROLLBACK_AWARENESS_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_ROLLBACK_AWARENESS_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_ROLLBACK_AWARENESS_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_ROLLBACK_AWARENESS_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('absence:build_vs_understand_ratio, beginner → ABSENCE_BUILD_VS_UNDERSTAND_RATIO_BEGINNER', () => {
+    expect(resolveDecisionContent('implementation', 'absence:build_vs_understand_ratio', makeProfile('beginner'))).toBe(ABSENCE_BUILD_VS_UNDERSTAND_RATIO_BEGINNER);
+  });
+
+  it('absence:build_vs_understand_ratio, cool_geek → TASK_REVIEW_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:build_vs_understand_ratio', makeProfile('cool_geek'))).toBe(TASK_REVIEW_CASUAL);
+  });
+
+  it('ABSENCE_BUILD_VS_UNDERSTAND_RATIO_BEGINNER has 2 L1, 1 L2, 1 L3 options', () => {
+    expect(ABSENCE_BUILD_VS_UNDERSTAND_RATIO_BEGINNER.L1).toHaveLength(2);
+    expect(ABSENCE_BUILD_VS_UNDERSTAND_RATIO_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_BUILD_VS_UNDERSTAND_RATIO_BEGINNER.L3).toHaveLength(1);
+  });
+
+  // ── Phase 5 D4-D6 — cool_geek signal routing (CASUAL map) ──────────────────
+
+  it('absence:feature_completion_check, cool_geek → ABSENCE_FEATURE_COMPLETION_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:feature_completion_check', makeProfile('cool_geek'))).toBe(ABSENCE_FEATURE_COMPLETION_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_FEATURE_COMPLETION_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_FEATURE_COMPLETION_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_FEATURE_COMPLETION_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_FEATURE_COMPLETION_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:finishing_line_awareness, cool_geek → ABSENCE_FINISHING_LINE_AWARENESS_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:finishing_line_awareness', makeProfile('cool_geek'))).toBe(ABSENCE_FINISHING_LINE_AWARENESS_CASUAL);
+  });
+
+  it('ABSENCE_FINISHING_LINE_AWARENESS_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_FINISHING_LINE_AWARENESS_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_FINISHING_LINE_AWARENESS_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_FINISHING_LINE_AWARENESS_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:polish_vs_function, cool_geek → ABSENCE_POLISH_VS_FUNCTION_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:polish_vs_function', makeProfile('cool_geek'))).toBe(ABSENCE_POLISH_VS_FUNCTION_CASUAL);
+  });
+
+  it('ABSENCE_POLISH_VS_FUNCTION_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_POLISH_VS_FUNCTION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_POLISH_VS_FUNCTION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_POLISH_VS_FUNCTION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:mvp_scope_discipline, cool_geek → ABSENCE_MVP_SCOPE_DISCIPLINE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:mvp_scope_discipline', makeProfile('cool_geek'))).toBe(ABSENCE_MVP_SCOPE_DISCIPLINE_CASUAL);
+  });
+
+  it('ABSENCE_MVP_SCOPE_DISCIPLINE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_MVP_SCOPE_DISCIPLINE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_MVP_SCOPE_DISCIPLINE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_MVP_SCOPE_DISCIPLINE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:idea_to_spec_bridge, cool_geek → ABSENCE_IDEA_TO_SPEC_BRIDGE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:idea_to_spec_bridge', makeProfile('cool_geek'))).toBe(ABSENCE_IDEA_TO_SPEC_BRIDGE_CASUAL);
+  });
+
+  it('ABSENCE_IDEA_TO_SPEC_BRIDGE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_IDEA_TO_SPEC_BRIDGE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_IDEA_TO_SPEC_BRIDGE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_IDEA_TO_SPEC_BRIDGE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:demo_vs_product, cool_geek → ABSENCE_DEMO_VS_PRODUCT_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:demo_vs_product', makeProfile('cool_geek'))).toBe(ABSENCE_DEMO_VS_PRODUCT_CASUAL);
+  });
+
+  it('ABSENCE_DEMO_VS_PRODUCT_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEMO_VS_PRODUCT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_DEMO_VS_PRODUCT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_DEMO_VS_PRODUCT_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:user_journey_check, cool_geek → ABSENCE_USER_JOURNEY_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:user_journey_check', makeProfile('cool_geek'))).toBe(ABSENCE_USER_JOURNEY_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_USER_JOURNEY_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_USER_JOURNEY_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_USER_JOURNEY_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_USER_JOURNEY_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:technical_spike_treatment, cool_geek → ABSENCE_TECHNICAL_SPIKE_TREATMENT_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:technical_spike_treatment', makeProfile('cool_geek'))).toBe(ABSENCE_TECHNICAL_SPIKE_TREATMENT_CASUAL);
+  });
+
+  it('ABSENCE_TECHNICAL_SPIKE_TREATMENT_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TECHNICAL_SPIKE_TREATMENT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_TECHNICAL_SPIKE_TREATMENT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_TECHNICAL_SPIKE_TREATMENT_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:dependency_adventure, cool_geek → ABSENCE_DEPENDENCY_ADVENTURE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:dependency_adventure', makeProfile('cool_geek'))).toBe(ABSENCE_DEPENDENCY_ADVENTURE_CASUAL);
+  });
+
+  it('ABSENCE_DEPENDENCY_ADVENTURE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEPENDENCY_ADVENTURE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_DEPENDENCY_ADVENTURE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_DEPENDENCY_ADVENTURE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:restart_impulse_check, cool_geek → ABSENCE_RESTART_IMPULSE_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:restart_impulse_check', makeProfile('cool_geek'))).toBe(ABSENCE_RESTART_IMPULSE_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_RESTART_IMPULSE_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_RESTART_IMPULSE_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_RESTART_IMPULSE_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_RESTART_IMPULSE_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:creative_vs_core_ratio, cool_geek → ABSENCE_CREATIVE_VS_CORE_RATIO_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:creative_vs_core_ratio', makeProfile('cool_geek'))).toBe(ABSENCE_CREATIVE_VS_CORE_RATIO_CASUAL);
+  });
+
+  it('ABSENCE_CREATIVE_VS_CORE_RATIO_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CREATIVE_VS_CORE_RATIO_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_CREATIVE_VS_CORE_RATIO_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_CREATIVE_VS_CORE_RATIO_CASUAL.L3).toHaveLength(1);
+  });
+
+  // ── Phase 5 D7-D9 — pro_geek_soul signal routing ─────────────────────────────
+
+  it('absence:code_documentation_gap, no profile → ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:code_documentation_gap')).toBe(ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL);
+  });
+
+  it('absence:code_documentation_gap, pro_geek_soul → ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:code_documentation_gap', makeProfile('pro_geek_soul'))).toBe(ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL);
+  });
+
+  it('ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:technical_debt_acknowledgment, no profile → ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:technical_debt_acknowledgment')).toBe(ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL);
+  });
+
+  it('absence:technical_debt_acknowledgment, pro_geek_soul → ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:technical_debt_acknowledgment', makeProfile('pro_geek_soul'))).toBe(ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL);
+  });
+
+  it('ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:test_depth_check, no profile → ABSENCE_TEST_DEPTH_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('review_testing', 'absence:test_depth_check')).toBe(ABSENCE_TEST_DEPTH_CHECK_CASUAL);
+  });
+
+  it('absence:test_depth_check, pro_geek_soul → ABSENCE_TEST_DEPTH_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('review_testing', 'absence:test_depth_check', makeProfile('pro_geek_soul'))).toBe(ABSENCE_TEST_DEPTH_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_TEST_DEPTH_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TEST_DEPTH_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_TEST_DEPTH_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_TEST_DEPTH_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:architecture_note_absence, no profile → ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:architecture_note_absence')).toBe(ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL);
+  });
+
+  it('absence:architecture_note_absence, pro_geek_soul → ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:architecture_note_absence', makeProfile('pro_geek_soul'))).toBe(ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL);
+  });
+
+  it('ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:dependency_audit_gap, no profile → ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:dependency_audit_gap')).toBe(ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL);
+  });
+
+  it('absence:dependency_audit_gap, pro_geek_soul → ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:dependency_audit_gap', makeProfile('pro_geek_soul'))).toBe(ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL);
+  });
+
+  it('ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:security_review_gap, no profile → ABSENCE_SECURITY_REVIEW_GAP_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:security_review_gap')).toBe(ABSENCE_SECURITY_REVIEW_GAP_CASUAL);
+  });
+
+  it('absence:security_review_gap, pro_geek_soul → ABSENCE_SECURITY_REVIEW_GAP_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:security_review_gap', makeProfile('pro_geek_soul'))).toBe(ABSENCE_SECURITY_REVIEW_GAP_CASUAL);
+  });
+
+  it('ABSENCE_SECURITY_REVIEW_GAP_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SECURITY_REVIEW_GAP_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SECURITY_REVIEW_GAP_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SECURITY_REVIEW_GAP_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:api_contract_definition, no profile → ABSENCE_API_CONTRACT_DEFINITION_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:api_contract_definition')).toBe(ABSENCE_API_CONTRACT_DEFINITION_CASUAL);
+  });
+
+  it('absence:api_contract_definition, pro_geek_soul → ABSENCE_API_CONTRACT_DEFINITION_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:api_contract_definition', makeProfile('pro_geek_soul'))).toBe(ABSENCE_API_CONTRACT_DEFINITION_CASUAL);
+  });
+
+  it('ABSENCE_API_CONTRACT_DEFINITION_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_API_CONTRACT_DEFINITION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_API_CONTRACT_DEFINITION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_API_CONTRACT_DEFINITION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:error_handling_coverage, no profile → ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:error_handling_coverage')).toBe(ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL);
+  });
+
+  it('absence:error_handling_coverage, pro_geek_soul → ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:error_handling_coverage', makeProfile('pro_geek_soul'))).toBe(ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL);
+  });
+
+  it('ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:refactoring_checkpoint, no profile → ABSENCE_REFACTORING_CHECKPOINT_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:refactoring_checkpoint')).toBe(ABSENCE_REFACTORING_CHECKPOINT_CASUAL);
+  });
+
+  it('absence:refactoring_checkpoint, pro_geek_soul → ABSENCE_REFACTORING_CHECKPOINT_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:refactoring_checkpoint', makeProfile('pro_geek_soul'))).toBe(ABSENCE_REFACTORING_CHECKPOINT_CASUAL);
+  });
+
+  it('ABSENCE_REFACTORING_CHECKPOINT_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_REFACTORING_CHECKPOINT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_REFACTORING_CHECKPOINT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_REFACTORING_CHECKPOINT_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:backwards_compatibility_check, no profile → ABSENCE_BACKWARDS_COMPATIBILITY_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:backwards_compatibility_check')).toBe(ABSENCE_BACKWARDS_COMPATIBILITY_CHECK_CASUAL);
+  });
+
+  it('absence:backwards_compatibility_check, pro_geek_soul → ABSENCE_BACKWARDS_COMPATIBILITY_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:backwards_compatibility_check', makeProfile('pro_geek_soul'))).toBe(ABSENCE_BACKWARDS_COMPATIBILITY_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_BACKWARDS_COMPATIBILITY_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_BACKWARDS_COMPATIBILITY_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_BACKWARDS_COMPATIBILITY_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_BACKWARDS_COMPATIBILITY_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:self_review_habit, no profile → ABSENCE_SELF_REVIEW_HABIT_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:self_review_habit')).toBe(ABSENCE_SELF_REVIEW_HABIT_CASUAL);
+  });
+
+  it('absence:self_review_habit, pro_geek_soul → ABSENCE_SELF_REVIEW_HABIT_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:self_review_habit', makeProfile('pro_geek_soul'))).toBe(ABSENCE_SELF_REVIEW_HABIT_CASUAL);
+  });
+
+  it('ABSENCE_SELF_REVIEW_HABIT_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SELF_REVIEW_HABIT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SELF_REVIEW_HABIT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SELF_REVIEW_HABIT_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:performance_awareness, no profile → ABSENCE_PERFORMANCE_AWARENESS_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:performance_awareness')).toBe(ABSENCE_PERFORMANCE_AWARENESS_CASUAL);
+  });
+
+  it('absence:performance_awareness, pro_geek_soul → ABSENCE_PERFORMANCE_AWARENESS_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:performance_awareness', makeProfile('pro_geek_soul'))).toBe(ABSENCE_PERFORMANCE_AWARENESS_CASUAL);
+  });
+
+  it('ABSENCE_PERFORMANCE_AWARENESS_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_PERFORMANCE_AWARENESS_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_PERFORMANCE_AWARENESS_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_PERFORMANCE_AWARENESS_CASUAL.L3).toHaveLength(1);
+  });
+
+  // ── Phase 5 D10-D12 — hardcore_pro signal routing ─────────────────────────────
+
+  it('absence:decision_record_absence, hardcore_pro → ABSENCE_DECISION_RECORD_ABSENCE_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:decision_record_absence', makeProfile('hardcore_pro'))).toBe(ABSENCE_DECISION_RECORD_ABSENCE_FORMAL);
+  });
+
+  it('ABSENCE_DECISION_RECORD_ABSENCE_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DECISION_RECORD_ABSENCE_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_DECISION_RECORD_ABSENCE_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_DECISION_RECORD_ABSENCE_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:over_engineering_check, hardcore_pro → ABSENCE_OVER_ENGINEERING_CHECK_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:over_engineering_check', makeProfile('hardcore_pro'))).toBe(ABSENCE_OVER_ENGINEERING_CHECK_FORMAL);
+  });
+
+  it('ABSENCE_OVER_ENGINEERING_CHECK_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_OVER_ENGINEERING_CHECK_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_OVER_ENGINEERING_CHECK_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_OVER_ENGINEERING_CHECK_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:pair_review_absence, hardcore_pro → ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:pair_review_absence', makeProfile('hardcore_pro'))).toBe(ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL);
+  });
+
+  it('ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:observability_first, hardcore_pro → ABSENCE_OBSERVABILITY_FIRST_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:observability_first', makeProfile('hardcore_pro'))).toBe(ABSENCE_OBSERVABILITY_FIRST_FORMAL);
+  });
+
+  it('ABSENCE_OBSERVABILITY_FIRST_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_OBSERVABILITY_FIRST_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_OBSERVABILITY_FIRST_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_OBSERVABILITY_FIRST_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:failure_mode_analysis, hardcore_pro → ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:failure_mode_analysis', makeProfile('hardcore_pro'))).toBe(ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL);
+  });
+
+  it('ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:contract_testing_gap, hardcore_pro → ABSENCE_CONTRACT_TESTING_GAP_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('review_testing', 'absence:contract_testing_gap', makeProfile('hardcore_pro'))).toBe(ABSENCE_CONTRACT_TESTING_GAP_FORMAL);
+  });
+
+  it('ABSENCE_CONTRACT_TESTING_GAP_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CONTRACT_TESTING_GAP_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_CONTRACT_TESTING_GAP_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_CONTRACT_TESTING_GAP_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:capacity_planning_gap, hardcore_pro → ABSENCE_CAPACITY_PLANNING_GAP_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:capacity_planning_gap', makeProfile('hardcore_pro'))).toBe(ABSENCE_CAPACITY_PLANNING_GAP_FORMAL);
+  });
+
+  it('ABSENCE_CAPACITY_PLANNING_GAP_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CAPACITY_PLANNING_GAP_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_CAPACITY_PLANNING_GAP_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_CAPACITY_PLANNING_GAP_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:security_threat_modeling, hardcore_pro → ABSENCE_SECURITY_THREAT_MODELING_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:security_threat_modeling', makeProfile('hardcore_pro'))).toBe(ABSENCE_SECURITY_THREAT_MODELING_FORMAL);
+  });
+
+  it('ABSENCE_SECURITY_THREAT_MODELING_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SECURITY_THREAT_MODELING_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_SECURITY_THREAT_MODELING_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_SECURITY_THREAT_MODELING_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:database_migration_safety, hardcore_pro → ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:database_migration_safety', makeProfile('hardcore_pro'))).toBe(ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL);
+  });
+
+  it('ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:deployment_strategy_absence, hardcore_pro → ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('release', 'absence:deployment_strategy_absence', makeProfile('hardcore_pro'))).toBe(ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL);
+  });
+
+  it('ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:operational_runbook_gap, hardcore_pro → ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('release', 'absence:operational_runbook_gap', makeProfile('hardcore_pro'))).toBe(ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL);
+  });
+
+  it('ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:slo_definition_gap, hardcore_pro → ABSENCE_SLO_DEFINITION_GAP_FORMAL (formal)', () => {
+    expect(resolveDecisionContent('implementation', 'absence:slo_definition_gap', makeProfile('hardcore_pro'))).toBe(ABSENCE_SLO_DEFINITION_GAP_FORMAL);
+  });
+
+  it('ABSENCE_SLO_DEFINITION_GAP_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SLO_DEFINITION_GAP_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_SLO_DEFINITION_GAP_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_SLO_DEFINITION_GAP_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_CONTENT_BEGINNER contains all 12 Phase 5 D1-D3 keys', () => {
+    const expected = [
+      'incremental_build', 'error_understanding', 'documentation_before_ask',
+      'output_verification', 'requirement_clarity_before_ask', 'copy_paste_awareness',
+      'debugging_observation_gap', 'learning_consolidation', 'simple_solution_first',
+      'single_responsibility_prompting', 'rollback_awareness', 'build_vs_understand_ratio',
+    ];
+    for (const key of expected) {
+      expect(key in ABSENCE_CONTENT_BEGINNER).toBe(true);
+    }
+  });
+});
+
+describe('resolveDecisionContent — Phase 6 role-based signal routing', () => {
+  const makeRoleProfile = (role: 'founder' | 'indie_hacker' | 'pm') =>
+    ({ role } as UserProfile);
+
+  // ── Phase 6 E1-E3 — founder role signals ──────────────────────────────────────
+
+  it('absence:user_value_check, founder → ABSENCE_USER_VALUE_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:user_value_check', makeRoleProfile('founder'))).toBe(ABSENCE_USER_VALUE_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_USER_VALUE_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_USER_VALUE_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_USER_VALUE_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_USER_VALUE_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:outcome_definition, founder → ABSENCE_OUTCOME_DEFINITION_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:outcome_definition', makeRoleProfile('founder'))).toBe(ABSENCE_OUTCOME_DEFINITION_CASUAL);
+  });
+
+  it('ABSENCE_OUTCOME_DEFINITION_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_OUTCOME_DEFINITION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_OUTCOME_DEFINITION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_OUTCOME_DEFINITION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:feature_prioritization, founder → ABSENCE_FEATURE_PRIORITIZATION_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:feature_prioritization', makeRoleProfile('founder'))).toBe(ABSENCE_FEATURE_PRIORITIZATION_CASUAL);
+  });
+
+  it('ABSENCE_FEATURE_PRIORITIZATION_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_FEATURE_PRIORITIZATION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_FEATURE_PRIORITIZATION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_FEATURE_PRIORITIZATION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:user_persona_clarity, founder → ABSENCE_USER_PERSONA_CLARITY_CASUAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:user_persona_clarity', makeRoleProfile('founder'))).toBe(ABSENCE_USER_PERSONA_CLARITY_CASUAL);
+  });
+
+  it('ABSENCE_USER_PERSONA_CLARITY_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_USER_PERSONA_CLARITY_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_USER_PERSONA_CLARITY_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_USER_PERSONA_CLARITY_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:competitive_awareness, founder → ABSENCE_COMPETITIVE_AWARENESS_CASUAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:competitive_awareness', makeRoleProfile('founder'))).toBe(ABSENCE_COMPETITIVE_AWARENESS_CASUAL);
+  });
+
+  it('ABSENCE_COMPETITIVE_AWARENESS_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_COMPETITIVE_AWARENESS_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_COMPETITIVE_AWARENESS_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_COMPETITIVE_AWARENESS_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:mvp_boundary_discipline, founder → ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:mvp_boundary_discipline', makeRoleProfile('founder'))).toBe(ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL);
+  });
+
+  it('ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:user_acquisition_consideration, founder → ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:user_acquisition_consideration', makeRoleProfile('founder'))).toBe(ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL);
+  });
+
+  it('ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:retention_mechanism_check, founder → ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('release', 'absence:retention_mechanism_check', makeRoleProfile('founder'))).toBe(ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:feedback_loop_establishment, founder → ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL', () => {
+    expect(resolveDecisionContent('release', 'absence:feedback_loop_establishment', makeRoleProfile('founder'))).toBe(ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL);
+  });
+
+  it('ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:hypothesis_before_build, founder → ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:hypothesis_before_build', makeRoleProfile('founder'))).toBe(ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL);
+  });
+
+  it('ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:technical_vs_product_time_balance, founder → ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:technical_vs_product_time_balance', makeRoleProfile('founder'))).toBe(ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL);
+  });
+
+  it('ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:north_star_alignment, founder → ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:north_star_alignment', makeRoleProfile('founder'))).toBe(ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL);
+  });
+
+  it('ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL.L3).toHaveLength(1);
+  });
+
+  // ── Phase 6 E4-E6 — indie_hacker role signals ─────────────────────────────────
+
+  it('absence:time_to_value_check, indie_hacker → ABSENCE_TIME_TO_VALUE_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:time_to_value_check', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_TIME_TO_VALUE_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_TIME_TO_VALUE_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TIME_TO_VALUE_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_TIME_TO_VALUE_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_TIME_TO_VALUE_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:ship_readiness_definition, indie_hacker → ABSENCE_SHIP_READINESS_DEFINITION_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:ship_readiness_definition', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_SHIP_READINESS_DEFINITION_CASUAL);
+  });
+
+  it('ABSENCE_SHIP_READINESS_DEFINITION_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SHIP_READINESS_DEFINITION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SHIP_READINESS_DEFINITION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SHIP_READINESS_DEFINITION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:manual_before_automate, indie_hacker → ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:manual_before_automate', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL);
+  });
+
+  it('ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:tech_stack_complexity_check, indie_hacker → ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:tech_stack_complexity_check', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:launch_strategy_absence, indie_hacker → ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:launch_strategy_absence', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL);
+  });
+
+  it('ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:early_user_feedback, indie_hacker → ABSENCE_EARLY_USER_FEEDBACK_CASUAL', () => {
+    expect(resolveDecisionContent('release', 'absence:early_user_feedback', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_EARLY_USER_FEEDBACK_CASUAL);
+  });
+
+  it('ABSENCE_EARLY_USER_FEEDBACK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_EARLY_USER_FEEDBACK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_EARLY_USER_FEEDBACK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_EARLY_USER_FEEDBACK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:solo_maintainability, indie_hacker → ABSENCE_SOLO_MAINTAINABILITY_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:solo_maintainability', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_SOLO_MAINTAINABILITY_CASUAL);
+  });
+
+  it('ABSENCE_SOLO_MAINTAINABILITY_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SOLO_MAINTAINABILITY_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SOLO_MAINTAINABILITY_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SOLO_MAINTAINABILITY_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:distribution_thinking, indie_hacker → ABSENCE_DISTRIBUTION_THINKING_CASUAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:distribution_thinking', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_DISTRIBUTION_THINKING_CASUAL);
+  });
+
+  it('ABSENCE_DISTRIBUTION_THINKING_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DISTRIBUTION_THINKING_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_DISTRIBUTION_THINKING_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_DISTRIBUTION_THINKING_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:monetization_path_clarity, indie_hacker → ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:monetization_path_clarity', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL);
+  });
+
+  it('ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:build_in_public_opportunity, indie_hacker → ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:build_in_public_opportunity', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL);
+  });
+
+  it('ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('absence:scope_vs_time_check, indie_hacker → ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:scope_vs_time_check', makeRoleProfile('indie_hacker'))).toBe(ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL);
+  });
+
+  it('ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  // ── Phase 6 E7-E9 — pm role signals ──────────────────────────────────────────
+
+  it('absence:acceptance_criteria_before_dev, pm → ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:acceptance_criteria_before_dev', makeRoleProfile('pm'))).toBe(ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL);
+  });
+
+  it('ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:stakeholder_alignment_check, pm → ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:stakeholder_alignment_check', makeRoleProfile('pm'))).toBe(ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL);
+  });
+
+  it('ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:requirements_ambiguity_flag, pm → ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:requirements_ambiguity_flag', makeRoleProfile('pm'))).toBe(ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL);
+  });
+
+  it('ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:dependency_mapping, pm → ABSENCE_DEPENDENCY_MAPPING_FORMAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:dependency_mapping', makeRoleProfile('pm'))).toBe(ABSENCE_DEPENDENCY_MAPPING_FORMAL);
+  });
+
+  it('ABSENCE_DEPENDENCY_MAPPING_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEPENDENCY_MAPPING_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_DEPENDENCY_MAPPING_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_DEPENDENCY_MAPPING_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:definition_of_done, pm → ABSENCE_DEFINITION_OF_DONE_FORMAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:definition_of_done', makeRoleProfile('pm'))).toBe(ABSENCE_DEFINITION_OF_DONE_FORMAL);
+  });
+
+  it('ABSENCE_DEFINITION_OF_DONE_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_DEFINITION_OF_DONE_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_DEFINITION_OF_DONE_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_DEFINITION_OF_DONE_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:cross_team_impact_check, pm → ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:cross_team_impact_check', makeRoleProfile('pm'))).toBe(ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL);
+  });
+
+  it('ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:success_metric_definition, pm → ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:success_metric_definition', makeRoleProfile('pm'))).toBe(ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL);
+  });
+
+  it('ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:priority_justification, pm → ABSENCE_PRIORITY_JUSTIFICATION_FORMAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:priority_justification', makeRoleProfile('pm'))).toBe(ABSENCE_PRIORITY_JUSTIFICATION_FORMAL);
+  });
+
+  it('ABSENCE_PRIORITY_JUSTIFICATION_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_PRIORITY_JUSTIFICATION_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_PRIORITY_JUSTIFICATION_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_PRIORITY_JUSTIFICATION_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:user_story_completeness, pm → ABSENCE_USER_STORY_COMPLETENESS_FORMAL', () => {
+    expect(resolveDecisionContent('idea', 'absence:user_story_completeness', makeRoleProfile('pm'))).toBe(ABSENCE_USER_STORY_COMPLETENESS_FORMAL);
+  });
+
+  it('ABSENCE_USER_STORY_COMPLETENESS_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_USER_STORY_COMPLETENESS_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_USER_STORY_COMPLETENESS_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_USER_STORY_COMPLETENESS_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:risk_flag, pm → ABSENCE_RISK_FLAG_FORMAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:risk_flag', makeRoleProfile('pm'))).toBe(ABSENCE_RISK_FLAG_FORMAL);
+  });
+
+  it('ABSENCE_RISK_FLAG_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_RISK_FLAG_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_RISK_FLAG_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_RISK_FLAG_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:scope_change_impact_assessment, pm → ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL', () => {
+    expect(resolveDecisionContent('implementation', 'absence:scope_change_impact_assessment', makeRoleProfile('pm'))).toBe(ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL);
+  });
+
+  it('ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('absence:retrospective_habit, pm → ABSENCE_RETROSPECTIVE_HABIT_FORMAL', () => {
+    expect(resolveDecisionContent('feedback_loop', 'absence:retrospective_habit', makeRoleProfile('pm'))).toBe(ABSENCE_RETROSPECTIVE_HABIT_FORMAL);
+  });
+
+  it('ABSENCE_RETROSPECTIVE_HABIT_FORMAL has 3 L1, 2 L2, 1 L3 options', () => {
+    expect(ABSENCE_RETROSPECTIVE_HABIT_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_RETROSPECTIVE_HABIT_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_RETROSPECTIVE_HABIT_FORMAL.L3).toHaveLength(1);
+  });
+
+  // ── Role map key coverage checks ──────────────────────────────────────────────
+
+  it('resolveDecisionContent returns founder CASUAL content for all 12 E1-E3 keys', () => {
+    const founderKeys = [
+      'user_value_check', 'outcome_definition', 'feature_prioritization',
+      'user_persona_clarity', 'competitive_awareness', 'mvp_boundary_discipline',
+      'user_acquisition_consideration', 'retention_mechanism_check', 'feedback_loop_establishment',
+      'hypothesis_before_build', 'technical_vs_product_time_balance', 'north_star_alignment',
+    ];
+    for (const key of founderKeys) {
+      const result = resolveDecisionContent('implementation', `absence:${key}`, makeRoleProfile('founder'));
+      expect(result).toBeDefined();
+    }
+  });
+
+  it('resolveDecisionContent returns indie_hacker CASUAL content for all 11 E4-E6 keys', () => {
+    const indieKeys = [
+      'time_to_value_check', 'ship_readiness_definition', 'manual_before_automate',
+      'tech_stack_complexity_check', 'launch_strategy_absence', 'early_user_feedback',
+      'solo_maintainability', 'distribution_thinking', 'monetization_path_clarity',
+      'build_in_public_opportunity', 'scope_vs_time_check',
+    ];
+    for (const key of indieKeys) {
+      const result = resolveDecisionContent('implementation', `absence:${key}`, makeRoleProfile('indie_hacker'));
+      expect(result).toBeDefined();
+    }
+  });
+
+  it('resolveDecisionContent returns pm FORMAL content for all 12 E7-E9 keys', () => {
+    const pmKeys = [
+      'acceptance_criteria_before_dev', 'stakeholder_alignment_check', 'requirements_ambiguity_flag',
+      'dependency_mapping', 'definition_of_done', 'cross_team_impact_check',
+      'success_metric_definition', 'priority_justification', 'user_story_completeness',
+      'risk_flag', 'scope_change_impact_assessment', 'retrospective_habit',
+    ];
+    for (const key of pmKeys) {
+      const result = resolveDecisionContent('implementation', `absence:${key}`, makeRoleProfile('pm'));
+      expect(result).toBeDefined();
+    }
+  });
+});
+
+// ── vibe_coder role routing (nature fallback, no role-specific content) ──────
+
+describe('resolveDecisionContent — vibe_coder role routing', () => {
+  const makeVibeCoderProfile = (nature?: UserProfile['nature']) =>
+    ({ role: 'vibe_coder', nature } as UserProfile);
+
+  it('vibe_coder role does NOT trigger founder-keyed content for absence:user_value_check', () => {
+    const result = resolveDecisionContent('implementation', 'absence:user_value_check', makeVibeCoderProfile('cool_geek'));
+    expect(result).not.toBe(ABSENCE_USER_VALUE_CHECK_CASUAL);
+  });
+
+  it('vibe_coder + cool_geek + absence:test_creation → ABSENCE_TEST_CREATION_CASUAL (nature fallback)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:test_creation', makeVibeCoderProfile('cool_geek'));
+    expect(content).toBe(ABSENCE_TEST_CREATION_CASUAL);
+  });
+
+  it('vibe_coder + pro_geek_soul + absence:test_creation → ABSENCE_TEST_CREATION_CASUAL (nature fallback)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:test_creation', makeVibeCoderProfile('pro_geek_soul'));
+    expect(content).toBe(ABSENCE_TEST_CREATION_CASUAL);
+  });
+
+  it('vibe_coder + hardcore_pro + absence:test_creation → ABSENCE_TEST_CREATION (formal fallback)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:test_creation', makeVibeCoderProfile('hardcore_pro'));
+    expect(content).toBe(ABSENCE_TEST_CREATION);
+  });
+
+  it('vibe_coder + beginner + absence:test_creation → ABSENCE_TEST_CREATION_BEGINNER (beginner override wins)', () => {
+    const content = resolveDecisionContent('implementation', 'absence:test_creation', makeVibeCoderProfile('beginner'));
+    expect(content).toBe(ABSENCE_TEST_CREATION_BEGINNER);
+  });
+
+  it('vibe_coder + cool_geek produces identical content to no-role + cool_geek (nature parity)', () => {
+    const vibeCoder = resolveDecisionContent('implementation', 'absence:test_creation', makeVibeCoderProfile('cool_geek'));
+    const noRole    = resolveDecisionContent('implementation', 'absence:test_creation', { nature: 'cool_geek' } as UserProfile);
+    expect(vibeCoder).toBe(noRole);
+  });
+
+  it('vibe_coder + hardcore_pro produces identical content to no-role + hardcore_pro (nature parity)', () => {
+    const vibeCoder = resolveDecisionContent('implementation', 'absence:test_creation', makeVibeCoderProfile('hardcore_pro'));
+    const noRole    = resolveDecisionContent('implementation', 'absence:test_creation', { nature: 'hardcore_pro' } as UserProfile);
+    expect(vibeCoder).toBe(noRole);
+  });
+
+  it('no SignalDefinition is keyed to role vibe_coder (fall-through guarantee)', () => {
+    const vibeCoderSignals = SIGNAL_DEFINITIONS.filter((s) => s.role === ('vibe_coder' as never));
+    expect(vibeCoderSignals).toHaveLength(0);
+  });
+});
+
+// ── Phase 7 F1-F2 — session-quality content ───────────────────────────────────
+
+describe('Phase 7 content — CASUAL variants', () => {
+  it('ABSENCE_DECISION_FATIGUE_PATTERN_CASUAL has 3 L1, 2 L2, 1 L3', () => {
+    expect(ABSENCE_DECISION_FATIGUE_PATTERN_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_DECISION_FATIGUE_PATTERN_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_DECISION_FATIGUE_PATTERN_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_WORK_RHYTHM_CHECK_CASUAL has 3 L1, 2 L2, 1 L3', () => {
+    expect(ABSENCE_WORK_RHYTHM_CHECK_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_WORK_RHYTHM_CHECK_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_WORK_RHYTHM_CHECK_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_FOCUS_DRIFT_DETECTION_CASUAL has 3 L1, 2 L2, 1 L3', () => {
+    expect(ABSENCE_FOCUS_DRIFT_DETECTION_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_FOCUS_DRIFT_DETECTION_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_FOCUS_DRIFT_DETECTION_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_SESSION_LENGTH_CHECKPOINT_CASUAL has 3 L1, 2 L2, 1 L3', () => {
+    expect(ABSENCE_SESSION_LENGTH_CHECKPOINT_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_SESSION_LENGTH_CHECKPOINT_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_SESSION_LENGTH_CHECKPOINT_CASUAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_PROGRESS_CONSOLIDATION_GAP_CASUAL has 3 L1, 2 L2, 1 L3', () => {
+    expect(ABSENCE_PROGRESS_CONSOLIDATION_GAP_CASUAL.L1).toHaveLength(3);
+    expect(ABSENCE_PROGRESS_CONSOLIDATION_GAP_CASUAL.L2).toHaveLength(2);
+    expect(ABSENCE_PROGRESS_CONSOLIDATION_GAP_CASUAL.L3).toHaveLength(1);
+  });
+});
+
+describe('Phase 7 content — FORMAL variants', () => {
+  it('ABSENCE_DECISION_FATIGUE_PATTERN_FORMAL has 3 L1, 2 L2, 1 L3', () => {
+    expect(ABSENCE_DECISION_FATIGUE_PATTERN_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_DECISION_FATIGUE_PATTERN_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_DECISION_FATIGUE_PATTERN_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_WORK_RHYTHM_CHECK_FORMAL has 3 L1, 2 L2, 1 L3', () => {
+    expect(ABSENCE_WORK_RHYTHM_CHECK_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_WORK_RHYTHM_CHECK_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_WORK_RHYTHM_CHECK_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_FOCUS_DRIFT_DETECTION_FORMAL has 3 L1, 2 L2, 1 L3', () => {
+    expect(ABSENCE_FOCUS_DRIFT_DETECTION_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_FOCUS_DRIFT_DETECTION_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_FOCUS_DRIFT_DETECTION_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_SESSION_LENGTH_CHECKPOINT_FORMAL has 3 L1, 2 L2, 1 L3', () => {
+    expect(ABSENCE_SESSION_LENGTH_CHECKPOINT_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_SESSION_LENGTH_CHECKPOINT_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_SESSION_LENGTH_CHECKPOINT_FORMAL.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_PROGRESS_CONSOLIDATION_GAP_FORMAL has 3 L1, 2 L2, 1 L3', () => {
+    expect(ABSENCE_PROGRESS_CONSOLIDATION_GAP_FORMAL.L1).toHaveLength(3);
+    expect(ABSENCE_PROGRESS_CONSOLIDATION_GAP_FORMAL.L2).toHaveLength(2);
+    expect(ABSENCE_PROGRESS_CONSOLIDATION_GAP_FORMAL.L3).toHaveLength(1);
+  });
+});
+
+describe('Phase 7 content — BEGINNER variants', () => {
+  it('ABSENCE_DECISION_FATIGUE_PATTERN_BEGINNER has 3 L1, 1 L2, 1 L3', () => {
+    expect(ABSENCE_DECISION_FATIGUE_PATTERN_BEGINNER.L1).toHaveLength(3);
+    expect(ABSENCE_DECISION_FATIGUE_PATTERN_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_DECISION_FATIGUE_PATTERN_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_WORK_RHYTHM_CHECK_BEGINNER has 3 L1, 1 L2, 1 L3', () => {
+    expect(ABSENCE_WORK_RHYTHM_CHECK_BEGINNER.L1).toHaveLength(3);
+    expect(ABSENCE_WORK_RHYTHM_CHECK_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_WORK_RHYTHM_CHECK_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_FOCUS_DRIFT_DETECTION_BEGINNER has 3 L1, 1 L2, 1 L3', () => {
+    expect(ABSENCE_FOCUS_DRIFT_DETECTION_BEGINNER.L1).toHaveLength(3);
+    expect(ABSENCE_FOCUS_DRIFT_DETECTION_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_FOCUS_DRIFT_DETECTION_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_SESSION_LENGTH_CHECKPOINT_BEGINNER has 3 L1, 1 L2, 1 L3', () => {
+    expect(ABSENCE_SESSION_LENGTH_CHECKPOINT_BEGINNER.L1).toHaveLength(3);
+    expect(ABSENCE_SESSION_LENGTH_CHECKPOINT_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_SESSION_LENGTH_CHECKPOINT_BEGINNER.L3).toHaveLength(1);
+  });
+
+  it('ABSENCE_PROGRESS_CONSOLIDATION_GAP_BEGINNER has 3 L1, 1 L2, 1 L3', () => {
+    expect(ABSENCE_PROGRESS_CONSOLIDATION_GAP_BEGINNER.L1).toHaveLength(3);
+    expect(ABSENCE_PROGRESS_CONSOLIDATION_GAP_BEGINNER.L2).toHaveLength(1);
+    expect(ABSENCE_PROGRESS_CONSOLIDATION_GAP_BEGINNER.L3).toHaveLength(1);
+  });
+});
+
+// ── Phase 7 F1-F2 — content invariants ────────────────────────────────────────
+// Locks pinch-UI labels (question + pinchFallback) and bans count-literal tokens
+// in the L1 / L2 / L3 option arrays for the 5 session-quality signals × 3 registers.
+
+describe('Phase 7 content — question + pinchFallback invariants', () => {
+  const pinchLabels: Array<{ name: string; c: import('./options.js').DecisionContent; q: string; pf: string }> = [
+    // FORMAL — 3 preserve question, 2 override (count-free)
+    { name: 'ABSENCE_DECISION_FATIGUE_PATTERN_FORMAL',   c: ABSENCE_DECISION_FATIGUE_PATTERN_FORMAL,   q: 'Long acceptance streak — applied critical review recently?',     pf: 'Streak alert.' },
+    { name: 'ABSENCE_WORK_RHYTHM_CHECK_FORMAL',          c: ABSENCE_WORK_RHYTHM_CHECK_FORMAL,          q: 'Rapid prompting — verified each response before continuing?',    pf: 'Slow down.' },
+    { name: 'ABSENCE_FOCUS_DRIFT_DETECTION_FORMAL',      c: ABSENCE_FOCUS_DRIFT_DETECTION_FORMAL,      q: 'Multiple areas open — completed any end-to-end?',                pf: 'Focus drift.' },
+    { name: 'ABSENCE_SESSION_LENGTH_CHECKPOINT_FORMAL',  c: ABSENCE_SESSION_LENGTH_CHECKPOINT_FORMAL,  q: 'Extended session — context checkpoint done?',                    pf: 'Checkpoint due.' },
+    { name: 'ABSENCE_PROGRESS_CONSOLIDATION_GAP_FORMAL', c: ABSENCE_PROGRESS_CONSOLIDATION_GAP_FORMAL, q: 'Extended implementation — progress documented?',                 pf: 'Document now.' },
+    // CASUAL — same overrides for session_length / progress_consolidation
+    { name: 'ABSENCE_DECISION_FATIGUE_PATTERN_CASUAL',   c: ABSENCE_DECISION_FATIGUE_PATTERN_CASUAL,   q: 'Long acceptance streak — applied critical review recently?',     pf: 'Streak alert.' },
+    { name: 'ABSENCE_WORK_RHYTHM_CHECK_CASUAL',          c: ABSENCE_WORK_RHYTHM_CHECK_CASUAL,          q: 'Rapid prompting — verified each response before continuing?',    pf: 'Slow down.' },
+    { name: 'ABSENCE_FOCUS_DRIFT_DETECTION_CASUAL',      c: ABSENCE_FOCUS_DRIFT_DETECTION_CASUAL,      q: 'Multiple areas open — completed any end-to-end?',                pf: 'Focus drift.' },
+    { name: 'ABSENCE_SESSION_LENGTH_CHECKPOINT_CASUAL',  c: ABSENCE_SESSION_LENGTH_CHECKPOINT_CASUAL,  q: 'Extended session — context checkpoint done?',                    pf: 'Checkpoint due.' },
+    { name: 'ABSENCE_PROGRESS_CONSOLIDATION_GAP_CASUAL', c: ABSENCE_PROGRESS_CONSOLIDATION_GAP_CASUAL, q: 'Extended implementation — progress documented?',                 pf: 'Document now.' },
+    // BEGINNER — all 5 preserve question + pinchFallback (no count literals existed in BEGINNER questions)
+    { name: 'ABSENCE_DECISION_FATIGUE_PATTERN_BEGINNER',   c: ABSENCE_DECISION_FATIGUE_PATTERN_BEGINNER,   q: 'Accepting without reviewing — applied critical check recently?', pf: 'Streak alert.' },
+    { name: 'ABSENCE_WORK_RHYTHM_CHECK_BEGINNER',          c: ABSENCE_WORK_RHYTHM_CHECK_BEGINNER,          q: 'Sending fast — read the last response fully before continuing?', pf: 'Slow down.' },
+    { name: 'ABSENCE_FOCUS_DRIFT_DETECTION_BEGINNER',      c: ABSENCE_FOCUS_DRIFT_DETECTION_BEGINNER,      q: 'Working on many things — finished any of them yet?',             pf: 'Focus drift.' },
+    { name: 'ABSENCE_SESSION_LENGTH_CHECKPOINT_BEGINNER',  c: ABSENCE_SESSION_LENGTH_CHECKPOINT_BEGINNER,  q: 'Working for a while — what have you built so far?',              pf: 'Checkpoint due.' },
+    { name: 'ABSENCE_PROGRESS_CONSOLIDATION_GAP_BEGINNER', c: ABSENCE_PROGRESS_CONSOLIDATION_GAP_BEGINNER, q: 'Built a lot — have you written down what you made?',             pf: 'Document now.' },
+  ];
+
+  for (const { name, c, q, pf } of pinchLabels) {
+    it(`${name} question matches expected (preserved or count-free override)`, () => {
+      expect(c.question).toBe(q);
+    });
+    it(`${name} pinchFallback is preserved verbatim`, () => {
+      expect(c.pinchFallback).toBe(pf);
+    });
+  }
+});
+
+describe('Phase 7 content — no count-literal tokens in L1/L2/L3', () => {
+  const constants: Array<{ name: string; c: import('./options.js').DecisionContent }> = [
+    { name: 'ABSENCE_DECISION_FATIGUE_PATTERN_FORMAL',   c: ABSENCE_DECISION_FATIGUE_PATTERN_FORMAL },
+    { name: 'ABSENCE_WORK_RHYTHM_CHECK_FORMAL',          c: ABSENCE_WORK_RHYTHM_CHECK_FORMAL },
+    { name: 'ABSENCE_FOCUS_DRIFT_DETECTION_FORMAL',      c: ABSENCE_FOCUS_DRIFT_DETECTION_FORMAL },
+    { name: 'ABSENCE_SESSION_LENGTH_CHECKPOINT_FORMAL',  c: ABSENCE_SESSION_LENGTH_CHECKPOINT_FORMAL },
+    { name: 'ABSENCE_PROGRESS_CONSOLIDATION_GAP_FORMAL', c: ABSENCE_PROGRESS_CONSOLIDATION_GAP_FORMAL },
+    { name: 'ABSENCE_DECISION_FATIGUE_PATTERN_CASUAL',   c: ABSENCE_DECISION_FATIGUE_PATTERN_CASUAL },
+    { name: 'ABSENCE_WORK_RHYTHM_CHECK_CASUAL',          c: ABSENCE_WORK_RHYTHM_CHECK_CASUAL },
+    { name: 'ABSENCE_FOCUS_DRIFT_DETECTION_CASUAL',      c: ABSENCE_FOCUS_DRIFT_DETECTION_CASUAL },
+    { name: 'ABSENCE_SESSION_LENGTH_CHECKPOINT_CASUAL',  c: ABSENCE_SESSION_LENGTH_CHECKPOINT_CASUAL },
+    { name: 'ABSENCE_PROGRESS_CONSOLIDATION_GAP_CASUAL', c: ABSENCE_PROGRESS_CONSOLIDATION_GAP_CASUAL },
+    { name: 'ABSENCE_DECISION_FATIGUE_PATTERN_BEGINNER',   c: ABSENCE_DECISION_FATIGUE_PATTERN_BEGINNER },
+    { name: 'ABSENCE_WORK_RHYTHM_CHECK_BEGINNER',          c: ABSENCE_WORK_RHYTHM_CHECK_BEGINNER },
+    { name: 'ABSENCE_FOCUS_DRIFT_DETECTION_BEGINNER',      c: ABSENCE_FOCUS_DRIFT_DETECTION_BEGINNER },
+    { name: 'ABSENCE_SESSION_LENGTH_CHECKPOINT_BEGINNER',  c: ABSENCE_SESSION_LENGTH_CHECKPOINT_BEGINNER },
+    { name: 'ABSENCE_PROGRESS_CONSOLIDATION_GAP_BEGINNER', c: ABSENCE_PROGRESS_CONSOLIDATION_GAP_BEGINNER },
+  ];
+
+  // Forbidden tokens that previously appeared in the inverted-cascade L1/L2 content.
+  // Allowed: ordinary uses of "N" as a sentence-initial pronoun (none expected here), or
+  //          regular text that happens to contain the letter — patterns below use \b word
+  //          boundaries to avoid false positives.
+  const forbidden: Array<{ pattern: RegExp; description: string }> = [
+    { pattern: /\bN prompts\b/,          description: 'unsubstituted "N prompts" placeholder' },
+    { pattern: /\bN AI\b/,               description: 'unsubstituted "N AI" placeholder' },
+    { pattern: /\bN distinct\b/,         description: 'unsubstituted "N distinct" placeholder' },
+    { pattern: /\b25\+\b/,               description: '"25+" hardcoded threshold' },
+    { pattern: /\b20\+\b/,               description: '"20+" hardcoded threshold' },
+    { pattern: /\b25 prompts\b/,         description: '"25 prompts" hardcoded count' },
+    { pattern: /\b20 prompts\b/,         description: '"20 prompts" hardcoded count' },
+  ];
+
+  for (const { name, c } of constants) {
+    it(`${name} L1/L2/L3 entries contain no count-literal tokens`, () => {
+      const all: string[] = [...c.L1, ...c.L2, ...c.L3];
+      for (let i = 0; i < all.length; i++) {
+        const text = all[i];
+        for (const { pattern, description } of forbidden) {
+          expect(text, `entry index ${i} contains ${description}: "${text}"`).not.toMatch(pattern);
+        }
+      }
+    });
+  }
+});
+
+// ── Phase 5 D10-D12 — academic-register content invariants ────────────────────
+// Locks pinch-UI labels (question + pinchFallback) and bans academic-citation /
+// tool-callout patterns in the L1 / L2 option arrays for the 12 hardcore_pro
+// FORMAL signals rewritten under Sub-Issue 3.
+
+describe('D10-D12 academic-register — question + pinchFallback invariants', () => {
+  const pinchLabels: Array<{ name: string; c: import('./options.js').DecisionContent; q: string; pf: string }> = [
+    { name: 'ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL',      c: ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL,      q: 'External dependencies integrated — failure modes enumerated?', pf: 'Enumerate failure modes for each dependency.' },
+    { name: 'ABSENCE_CONTRACT_TESTING_GAP_FORMAL',       c: ABSENCE_CONTRACT_TESTING_GAP_FORMAL,       q: 'Service boundary established — contract tests defined?',      pf: 'Define consumer-driven contract tests for this boundary.' },
+    { name: 'ABSENCE_CAPACITY_PLANNING_GAP_FORMAL',      c: ABSENCE_CAPACITY_PLANNING_GAP_FORMAL,      q: 'Load-adding feature — capacity estimate done?',                pf: 'Complete a capacity estimate before shipping.' },
+    { name: 'ABSENCE_SECURITY_THREAT_MODELING_FORMAL',   c: ABSENCE_SECURITY_THREAT_MODELING_FORMAL,   q: 'Security-sensitive feature — STRIDE threat model completed?',  pf: 'Complete a STRIDE threat model before shipping.' },
+    { name: 'ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL',  c: ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL,  q: 'Schema change — expand-migrate-contract pattern applied?',     pf: 'Apply backwards-compatible phased migration.' },
+    { name: 'ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL', c: ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL, q: 'Significant feature shipping — deployment strategy defined?', pf: 'Define deployment strategy and rollback plan before shipping.' },
+    { name: 'ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL',    c: ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL,    q: 'New service/feature shipping — operational runbook written?',  pf: 'Write the runbook before shipping.' },
+    { name: 'ABSENCE_SLO_DEFINITION_GAP_FORMAL',         c: ABSENCE_SLO_DEFINITION_GAP_FORMAL,         q: 'User-facing feature/service — SLOs defined?',                  pf: 'Define SLOs before shipping.' },
+    { name: 'ABSENCE_DECISION_RECORD_ABSENCE_FORMAL',    c: ABSENCE_DECISION_RECORD_ABSENCE_FORMAL,    q: 'Architectural decision made — ADR recorded?',                  pf: 'Record the decision with context and consequences.' },
+    { name: 'ABSENCE_OVER_ENGINEERING_CHECK_FORMAL',     c: ABSENCE_OVER_ENGINEERING_CHECK_FORMAL,     q: 'Is this abstraction required by current requirements?',        pf: 'Apply YAGNI — build only what current requirements require.' },
+    { name: 'ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL',        c: ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL,        q: 'Critical implementation complete — review plan established?',  pf: 'Establish a review plan before merging.' },
+    { name: 'ABSENCE_OBSERVABILITY_FIRST_FORMAL',        c: ABSENCE_OBSERVABILITY_FIRST_FORMAL,        q: 'Feature shipping — observability instrumented?',               pf: 'Add logging, metrics, and tracing before shipping.' },
+  ];
+
+  for (const { name, c, q, pf } of pinchLabels) {
+    it(`${name} question is preserved verbatim`, () => {
+      expect(c.question).toBe(q);
+    });
+    it(`${name} pinchFallback is preserved verbatim`, () => {
+      expect(c.pinchFallback).toBe(pf);
+    });
+  }
+});
+
+describe('D10-D12 academic-register — no citation patterns or tool callouts in L1/L2', () => {
+  const constants: Array<{ name: string; c: import('./options.js').DecisionContent }> = [
+    { name: 'ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL',      c: ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL },
+    { name: 'ABSENCE_CONTRACT_TESTING_GAP_FORMAL',       c: ABSENCE_CONTRACT_TESTING_GAP_FORMAL },
+    { name: 'ABSENCE_CAPACITY_PLANNING_GAP_FORMAL',      c: ABSENCE_CAPACITY_PLANNING_GAP_FORMAL },
+    { name: 'ABSENCE_SECURITY_THREAT_MODELING_FORMAL',   c: ABSENCE_SECURITY_THREAT_MODELING_FORMAL },
+    { name: 'ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL',  c: ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL },
+    { name: 'ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL', c: ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_FORMAL },
+    { name: 'ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL',    c: ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL },
+    { name: 'ABSENCE_SLO_DEFINITION_GAP_FORMAL',         c: ABSENCE_SLO_DEFINITION_GAP_FORMAL },
+    { name: 'ABSENCE_DECISION_RECORD_ABSENCE_FORMAL',    c: ABSENCE_DECISION_RECORD_ABSENCE_FORMAL },
+    { name: 'ABSENCE_OVER_ENGINEERING_CHECK_FORMAL',     c: ABSENCE_OVER_ENGINEERING_CHECK_FORMAL },
+    { name: 'ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL',        c: ABSENCE_PAIR_REVIEW_ABSENCE_FORMAL },
+    { name: 'ABSENCE_OBSERVABILITY_FIRST_FORMAL',        c: ABSENCE_OBSERVABILITY_FIRST_FORMAL },
+  ];
+
+  // Forbidden patterns: opener citations, URL citations, et-al citations, MIL-STD
+  // identifiers, and standalone "Tools: " list-callouts. Regex set narrowed to avoid
+  // false positives on inline engineering terms (STRIDE, RPS, SLO, ADR, etc.) which
+  // are acceptable inside the action-first prose.
+  const forbidden: Array<{ pattern: RegExp; description: string }> = [
+    // "(Nygard, 2011)" or "(Fowler/Sadalage, 2003)"-style paren-citation.
+    { pattern: /\([A-Z][a-z]+(?:\/[A-Z][a-z]+)?(?:,| et al\.,?) \d{4}\)/, description: 'opener paren-citation like (Author, year) or (Author et al., year)' },
+    // "Beyer et al., 2016"-style inline et-al citation.
+    { pattern: /\b[A-Z][a-z]+ et al\.,? \d{4}\b/, description: 'inline et-al citation like Author et al., year' },
+    // "Adam Shostack, 'Title' (Publisher YYYY)"-style attribution.
+    { pattern: /\b[A-Z][a-z]+ [A-Z][a-z]+, '[^']+' \(/, description: 'attribution like "First Last, \'Title\' (Publisher...)"' },
+    // Year-tag opener like "Author Name (2011):" — note the colon after the paren.
+    { pattern: /\b[A-Z][a-z]+(?: [A-Z][a-z]+)? \(\d{4}\):/, description: 'opener attribution like "Author (YYYY):"' },
+    // martinfowler.com URL citation.
+    { pattern: /martinfowler\.com/, description: 'martinfowler.com URL citation' },
+    // MIL-STD identifier (FMEA opener).
+    { pattern: /\bMIL-STD-\d+[A-Z]?\b/, description: 'MIL-STD identifier (citation)' },
+    // Standalone "Tools: X, Y, Z" list-callout at the start of a clause.
+    { pattern: /(?:^|\. )Tools: [A-Z]/, description: 'standalone "Tools: X, Y, Z" list-callout' },
+  ];
+
+  for (const { name, c } of constants) {
+    it(`${name} L1/L2 entries contain no academic citation or tool-callout patterns`, () => {
+      const checkable: string[] = [...c.L1, ...c.L2];
+      for (let i = 0; i < checkable.length; i++) {
+        const text = checkable[i];
+        for (const { pattern, description } of forbidden) {
+          expect(text, `entry index ${i} matches ${description}: "${text}"`).not.toMatch(pattern);
+        }
+      }
+    });
+  }
+});
+
+// ── Phase 6 E1-E3 — founder role content invariants ──────────────────────────
+// Locks pinch-UI labels (question + pinchFallback) and bans the definitional /
+// attributional opener forms that the §12.7 rewrites removed. Inline references
+// to product-management concepts (MVP, OKR, north star, hypothesis) inside an
+// instruction remain acceptable; the original educational openers do not.
+
+describe('Founder role — question + pinchFallback invariants', () => {
+  const pinchLabels: Array<{ name: string; c: import('./options.js').DecisionContent; q: string; pf: string }> = [
+    { name: 'ABSENCE_OUTCOME_DEFINITION_CASUAL',                c: ABSENCE_OUTCOME_DEFINITION_CASUAL,                q: 'What does success look like for this feature?',                                    pf: 'Define the success metric before building starts.' },
+    { name: 'ABSENCE_FEATURE_PRIORITIZATION_CASUAL',            c: ABSENCE_FEATURE_PRIORITIZATION_CASUAL,            q: 'Why is this the highest-priority thing to build right now?',                       pf: 'Confirm this is the highest-impact item before building.' },
+    { name: 'ABSENCE_USER_PERSONA_CLARITY_CASUAL',              c: ABSENCE_USER_PERSONA_CLARITY_CASUAL,              q: 'Who specifically is this feature for?',                                            pf: 'Name the specific user this feature is designed for.' },
+    { name: 'ABSENCE_COMPETITIVE_AWARENESS_CASUAL',             c: ABSENCE_COMPETITIVE_AWARENESS_CASUAL,             q: 'Have you checked how competitors handle this?',                                    pf: 'Run a quick competitive check before committing to this build.' },
+    { name: 'ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL',           c: ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL,           q: 'Is this addition within MVP scope?',                                               pf: 'Check whether this is needed to test the core hypothesis.' },
+    { name: 'ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL',    c: ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL,    q: 'How will target users find and access this feature?',                              pf: 'Define the acquisition path before building.' },
+    { name: 'ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL',         c: ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL,         q: 'How does this feature bring users back?',                                          pf: 'Consider the retention angle before building.' },
+    { name: 'ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL',       c: ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL,       q: 'How will you know if this feature is working after you ship it?',                  pf: 'Add a feedback mechanism before shipping.' },
+    { name: 'ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL',           c: ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL,           q: 'What hypothesis does this feature test?',                                          pf: 'Define the hypothesis before starting the build.' },
+    { name: 'ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL', c: ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL, q: 'When did you last check product direction — not just implementation?',             pf: 'Take a product perspective before continuing to build.' },
+    { name: 'ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL',              c: ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL,              q: 'How does this feature connect to your product\'s core metric?',                    pf: 'Check north star alignment before adding this feature.' },
+  ];
+
+  for (const { name, c, q, pf } of pinchLabels) {
+    it(`${name} question is preserved verbatim`, () => {
+      expect(c.question).toBe(q);
+    });
+    it(`${name} pinchFallback is preserved verbatim`, () => {
+      expect(c.pinchFallback).toBe(pf);
+    });
+  }
+});
+
+describe('Founder role — no opener-attribution patterns in rewritten L1 slots', () => {
+  // Affected slots per analysis §12.7 / dev plan §5.1 table.
+  const affectedSlots: Array<{ name: string; c: import('./options.js').DecisionContent; slots: number[] }> = [
+    { name: 'ABSENCE_USER_PERSONA_CLARITY_CASUAL',              c: ABSENCE_USER_PERSONA_CLARITY_CASUAL,              slots: [0, 1, 2] },
+    { name: 'ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL',              c: ABSENCE_NORTH_STAR_ALIGNMENT_CASUAL,              slots: [0, 1, 2] },
+    { name: 'ABSENCE_OUTCOME_DEFINITION_CASUAL',                c: ABSENCE_OUTCOME_DEFINITION_CASUAL,                slots: [1, 2] },
+    { name: 'ABSENCE_FEATURE_PRIORITIZATION_CASUAL',            c: ABSENCE_FEATURE_PRIORITIZATION_CASUAL,            slots: [2] },
+    { name: 'ABSENCE_COMPETITIVE_AWARENESS_CASUAL',             c: ABSENCE_COMPETITIVE_AWARENESS_CASUAL,             slots: [1, 2] },
+    { name: 'ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL',           c: ABSENCE_MVP_BOUNDARY_DISCIPLINE_CASUAL,           slots: [0] },
+    { name: 'ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL',    c: ABSENCE_USER_ACQUISITION_CONSIDERATION_CASUAL,    slots: [1, 2] },
+    { name: 'ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL',         c: ABSENCE_RETENTION_MECHANISM_CHECK_CASUAL,         slots: [1] },
+    { name: 'ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL',       c: ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_CASUAL,       slots: [1] },
+    { name: 'ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL',           c: ABSENCE_HYPOTHESIS_BEFORE_BUILD_CASUAL,           slots: [0, 2] },
+    { name: 'ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL', c: ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_CASUAL, slots: [0] },
+  ];
+
+  // Forbidden patterns: opener-attribution forms and definitional-statement openers
+  // that the §12.7 rewrites removed. Inline references to product-management
+  // concepts (the word "MVP", "OKR", "north star", "hypothesis") inside an
+  // instruction remain acceptable — these patterns target opener-style usage only.
+  const forbidden: Array<{ pattern: RegExp; description: string }> = [
+    // Attribution openers like "Alan Cooper's persona principle:" or "Nir Eyal's Hook model:"
+    { pattern: /\b(?:Alan Cooper|Nir Eyal|Eric Ries|Steve Blank)'s [A-Z][a-z]+/, description: 'attribution opener referencing a named thinker' },
+    // Framework-as-opener like "Lean Startup core loop:"
+    { pattern: /\bLean Startup core loop\b/, description: 'Lean Startup framework opener' },
+    // Definitional opener form: "MVP stands for minimum viable product" / similar acronym expansion
+    { pattern: /\b[A-Z]{2,4} stands for [a-z]/, description: 'acronym-expansion definitional opener' },
+    // Observational opener about founders ("Founders who code face a structural bias...")
+    { pattern: /^Founders who code face a structural bias/, description: 'observational opener about founders\' bias' },
+    // Definitional opener about feature builds ("Every feature build is an experiment.")
+    { pattern: /^Every feature build is an experiment\b/, description: 'definitional opener about feature builds' },
+    // Definitional opener about the north star metric
+    { pattern: /^The north star metric is the single number\b/, description: 'definitional opener about the north star metric' },
+    // Definitional opener about persona principle
+    { pattern: /^Building for "users" in the abstract\b/, description: 'definitional opener about users in the abstract' },
+  ];
+
+  for (const { name, c, slots } of affectedSlots) {
+    for (const slotIndex of slots) {
+      it(`${name} L1[${slotIndex}] (rewritten) contains no opener-attribution patterns`, () => {
+        const text = c.L1[slotIndex];
+        for (const { pattern, description } of forbidden) {
+          expect(text, `L1[${slotIndex}] matches ${description}: "${text}"`).not.toMatch(pattern);
+        }
+      });
+    }
+  }
+});
+
+// ── Phase 6 E7-E9 — PM role content invariants ────────────────────────────────
+// Locks pinch-UI labels (question + pinchFallback) and bans citation / framework
+// reference patterns in the affected L1 slots for the 12 PM-role FORMAL signals
+// where surgical slot rewrites were applied. Unaffected L1 slots, L2, and L3
+// are NOT covered by the sweep below (they may legitimately contain framework
+// references in casual prose); only the affected slots are locked.
+
+describe('PM role — question + pinchFallback invariants', () => {
+  const pinchLabels: Array<{ name: string; c: import('./options.js').DecisionContent; q: string; pf: string }> = [
+    { name: 'ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL',  c: ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL,  q: 'Are acceptance criteria defined for this story before development begins?',                                pf: 'Define acceptance criteria for this story before starting implementation.' },
+    { name: 'ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL',     c: ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL,     q: 'Have relevant stakeholders been aligned on this feature before development begins?',                       pf: 'Verify stakeholder alignment before proceeding with significant development work.' },
+    { name: 'ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL',     c: ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL,     q: 'Are there ambiguous quality attributes in these requirements that need a measurable definition?',          pf: 'Resolve ambiguous quality attributes to measurable criteria before implementation.' },
+    { name: 'ABSENCE_DEPENDENCY_MAPPING_FORMAL',              c: ABSENCE_DEPENDENCY_MAPPING_FORMAL,              q: 'Have upstream and downstream dependencies for this work been identified before starting?',                 pf: 'Map dependencies before beginning this work to prevent blocked integration.' },
+    { name: 'ABSENCE_DEFINITION_OF_DONE_FORMAL',              c: ABSENCE_DEFINITION_OF_DONE_FORMAL,              q: 'Is there an explicit Definition of Done for this sprint item?',                                            pf: 'Define the completion criteria for this item before starting work.' },
+    { name: 'ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL',         c: ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL,         q: 'Have teams affected by this change been notified before development begins?',                              pf: 'Identify and notify affected teams before building this change to shared systems.' },
+    { name: 'ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL',       c: ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL,       q: 'Is there a success metric defined for this feature before development begins?',                            pf: 'Define how success will be measured for this feature before starting implementation.' },
+    { name: 'ABSENCE_PRIORITY_JUSTIFICATION_FORMAL',          c: ABSENCE_PRIORITY_JUSTIFICATION_FORMAL,          q: 'Is there an explicit justification for why this item is the current highest priority?',                    pf: 'Articulate the priority justification for this item before beginning work.' },
+    { name: 'ABSENCE_USER_STORY_COMPLETENESS_FORMAL',         c: ABSENCE_USER_STORY_COMPLETENESS_FORMAL,         q: 'Is this work item expressed as a complete user story with who, what, and why?',                            pf: 'Reframe this work item as a user story — who benefits, what they need, why it matters.' },
+    { name: 'ABSENCE_RISK_FLAG_FORMAL',                       c: ABSENCE_RISK_FLAG_FORMAL,                       q: 'Have risks been identified for this decision or scope change before proceeding?',                          pf: 'Identify and document risks before proceeding with this significant decision.' },
+    { name: 'ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL',  c: ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL,  q: 'Has the impact of this scope change on the current sprint been assessed?',                                 pf: 'Assess sprint impact before accepting this scope change.' },
+    { name: 'ABSENCE_RETROSPECTIVE_HABIT_FORMAL',             c: ABSENCE_RETROSPECTIVE_HABIT_FORMAL,             q: 'Has this sprint or iteration been closed with a retrospective before starting the next?',                  pf: 'Run a retrospective on this sprint before moving to the next cycle.' },
+  ];
+
+  for (const { name, c, q, pf } of pinchLabels) {
+    it(`${name} question is preserved verbatim`, () => {
+      expect(c.question).toBe(q);
+    });
+    it(`${name} pinchFallback is preserved verbatim`, () => {
+      expect(c.pinchFallback).toBe(pf);
+    });
+  }
+});
+
+describe('PM role — no opener-citation or framework-only opener tokens in rewritten L1 entries', () => {
+  // Affected slots per analysis §12.8. Sweep ONLY these specific slot indices —
+  // unaffected L1 entries are out of scope (may legitimately contain framework
+  // references in casual prose).
+  const affectedSlots: Array<{ name: string; c: import('./options.js').DecisionContent; slots: number[] }> = [
+    { name: 'ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL',  c: ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL,  slots: [0, 1] },
+    { name: 'ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL',     c: ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL,     slots: [0, 1] },
+    { name: 'ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL',     c: ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL,     slots: [0, 1, 2] },
+    { name: 'ABSENCE_DEPENDENCY_MAPPING_FORMAL',              c: ABSENCE_DEPENDENCY_MAPPING_FORMAL,              slots: [1, 2] },
+    { name: 'ABSENCE_DEFINITION_OF_DONE_FORMAL',              c: ABSENCE_DEFINITION_OF_DONE_FORMAL,              slots: [0, 1, 2] },
+    { name: 'ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL',         c: ABSENCE_CROSS_TEAM_IMPACT_CHECK_FORMAL,         slots: [0, 1] },
+    { name: 'ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL',       c: ABSENCE_SUCCESS_METRIC_DEFINITION_FORMAL,       slots: [0, 2] },
+    { name: 'ABSENCE_PRIORITY_JUSTIFICATION_FORMAL',          c: ABSENCE_PRIORITY_JUSTIFICATION_FORMAL,          slots: [0] },
+    { name: 'ABSENCE_USER_STORY_COMPLETENESS_FORMAL',         c: ABSENCE_USER_STORY_COMPLETENESS_FORMAL,         slots: [0, 1] },
+    { name: 'ABSENCE_RISK_FLAG_FORMAL',                       c: ABSENCE_RISK_FLAG_FORMAL,                       slots: [0] },
+    { name: 'ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL',  c: ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_FORMAL,  slots: [0] },
+    { name: 'ABSENCE_RETROSPECTIVE_HABIT_FORMAL',             c: ABSENCE_RETROSPECTIVE_HABIT_FORMAL,             slots: [0, 1, 2] },
+  ];
+
+  // Forbidden patterns: opener attributions and framework-only openers that the
+  // §12.8 rewrites removed. Inline references to a framework name (e.g. "Apply
+  // INVEST to..." or "SMART criteria" inside an instruction) are acceptable; the
+  // patterns below catch only opener-style citations and bare "(Wiegers, SEI)"-
+  // style citations.
+  const forbidden: Array<{ pattern: RegExp; description: string }> = [
+    // "(Wiegers, SEI)" / "(Beyer et al., 2016)" paren-citations
+    { pattern: /\([A-Z][a-z]+(?:\/[A-Z][a-z]+)?(?:,| et al\.,?) [A-Z0-9]/, description: 'paren-citation like (Author, Org/Year)' },
+    // "PMBOK ... (Ch.NN)" framework-reference opener
+    { pattern: /\bPMBOK [a-z][a-z\s]+\(Ch\.\d+\)/, description: 'PMBOK chapter-reference opener' },
+    // "Scrum Guide 2020"-style version citation
+    { pattern: /\bScrum Guide \d{4}\b/, description: 'Scrum Guide year-version citation' },
+    // "Norm Kerth's Prime Directive framework" — opener attribution to a named person+framework
+    { pattern: /\bNorm Kerth's [A-Z][a-z]+ [A-Z][a-z]+\b/, description: 'Norm Kerth attribution opener' },
+    // Inline et-al style citation
+    { pattern: /\b[A-Z][a-z]+ et al\.,? \d{4}\b/, description: 'inline et-al citation' },
+  ];
+
+  for (const { name, c, slots } of affectedSlots) {
+    for (const slotIndex of slots) {
+      it(`${name} L1[${slotIndex}] (rewritten) contains no citation or framework-opener patterns`, () => {
+        const text = c.L1[slotIndex];
+        for (const { pattern, description } of forbidden) {
+          expect(text, `L1[${slotIndex}] matches ${description}: "${text}"`).not.toMatch(pattern);
+        }
+      });
+    }
+  }
+});
+
+// ── Phase 6 E4-E6 — indie_hacker role content invariants ─────────────────────
+// Locks pinch-UI labels (question + pinchFallback) and bans verbatim citations
+// of indie-hacker thought-leaders (37signals, Paul Graham, CV-driven dev) in the
+// rewritten L1 slots. Inline framework references inside instructions remain
+// acceptable; opener-citations are not.
+
+describe('Indie_hacker role — question + pinchFallback invariants', () => {
+  const pinchLabels: Array<{ name: string; c: import('./options.js').DecisionContent; q: string; pf: string }> = [
+    { name: 'ABSENCE_TIME_TO_VALUE_CHECK_CASUAL',         c: ABSENCE_TIME_TO_VALUE_CHECK_CASUAL,         q: 'Is this solution the right size for your current scale?',                       pf: 'Check whether this complexity is justified at current user count.' },
+    { name: 'ABSENCE_SHIP_READINESS_DEFINITION_CASUAL',   c: ABSENCE_SHIP_READINESS_DEFINITION_CASUAL,   q: 'What needs to be true for this to be ready to ship?',                            pf: 'Write ship criteria before continuing to build.' },
+    { name: 'ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL',      c: ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL,      q: 'Have you done this manually to confirm it works before automating?',             pf: 'Do it manually first, then automate the proven version.' },
+    { name: 'ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL', c: ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL, q: 'Can you maintain this architecture alone, at 2am, when it breaks?',              pf: 'Apply the solo maintainability test before adding this complexity.' },
+    { name: 'ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL',     c: ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL,     q: 'How are people going to find out this product exists when you launch?',          pf: 'Define a launch strategy before getting closer to ship date.' },
+    { name: 'ABSENCE_EARLY_USER_FEEDBACK_CASUAL',         c: ABSENCE_EARLY_USER_FEEDBACK_CASUAL,         q: 'When did you last get a real user\'s reaction to what you\'re building?',         pf: 'Show what you\'ve built to at least one real user before continuing.' },
+    { name: 'ABSENCE_SOLO_MAINTAINABILITY_CASUAL',        c: ABSENCE_SOLO_MAINTAINABILITY_CASUAL,        q: 'Is this addition maintainable by you alone, long-term?',                         pf: 'Run the solo maintainability check before adding this complexity.' },
+    { name: 'ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL',   c: ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL,   q: 'How does this feature connect to how the product makes money?',                  pf: 'Consider the monetization connection before building this feature.' },
+    { name: 'ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL', c: ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL, q: 'Is this a milestone worth sharing publicly?',                                     pf: 'Consider sharing this milestone publicly before moving to the next.' },
+    { name: 'ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL',         c: ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL,         q: 'Is the current scope still within your available time and energy?',              pf: 'Run a scope-vs-time check before adding more to the build.' },
+  ];
+
+  for (const { name, c, q, pf } of pinchLabels) {
+    it(`${name} question is preserved verbatim`, () => {
+      expect(c.question).toBe(q);
+    });
+    it(`${name} pinchFallback is preserved verbatim`, () => {
+      expect(c.pinchFallback).toBe(pf);
+    });
+  }
+});
+
+describe('Indie_hacker role — no opener-citation patterns in rewritten L1 slots', () => {
+  // Affected slots per analysis §12.9.
+  const affectedSlots: Array<{ name: string; c: import('./options.js').DecisionContent; slots: number[] }> = [
+    { name: 'ABSENCE_TIME_TO_VALUE_CHECK_CASUAL',         c: ABSENCE_TIME_TO_VALUE_CHECK_CASUAL,         slots: [0, 1] },
+    { name: 'ABSENCE_SHIP_READINESS_DEFINITION_CASUAL',   c: ABSENCE_SHIP_READINESS_DEFINITION_CASUAL,   slots: [0] },
+    { name: 'ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL',      c: ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL,      slots: [0] },
+    { name: 'ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL', c: ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL, slots: [1] },
+    { name: 'ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL',     c: ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL,     slots: [1] },
+    { name: 'ABSENCE_EARLY_USER_FEEDBACK_CASUAL',         c: ABSENCE_EARLY_USER_FEEDBACK_CASUAL,         slots: [0, 1] },
+    { name: 'ABSENCE_SOLO_MAINTAINABILITY_CASUAL',        c: ABSENCE_SOLO_MAINTAINABILITY_CASUAL,        slots: [1] },
+    { name: 'ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL',   c: ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL,   slots: [2] },
+    { name: 'ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL', c: ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL, slots: [0, 1, 2] },
+    { name: 'ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL',         c: ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL,         slots: [0] },
+  ];
+
+  // Forbidden patterns: opener attributions. Inline references like
+  // "Apply Paul Graham's 'do things that don't scale' rule" or "Apply the 37signals
+  // match-current-traffic rule" are acceptable — these are instructions that
+  // reference a named principle inline. Opener forms like "Paul Graham: 'quote'"
+  // or "37signals principle: ..." as the sentence-leading attribution are not.
+  const forbidden: Array<{ pattern: RegExp; description: string }> = [
+    // "Paul Graham: 'quote'..."-style attribution opener (proper name + colon at start of sentence)
+    { pattern: /^(?:Paul Graham|Joel Spolsky|Jason Fried|David Heinemeier Hansson|Nir Eyal|Eric Ries):/, description: 'attribution opener: "Author: ..."' },
+    // "37signals principle: ..."-style framework opener (where "principle:" is the slot opener)
+    { pattern: /^37signals principle:/, description: '37signals principle opener' },
+    // "CV-driven development trap: ..."-style trap opener
+    { pattern: /^CV-driven development trap:/, description: 'CV-driven development trap opener' },
+    // "Hook model: ..." style (Nir Eyal framework opener)
+    { pattern: /^(?:Nir Eyal's )?Hook model:/, description: 'Hook model opener' },
+  ];
+
+  for (const { name, c, slots } of affectedSlots) {
+    for (const slotIndex of slots) {
+      it(`${name} L1[${slotIndex}] (rewritten) contains no opener-citation patterns`, () => {
+        const text = c.L1[slotIndex];
+        for (const { pattern, description } of forbidden) {
+          expect(text, `L1[${slotIndex}] matches ${description}: "${text}"`).not.toMatch(pattern);
+        }
+      });
+    }
+  }
+});
+
+// ── Phase 5 D7-D9 borderline — ABSENCE_TEST_DEPTH_CHECK_CASUAL invariant ──────
+// Single-slot surgical rewrite: L1[2] changed from an educational test-categories
+// list to a directive that produces a test per category. Locks the rewritten slot
+// against drift back to the educational form.
+
+describe('D7-D9 borderline — ABSENCE_TEST_DEPTH_CHECK_CASUAL L1[2] invariant', () => {
+  it('ABSENCE_TEST_DEPTH_CHECK_CASUAL L1[2] starts with an action verb (Add)', () => {
+    expect(ABSENCE_TEST_DEPTH_CHECK_CASUAL.L1[2]).toMatch(/^Add tests beyond the happy path/);
+  });
+
+  it('ABSENCE_TEST_DEPTH_CHECK_CASUAL L1[2] ends with the per-category write directive', () => {
+    expect(ABSENCE_TEST_DEPTH_CHECK_CASUAL.L1[2]).toMatch(/Write at least one test per category for what was just built before moving on\.$/);
+  });
+
+  it('ABSENCE_TEST_DEPTH_CHECK_CASUAL L1[2] does NOT contain the original "misleadingly high" educational closer', () => {
+    expect(ABSENCE_TEST_DEPTH_CHECK_CASUAL.L1[2]).not.toMatch(/misleadingly high/);
+  });
+
+  it('ABSENCE_TEST_DEPTH_CHECK_CASUAL L1[0] and L1[1] are unchanged from source (not touched by §12.10)', () => {
+    expect(ABSENCE_TEST_DEPTH_CHECK_CASUAL.L1[0]).toMatch(/Testing pyramid \(Mike Cohn, 2009\)/);
+    expect(ABSENCE_TEST_DEPTH_CHECK_CASUAL.L1[1]).toMatch(/Branch coverage over line coverage/);
+  });
+});
+
+describe('Phase 7 content routing', () => {
+  function makeProfile(nature: import('../classifier/types.js').UserNature, role?: import('../classifier/types.js').UserRole): import('../classifier/types.js').UserProfile {
+    return {
+      nature,
+      precisionScore: 5, playfulnessScore: 5,
+      precisionOrdinal: 'medium', playfulnessOrdinal: 'medium',
+      mood: 'focused', depth: 'medium', depthScore: 5,
+      computedAt: 0,
+      role: role ?? null,
+    };
+  }
+
+  const phase7Keys = [
+    'decision_fatigue_pattern', 'work_rhythm_check', 'focus_drift_detection',
+    'session_length_checkpoint', 'progress_consolidation_gap',
+  ];
+
+  it('beginner profile gets BEGINNER content for all 5 Phase 7 signals', () => {
+    const profile = makeProfile('beginner');
+    for (const key of phase7Keys) {
+      const result = resolveDecisionContent('implementation', `absence:${key}`, profile);
+      expect(result).toBeDefined();
+    }
+  });
+
+  it('cool_geek profile gets CASUAL content for all 5 Phase 7 signals', () => {
+    const profile = makeProfile('cool_geek');
+    const expected = [
+      ABSENCE_DECISION_FATIGUE_PATTERN_CASUAL,
+      ABSENCE_WORK_RHYTHM_CHECK_CASUAL,
+      ABSENCE_FOCUS_DRIFT_DETECTION_CASUAL,
+      ABSENCE_SESSION_LENGTH_CHECKPOINT_CASUAL,
+      ABSENCE_PROGRESS_CONSOLIDATION_GAP_CASUAL,
+    ];
+    for (let i = 0; i < phase7Keys.length; i++) {
+      const result = resolveDecisionContent('implementation', `absence:${phase7Keys[i]!}`, profile);
+      expect(result).toBe(expected[i]);
+    }
+  });
+
+  it('hardcore_pro profile gets FORMAL content for all 5 Phase 7 signals', () => {
+    const profile = makeProfile('hardcore_pro');
+    const expected = [
+      ABSENCE_DECISION_FATIGUE_PATTERN_FORMAL,
+      ABSENCE_WORK_RHYTHM_CHECK_FORMAL,
+      ABSENCE_FOCUS_DRIFT_DETECTION_FORMAL,
+      ABSENCE_SESSION_LENGTH_CHECKPOINT_FORMAL,
+      ABSENCE_PROGRESS_CONSOLIDATION_GAP_FORMAL,
+    ];
+    for (let i = 0; i < phase7Keys.length; i++) {
+      const result = resolveDecisionContent('implementation', `absence:${phase7Keys[i]!}`, profile);
+      expect(result).toBe(expected[i]);
+    }
+  });
+
+  it('pm role gets FORMAL content for all 5 Phase 7 signals', () => {
+    const profile = makeProfile('pro_geek_soul', 'pm');
+    const expected = [
+      ABSENCE_DECISION_FATIGUE_PATTERN_FORMAL,
+      ABSENCE_WORK_RHYTHM_CHECK_FORMAL,
+      ABSENCE_FOCUS_DRIFT_DETECTION_FORMAL,
+      ABSENCE_SESSION_LENGTH_CHECKPOINT_FORMAL,
+      ABSENCE_PROGRESS_CONSOLIDATION_GAP_FORMAL,
+    ];
+    for (let i = 0; i < phase7Keys.length; i++) {
+      const result = resolveDecisionContent('implementation', `absence:${phase7Keys[i]!}`, profile);
+      expect(result).toBe(expected[i]);
+    }
+  });
+
+  it('pro_geek_soul (no role) gets FORMAL content for all 5 Phase 7 signals', () => {
+    const profile = makeProfile('pro_geek_soul');
+    const expected = [
+      ABSENCE_DECISION_FATIGUE_PATTERN_FORMAL,
+      ABSENCE_WORK_RHYTHM_CHECK_FORMAL,
+      ABSENCE_FOCUS_DRIFT_DETECTION_FORMAL,
+      ABSENCE_SESSION_LENGTH_CHECKPOINT_FORMAL,
+      ABSENCE_PROGRESS_CONSOLIDATION_GAP_FORMAL,
+    ];
+    for (let i = 0; i < phase7Keys.length; i++) {
+      const result = resolveDecisionContent('implementation', `absence:${phase7Keys[i]!}`, profile);
+      expect(result).toBe(expected[i]);
+    }
+  });
+
+  it('pro_geek_soul (no role) still gets CASUAL for non-Phase-7 absence signals', () => {
+    const profile = makeProfile('pro_geek_soul');
+    const result = resolveDecisionContent('implementation', 'absence:test_creation', profile);
+    expect(result).toBe(ABSENCE_TEST_CREATION_CASUAL);
   });
 });
 

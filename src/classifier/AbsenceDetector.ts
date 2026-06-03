@@ -2,6 +2,55 @@ import type { SessionState, AbsenceFlag, UserProfile } from './types.js';
 import { SIGNAL_MAP } from './signals.js';
 import { STAGE_CONFIRM_THRESHOLD } from './SessionStateManager.js';
 
+// ── Phase 7 F1 custom detection constants ─────────────────────────────────────
+
+/** Average inter-prompt interval (ms) below which work_rhythm_check fires. */
+const WORK_RHYTHM_VELOCITY_THRESHOLD_MS = 30_000;
+/** Number of recent prompts to average for velocity check. */
+const WORK_RHYTHM_WINDOW = 10;
+
+/** Number of distinct active domains in last 20 prompts to trigger focus_drift_detection. */
+const FOCUS_DRIFT_DOMAIN_THRESHOLD = 5;
+/** Prompt window for domain-bucket scan. */
+const FOCUS_DRIFT_WINDOW = 20;
+
+const FOCUS_DOMAINS: Record<string, string[]> = {
+  auth:         ['login', 'password', 'token', 'authentication', 'jwt', 'oauth', 'session', 'permission'],
+  database:     ['database', 'query', 'migration', 'schema', 'table', 'sql', 'orm', 'mongodb', 'postgres'],
+  ui:           ['component', 'frontend', 'css', 'style', 'button', 'modal', 'layout', 'render', 'react', 'vue'],
+  api:          ['endpoint', 'route', 'request', 'response', 'rest', 'graphql', 'fetch', 'axios', 'webhook'],
+  testing:      ['test', 'spec', 'assert', 'mock', 'fixture', 'coverage', 'jest', 'vitest', 'cypress'],
+  deployment:   ['deploy', 'docker', 'ci', 'pipeline', 'build', 'release', 'kubernetes', 'staging'],
+  performance:  ['cache', 'optimize', 'latency', 'memory', 'profiling', 'benchmark', 'slow'],
+  architecture: ['refactor', 'design', 'pattern', 'architecture', 'module', 'abstraction', 'structure'],
+};
+
+const FOCUS_COMPLETION_KEYWORDS = ['done', 'finished', 'merged', 'shipped', 'closed'];
+
+function detectWorkRhythmFlag(state: SessionState): boolean {
+  const history = state.promptHistory;
+  if (history.length < WORK_RHYTHM_WINDOW) return false;
+  const recent = history.slice(-WORK_RHYTHM_WINDOW);
+  let totalInterval = 0;
+  for (let i = 1; i < recent.length; i++) {
+    totalInterval += (recent[i]!.capturedAt - recent[i - 1]!.capturedAt);
+  }
+  const avgInterval = totalInterval / (recent.length - 1);
+  return avgInterval < WORK_RHYTHM_VELOCITY_THRESHOLD_MS;
+}
+
+function detectFocusDriftFlag(state: SessionState): boolean {
+  const history = state.promptHistory;
+  const window = history.slice(-FOCUS_DRIFT_WINDOW);
+  const windowText = window.map((r) => r.text.toLowerCase()).join(' ');
+  const hasCompletion = FOCUS_COMPLETION_KEYWORDS.some((kw) => windowText.includes(kw));
+  if (hasCompletion) return false;
+  const activeDomains = Object.values(FOCUS_DOMAINS).filter(
+    (keywords) => keywords.some((kw) => windowText.includes(kw)),
+  );
+  return activeDomains.length >= FOCUS_DRIFT_DOMAIN_THRESHOLD;
+}
+
 /**
  * Minimum prompts in current stage before checking for absences.
  * Research: 15-20 prompts. We use 15 (lower bound) as default.
@@ -47,20 +96,22 @@ export const ABSENCE_COOLDOWN_PROMPTS = 30;
  * Returns only NEW flags (not already active/in-cooldown).
  */
 export function detectAbsenceFlags(
-  state:   SessionState,
-  profile?: UserProfile | null,
+  state:               SessionState,
+  profile?:            UserProfile | null,
+  projectType?:        string,
+  thresholdMultiplier = 1.0,
+  absenceMinFloor     = 5,
 ): AbsenceFlag[] {
   const { currentStage, stageConfidence, promptsInCurrentStage, promptCount } = state;
 
   // Gate 1 — stage must be confirmed
   if (stageConfidence < STAGE_CONFIRM_THRESHOLD) return [];
 
-  // Profile-aware threshold for Gate 3
-  const isVibeProfile = profile?.nature === 'beginner' || profile?.nature === 'cool_geek';
-  const effectiveMinPrompts = isVibeProfile ? 5 : 10;
+  const isVibeProfile    = profile?.nature === 'beginner' || profile?.nature === 'cool_geek';
+  const profileMultiplier = isVibeProfile ? 0.5 : 1.0;
 
   // Gate 2 — must have been in this stage long enough before checking
-  if (promptsInCurrentStage < 5) return [];
+  if (promptsInCurrentStage < absenceMinFloor) return [];
 
   const newFlags: AbsenceFlag[] = [];
 
@@ -68,12 +119,52 @@ export function detectAbsenceFlags(
     // Gate — signal expected in this stage?
     if (!sig.expectedStages.includes(currentStage)) continue;
 
-    // Gate 3 — profile-aware: enough prompts in stage for this signal?
-    if (promptsInCurrentStage < effectiveMinPrompts) continue;
+    // Gate — project-type filter: null/undefined/'other' bypasses the filter entirely
+    if (sig.relevantProjectTypes && projectType && projectType !== 'other'
+        && !sig.relevantProjectTypes.includes(projectType)) continue;
 
-    // Gate — signal never detected?
-    const counter = state.signalCounters[sig.key];
-    if (!counter || counter.lastSeenAt !== null) continue;
+    // Nature gate — Dim1 signals: fire only when profile.nature matches
+    if (sig.nature && sig.nature !== profile?.nature) continue;
+
+    // Role gate — Dim2 signals: fire only when profile.role matches
+    if (sig.role && sig.role !== profile?.role) continue;
+
+    // Gate 3 — per-signal threshold with profile multiplier and global frequency multiplier
+    const effectiveThreshold = Math.max(absenceMinFloor, Math.ceil(sig.absenceThreshold * profileMultiplier * thresholdMultiplier));
+    if (promptsInCurrentStage < effectiveThreshold) continue;
+
+    // Custom detection gates — F1 signals use streak/velocity/domain-bucket logic; three signals add semantic preconditions
+    if (sig.key === 'decision_fatigue_pattern') {
+      const streak = state.consecutiveAcceptanceStreak ?? 0;
+      if (streak < sig.absenceThreshold) continue;
+    } else if (sig.key === 'work_rhythm_check') {
+      if (!detectWorkRhythmFlag(state)) continue;
+    } else if (sig.key === 'focus_drift_detection') {
+      if (!detectFocusDriftFlag(state)) continue;
+    } else if (sig.key === 'problem_correction') {
+      const hasProblemContext = state.promptHistory.some((p) =>
+        /\b(bug|error|broken|crash|fail(ed|ing)?|issue|problem|not working|doesn't work|TypeError|undefined|exception)\b/i.test(p.text)
+      );
+      if (!hasProblemContext) continue;
+      const counter = state.signalCounters[sig.key];
+      if (!counter || counter.lastSeenAt !== null) continue;
+    } else if (sig.key === 'deployment_planning') {
+      const MIN_REVIEW_TESTING_PROMPTS = 5;
+      if (currentStage !== 'release' &&
+          !(currentStage === 'review_testing' &&
+            promptsInCurrentStage >= MIN_REVIEW_TESTING_PROMPTS)) continue;
+      const counter = state.signalCounters[sig.key];
+      if (!counter || counter.lastSeenAt !== null) continue;
+    } else if (sig.key === 'context_loss') {
+      const MIN_CONTEXT_LOSS_PROMPTS = 25;
+      if (promptCount < MIN_CONTEXT_LOSS_PROMPTS) continue;
+      const counter = state.signalCounters[sig.key];
+      if (!counter || counter.lastSeenAt !== null) continue;
+    } else {
+      // Standard gate — signal never detected?
+      const counter = state.signalCounters[sig.key];
+      if (!counter || counter.lastSeenAt !== null) continue;
+    }
 
     // Gate — cooldown: is there an active flag whose cooldown window hasn't expired?
     const existingFlag = state.absenceFlags.find((f) => f.signalKey === sig.key);
