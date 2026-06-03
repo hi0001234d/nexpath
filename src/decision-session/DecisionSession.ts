@@ -47,6 +47,23 @@ const ITALIC_DIM   = '\x1b[3;2m';
 const ITALIC_AMBER = '\x1b[3;33m';
 const BOLD         = '\x1b[1m';
 
+/**
+ * Branded Nexpath wordmark, shown at the top of every popup window.
+ *
+ *   ▲  N E X P A T H
+ *   ─────────────────
+ *
+ * Triangle bold bright cyan, wordmark bold bright white with 2-space
+ * tracking, rule dim gray. Trailing blank line gives breathing room
+ * before the clack prompt area starts rendering.
+ */
+export const NEXPATH_HEADER =
+  `${BOLD_CYAN}▲${RESET}  ${BOLD_WHITE}N E X P A T H${RESET}\n` +
+  `${DIM_GRAY}─────────────────${RESET}\n\n`;
+
+/** Visible row count the header consumes — wordmark (1) + rule (1) + blank (1). */
+export const NEXPATH_HEADER_LINES = 3;
+
 const SKIP_NOW_LABEL =
   `${BOLD}Skip for now${RESET}${DIM_GRAY}  — nexpath optimize will remind you${RESET}`;
 const SHOW_SIMPLER_LABEL =

@@ -9,7 +9,13 @@ import { createRequire } from 'node:module';
 import * as rl from 'node:readline';
 import pc, { createColors } from 'picocolors';
 import type { SelectFn } from './DecisionSession.js';
-import { CLIPBOARD_ONLY, OPTION_SEPARATOR, OPT_OUT_SENTINEL } from './DecisionSession.js';
+import {
+  CLIPBOARD_ONLY,
+  OPTION_SEPARATOR,
+  OPT_OUT_SENTINEL,
+  NEXPATH_HEADER,
+  NEXPATH_HEADER_LINES,
+} from './DecisionSession.js';
 import { SKIP_NOW, SHOW_SIMPLER } from './options.js';
 import type { Store } from '../store/db.js';
 import { getConfig, setConfig } from '../store/config.js';
@@ -46,6 +52,8 @@ import { spawnSync } from 'node:child_process';
 import { emitKeypressEvents } from 'node:readline';
 import { tmpdir } from 'node:os';
 
+process.stdout.write(${JSON.stringify(NEXPATH_HEADER)});
+
 const opts    = JSON.parse(readFileSync('${optFileFwd}', 'utf8'));
 const _dbg = tmpdir() + '/nexpath-render-debug.txt';
 const _log = (m) => appendFileSync(_dbg, m + '\\n', 'utf8');
@@ -69,7 +77,7 @@ process.stdout.write = function(chunk, ...a) {
 const _rows = process.stdout.rows;
 const _cols = process.stdout.columns;
 const _msgLineCount = opts.message.split('\\n').length;
-const _fixedLines = 1 + _msgLineCount + 2;
+const _fixedLines = 1 + _msgLineCount + 2 + ${NEXPATH_HEADER_LINES};
 const _avail = _rows - _fixedLines - 2;
 function _lineCount(label) {
   if (!label) return 1;
@@ -176,6 +184,8 @@ function buildFreqMjsScript(clackUrl: string, resultFileFwd: string, currentFreq
   return `import { select, isCancel } from '${clackUrl}';
 import { writeFileSync } from 'node:fs';
 
+process.stdout.write(${JSON.stringify(NEXPATH_HEADER)});
+
 const picked = await select({
   message: 'Advisory frequency',
   initialValue: ${JSON.stringify(currentFreq)},
@@ -208,6 +218,8 @@ function buildRoleMjsScript(_clackUrl: string, resultFileFwd: string, currentRol
   const descLines = buildRoleDescriptionLines(createColors(true));
   return `import { SelectPrompt, isCancel } from '${coreUrl}';
 import { writeFileSync } from 'node:fs';
+
+process.stdout.write(${JSON.stringify(NEXPATH_HEADER)});
 
 const ESC = String.fromCharCode(27);
 const A = (c) => (s) => ESC + '[' + c + 'm' + s + ESC + '[0m';
@@ -245,6 +257,8 @@ process.exit(0);
 function buildRootMenuMjsScript(clackUrl: string, resultFileFwd: string): string {
   return `import { select, isCancel } from '${clackUrl}';
 import { writeFileSync } from 'node:fs';
+
+process.stdout.write(${JSON.stringify(NEXPATH_HEADER)});
 
 const picked = await select({
   message: 'What would you like to adjust?',

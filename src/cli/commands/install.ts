@@ -118,17 +118,52 @@ export type DetectedAgent = {
 };
 
 /**
- * Determine which agents are installed by checking whether the parent
- * directory of each agent's config file exists.
+ * Officially-supported agents in the current nexpath version — single source
+ * of truth for the registration allow-list AND the "Not found" notice.
+ *
+ * Only entries here appear in `detectAgents()` output, get nexpath registration
+ * written during install, and show up in `nexpath status`. Agents present on
+ * disk but not listed here are silently filtered out.
+ *
+ * During install, any supported agent NOT detected on disk produces a
+ * "Not found: <label>" line so users know which expected agent is missing.
+ *
+ * To officially support a new agent in a future version:
+ *   1. Add { id, label } to this array.
+ *   2. Verify the matching push site in detectAgentsForCleanup() builds
+ *      the correct DetectedAgent.
+ *   3. Verify the registration path (writeMcpEntry / writeOpenCodeEntry / …)
+ *      is wired in installAction's per-agent loop.
+ *
+ * Uninstall uses detectAgentsForCleanup() directly so it can still remove
+ * registration entries written by older nexpath versions, even for IDs no
+ * longer listed here.
+ */
+export const SUPPORTED_AGENTS: ReadonlyArray<{ id: string; label: string }> = [
+  { id: 'claude', label: 'Claude Code' },
+];
+
+/** Derived ID set used by the detectAgents filter. Mirrors SUPPORTED_AGENTS. */
+export const SUPPORTED_AGENT_IDS: ReadonlySet<string> = new Set(
+  SUPPORTED_AGENTS.map((a) => a.id),
+);
+
+/**
+ * Detect every agent whose config directory exists on disk, without applying
+ * the SUPPORTED_AGENT_IDS filter. Used by the uninstall flow so that legacy
+ * registration entries written by older nexpath versions can still be removed.
  *
  * Claude Code is always included — home dir is always present, and the CLI
- * command (claude mcp add) will be attempted first regardless.
+ * command (claude mcp add) is attempted first regardless.
  */
-export function detectAgents(paths: AgentPaths): DetectedAgent[] {
+export function detectAgentsForCleanup(paths: AgentPaths): DetectedAgent[] {
   const found: DetectedAgent[] = [];
 
-  // Claude Code — always detected; CLI install attempted first
-  found.push({ id: 'claude', label: 'Claude Code', configPath: paths.claudeJson, type: 'claude-cli' });
+  // Claude Code — detected when its user-level config file (~/.claude.json) or
+  // settings dir (~/.claude/) exists. Both are created on first interactive run.
+  if (existsSync(paths.claudeJson) || existsSync(dirname(paths.claudeSettings))) {
+    found.push({ id: 'claude', label: 'Claude Code', configPath: paths.claudeJson, type: 'claude-cli' });
+  }
 
   if (existsSync(dirname(paths.cursor))) {
     found.push({ id: 'cursor', label: 'Cursor', configPath: paths.cursor, type: 'standard' });
@@ -159,6 +194,16 @@ export function detectAgents(paths: AgentPaths): DetectedAgent[] {
   }
 
   return found;
+}
+
+/**
+ * Determine which agents to register on install / surface in status.
+ *
+ * Returns only agents whose `id` appears in SUPPORTED_AGENT_IDS. Agents
+ * present on disk but not officially supported are silently filtered out.
+ */
+export function detectAgents(paths: AgentPaths): DetectedAgent[] {
+  return detectAgentsForCleanup(paths).filter((a) => SUPPORTED_AGENT_IDS.has(a.id));
 }
 
 // ── Config read / write helpers ───────────────────────────────────────────────
@@ -647,10 +692,19 @@ export async function installAction(
   }
 
   // ── Step 3: Agent detection + registration ────────────────────────────────
-  const agents = detectAgents(paths);
+  const agents      = detectAgents(paths);
+  const detectedIds = new Set(agents.map((a) => a.id));
+  const missing     = SUPPORTED_AGENTS.filter((sa) => !detectedIds.has(sa.id));
+
+  if (agents.length > 0) {
+    console.log(`Detected: ${agents.map((a) => a.label).join(', ')}`);
+  }
+  if (missing.length > 0) {
+    console.log(`Not found: ${missing.map((sa) => sa.label).join(', ')}`);
+    console.log('nexpath currently supports Claude Code only — support for Cursor, Windsurf, and other agents is coming in future updates.');
+  }
 
   if (agents.length === 0) {
-    console.log('No supported agents detected. Run nexpath install --help for details.');
     closeStore(store);
     return {
       apiKey:    { source: apiKeySource },
@@ -659,9 +713,6 @@ export async function installAction(
       extras:    { clipboardInstalled: false, clipboardTool: null },
     };
   }
-
-  const detectedNames = agents.map((a) => a.label).join(', ');
-  console.log(`Detected: ${detectedNames}`);
 
   if (!opts.yes) {
     const ok = await confirmFn();
@@ -916,7 +967,10 @@ export async function uninstallAction(
     dbPath?:          string;
   } = {},
 ): Promise<void> {
-  const agents = detectAgents(paths);
+  // Uninstall must clean up registration entries from agents that may have
+  // been written by an older nexpath version, so it bypasses the support
+  // filter and walks every agent present on disk.
+  const agents = detectAgentsForCleanup(paths);
 
   for (const agent of agents) {
     try {

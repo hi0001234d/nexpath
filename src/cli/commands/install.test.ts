@@ -16,6 +16,9 @@ import {
   getRooCodePath,
   resolveAgentPaths,
   detectAgents,
+  detectAgentsForCleanup,
+  SUPPORTED_AGENT_IDS,
+  SUPPORTED_AGENTS,
   writeMcpEntry,
   removeMcpEntry,
   writeOpenCodeEntry,
@@ -42,6 +45,16 @@ function tmpDir(): { dir: string; cleanup: () => void } {
   const dir = join(tmpdir(), `nexpath-install-test-${randomUUID()}`);
   mkdirSync(dir, { recursive: true });
   return { dir, cleanup: () => { try { rmSync(dir, { recursive: true }); } catch { /* ignore */ } } };
+}
+
+/**
+ * Mark Claude Code as "installed" inside a tmpDir sandbox by creating the
+ * settings directory the presence gate checks for. Tests that rely on Claude
+ * detection (registration, hook write, post-detection prompts) should call
+ * this immediately after `tmpDir()`.
+ */
+function markClaudeInstalled(dir: string): void {
+  mkdirSync(join(dir, '.claude'), { recursive: true });
 }
 
 function readJson(path: string): Record<string, unknown> {
@@ -223,23 +236,46 @@ describe('resolveAgentPaths', () => {
   });
 });
 
-// ── detectAgents ──────────────────────────────────────────────────────────────
+// ── detectAgentsForCleanup ────────────────────────────────────────────────────
+//
+// detectAgentsForCleanup returns every agent whose config directory exists on
+// disk, without applying the SUPPORTED_AGENT_IDS filter. It is the uninstall
+// flow's detection helper, so the per-agent path-presence assertions live
+// here; the filtered detectAgents() wrapper is exercised separately below.
 
-describe('detectAgents', () => {
-  it('always includes Claude Code (home dir is always present)', () => {
+describe('detectAgentsForCleanup', () => {
+  it('detects Claude Code when ~/.claude.json exists', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      writeFileSync(join(dir, '.claude.json'), '{}');
+      const paths = resolveAgentPaths(dir, dir, dir);
+      expect(detectAgentsForCleanup(paths).some((a) => a.id === 'claude')).toBe(true);
+    } finally { cleanup(); }
+  });
+
+  it('detects Claude Code when ~/.claude/ dir exists', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      mkdirSync(join(dir, '.claude'), { recursive: true });
+      const paths = resolveAgentPaths(dir, dir, dir);
+      expect(detectAgentsForCleanup(paths).some((a) => a.id === 'claude')).toBe(true);
+    } finally { cleanup(); }
+  });
+
+  it('does not detect Claude Code when neither ~/.claude.json nor ~/.claude/ exists', () => {
     const { dir, cleanup } = tmpDir();
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
-      expect(agents.some((a) => a.id === 'claude')).toBe(true);
+      expect(detectAgentsForCleanup(paths).some((a) => a.id === 'claude')).toBe(false);
     } finally { cleanup(); }
   });
 
   it('Claude Code type is claude-cli', () => {
     const { dir, cleanup } = tmpDir();
     try {
+      writeFileSync(join(dir, '.claude.json'), '{}');
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       const claude = agents.find((a) => a.id === 'claude')!;
       expect(claude.type).toBe('claude-cli');
     } finally { cleanup(); }
@@ -250,7 +286,7 @@ describe('detectAgents', () => {
     try {
       mkdirSync(join(dir, '.cursor'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       expect(agents.some((a) => a.id === 'cursor')).toBe(true);
     } finally { cleanup(); }
   });
@@ -259,7 +295,7 @@ describe('detectAgents', () => {
     const { dir, cleanup } = tmpDir();
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       expect(agents.some((a) => a.id === 'cursor')).toBe(false);
     } finally { cleanup(); }
   });
@@ -269,7 +305,7 @@ describe('detectAgents', () => {
     try {
       mkdirSync(join(dir, '.codeium', 'windsurf'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       expect(agents.some((a) => a.id === 'windsurf')).toBe(true);
     } finally { cleanup(); }
   });
@@ -279,7 +315,7 @@ describe('detectAgents', () => {
     try {
       mkdirSync(join(dir, '.kilocode'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       expect(agents.some((a) => a.id === 'kiloCode')).toBe(true);
     } finally { cleanup(); }
   });
@@ -288,7 +324,7 @@ describe('detectAgents', () => {
     const { dir, cleanup } = tmpDir();
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       expect(agents.some((a) => a.id === 'kiloCode')).toBe(false);
     } finally { cleanup(); }
   });
@@ -298,7 +334,7 @@ describe('detectAgents', () => {
     try {
       mkdirSync(join(dir, '.config', 'opencode'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       expect(agents.some((a) => a.id === 'openCode')).toBe(true);
     } finally { cleanup(); }
   });
@@ -308,7 +344,7 @@ describe('detectAgents', () => {
     try {
       writeFileSync(join(dir, 'opencode.json'), '{}');
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       expect(agents.some((a) => a.id === 'openCode')).toBe(true);
     } finally { cleanup(); }
   });
@@ -317,7 +353,7 @@ describe('detectAgents', () => {
     const { dir, cleanup } = tmpDir();
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      const agents = detectAgents(paths);
+      const agents = detectAgentsForCleanup(paths);
       expect(agents.some((a) => a.id === 'openCode')).toBe(false);
     } finally { cleanup(); }
   });
@@ -327,8 +363,96 @@ describe('detectAgents', () => {
     try {
       mkdirSync(join(dir, '.cursor'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
-      const cursor = detectAgents(paths).find((a) => a.id === 'cursor')!;
+      const cursor = detectAgentsForCleanup(paths).find((a) => a.id === 'cursor')!;
       expect(cursor.type).toBe('standard');
+    } finally { cleanup(); }
+  });
+});
+
+// ── SUPPORTED_AGENT_IDS ───────────────────────────────────────────────────────
+
+describe('SUPPORTED_AGENT_IDS', () => {
+  it('includes Claude Code (the one officially supported agent in this version)', () => {
+    expect(SUPPORTED_AGENT_IDS.has('claude')).toBe(true);
+  });
+
+  it('does not yet include Cursor, Windsurf, Cline, Roo Code, KiloCode, or OpenCode', () => {
+    for (const id of ['cursor', 'windsurf', 'cline', 'rooCode', 'kiloCode', 'openCode']) {
+      expect(SUPPORTED_AGENT_IDS.has(id)).toBe(false);
+    }
+  });
+});
+
+// ── SUPPORTED_AGENTS (source of truth for filter + Not found notice) ──────────
+
+describe('SUPPORTED_AGENTS', () => {
+  it('contains a Claude Code entry with id "claude" and label "Claude Code"', () => {
+    expect(SUPPORTED_AGENTS).toContainEqual({ id: 'claude', label: 'Claude Code' });
+  });
+
+  it('every entry has non-empty id and label string fields', () => {
+    for (const agent of SUPPORTED_AGENTS) {
+      expect(typeof agent.id).toBe('string');
+      expect(typeof agent.label).toBe('string');
+      expect(agent.id.length).toBeGreaterThan(0);
+      expect(agent.label.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('SUPPORTED_AGENT_IDS is the derived set of SUPPORTED_AGENTS ids (cannot drift)', () => {
+    expect([...SUPPORTED_AGENT_IDS].sort()).toEqual(SUPPORTED_AGENTS.map((a) => a.id).sort());
+  });
+});
+
+// ── detectAgents (filtered wrapper) ───────────────────────────────────────────
+//
+// detectAgents applies SUPPORTED_AGENT_IDS to detectAgentsForCleanup's output.
+// These tests verify the filter is the only difference — every id NOT in the
+// supported set is dropped, regardless of on-disk presence.
+
+describe('detectAgents — SUPPORTED_AGENT_IDS filter', () => {
+  it('returns only Claude Code even when every other agent dir exists on disk', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      writeFileSync(join(dir, '.claude.json'), '{}');
+      mkdirSync(join(dir, '.cursor'),                                            { recursive: true });
+      mkdirSync(join(dir, '.codeium', 'windsurf'),                               { recursive: true });
+      mkdirSync(join(dir, '.config', 'Code', 'User', 'globalStorage',
+                'saoudrizwan.claude-dev', 'settings'),                           { recursive: true });
+      mkdirSync(join(dir, '.config', 'Code', 'User', 'globalStorage',
+                'rooveterinaryinc.roo-cline', 'settings'),                       { recursive: true });
+      mkdirSync(join(dir, '.kilocode'),                                          { recursive: true });
+      mkdirSync(join(dir, '.config', 'opencode'),                                { recursive: true });
+      const paths = resolveAgentPaths(dir, dir, dir);
+      const agents = detectAgents(paths);
+      expect(agents.map((a) => a.id)).toEqual(['claude']);
+    } finally { cleanup(); }
+  });
+
+  it('preserves Claude Code DetectedAgent shape (id, label, type) when filtered', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      writeFileSync(join(dir, '.claude.json'), '{}');
+      const paths = resolveAgentPaths(dir, dir, dir);
+      const claude = detectAgents(paths).find((a) => a.id === 'claude')!;
+      expect(claude.label).toBe('Claude Code');
+      expect(claude.type).toBe('claude-cli');
+      expect(claude.configPath).toBe(paths.claudeJson);
+    } finally { cleanup(); }
+  });
+
+  it('detectAgents is a strict subset of detectAgentsForCleanup', () => {
+    const { dir, cleanup } = tmpDir();
+    try {
+      mkdirSync(join(dir, '.cursor'),              { recursive: true });
+      mkdirSync(join(dir, '.codeium', 'windsurf'), { recursive: true });
+      const paths = resolveAgentPaths(dir, dir, dir);
+      const filtered = detectAgents(paths).map((a) => a.id);
+      const all      = detectAgentsForCleanup(paths).map((a) => a.id);
+      for (const id of filtered) {
+        expect(all).toContain(id);
+      }
+      expect(filtered.length).toBeLessThanOrEqual(all.length);
     } finally { cleanup(); }
   });
 });
@@ -614,6 +738,7 @@ describe('installAction', () => {
 
   it('cancelled by confirmFn — prints Cancelled and writes nothing', async () => {
     const { dir, cleanup } = tmpDir();
+    markClaudeInstalled(dir);
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
@@ -705,6 +830,7 @@ describe('installAction', () => {
 
   it('prints restart instructions on success', async () => {
     const { dir, cleanup } = tmpDir();
+    markClaudeInstalled(dir);
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
@@ -718,6 +844,7 @@ describe('installAction', () => {
 
   it('still writes advisory hook when isWin is true (REGISTER_MCP_SERVER has no effect on hooks)', async () => {
     const { dir, cleanup } = tmpDir();
+    markClaudeInstalled(dir);
     vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
@@ -733,6 +860,7 @@ describe('installAction', () => {
 
   it('writes advisory hook to claudeSettings when claude CLI succeeds', async () => {
     const { dir, cleanup } = tmpDir();
+    markClaudeInstalled(dir);
     vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
@@ -748,6 +876,7 @@ describe('installAction', () => {
 
   it('writes advisory hook to claudeSettings even when claude CLI falls back', async () => {
     const { dir, cleanup } = tmpDir();
+    markClaudeInstalled(dir);
     vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
@@ -778,6 +907,36 @@ describe('installAction', () => {
       expect(output).toContain('hook write failed');
       // MCP registration still happened (install did not abort)
       expect(output).toContain('Claude Code');
+    } finally { cleanup(); }
+  });
+
+  // ── "Not found:" notice for missing supported agents ──────────────────────
+
+  it('prints "Not found: Claude Code" + support notice when Claude Code is not installed', async () => {
+    const { dir, cleanup } = tmpDir();
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, skipClipboardCheck: true });
+      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
+      expect(output).toContain('Not found: Claude Code');
+      expect(output).toContain('nexpath currently supports Claude Code only');
+      // The "Detected:" line should NOT appear when nothing was detected.
+      expect(output).not.toContain('Detected:');
+    } finally { cleanup(); }
+  });
+
+  it('does not print "Not found:" notice when every supported agent is present', async () => {
+    const { dir, cleanup } = tmpDir();
+    markClaudeInstalled(dir);
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true }, { paths, isWin: false, execFn: () => {}, skipClipboardCheck: true });
+      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
+      expect(output).toContain('Detected: Claude Code');
+      expect(output).not.toContain('Not found:');
+      expect(output).not.toContain('nexpath currently supports Claude Code only');
     } finally { cleanup(); }
   });
 
@@ -882,6 +1041,9 @@ describe('uninstallAction', () => {
 
   it('reports hook not registered when no settings file exists', async () => {
     const { dir, cleanup } = tmpDir();
+    // .claude.json marks Claude as installed (presence gate), but no .claude/settings.json
+    // → the hook was never registered, which is what this test asserts.
+    writeFileSync(join(dir, '.claude.json'), '{}');
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
@@ -1470,6 +1632,7 @@ describe('installAction — frequency and role prompts', () => {
 
   it('--yes path applies the every_event frequency default when no value is configured', async () => {
     const { dir, cleanup: cleanupDir } = tmpDir();
+    markClaudeInstalled(dir);
     const { path: dbPath, cleanup: cleanupDb } = tempDbFile();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
@@ -1486,6 +1649,7 @@ describe('installAction — frequency and role prompts', () => {
 
   it('--yes path applies the founder role default when no value is configured', async () => {
     const { dir, cleanup: cleanupDir } = tmpDir();
+    markClaudeInstalled(dir);
     const { path: dbPath, cleanup: cleanupDb } = tempDbFile();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
@@ -1569,6 +1733,7 @@ describe('installAction — frequency and role prompts', () => {
 
   it('interactive path passes the current frequency to the prompt and writes the selection', async () => {
     const { dir, cleanup: cleanupDir } = tmpDir();
+    markClaudeInstalled(dir);
     const { path: dbPath, cleanup: cleanupDb } = tempDbFile();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
@@ -1606,6 +1771,7 @@ describe('installAction — frequency and role prompts', () => {
 
   it('interactive path passes the current role to the prompt and writes the selection', async () => {
     const { dir, cleanup: cleanupDir } = tmpDir();
+    markClaudeInstalled(dir);
     const { path: dbPath, cleanup: cleanupDb } = tempDbFile();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
@@ -1730,6 +1896,7 @@ describe('installAction — frequency and role prompts', () => {
 
   it('interactive path passes the founder default to the role prompt for legacy "clear" stored value', async () => {
     const { dir, cleanup: cleanupDir } = tmpDir();
+    markClaudeInstalled(dir);
     const { path: dbPath, cleanup: cleanupDb } = tempDbFile();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     try {

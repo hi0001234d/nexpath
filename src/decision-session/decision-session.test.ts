@@ -260,6 +260,8 @@ import {
   runDecisionSession,
   OPTION_SEPARATOR,
   OPT_OUT_SENTINEL,
+  NEXPATH_HEADER,
+  NEXPATH_HEADER_LINES,
 } from './DecisionSession.js';
 import type { DecisionSessionInput, SelectFn } from './DecisionSession.js';
 import type { Store } from '../store/db.js';
@@ -2249,6 +2251,53 @@ describe('ANSI formatting helpers', () => {
     expect(pinch).not.toBe(question);
     expect(pinch).not.toBe(subtitle);
     expect(question).not.toBe(subtitle);
+  });
+});
+
+// ── NEXPATH_HEADER ────────────────────────────────────────────────────────────
+
+describe('NEXPATH_HEADER', () => {
+  it('contains the triangle wordmark accent', () => {
+    expect(NEXPATH_HEADER).toContain('▲');
+  });
+
+  it('contains the tracked wordmark "N E X P A T H"', () => {
+    expect(NEXPATH_HEADER).toContain('N E X P A T H');
+  });
+
+  it('contains a dim-gray horizontal rule line', () => {
+    expect(NEXPATH_HEADER).toContain('─');
+  });
+
+  it('uses bold bright cyan for the triangle (matches pinch-label brand color)', () => {
+    expect(NEXPATH_HEADER).toContain('\x1b[1;96m');
+  });
+
+  it('uses bold bright white for the wordmark', () => {
+    expect(NEXPATH_HEADER).toContain('\x1b[1;97m');
+  });
+
+  it('ends with a trailing blank line for breathing room before the prompt', () => {
+    expect(NEXPATH_HEADER.endsWith('\n\n')).toBe(true);
+  });
+
+  it('is a 3-row visual block (wordmark + rule + blank)', () => {
+    expect(NEXPATH_HEADER_LINES).toBe(3);
+    // The header string also produces 3 visible lines once ANSI is stripped:
+    // line 1: ▲  N E X P A T H, line 2: rule, line 3: empty (trailing blank).
+    const stripped = NEXPATH_HEADER.replace(/\x1b\[[0-9;]*m/g, '');
+    const lineCount = stripped.split('\n').length - 1; // trailing '\n' creates empty tail
+    expect(lineCount).toBe(NEXPATH_HEADER_LINES);
+  });
+
+  it('triangle appears before the wordmark', () => {
+    const stripped = NEXPATH_HEADER.replace(/\x1b\[[0-9;]*m/g, '');
+    expect(stripped.indexOf('▲')).toBeLessThan(stripped.indexOf('N E X P A T H'));
+  });
+
+  it('wordmark appears before the rule', () => {
+    const stripped = NEXPATH_HEADER.replace(/\x1b\[[0-9;]*m/g, '');
+    expect(stripped.indexOf('N E X P A T H')).toBeLessThan(stripped.indexOf('─'));
   });
 });
 
