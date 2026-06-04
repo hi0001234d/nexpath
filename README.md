@@ -10,7 +10,7 @@ Nexpath gives developers meaningful direction while they work with AI coding age
 
 - A behaviour guidance system and developer productivity layer for builders using AI coding agents and AI code tools.
 - Monitors your development sessions and understands where you are in your project lifecycle.
-- Surfaces **"the decision session"** — a lightweight prompt that gives direction without forcing your hand.
+- Surfaces **"the decision session"** — which we also call the **advisory popup** — a lightweight prompt that gives direction without forcing your hand.
 - Presents pre-filled agent prompts you select with one keypress — ready-to-send, not just tips.
 - Want to tweak one first? Copy it to your clipboard, then paste and edit before sending.
 - None fit? Skip it and revisit skipped items later in one focused session.
@@ -56,7 +56,16 @@ Built during AI Hackfest 2026 by MLH.
 
 ---
 
-![Nexpath CLI demo](assets/nexpath.gif)
+## The Decision Session — How It Works
+
+1. **Detection** — As you work, Nexpath captures each prompt and classifies your development stage.
+2. **Trigger** — On a stage transition, a lightweight LLM call confirms before the decision session fires. The session is shown by the Stop hook **after** the agent has fully responded — never mid-response.
+3. **Presentation** — A 2–3 word creative label appears (e.g., "Before coding.", "Quick check."), followed by a question and pre-filled options across three levels.
+4. **Selection** — Pick an option to send it straight to your agent, copy it to your clipboard to edit before sending, or choose "Show simpler options" for lighter alternatives.
+
+---
+
+![Nexpath CLI demo](assets/nexpath_new.gif)
 
 ---
 
