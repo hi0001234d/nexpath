@@ -10,7 +10,7 @@ Nexpath gives developers meaningful direction while they work with AI coding age
 
 - A behaviour guidance system and developer productivity layer for builders using AI coding agents and AI code tools.
 - Monitors your development sessions and understands where you are in your project lifecycle.
-- Surfaces **"the decision session"** — a lightweight prompt that gives direction without forcing your hand.
+- Surfaces **"the decision session"** — which we also call the **advisory popup** — a lightweight prompt that gives direction without forcing your hand.
 - Presents pre-filled agent prompts you select with one keypress — ready-to-send, not just tips.
 - Want to tweak one first? Copy it to your clipboard, then paste and edit before sending.
 - None fit? Skip it and revisit skipped items later in one focused session.
