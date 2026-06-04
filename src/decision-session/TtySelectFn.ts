@@ -99,6 +99,10 @@ for (const opt of opts.options) {
 const _skipNowIdx = opts.options.findIndex(o => o.value === opts.skipNow);
 if (_skipNowIdx >= 0 && _maxItems <= _skipNowIdx) _maxItems = _skipNowIdx + 1;
 _maxItems = Math.max(_maxItems, 5);
+const _helpIdx = opts.options.findIndex(o => o.value === opts.separatorPrefix + 'help');
+if (_helpIdx >= 0) {
+  _maxItems = opts.options.length;
+}
 const _selOptions = (_skipNowIdx >= 0 && _maxItems < opts.options.length)
   ? opts.options.slice(0, _skipNowIdx + 1)
   : opts.options;
