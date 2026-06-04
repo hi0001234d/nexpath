@@ -65,7 +65,7 @@ Built during AI Hackfest 2026 by MLH.
 
 ---
 
-![Nexpath CLI demo](assets/nexpath.gif)
+![Nexpath CLI demo](assets/nexpath_new.gif)
 
 ---
 
