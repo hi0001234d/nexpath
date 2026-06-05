@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { EventEmitter } from 'node:events';
 import { Command } from 'commander';
-import { awaitChild, handleWindsurfHookCli, registerWindsurfHookCommand } from './windsurf-hook.js';
+import { handleWindsurfHookCli, registerWindsurfHookCommand } from './windsurf-hook.js';
 
 describe('handleWindsurfHookCli', () => {
   it('reads stdin and dispatches (event, raw, {cwd}) to the handler', async () => {
@@ -27,32 +26,6 @@ describe('handleWindsurfHookCli', () => {
       cwd: '/fallback',
     });
     expect(run).toHaveBeenCalledWith('post_cascade_response', '', { cwd: '/fallback' });
-  });
-});
-
-describe('awaitChild', () => {
-  it('resolves immediately when there is no child', async () => {
-    await expect(awaitChild(null)).resolves.toBeUndefined();
-    await expect(awaitChild(undefined)).resolves.toBeUndefined();
-  });
-
-  it('resolves when the child exits', async () => {
-    const child = new EventEmitter() as unknown as import('node:child_process').ChildProcess;
-    const p = awaitChild(child, 5000);
-    (child as unknown as EventEmitter).emit('exit', 0);
-    await expect(p).resolves.toBeUndefined();
-  });
-
-  it('resolves when the child errors (never rejects)', async () => {
-    const child = new EventEmitter() as unknown as import('node:child_process').ChildProcess;
-    const p = awaitChild(child, 5000);
-    (child as unknown as EventEmitter).emit('error', new Error('spawn fail'));
-    await expect(p).resolves.toBeUndefined();
-  });
-
-  it('resolves via the timeout fallback if the child never exits', async () => {
-    const child = new EventEmitter() as unknown as import('node:child_process').ChildProcess;
-    await expect(awaitChild(child, 1)).resolves.toBeUndefined();
   });
 });
 
