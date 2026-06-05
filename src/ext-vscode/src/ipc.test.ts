@@ -4,6 +4,7 @@ import { Readable, Writable } from 'node:stream';
 import {
   spawnAuto,
   spawnStop,
+  resolveSpawnEnv,
   NexpathBinaryNotFoundError,
   NexpathMalformedPayloadError,
 } from './ipc.js';
@@ -231,5 +232,35 @@ describe('spawnStop', () => {
     await spawnStop('s', { spawnFn: spawnFn as never, cwd: '/spawn/cwd' });
     const opts = spawnFn.mock.calls[0]![2] as { cwd?: string };
     expect(opts.cwd).toBe('/spawn/cwd');
+  });
+});
+
+describe('resolveSpawnEnv — DBus session bus restoration', () => {
+  it('injects the standard per-user bus when DBUS_SESSION_BUS_ADDRESS is absent and the socket exists', () => {
+    const env = resolveSpawnEnv({
+      env: { PATH: '/usr/bin' },
+      getuid: () => 1000,
+      existsSync: (p) => p === '/run/user/1000/bus',
+    });
+    expect(env.DBUS_SESSION_BUS_ADDRESS).toBe('unix:path=/run/user/1000/bus');
+    expect(env.PATH).toBe('/usr/bin'); // existing vars preserved
+  });
+
+  it('never overrides an address that is already set', () => {
+    const env = resolveSpawnEnv({
+      env: { DBUS_SESSION_BUS_ADDRESS: 'unix:path=/already/here' },
+      getuid: () => 1000,
+      existsSync: () => true,
+    });
+    expect(env.DBUS_SESSION_BUS_ADDRESS).toBe('unix:path=/already/here');
+  });
+
+  it('leaves env unchanged when the bus socket does not exist', () => {
+    const env = resolveSpawnEnv({
+      env: { PATH: '/usr/bin' },
+      getuid: () => 1000,
+      existsSync: () => false,
+    });
+    expect(env.DBUS_SESSION_BUS_ADDRESS).toBeUndefined();
   });
 });

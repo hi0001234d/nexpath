@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import type { SpawnOptions } from 'node:child_process';
+import { existsSync } from 'node:fs';
 
 /**
  * IPC layer between the VS Code extension (Layer B) and the existing nexpath
@@ -69,6 +70,41 @@ function buildArgs(
   return args;
 }
 
+/**
+ * Build the child env, restoring `DBUS_SESSION_BUS_ADDRESS` when it's missing.
+ *
+ * Layer C's `nexpath stop` renders the decision-session popup by spawning a
+ * terminal (`gnome-terminal` on Linux), which is a DBus client — it asks
+ * `gnome-terminal-server` over the session bus to open the window. When Cursor
+ * itself is launched without `DBUS_SESSION_BUS_ADDRESS` (desktop launchers,
+ * remote / VNC / `DISPLAY=:1` sessions, or an already-running instance started
+ * in a different session), the extension host — and therefore the spawned
+ * `nexpath stop` — has no session bus, so gnome-terminal silently fails to open
+ * and the advisory is `stop_skipped` with no popup. The fix: if the var is
+ * absent, point it at the standard per-user bus socket `/run/user/<uid>/bus`
+ * when that socket actually exists. Never overrides an address that's already
+ * present, and no-ops on non-Linux / when the socket is missing.
+ */
+export interface SpawnEnvDeps {
+  env?: NodeJS.ProcessEnv;
+  getuid?: () => number;
+  existsSync?: (path: string) => boolean;
+}
+
+export function resolveSpawnEnv(deps: SpawnEnvDeps = {}): NodeJS.ProcessEnv {
+  const getuid =
+    deps.getuid ?? (typeof process.getuid === 'function' ? process.getuid.bind(process) : undefined);
+  const fsExists = deps.existsSync ?? existsSync;
+  const env = { ...(deps.env ?? process.env) };
+  if (!env.DBUS_SESSION_BUS_ADDRESS && getuid) {
+    const socket = `/run/user/${getuid()}/bus`;
+    if (fsExists(socket)) {
+      env.DBUS_SESSION_BUS_ADDRESS = `unix:path=${socket}`;
+    }
+  }
+  return env;
+}
+
 function buildSpawnOptions(opts: IpcOptions): SpawnOptions {
   // `cwd` is required by Layer C for correct project-root resolution:
   //   - `nexpath auto` defaults its `--project` flag to `process.cwd()` of the
@@ -77,9 +113,12 @@ function buildSpawnOptions(opts: IpcOptions): SpawnOptions {
   //   - `nexpath stop` reads `payload.cwd` from stdin (we pass it explicitly
   //     in `spawnStop`), but also benefits from spawning at the right cwd
   //     for consistency with auto.
+  // `env` restores the session bus so Layer C's gnome-terminal popup can open
+  // even when Cursor was launched without DBUS_SESSION_BUS_ADDRESS.
   return {
     stdio: ['pipe', 'pipe', 'pipe'],
     cwd:   opts.cwd ?? process.cwd(),
+    env:   resolveSpawnEnv(),
   };
 }
 
