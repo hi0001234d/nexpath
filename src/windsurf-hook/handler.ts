@@ -12,6 +12,7 @@
  *   {"agent_action_name":"pre_user_prompt","trajectory_id":"…","execution_id":"…",
  *    "model_name":"SWE-1.6 Slow","tool_info":{"user_prompt":"what is 2 + 2."}}
  */
+import type { ChildProcess } from 'node:child_process';
 import { spawnAuto, spawnStop, type SpawnDeps } from './spawn.js';
 
 export type WindsurfHookEvent = 'pre_user_prompt' | 'post_cascade_response';
@@ -27,6 +28,8 @@ export interface WindsurfHookPayload {
 export interface RunResult {
   action: 'auto' | 'stop' | 'ignored';
   reason?: string;
+  /** The spawned Layer-C child (auto/stop) so the caller can await its exit. */
+  child?: ChildProcess | null;
 }
 
 /** Parse the hook's stdin JSON; returns null on malformed / non-object input. */
@@ -51,14 +54,12 @@ export function runWindsurfHook(event: string, raw: string, deps: SpawnDeps): Ru
     if (typeof prompt !== 'string' || prompt.trim() === '') {
       return { action: 'ignored', reason: 'no user_prompt in payload' };
     }
-    spawnAuto(prompt, deps);
-    return { action: 'auto' };
+    return { action: 'auto', child: spawnAuto(prompt, deps) };
   }
 
   if (event === 'post_cascade_response') {
     // stop needs only cwd; the response body is irrelevant to rendering the advisory.
-    spawnStop(deps);
-    return { action: 'stop' };
+    return { action: 'stop', child: spawnStop(deps) };
   }
 
   return { action: 'ignored', reason: `unhandled event: ${event}` };

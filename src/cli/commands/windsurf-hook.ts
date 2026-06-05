@@ -10,7 +10,27 @@
  * Always exits 0 — a hook must never block or break Cascade.
  */
 import type { Command } from 'commander';
+import type { ChildProcess } from 'node:child_process';
 import { runWindsurfHook, type RunResult } from '../../windsurf-hook/handler.js';
+
+/**
+ * Resolve once the spawned `auto`/`stop` child exits (so the hook has finished its
+ * work — `auto` has persisted the advisory, `stop` has shown the popup + got the
+ * selection — before we return). Resolves immediately if there is no child, and
+ * is bounded by `timeoutMs` so a hook can never hang forever.
+ */
+export function awaitChild(child: ChildProcess | null | undefined, timeoutMs = 600_000): Promise<void> {
+  if (!child) return Promise.resolve();
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (): void => { if (!done) { done = true; resolve(); } };
+    const timer = setTimeout(finish, timeoutMs);
+    if (typeof timer.unref === 'function') timer.unref();
+    child.on('exit', finish);
+    child.on('close', finish);
+    child.on('error', finish);
+  });
+}
 
 /** Read all of stdin (returns '' immediately when attached to a TTY / no pipe). */
 export function defaultReadStdin(): Promise<string> {
@@ -58,7 +78,10 @@ export function registerWindsurfHookCommand(program: Command): void {
     .option('-p, --project <dir>', 'Project root (defaults to the current working directory)')
     .action(async (event: string, opts: { project?: string }) => {
       try {
-        await handleWindsurfHookCli(event, opts);
+        const result = await handleWindsurfHookCli(event, opts);
+        // Await the Layer-C child so the prompt is fully written + auto has
+        // persisted the advisory (and stop has rendered the popup) before we exit.
+        await awaitChild(result.child);
       } catch {
         // Never break Cascade — swallow any error and exit cleanly.
       }
