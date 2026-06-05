@@ -1413,7 +1413,11 @@ describe('ensureLinuxClipboard', () => {
   const mockSpawn = vi.fn();
   const mockExec  = vi.fn();
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    mockSpawn.mockReset();
+    mockExec.mockReset();
+    vi.restoreAllMocks();
+  });
 
   it('skips on macOS (pbcopy built-in)', async () => {
     await ensureLinuxClipboard({ platform: 'darwin', spawnFn: mockSpawn as any });

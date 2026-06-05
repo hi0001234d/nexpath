@@ -497,6 +497,7 @@ describe('runStop — telemetry events', () => {
     store = await openStore(':memory:');
     vi.mocked(writeTelemetry).mockClear();
     vi.mocked(generateOptionList).mockClear();
+    vi.mocked(recentPromptMetadata).mockClear();
   });
   afterEach(() => {
     store.db.close();
