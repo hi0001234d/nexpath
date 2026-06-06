@@ -116,10 +116,18 @@ function buildSpawnOptions(opts: IpcOptions): SpawnOptions {
   //     for consistency with auto.
   // `env` restores the session bus so Layer C's gnome-terminal popup can open
   // even when Cursor was launched without DBUS_SESSION_BUS_ADDRESS.
+  //
+  // `shell` on Windows: the resolved CLI is `nexpath.cmd` (npm-link/global bin)
+  // or `node`-shebang script; Node's spawn refuses to execute a `.cmd` shim
+  // without a shell (post CVE-2024-27980) → `spawnAuto failed` / capture never
+  // runs. Spawning through cmd.exe lets Windows resolve the `.cmd`. POSIX is
+  // unaffected (shell stays false). Args here are simple (`auto`/`stop` +
+  // `--db <~/.nexpath path>`), so shell concatenation is safe.
   return {
     stdio: ['pipe', 'pipe', 'pipe'],
     cwd:   opts.cwd ?? process.cwd(),
     env:   resolveSpawnEnv(),
+    shell: process.platform === 'win32',
   };
 }
 
