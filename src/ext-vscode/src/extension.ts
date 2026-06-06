@@ -239,6 +239,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   watcher = createChatHistoryWatcher({
     targets,
+    // Polling backstop: fs.watch alone is unreliable on Windows for the SQLite
+    // WAL recreate pattern (fires once then goes silent → only the first prompts
+    // captured). Re-read every 2s; dedup makes it safe (no re-emit of seen
+    // prompts). Low latency still comes from fs.watch when it does fire.
+    pollMs: 2000,
     onEvent: (event) => {
       log(`[nexpath] watcher event: prompt="${event.prompt.slice(0, 80)}" raw_session_id=${event.rawSessionId} extractor=${event.extractorId}`);
       // The watcher's onEvent is sync-fire-and-forget; the handler returns

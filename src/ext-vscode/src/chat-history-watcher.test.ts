@@ -108,6 +108,37 @@ describe('createChatHistoryWatcher', () => {
     expect(watchFn).toHaveBeenCalledWith('/b/state.vscdb-shm', expect.any(Function));
   });
 
+  it('pollMs backstop captures new prompts even when fs.watch NEVER fires (Windows)', async () => {
+    // Simulates the Windows failure: fs.watch goes silent after start, so the
+    // ONLY way new prompts surface is the poll. No watcher .emit() is called.
+    readItemTableFn.mockResolvedValue([]);
+    const extractor = makeExtractor('test', [ev('polled-prompt', 's-poll', '/p/state.vscdb')]);
+    const w = createChatHistoryWatcher({
+      targets: [cursorTarget('/p/state.vscdb', extractor)],
+      onEvent,
+      watchFn: watchFn as never,
+      readItemTableFn,
+      debounceMs: 5,
+      pollMs: 10,
+    });
+    w.start();
+    await new Promise((r) => setTimeout(r, 20)); // prime pass reads [] → no emit
+    expect(onEvent).toHaveBeenCalledTimes(0);
+
+    // A new prompt lands; fs.watch is dead → only the poll can catch it.
+    readItemTableFn.mockResolvedValue([{ key: 'k', value: 'v' }]);
+    await new Promise((r) => setTimeout(r, 40)); // poll (10ms) re-reads → emit
+    expect(onEvent).toHaveBeenCalledTimes(1);
+    expect(onEvent.mock.calls[0]![0].prompt).toBe('polled-prompt');
+
+    // stop() must cancel the poll — no further emits after a new row appears.
+    w.stop();
+    onEvent.mockClear();
+    readItemTableFn.mockResolvedValue([{ key: 'k2', value: 'v2' }]);
+    await new Promise((r) => setTimeout(r, 40));
+    expect(onEvent).toHaveBeenCalledTimes(0);
+  });
+
   it('WAL sibling change triggers a re-read of the main target (WAL-mode liveness)', async () => {
     // Start with no rows so the initial pass primes nothing; then a NEW row
     // appears via a WAL-sibling change and that should produce one emit.

@@ -244,6 +244,18 @@ export interface ChatHistoryWatcherOptions {
   // ── Dependency injection (tests substitute these) ─────────────────────────
   /** Debounce window for coalescing fs.watch events. Default 250 ms. */
   debounceMs?: number;
+  /**
+   * Polling backstop interval (ms). When > 0, every target is re-read on this
+   * interval IN ADDITION to fs.watch. Default 0 (off — preserves test behaviour;
+   * production wiring sets it). This exists because `fs.watch` is unreliable on
+   * Windows for SQLite files written by another process: WAL checkpoints
+   * delete+recreate the `-wal`/`-shm` siblings, which orphans the Windows watch
+   * handle so it fires once (or not at all) and then goes silent — observed as
+   * "only the first 1–2 prompts captured, then nothing". Polling re-reads
+   * regardless; the dedup set means already-seen prompts are never re-emitted,
+   * so a poll only surfaces genuinely new prompts.
+   */
+  pollMs?: number;
   /** Inject `fs.watch` (defaults to node:fs `watch`). */
   watchFn?: typeof watch;
   /** Inject the ItemTable reader (defaults to better-sqlite3 WAL-aware reader). */
@@ -272,6 +284,7 @@ export function createChatHistoryWatcher(
   opts: ChatHistoryWatcherOptions,
 ): ChatHistoryWatcher {
   const debounceMs = opts.debounceMs ?? 250;
+  const pollMs = opts.pollMs ?? 0;
   const watchFn = opts.watchFn ?? watch;
   const readItemTableFn = opts.readItemTableFn ?? defaultReadItemTable;
   const readWindsurfJsonFilesFn =
@@ -280,6 +293,7 @@ export function createChatHistoryWatcher(
   const nowFn = opts.nowFn ?? (() => new Date());
 
   const fsWatchers: FSWatcher[] = [];
+  let pollTimer: ReturnType<typeof setInterval> | undefined;
   const debouncers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Deduplication key per emitted event so we never emit the same prompt twice. */
   const seenSignatures = new Set<string>();
@@ -508,8 +522,22 @@ export function createChatHistoryWatcher(
           reportError(err, target.path);
         }
       }
+
+      // Polling backstop — re-read every target on an interval so capture does
+      // not depend on fs.watch firing (which is unreliable on Windows for the
+      // SQLite WAL recreate pattern; see pollMs doc). Dedup makes this safe: a
+      // poll only emits prompts not already seen.
+      if (pollMs > 0) {
+        pollTimer = setInterval(() => {
+          for (const target of opts.targets) schedule(target);
+        }, pollMs);
+        if (typeof (pollTimer as { unref?: () => void }).unref === 'function') {
+          (pollTimer as { unref: () => void }).unref();
+        }
+      }
     },
     stop(): void {
+      if (pollTimer !== undefined) { clearInterval(pollTimer); pollTimer = undefined; }
       for (const t of debouncers.values()) clearTimeout(t);
       debouncers.clear();
       for (const w of fsWatchers) {
