@@ -28,3 +28,26 @@ export const ALL_LINE_KINDS: readonly LineKind[] = [
   'pinch-label',
   'question',
 ] as const;
+
+/**
+ * Apply per-LineKind styling to a layout-emitted line.
+ *
+ * Layout has already done line-wrapping, truncation, padding, and `...`
+ * marker insertion before calling this function — styler does NOT
+ * re-truncate or re-wrap. ANSI escape codes are the styler's
+ * responsibility; layout never emits them.
+ *
+ * Initial implementation is pass-through (returns input unchanged for
+ * every kind). The per-kind ANSI / picocolors mapping is added by the
+ * styling implementation pass.
+ *
+ * Default behavior for an unknown kind: return the line unchanged
+ * (graceful fallback per the LineKind extensibility rule above).
+ *
+ * @param line  The raw text content from the layout.
+ * @param kind  The line-kind tag.
+ * @returns     The styled string ready to write to stdout.
+ */
+export function styler(line: string, _kind: LineKind): string {
+  return line;
+}

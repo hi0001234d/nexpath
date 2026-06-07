@@ -4,9 +4,9 @@ import type {
   NonStandardWhyHelpVariants,
   WhyHelpEntry,
   WhyHelpVariants,
-} from './why-help-types.js';
+} from './why-help.js';
 
-describe('why-help-types', () => {
+describe('why-help — type shape', () => {
   it('UniversalWhyHelpVariants requires formal + casual + beginner', () => {
     const ok: UniversalWhyHelpVariants = {
       formal:   'F',

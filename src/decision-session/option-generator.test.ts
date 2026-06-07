@@ -66,9 +66,9 @@ function makeClient(responseText: string) {
 
 function validResponse(content = TASK_REVIEW): string {
   return JSON.stringify({
-    l1: content.L1.map((o) => `[adapted] ${o}`),
-    l2: content.L2.map((o) => `[adapted] ${o}`),
-    l3: content.L3.map((o) => `[adapted] ${o}`),
+    l1: content.L1.map((o) => `[adapted] ${o.option}`),
+    l2: content.L2.map((o) => `[adapted] ${o.option}`),
+    l3: content.L3.map((o) => `[adapted] ${o.option}`),
   });
 }
 
@@ -185,8 +185,8 @@ describe('buildAdaptationPrompt — ordinal labels in profile context line', () 
 describe('buildAdaptationPrompt — static options in prompt', () => {
   it('includes each L1 option text in the prompt', () => {
     const prompt = buildAdaptationPrompt(TASK_REVIEW, makeProfile(), undefined, []);
-    for (const opt of TASK_REVIEW.L1) {
-      expect(prompt).toContain(opt.slice(0, 40)); // first 40 chars to avoid wrapping issues
+    for (const entry of TASK_REVIEW.L1.map((e) => e.option)) {
+      expect(prompt).toContain(entry.slice(0, 40)); // first 40 chars to avoid wrapping issues
     }
   });
 
@@ -320,7 +320,7 @@ describe('validateGeneratedOptions', () => {
 
   it('returns null when any item is an empty string', () => {
     const bad = JSON.stringify({
-      l1: [...TASK_REVIEW.L1.slice(0, -1), ''],
+      l1: [...TASK_REVIEW.L1.map((e) => e.option).slice(0, -1), ''],
       l2: TASK_REVIEW.L2.map((o) => o),
       l3: TASK_REVIEW.L3.map((o) => o),
     });
@@ -329,7 +329,7 @@ describe('validateGeneratedOptions', () => {
 
   it('returns null when any item is not a string', () => {
     const bad = JSON.stringify({
-      l1: [...TASK_REVIEW.L1.slice(0, -1), 42],
+      l1: [...TASK_REVIEW.L1.map((e) => e.option).slice(0, -1), 42],
       l2: TASK_REVIEW.L2.map((o) => o),
       l3: TASK_REVIEW.L3.map((o) => o),
     });
@@ -365,7 +365,7 @@ describe('validateGeneratedOptions — multi-step fallback', () => {
     });
     const result = validateGeneratedOptions(raw, TASK_REVIEW_BEGINNER);
     expect(result).not.toBeNull();
-    expect(result!.l1[0]).toBe(TASK_REVIEW_BEGINNER.L1[0]);
+    expect(result!.l1[0]).toBe(TASK_REVIEW_BEGINNER.L1[0].option);
     expect(result!.l1[1]).toBe('Check done');
     expect(result!.l2[0]).toBe('Looks good');
     expect(result!.l3[0]).toBe('Nothing wrong');
@@ -379,7 +379,7 @@ describe('validateGeneratedOptions — multi-step fallback', () => {
     });
     const result = validateGeneratedOptions(raw, TASK_REVIEW_BEGINNER);
     expect(result).not.toBeNull();
-    expect(result!.l1[0]).toBe(TASK_REVIEW_BEGINNER.L1[0]);
+    expect(result!.l1[0]).toBe(TASK_REVIEW_BEGINNER.L1[0].option);
     expect(result!.l1[1]).toBe('Check done');
     expect(result!.l2[0]).toBe('Looks good');
     expect(result!.l3[0]).toBe('Nothing wrong');
@@ -649,7 +649,7 @@ describe('buildAdaptationPrompt — type contract', () => {
 
   it('mixed content (ARRAY + STRING in L1) → correct per-position labels', () => {
     const prompt = buildAdaptationPrompt(TASK_REVIEW_BEGINNER, makeProfile(), undefined, []);
-    // TASK_REVIEW_BEGINNER.L1[0] has \n (3 steps), L1[1] is a plain string
+    // TASK_REVIEW_BEGINNER.L1[0].option has \n (3 steps), L1[1] is a plain string
     expect(prompt).toContain('l1: [ARRAY(3), STRING]');
   });
 
@@ -831,7 +831,7 @@ describe('Issue 16 Phase 1 — ABSENCE_CORRECTION_SEEKING_BEGINNER content', () 
   });
 
   it('L1[0] is a 3-step ARRAY with corrected imperative text', () => {
-    const steps = ABSENCE_CORRECTION_SEEKING_BEGINNER.L1[0].split('\n');
+    const steps = ABSENCE_CORRECTION_SEEKING_BEGINNER.L1[0].option.split('\n');
     expect(steps).toHaveLength(3);
     expect(steps[0]).toBe('1. Look at what was just built again — but this time, find what might be wrong with it.');
     expect(steps[1]).toBe('2. Share what you find with me.');
@@ -839,25 +839,25 @@ describe('Issue 16 Phase 1 — ABSENCE_CORRECTION_SEEKING_BEGINNER content', () 
   });
 
   it('L1[1] has no relay wrapper or coaching-voice framing', () => {
-    expect(ABSENCE_CORRECTION_SEEKING_BEGINNER.L1[1]).toBe(
+    expect(ABSENCE_CORRECTION_SEEKING_BEGINNER.L1[1].option).toBe(
       "What's the part of what was just built you're least sure about? — share what you find with me so we can check together.",
     );
   });
 
   it('L2[0] uses direct imperative', () => {
-    expect(ABSENCE_CORRECTION_SEEKING_BEGINNER.L2[0]).toBe(
+    expect(ABSENCE_CORRECTION_SEEKING_BEGINNER.L2[0].option).toBe(
       'Point out any part of what was just built that might not be right — then share what you find with me.',
     );
   });
 
   it('L3[0] uses direct imperative', () => {
-    expect(ABSENCE_CORRECTION_SEEKING_BEGINNER.L3[0]).toBe(
+    expect(ABSENCE_CORRECTION_SEEKING_BEGINNER.L3[0].option).toBe(
       'Find one thing in what was just built that might be wrong or could be done better.',
     );
   });
 
   it('no option contains coaching-voice relay patterns', () => {
-    const opts = [...ABSENCE_CORRECTION_SEEKING_BEGINNER.L1, ...ABSENCE_CORRECTION_SEEKING_BEGINNER.L2, ...ABSENCE_CORRECTION_SEEKING_BEGINNER.L3];
+    const opts = [...ABSENCE_CORRECTION_SEEKING_BEGINNER.L1.map((e) => e.option), ...ABSENCE_CORRECTION_SEEKING_BEGINNER.L2.map((e) => e.option), ...ABSENCE_CORRECTION_SEEKING_BEGINNER.L3.map((e) => e.option)];
     for (const text of opts) {
       for (const p of RELAY_PATTERNS) {
         expect(text, `found "${p}" in: ${text}`).not.toContain(p);
@@ -877,7 +877,7 @@ describe('Issue 16 Phase 1 — ABSENCE_PROMPT_CONTEXT_BEGINNER content', () => {
   });
 
   it('L1[0] is a 3-step ARRAY with corrected text — no relay, no phantom reference', () => {
-    const steps = ABSENCE_PROMPT_CONTEXT_BEGINNER.L1[0].split('\n');
+    const steps = ABSENCE_PROMPT_CONTEXT_BEGINNER.L1[0].option.split('\n');
     expect(steps).toHaveLength(3);
     expect(steps[0]).toBe("1. Think about what you've been building in this session.");
     expect(steps[1]).toBe("2. Share with me: have you seen the original plan for what we're building, or have you just been following each instruction without knowing the bigger picture?");
@@ -885,25 +885,25 @@ describe('Issue 16 Phase 1 — ABSENCE_PROMPT_CONTEXT_BEGINNER content', () => {
   });
 
   it('L1[1] has no phantom plan reference and no relay', () => {
-    expect(ABSENCE_PROMPT_CONTEXT_BEGINNER.L1[1]).toBe(
+    expect(ABSENCE_PROMPT_CONTEXT_BEGINNER.L1[1].option).toBe(
       "Walk me through what you've been working from in this session — have you seen the full plan, or just individual instructions? Check whether what was just built matches the original plan if you have it, and share what you find with me.",
     );
   });
 
   it('L2[0] has no phantom reference and uses ask-me fallback', () => {
-    expect(ABSENCE_PROMPT_CONTEXT_BEGINNER.L2[0]).toBe(
+    expect(ABSENCE_PROMPT_CONTEXT_BEGINNER.L2[0].option).toBe(
       'Have you seen the plan or the description of what this feature is supposed to do? If not, ask me for it — then check that what was just built matches and share what you find.',
     );
   });
 
   it('L3[0] uses second-person direct address', () => {
-    expect(ABSENCE_PROMPT_CONTEXT_BEGINNER.L3[0]).toBe(
+    expect(ABSENCE_PROMPT_CONTEXT_BEGINNER.L3[0].option).toBe(
       'Do you know what the full plan says for this feature, or have you been building without seeing it?',
     );
   });
 
   it('no option contains coaching-voice relay or third-person AI patterns', () => {
-    const opts = [...ABSENCE_PROMPT_CONTEXT_BEGINNER.L1, ...ABSENCE_PROMPT_CONTEXT_BEGINNER.L2, ...ABSENCE_PROMPT_CONTEXT_BEGINNER.L3];
+    const opts = [...ABSENCE_PROMPT_CONTEXT_BEGINNER.L1.map((e) => e.option), ...ABSENCE_PROMPT_CONTEXT_BEGINNER.L2.map((e) => e.option), ...ABSENCE_PROMPT_CONTEXT_BEGINNER.L3.map((e) => e.option)];
     for (const text of opts) {
       for (const p of RELAY_PATTERNS) {
         expect(text, `found "${p}" in: ${text}`).not.toContain(p);
@@ -921,35 +921,35 @@ describe('Issue 16 Phase 1 — ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER 
   });
 
   it('L1[0] step count is preserved at 2', () => {
-    const steps = ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L1[0].split('\n');
+    const steps = ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L1[0].option.split('\n');
     expect(steps).toHaveLength(2);
   });
 
   it('L1[0] step 1 has no self-referential "ask the AI" phrase', () => {
-    const steps = ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L1[0].split('\n');
+    const steps = ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L1[0].option.split('\n');
     expect(steps[0]).toBe('1. When you send several things at once, the results get messy and hard to check. Try focusing on just one thing per message.');
   });
 
   it('L1[0] step 2 is unchanged', () => {
-    const steps = ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L1[0].split('\n');
+    const steps = ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L1[0].option.split('\n');
     expect(steps[1]).toBe("2. What's the most important thing to do right now? Start with that — then we'll move to the next.");
   });
 
   it('L1[1], L2[0], L3[0] are unchanged', () => {
-    expect(ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L1[1]).toBe(
+    expect(ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L1[1].option).toBe(
       "One task per message works better than many — it's easier to see if it worked, easier to fix if it didn't, and easier to understand what happened. What's the single next step?",
     );
-    expect(ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L2[0]).toBe(
+    expect(ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L2[0].option).toBe(
       "What's the one thing to do right now? Focus on that first — we'll do the rest after.",
     );
-    expect(ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L3[0]).toBe(
+    expect(ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L3[0].option).toBe(
       "One thing at a time — what's the most important next step?",
     );
   });
 
   it('L1[0] contains no "ask the AI" self-referential phrase', () => {
-    expect(ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L1[0]).not.toContain('ask the AI');
-    expect(ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L1[0]).not.toContain('Ask the AI');
+    expect(ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L1[0].option).not.toContain('ask the AI');
+    expect(ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER.L1[0].option).not.toContain('Ask the AI');
   });
 });
 
@@ -962,46 +962,46 @@ describe('Issue 16 Phase 2 — ABSENCE_CORRECTION_SEEKING content', () => {
   });
 
   it('L1[0] is the self-review corrected text', () => {
-    expect(ABSENCE_CORRECTION_SEEKING.L1[0]).toBe(
+    expect(ABSENCE_CORRECTION_SEEKING.L1[0].option).toBe(
       'Self-review what was just built: identify any assumptions that may be incorrect, logic that could fail under edge cases, and any parts of the implementation you are not confident about.',
     );
   });
 
   it('L1[1] is the adversarial-argument corrected text', () => {
-    expect(ABSENCE_CORRECTION_SEEKING.L1[1]).toBe(
+    expect(ABSENCE_CORRECTION_SEEKING.L1[1].option).toBe(
       'Argue against your own implementation of what was just built — what would a skeptical senior engineer flag, what alternative approaches were not considered, and what are the weakest parts of this solution?',
     );
   });
 
   it('L1[2] is the failure-analysis corrected text', () => {
-    expect(ABSENCE_CORRECTION_SEEKING.L1[2]).toBe(
+    expect(ABSENCE_CORRECTION_SEEKING.L1[2].option).toBe(
       'Produce a failure analysis of what was just built: what are the most likely ways this implementation fails in production, what inputs would cause incorrect behaviour, and what would you change if rebuilding this from scratch?',
     );
   });
 
   it('L2[0] is the senior-engineer-review corrected text', () => {
-    expect(ABSENCE_CORRECTION_SEEKING.L2[0]).toBe(
+    expect(ABSENCE_CORRECTION_SEEKING.L2[0].option).toBe(
       'Review what was just built critically — what would you change or flag if reviewing this as a senior engineer rather than as the author?',
     );
   });
 
   it('L2[1] is the self-critique corrected text', () => {
-    expect(ABSENCE_CORRECTION_SEEKING.L2[1]).toBe(
+    expect(ABSENCE_CORRECTION_SEEKING.L2[1].option).toBe(
       'Self-critique what was just built: what are the weakest parts, and what were you least confident about when generating this?',
     );
   });
 
   it('L3[0] is the least-confident corrected text', () => {
-    expect(ABSENCE_CORRECTION_SEEKING.L3[0]).toBe(
+    expect(ABSENCE_CORRECTION_SEEKING.L3[0].option).toBe(
       'Identify the part of what was just built you are least confident is correct.',
     );
   });
 
   it('no option text contains coaching-voice relay patterns', () => {
     const allTexts = [
-      ...ABSENCE_CORRECTION_SEEKING.L1,
-      ...ABSENCE_CORRECTION_SEEKING.L2,
-      ...ABSENCE_CORRECTION_SEEKING.L3,
+      ...ABSENCE_CORRECTION_SEEKING.L1.map((e) => e.option),
+      ...ABSENCE_CORRECTION_SEEKING.L2.map((e) => e.option),
+      ...ABSENCE_CORRECTION_SEEKING.L3.map((e) => e.option),
     ];
     const patterns = ['Ask the AI', 'ask the AI', 'ask it to', 'what it says', 'its answer', 'Has the AI', 'Does the AI', 'has it seen', 'has it been'];
     for (const text of allTexts) {
@@ -1021,46 +1021,46 @@ describe('Issue 16 Phase 2 — ABSENCE_CORRECTION_SEEKING_CASUAL content', () =>
   });
 
   it('L1[0] is the second-look critique corrected text', () => {
-    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L1[0]).toBe(
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L1[0].option).toBe(
       "Take a second look at what was just built — not to explain it, but to actually critique it. What would you do differently, what assumptions did you make that might be wrong, and what are the riskiest parts?",
     );
   });
 
   it('L1[1] is the argue-against corrected text', () => {
-    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L1[1]).toBe(
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L1[1].option).toBe(
       "Argue against your own output for what was just built: what's the case against this approach, what did you not consider, and what's the part you're least confident about?",
     );
   });
 
   it('L1[2] is the find-a-bug corrected text', () => {
-    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L1[2]).toBe(
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L1[2].option).toBe(
       'If you had to find a bug or a flaw in what was just built, what would it be? Don\'t let yourself off the hook with "it looks fine."',
     );
   });
 
   it('L2[0] is the reviewer corrected text', () => {
-    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L2[0]).toBe(
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L2[0].option).toBe(
       "Review what was just built as if you hadn't written it — what would you flag or change?",
     );
   });
 
   it('L2[1] is the weakest-part corrected text', () => {
-    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L2[1]).toBe(
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L2[1].option).toBe(
       'Identify the weakest part of what was just built and explain what you\'re not sure about.',
     );
   });
 
   it('L3[0] is the least-confident corrected text', () => {
-    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L3[0]).toBe(
+    expect(ABSENCE_CORRECTION_SEEKING_CASUAL.L3[0].option).toBe(
       "Identify the part of what was just built you're least confident is correct.",
     );
   });
 
   it('no option text contains coaching-voice relay patterns', () => {
     const allTexts = [
-      ...ABSENCE_CORRECTION_SEEKING_CASUAL.L1,
-      ...ABSENCE_CORRECTION_SEEKING_CASUAL.L2,
-      ...ABSENCE_CORRECTION_SEEKING_CASUAL.L3,
+      ...ABSENCE_CORRECTION_SEEKING_CASUAL.L1.map((e) => e.option),
+      ...ABSENCE_CORRECTION_SEEKING_CASUAL.L2.map((e) => e.option),
+      ...ABSENCE_CORRECTION_SEEKING_CASUAL.L3.map((e) => e.option),
     ];
     const patterns = ['Ask the AI', 'ask the AI', 'ask it to', 'what it says', 'its answer', 'Has the AI', 'Does the AI', 'has it seen', 'has it been'];
     for (const text of allTexts) {
@@ -1080,46 +1080,46 @@ describe('Issue 16 Phase 2 — ABSENCE_PROMPT_CONTEXT content', () => {
   });
 
   it('L1[0] is the review-prompts corrected text', () => {
-    expect(ABSENCE_PROMPT_CONTEXT.L1[0]).toBe(
+    expect(ABSENCE_PROMPT_CONTEXT.L1[0].option).toBe(
       "Review the prompts used to build this feature: are they grounded in the project's spec, architecture decisions, and task breakdown, or are they ad hoc instructions that you are implementing without access to the full planning context? If context is missing, inject it now before the next prompt.",
     );
   });
 
   it('L1[1] is the audit-context-richness corrected text', () => {
-    expect(ABSENCE_PROMPT_CONTEXT.L1[1]).toBe(
+    expect(ABSENCE_PROMPT_CONTEXT.L1[1].option).toBe(
       'Audit the context richness of the prompts used to build this feature: do you have access to the current spec, the established architecture, and the specific acceptance criteria for what was just built, or are you making assumptions that a context-rich prompt would have resolved?',
     );
   });
 
   it('L1[2] is the cross-confirm corrected text', () => {
-    expect(ABSENCE_PROMPT_CONTEXT.L1[2]).toBe(
+    expect(ABSENCE_PROMPT_CONTEXT.L1[2].option).toBe(
       "Cross-confirm that what was just built is aligned with the project's planning artifacts: paste the relevant spec section, architecture diagram, or task definition into the conversation and verify that your implementation matches what was planned.",
     );
   });
 
   it('L2[0] is the have-spec corrected text', () => {
-    expect(ABSENCE_PROMPT_CONTEXT.L2[0]).toBe(
+    expect(ABSENCE_PROMPT_CONTEXT.L2[0].option).toBe(
       'Do you have the spec and architecture context needed to build this feature correctly, or have you been working from ad hoc instructions? Inject the relevant planning context before continuing.',
     );
   });
 
   it('L2[1] is the paste-spec corrected text', () => {
-    expect(ABSENCE_PROMPT_CONTEXT.L2[1]).toBe(
+    expect(ABSENCE_PROMPT_CONTEXT.L2[1].option).toBe(
       'Paste the spec or acceptance criteria for this feature into the conversation and check whether what was just built matches what was planned.',
     );
   });
 
   it('L3[0] is the enough-context corrected text', () => {
-    expect(ABSENCE_PROMPT_CONTEXT.L3[0]).toBe(
+    expect(ABSENCE_PROMPT_CONTEXT.L3[0].option).toBe(
       'Do you have enough context about the spec and architecture to be building this feature correctly, or are you working without the full picture?',
     );
   });
 
   it('no option text contains coaching-voice relay patterns', () => {
     const allTexts = [
-      ...ABSENCE_PROMPT_CONTEXT.L1,
-      ...ABSENCE_PROMPT_CONTEXT.L2,
-      ...ABSENCE_PROMPT_CONTEXT.L3,
+      ...ABSENCE_PROMPT_CONTEXT.L1.map((e) => e.option),
+      ...ABSENCE_PROMPT_CONTEXT.L2.map((e) => e.option),
+      ...ABSENCE_PROMPT_CONTEXT.L3.map((e) => e.option),
     ];
     const patterns = ['Ask the AI', 'ask the AI', 'ask it to', 'what it says', 'its answer', 'Has the AI', 'Does the AI', 'has it seen', 'has it been'];
     for (const text of allTexts) {
@@ -1139,46 +1139,46 @@ describe('Issue 16 Phase 2 — ABSENCE_PROMPT_CONTEXT_CASUAL content', () => {
   });
 
   it('L1[0] is the check-prompts corrected text', () => {
-    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L1[0]).toBe(
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L1[0].option).toBe(
       "Check the prompts used to build this feature — do you actually know what the spec says, what the architecture looks like, and what the task is supposed to achieve? If you've just been getting ad hoc instructions, paste the relevant context in now so you're building the right thing.",
     );
   });
 
   it('L1[1] is the full-picture corrected text', () => {
-    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L1[1]).toBe(
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L1[1].option).toBe(
       "Have you been working with the full picture, or just the last thing asked of you? If there's a spec, an architecture doc, or a task breakdown you haven't seen, let me know — then check that what was just built matches up once you have the full context.",
     );
   });
 
   it('L1[2] is the paste-and-confirm corrected text', () => {
-    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L1[2]).toBe(
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L1[2].option).toBe(
       "Paste the relevant spec or task definition into the conversation and confirm that what was just built actually does what it's supposed to. If there's a mismatch, now is a better time to find it than after shipping.",
     );
   });
 
   it('L2[0] is the enough-context corrected text', () => {
-    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L2[0]).toBe(
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L2[0].option).toBe(
       "Do you have enough context to build this feature correctly — have you seen the spec, the architecture, or the task breakdown? If not, share the relevant bits now.",
     );
   });
 
   it('L2[1] is the paste-and-check corrected text (unchanged)', () => {
-    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L2[1]).toBe(
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L2[1].option).toBe(
       'Paste the spec or the definition of done for this feature into the conversation and check whether what was just built actually matches it.',
     );
   });
 
   it('L3[0] is the know-the-spec corrected text', () => {
-    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L3[0]).toBe(
+    expect(ABSENCE_PROMPT_CONTEXT_CASUAL.L3[0].option).toBe(
       "Do you know what the spec says for this feature, or have you been building without seeing it?",
     );
   });
 
   it('no option text contains coaching-voice relay patterns', () => {
     const allTexts = [
-      ...ABSENCE_PROMPT_CONTEXT_CASUAL.L1,
-      ...ABSENCE_PROMPT_CONTEXT_CASUAL.L2,
-      ...ABSENCE_PROMPT_CONTEXT_CASUAL.L3,
+      ...ABSENCE_PROMPT_CONTEXT_CASUAL.L1.map((e) => e.option),
+      ...ABSENCE_PROMPT_CONTEXT_CASUAL.L2.map((e) => e.option),
+      ...ABSENCE_PROMPT_CONTEXT_CASUAL.L3.map((e) => e.option),
     ];
     const patterns = ['Ask the AI', 'ask the AI', 'ask it to', 'what it says', 'its answer', 'Has the AI', 'Does the AI', 'has it seen', 'has it been'];
     for (const text of allTexts) {

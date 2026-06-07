@@ -441,7 +441,7 @@ describe('runStop — generated options wiring', () => {
     // module mock: generateOptionList returns null → static options used
     insertAdvisory(store);
     const { TASK_REVIEW } = await import('../../decision-session/options.js');
-    const staticL1First = TASK_REVIEW.L1[0];
+    const staticL1First = TASK_REVIEW.L1[0].option;
     const result = await runStop(makePayload(), store, mockSelect(staticL1First));
     expect(result.outcome).toBe('blocked');
     if (result.outcome === 'blocked') {
@@ -454,7 +454,7 @@ describe('runStop — generated options wiring', () => {
     // stop.ts generates options live via generateOptionList — no crash expected
     insertAdvisory(store);
     const { TASK_REVIEW } = await import('../../decision-session/options.js');
-    const result = await runStop(makePayload(), store, mockSelect(TASK_REVIEW.L1[0]));
+    const result = await runStop(makePayload(), store, mockSelect(TASK_REVIEW.L1[0].option));
     expect(['blocked', 'skipped']).toContain(result.outcome);
   });
 });

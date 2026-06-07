@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import type { UserProfile, PromptRecord, Stage } from '../classifier/types.js';
 import type { FlagType } from '../classifier/Stage2Trigger.js';
-import type { DecisionContent } from './options.js';
+import type { DecisionContent, OptionEntry } from './options.js';
 import { logger } from '../logger.js';
 import { GroundingConfig } from '../config/GroundingConfig.js';
 
@@ -214,8 +214,10 @@ export function buildAdaptationPrompt(
 
   // Multi-line options (steps separated by \n) are serialised as sub-arrays so the LLM
   // never needs to preserve \n inside a string — it just keeps the array structure.
-  const toPromptItem = (s: string): string | string[] =>
-    s.includes('\n') ? s.split('\n') : s;
+  // OptionEntry.option carries the user-facing text the LLM rewrites; descBase is
+  // out of scope for the adaptation prompt.
+  const toPromptItem = (e: OptionEntry): string | string[] =>
+    e.option.includes('\n') ? e.option.split('\n') : e.option;
 
   const inputJson = JSON.stringify({
     l1: content.L1.map(toPromptItem),
@@ -223,7 +225,8 @@ export function buildAdaptationPrompt(
     l3: content.L3.map(toPromptItem),
   });
 
-  const typeLabel    = (s: string): string => s.includes('\n') ? `ARRAY(${s.split('\n').length})` : 'STRING';
+  const typeLabel    = (e: OptionEntry): string =>
+    e.option.includes('\n') ? `ARRAY(${e.option.split('\n').length})` : 'STRING';
   const typeContract = [
     `l1: [${content.L1.map(typeLabel).join(', ')}]`,
     `l2: [${content.L2.map(typeLabel).join(', ')}]`,
@@ -388,16 +391,19 @@ function validateWithError(raw: string, content: DecisionContent): ValidationRes
   // Per-item type validation and reassembly:
   //   source had \n  → generated item must be array of same step-count → join with \n
   //   source had no \n → generated item must be a plain string
-  const reassemble = (items: unknown[], source: string[], key: string): string[] | string => {
+  // Source is OptionEntry[]; the .option field holds the user-facing text whose
+  // newline structure determines the expected LLM-output shape per item.
+  const reassemble = (items: unknown[], source: OptionEntry[], key: string): string[] | string => {
     const result: string[] = [];
     for (let i = 0; i < items.length; i++) {
-      const srcSteps     = source[i].split('\n').length;
-      const srcMultiLine = source[i].includes('\n');
+      const srcText      = source[i].option;
+      const srcSteps     = srcText.split('\n').length;
+      const srcMultiLine = srcText.includes('\n');
       const item = items[i];
       if (srcMultiLine) {
         // Cases 1+2: structural violations — fall back to original source text for this item
         if (!Array.isArray(item) || (item as unknown[]).length !== srcSteps) {
-          result.push(source[i]);
+          result.push(srcText);
           continue;
         }
         // Case 3: content quality failure — keep error-return so retry still fires

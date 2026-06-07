@@ -5,6 +5,7 @@ import type { Store } from '../store/db.js';
 import { insertSkippedSession, getSkippedSessions } from '../store/skipped-sessions.js';
 import { incrementDecisionSessionCount } from '../store/projects.js';
 import { setConfig } from '../store/config.js';
+import type { DecisionContent } from './options.js';
 import {
   resolveDecisionContent,
   buildOptionList,
@@ -191,8 +192,18 @@ export async function runLevel(
 ): Promise<'skip' | 'next' | 'clipboard_only' | string> {
   const content  = resolveDecisionContent(input.stage, input.flagType, input.profile);
   const gen      = input.generatedOptions;
-  const effective = gen
-    ? { ...content, L1: gen.l1, L2: gen.l2, L3: gen.l3 }
+  // Generated options carry only the user-facing text. Re-attach each option's
+  // existing desc-base from the static content so the OptionEntry shape stays
+  // intact through the build pipeline.
+  const wrapGen = (texts: string[], source: { L1: typeof content.L1; L2: typeof content.L2; L3: typeof content.L3; }, key: 'L1' | 'L2' | 'L3') =>
+    texts.map((text, i) => ({ option: text, descBase: source[key][i]?.descBase ?? '' }));
+  const effective: DecisionContent = gen
+    ? {
+        ...content,
+        L1: wrapGen(gen.l1, content, 'L1'),
+        L2: wrapGen(gen.l2, content, 'L2'),
+        L3: wrapGen(gen.l3, content, 'L3'),
+      }
     : content;
   const { options } = buildOptionList(effective, level);
   const message  = buildSelectMessage(input.pinchLabel, content.question, level);
