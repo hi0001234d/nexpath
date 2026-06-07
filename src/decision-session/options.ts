@@ -20,12 +20,16 @@ import {
  * Every option IS a pre-filled prompt ready to send to the agent — user hits Enter.
  */
 
+import type { WhyHelpVariants } from './why-help-types.js';
+
 export interface DecisionContent {
   question:      string;
   pinchFallback: string;
   L1: string[];
   L2: string[];
   L3: string[];
+  /** Optional popup why-help block keyed by register. Populated per signal class. */
+  whyHelp?:      WhyHelpVariants;
 }
 
 // ── Per-transition content ─────────────────────────────────────────────────────
