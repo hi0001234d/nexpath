@@ -239,4 +239,49 @@ describe('§14.4 — Pass 1 → Pass 2 → injectR5 → substituteCAFacingBooken
     expect(result).not.toBeNull();
     expect(result?.generatedDescBases).toBeDefined();
   });
+
+  it('coverage 3 — R5 vocab insulation: Pass 1 / Pass 2 LLM prompts NEVER contain R5/R4 substitution output (R5 runs AFTER both passes)', async () => {
+    // Per dev-plan §14.4 coverage target 3 — assert "R5-injected vocab does NOT pass
+    // through Pass 1/Pass 2 LLM rewrites". Mechanism: R5 + R4 substitution runs AFTER
+    // Pass 2 returns. Verify by recording every Pass 1 / Pass 2 prompt and asserting
+    // none of them contain the R4 CA-facing open bookend "(I'm flagging this because:)"
+    // — that string only exists in the runtime substitution output, NEVER in the LLM
+    // prompts. If it appeared in any Pass 1/Pass 2 prompt, R5 substitution would have
+    // leaked back into the rewrite pipeline.
+    const prompts: string[] = [];
+    const create = vi.fn().mockImplementation((args: { messages: Array<{ content: string }> }) => {
+      // Record EVERY message's content for both Pass 1 and Pass 2 calls.
+      for (const m of args.messages) prompts.push(m.content);
+      return Promise.resolve({ choices: [{ message: { content: validResponse() } }] });
+    });
+    const client = { chat: { completions: { create } } } as unknown as import('openai').default;
+
+    const result = await generateOptionList(
+      TASK_REVIEW,
+      makeProfile(),
+      undefined,
+      [makePrompt('first prompt', 0), makePrompt('second prompt', 1)],
+      undefined,
+      client,
+    );
+
+    // The substituted desc-bases DO contain the R4 CA-facing bookend (sanity check).
+    const allDescBases = [
+      ...(result?.generatedDescBases?.l1 ?? []),
+      ...(result?.generatedDescBases?.l2 ?? []),
+      ...(result?.generatedDescBases?.l3 ?? []),
+    ];
+    const r4Bookend = "(I'm flagging this because:)";
+    const outputJoined = allDescBases.join('\n');
+    expect(outputJoined).toContain(r4Bookend);
+
+    // The recorded Pass 1 / Pass 2 prompts NEVER contain the R4 bookend — proves
+    // R5/R4 substitution ran AFTER both passes and the substitution output never
+    // flowed back into the rewrite pipeline. R5 vocab is insulated by the locked
+    // O-A substitution order (§10.8).
+    expect(prompts.length).toBeGreaterThan(0);
+    for (const p of prompts) {
+      expect(p).not.toContain(r4Bookend);
+    }
+  });
 });
