@@ -344,6 +344,83 @@ describe('render-loop — computeLayout D1 + D2 integration', () => {
   });
 });
 
+describe('render-loop — auto-scroll viewport (§11.7 step 5 + §11.9 step 5)', () => {
+  function makeManyOpts(n: number, descBaseLines = 1): RenderLoopOptions {
+    const desc = Array.from({ length: descBaseLines }, (_, i) => `l${i + 1}`).join('\n');
+    return {
+      pinchLabel: 'P', question: 'Q',
+      options: Array.from({ length: n }, (_, i) => ({ value: `opt-${i}`, label: `O${i}`, descBase: desc })),
+      rows: 14, cols: 80,  // tight terminal — forces scroll
+    };
+  }
+
+  it('appliedScrollOffset === 0 when the focused option already fits inside the viewport', () => {
+    const r = computeLayout(makeManyOpts(3), { ...FRESH_STATE, focusedIndex: 0 });
+    expect(r.viewport.appliedScrollOffset).toBe(0);
+  });
+
+  it('auto-scrolls DOWN so the focused option\'s end fits inside the viewport', () => {
+    const opts = makeManyOpts(10);
+    // rows=14, no whyHelp → fixed = pinch+question+padding = 3; avail = 14-3-2 = 9
+    // Each unfocused option = 2 emissions (label + 1-line desc); focused = 3 (label + desc + hint)
+    // Focusing index 8 puts the focused option's end deep into the option list → must scroll.
+    const r = computeLayout(opts, { focusedIndex: 8, expandedOptions: new Set(), scrollOffset: 0 });
+    expect(r.viewport.appliedScrollOffset).toBeGreaterThan(0);
+    // The focused option's emissions appear in visibleStyledLines.
+    const focusedLabel = `O8`;
+    const visibleText  = r.viewport.visibleStyledLines.join('\n');
+    expect(visibleText).toContain(focusedLabel);
+  });
+
+  it('auto-scrolls UP when focus moves above the current scroll window', () => {
+    const opts = makeManyOpts(10);
+    // Start with a high scrollOffset, then focus index 0 — must scroll back up.
+    const r = computeLayout(opts, { focusedIndex: 0, expandedOptions: new Set(), scrollOffset: 12 });
+    expect(r.viewport.appliedScrollOffset).toBeLessThanOrEqual(0 + r.optionLineRanges[0].endIdx);
+    // Option 0 must be visible.
+    const visibleText = r.viewport.visibleStyledLines.join('\n');
+    expect(visibleText).toContain('O0');
+  });
+
+  it('does not scroll past the end of the option list', () => {
+    const opts = makeManyOpts(3);
+    const r    = computeLayout(opts, { focusedIndex: 0, expandedOptions: new Set(), scrollOffset: 9999 });
+    // With only 3 options, scrolling past the end clamps to 0 (or to max scroll which is 0 here).
+    expect(r.viewport.appliedScrollOffset).toBe(0);
+  });
+
+  it('expanding the focused option triggers a scroll that keeps the expanded body visible', () => {
+    const opts = makeManyOpts(5, 8);  // each desc-base is 8 lines → 8 lines in expanded state
+    // Focus middle option in expanded state — its 8-line body plus label + hint = 10 rows.
+    const r = computeLayout(opts, { focusedIndex: 2, expandedOptions: new Set([2]), scrollOffset: 0 });
+    const visibleText = r.viewport.visibleStyledLines.join('\n');
+    expect(visibleText).toContain('O2');
+  });
+
+  it('headers always appear in visibleStyledLines regardless of scrollOffset', () => {
+    const opts = makeManyOpts(20);
+    const r    = computeLayout(opts, { focusedIndex: 15, expandedOptions: new Set(), scrollOffset: 0 });
+    // The pinch + question + D4 padding rows must be in the visible output.
+    expect(r.viewport.visibleStyledLines[0]).toBe('P');  // pinch label
+    expect(r.viewport.visibleStyledLines[1]).toBe('Q');  // question
+  });
+
+  it('reports the totalOptionRows for the interactive shell\'s scroll decisions', () => {
+    const opts = makeManyOpts(3);  // 3 options × 2 emissions each = 6 (focused option = 3, others = 2)
+    const r    = computeLayout(opts, { ...FRESH_STATE });
+    expect(r.viewport.totalOptionRows).toBeGreaterThan(0);
+    // 1 focused (3 rows) + 2 unfocused (2 rows each) = 3 + 4 = 7 option rows
+    expect(r.viewport.totalOptionRows).toBe(7);
+  });
+
+  it('visibleStyledLines length === fixedLines + min(avail, totalOptionRows - appliedScrollOffset)', () => {
+    const opts = makeManyOpts(10);
+    const r    = computeLayout(opts, { focusedIndex: 5, expandedOptions: new Set(), scrollOffset: 0 });
+    const expectedVisible = r.budget.fixedLines + Math.min(r.budget.avail, r.viewport.totalOptionRows - r.viewport.appliedScrollOffset);
+    expect(r.viewport.visibleStyledLines.length).toBe(expectedVisible);
+  });
+});
+
 describe('render-loop — budget computation (§11.4 / §11.8 / §11.12)', () => {
   it('fixedLines counts all header / why-help / D4-padding emissions (optionIndex === null)', () => {
     const r = computeLayout(makeOpts({ whyHelpBlock: 'w1\nw2\nw3' }), FRESH_STATE);

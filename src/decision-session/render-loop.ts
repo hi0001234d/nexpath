@@ -112,11 +112,11 @@ export interface LineEmission {
   isPadding:   boolean;
 }
 
-/** Output of `computeLayout` — ordered list of emissions + post-styler lines + per-option line ranges + budget metadata. */
+/** Output of `computeLayout` — ordered list of emissions + post-styler lines + per-option line ranges + budget metadata + viewport. */
 export interface RenderedLayout {
   /** Raw per-line emissions including LineKind tags. */
   emissions:        readonly LineEmission[];
-  /** Per-line styled output (parallel to emissions). What goes to stdout. */
+  /** Per-line styled output (parallel to emissions). What goes to stdout WHEN no viewport clipping is applied. */
   styledLines:      readonly string[];
   /** Per-option visible-range map — startIdx/endIdx into emissions for each option's lines. */
   optionLineRanges: readonly { startIdx: number; endIdx: number; itemIndex: number }[];
@@ -136,6 +136,28 @@ export interface RenderedLayout {
     avail:       number;
     maxItems:    number;
     fittedItems: number;
+  };
+  /**
+   * Auto-scroll viewport — what's actually visible after applying
+   * `state.scrollOffset` plus any auto-adjustment to keep the focused
+   * option (+ its expanded body) inside the visible band per §11.7
+   * step 5 + §11.9 step 5. The interactive renderLoop writes
+   * `visibleStyledLines` to stdout (not `styledLines`).
+   *
+   *   appliedScrollOffset : the scrollOffset actually used after
+   *                         auto-adjustment (may differ from
+   *                         state.scrollOffset when focus forced a shift)
+   *   totalOptionRows     : total emission row count across all options
+   *                         (informational; lets the shell decide if
+   *                         scrolling is needed at all)
+   *   visibleStyledLines  : styled lines to write to stdout — header
+   *                         rows always included; option rows clipped
+   *                         to the viewport window
+   */
+  viewport: {
+    appliedScrollOffset: number;
+    totalOptionRows:     number;
+    visibleStyledLines:  readonly string[];
   };
 }
 
@@ -402,11 +424,46 @@ export function computeLayout(opts: RenderLoopOptions, state: LayoutState): Rend
   const floor    = opts.maxItemsFloor ?? DEFAULT_MAX_ITEMS_FLOOR;
   const maxItems = Math.max(fittedItems, floor);
 
+  // ── Viewport / auto-scroll (§11.7 step 5 + §11.9 step 5) ──────────────────
+  // Header emissions always render; option emissions are the scrolled band.
+  // Determine where the option region starts in the emissions array.
+  const optionRegionStart = emissions.findIndex((e) => e.optionIndex !== null);
+  const headerEnd         = optionRegionStart === -1 ? emissions.length : optionRegionStart;
+  const totalOptionRows   = emissions.length - headerEnd;
+
+  // Focused-option emission range within the OPTION REGION (offset from headerEnd).
+  // Find the optionLineRange whose itemIndex matches state.focusedIndex.
+  const focusedRange   = optionLineRanges.find((r) => r.itemIndex === state.focusedIndex);
+  const focusedStartOR = focusedRange ? focusedRange.startIdx - headerEnd : 0;
+  const focusedEndOR   = focusedRange ? focusedRange.endIdx   - headerEnd : 0;
+
+  // Auto-adjust scrollOffset so the focused option's emissions stay
+  // inside [scroll, scroll + avail]. Clamp to non-negative + to
+  // `max(0, totalOptionRows - avail)` so we never scroll past the end.
+  let appliedScrollOffset = Math.max(0, state.scrollOffset);
+  if (focusedRange) {
+    if (focusedEndOR > appliedScrollOffset + avail) {
+      appliedScrollOffset = Math.max(0, focusedEndOR - avail);
+    }
+    if (focusedStartOR < appliedScrollOffset) {
+      appliedScrollOffset = focusedStartOR;
+    }
+  }
+  const maxScroll = Math.max(0, totalOptionRows - avail);
+  if (appliedScrollOffset > maxScroll) appliedScrollOffset = maxScroll;
+
+  // Build the visible styled lines: header (always) + windowed option rows.
+  const headerStyled = styledLines.slice(0, headerEnd);
+  const optionStyled = styledLines.slice(headerEnd);
+  const windowed     = optionStyled.slice(appliedScrollOffset, appliedScrollOffset + avail);
+  const visibleStyledLines: readonly string[] = [...headerStyled, ...windowed];
+
   return {
     emissions,
     styledLines,
     optionLineRanges,
-    budget: { fixedLines, avail, maxItems, fittedItems },
+    budget:   { fixedLines, avail, maxItems, fittedItems },
+    viewport: { appliedScrollOffset, totalOptionRows, visibleStyledLines },
   };
 }
 
@@ -497,7 +554,13 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
 
   const writeFrame = () => {
     const layout = computeLayout(opts.layout, state);
-    for (const line of layout.styledLines) {
+    // Persist the auto-adjusted scroll offset back into state so subsequent
+    // events (focus moves, expand toggles) start from the correctly
+    // scrolled viewport rather than a stale state.scrollOffset value.
+    if (layout.viewport.appliedScrollOffset !== state.scrollOffset) {
+      state = { ...state, scrollOffset: layout.viewport.appliedScrollOffset };
+    }
+    for (const line of layout.viewport.visibleStyledLines) {
       out.write(line);
       out.write('\n');
     }
