@@ -1103,14 +1103,39 @@ export const ABSENCE_PHASE_TRANSITION_BEGINNER: DecisionContent = {
   question:      'Been in this phase a while — what comes next?',
   pinchFallback: 'Phase check.',
   L1: [
-    { option: '1. Think about what phase of development this project is currently in.\n2. Share with me: have you finished what you set out to do in this phase, or are you still in the middle of it?\n3. Then tell me: what needs to be done before it makes sense to move on to the next phase?', descBase: '' },
-    { option: 'Walk me through where this project stands right now — are you still in the middle of the current phase, or have you finished it without realising it? Share what still needs to be done before moving on.', descBase: '' },
+    {
+      option: '1. Think about what phase of development this project is currently in.\n2. Share with me: have you finished what you set out to do in this phase, or are you still in the middle of it?\n3. Then tell me: what needs to be done before it makes sense to move on to the next phase?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Long time in this phase; I haven't paused to check where we actually are."}
+The phase-status check hasn't been done.
+Walk me through: current phase / done or still mid / what's left before moving on.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk me through where this project stands right now — are you still in the middle of the current phase, or have you finished it without realising it? Share what still needs to be done before moving on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Long phase; where-we-stand walk-through not done."}
+Same moment, simpler: where we stand / mid or finished / what's left.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there anything in this project that needs to be finished or decided before moving to the next phase? Share what you think is still missing with me.', descBase: '' },
+    {
+      option: 'Is there anything in this project that needs to be finished or decided before moving to the next phase? Share what you think is still missing with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Long phase."}
+Lighter: anything still needed before next phase — share what's missing.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is this project ready to move to the next phase, or are there things that should be finished first?', descBase: '' },
+    {
+      option: 'Is this project ready to move to the next phase, or are there things that should be finished first?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Long phase."}
+Minimum next step: ready or things-to-finish-first?
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1202,14 +1227,39 @@ export const ABSENCE_IDEA_SCOPING_BEGINNER: DecisionContent = {
   question:      'Idea forming — what exactly are we building?',
   pinchFallback: 'Scope unclear.',
   L1: [
-    { option: '1. Help me describe this project in plain words — what it does and what problem it solves.\n2. Share your description with me before we go further so I can check it sounds right.\n3. Then tell me: is there anything about what we\'re building that\'s still unclear or not decided yet?', descBase: '' },
-    { option: 'Describe this project in plain language — what it does, what problem it solves, and what we\'re building first. Share your answer with me before we continue.', descBase: '' },
+    {
+      option: '1. Help me describe this project in plain words — what it does and what problem it solves.\n2. Share your description with me before we go further so I can check it sounds right.\n3. Then tell me: is there anything about what we\'re building that\'s still unclear or not decided yet?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I'm forming an idea but haven't described it in plain words yet."}
+The plain-words description hasn't been done.
+Walk me through: what it does / what problem it solves / what's still unclear.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Describe this project in plain language — what it does, what problem it solves, and what we\'re building first. Share your answer with me before we continue.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Idea forming; plain-language description not done."}
+Same moment, simpler: plain-language description — what / problem / building first.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Describe this project to me in two sentences: what it does, and what it\'s for. Share it with me before we move on.', descBase: '' },
+    {
+      option: 'Describe this project to me in two sentences: what it does, and what it\'s for. Share it with me before we move on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Idea forming."}
+Lighter: 2-sentence description — what + what for.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is it clear what this project is and what it\'s supposed to do?', descBase: '' },
+    {
+      option: 'Is it clear what this project is and what it\'s supposed to do?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Idea forming."}
+Minimum next step: is it clear what / what for?
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1217,14 +1267,39 @@ export const ABSENCE_IDEA_CONSTRAINT_CHECK_BEGINNER: DecisionContent = {
   question:      'Idea forming — what\'s out of scope?',
   pinchFallback: 'No non-goals set.',
   L1: [
-    { option: '1. Think about this project — what is it NOT going to do?\n2. Share a list of at least two things we\'re leaving out of this project on purpose, even if they seem obvious.\n3. Then tell me: why is it helpful to say those things out loud now?', descBase: '' },
-    { option: 'Help me list the things this project is NOT going to do — at least two. Share the list with me before we go further.', descBase: '' },
+    {
+      option: '1. Think about this project — what is it NOT going to do?\n2. Share a list of at least two things we\'re leaving out of this project on purpose, even if they seem obvious.\n3. Then tell me: why is it helpful to say those things out loud now?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Idea forming; will-not-do list not made."}
+The will-not-do list hasn't been made.
+Walk me through: 2+ deliberate omissions / why saying them out loud helps now.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Help me list the things this project is NOT going to do — at least two. Share the list with me before we go further.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Idea forming; will-not-do list not shared."}
+Same moment, simpler: 2+ will-not-do items shared back.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s one thing this project won\'t do? Share your answer with me and tell me why it\'s good to state that now.', descBase: '' },
+    {
+      option: 'What\'s one thing this project won\'t do? Share your answer with me and tell me why it\'s good to state that now.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Idea forming."}
+Lighter: one won't-do + why-state-now.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything this project won\'t do that we haven\'t said out loud yet?', descBase: '' },
+    {
+      option: 'Is there anything this project won\'t do that we haven\'t said out loud yet?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Idea forming."}
+Minimum next step: any will-not-do still unsaid.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1232,14 +1307,39 @@ export const ABSENCE_IDEA_USER_DEFINITION_BEGINNER: DecisionContent = {
   question:      'Idea forming — who is this actually for?',
   pinchFallback: 'User not defined.',
   L1: [
-    { option: '1. Think about who will use this project — who is the main person it\'s for?\n2. Share a description of that person with me: who they are and what they\'re trying to do.\n3. Then tell me: what does that mean for how we build this project?', descBase: '' },
-    { option: 'Describe the person who will use this project in plain words — who they are and what they need it to do. Share your description with me before we go further.', descBase: '' },
+    {
+      option: '1. Think about who will use this project — who is the main person it\'s for?\n2. Share a description of that person with me: who they are and what they\'re trying to do.\n3. Then tell me: what does that mean for how we build this project?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Idea forming; main-user description not done."}
+The main-user description hasn't been done.
+Walk me through: who / what they're trying to do / what that means for how we build.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Describe the person who will use this project in plain words — who they are and what they need it to do. Share your description with me before we go further.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Idea forming; plain-words user description not shared."}
+Same moment, simpler: plain-words who-they-are and what-they-need.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Who is this project for? Describe that person to me in a sentence or two, then share it with me so I can check it sounds right.', descBase: '' },
+    {
+      option: 'Who is this project for? Describe that person to me in a sentence or two, then share it with me so I can check it sounds right.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Idea forming."}
+Lighter: 1-2 sentence user description shared back.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is it clear who this project is for and what they\'re trying to do?', descBase: '' },
+    {
+      option: 'Is it clear who this project is for and what they\'re trying to do?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Idea forming."}
+Minimum next step: is it clear who + trying-to-do?
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1249,14 +1349,39 @@ export const ABSENCE_TASK_ORDERING_BEGINNER: DecisionContent = {
   question:      'Tasks listed — what order do we do them in?',
   pinchFallback: 'No order set.',
   L1: [
-    { option: '1. Look at the tasks for this project.\n2. Share with me: which one should we do first, and which ones can\'t be done until something else is finished?\n3. Then tell me: what\'s the order we should follow to build this?', descBase: '' },
-    { option: 'Put the tasks for this project in order — which one goes first? Share the order with me before we start building.', descBase: '' },
+    {
+      option: '1. Look at the tasks for this project.\n2. Share with me: which one should we do first, and which ones can\'t be done until something else is finished?\n3. Then tell me: what\'s the order we should follow to build this?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I have tasks but haven't put them in order yet."}
+The task ordering hasn't been done.
+Walk me through: which first / which can't start yet / overall order to follow.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Put the tasks for this project in order — which one goes first? Share the order with me before we start building.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Tasks unordered."}
+Same moment, simpler: order them — which first — share before building.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the first task to work on for this project? Tell me what it is and why it should come first, then share it with me.', descBase: '' },
+    {
+      option: 'What\'s the first task to work on for this project? Tell me what it is and why it should come first, then share it with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Tasks unordered."}
+Lighter: first task + why-first — share it.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is the order of tasks for this project clear, or does anything still need to be sorted out?', descBase: '' },
+    {
+      option: 'Is the order of tasks for this project clear, or does anything still need to be sorted out?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Tasks unordered."}
+Minimum next step: order clear or still to sort?
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1264,14 +1389,39 @@ export const ABSENCE_TASK_SIZING_BEGINNER: DecisionContent = {
   question:      'Tasks listed — are they small enough to do in one go?',
   pinchFallback: 'Tasks too big.',
   L1: [
-    { option: '1. Look at the tasks for this project.\n2. Share with me: is there any task that feels too big to finish in one sitting?\n3. Then tell me: how would you split that task into smaller pieces that are easier to finish one at a time?', descBase: '' },
-    { option: 'Are any tasks in this project too big to do in one session? Share which ones feel too large, and let\'s figure out how to break them down.', descBase: '' },
+    {
+      option: '1. Look at the tasks for this project.\n2. Share with me: is there any task that feels too big to finish in one sitting?\n3. Then tell me: how would you split that task into smaller pieces that are easier to finish one at a time?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I haven't checked if any tasks feel too big to finish in one sitting."}
+The too-big-to-finish-in-one-sitting check hasn't been done.
+Walk me through: any too-big / split it into easier-one-at-a-time pieces.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Are any tasks in this project too big to do in one session? Share which ones feel too large, and let\'s figure out how to break them down.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Task sizing not checked."}
+Same moment, simpler: which feel too large + break-down plan.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Pick the biggest task for this project. Share it with me, and then tell me how you\'d split it into smaller steps that could each be finished in one sitting.', descBase: '' },
+    {
+      option: 'Pick the biggest task for this project. Share it with me, and then tell me how you\'d split it into smaller steps that could each be finished in one sitting.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Tasks defined."}
+Lighter: biggest task + split-into-single-sitting-steps.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Are all the tasks for this project small enough to finish one at a time, or do any of them need to be broken down more?', descBase: '' },
+    {
+      option: 'Are all the tasks for this project small enough to finish one at a time, or do any of them need to be broken down more?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Tasks defined."}
+Minimum next step: all small enough vs any-needing-break-down.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1279,14 +1429,39 @@ export const ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER: DecisionContent = {
   question:      'Tasks set — how do we know when each one\'s done?',
   pinchFallback: 'Done criteria missing.',
   L1: [
-    { option: '1. Pick one task from this project.\n2. Share with me: how would you know when that task is finished? What would you check?\n3. Then do the same for each of the other tasks — for each one, tell me what \'done\' looks like.', descBase: '' },
-    { option: 'For each task in this project, help me write one sentence about what \'done\' means — something you could check to know the task is finished. Share the list with me when you\'re done.', descBase: '' },
+    {
+      option: '1. Pick one task from this project.\n2. Share with me: how would you know when that task is finished? What would you check?\n3. Then do the same for each of the other tasks — for each one, tell me what \'done\' looks like.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I have tasks but haven't said per task how I'd know each is done."}
+The per-task done-check hasn't been pinned.
+Walk me through: pick one / how to know finished / what to check / repeat for each.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'For each task in this project, help me write one sentence about what \'done\' means — something you could check to know the task is finished. Share the list with me when you\'re done.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Per-task DoD list not written."}
+Same moment, simpler: per-task one-sentence DoD list — checkable.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Pick the first task for this project and tell me: how would you know it\'s finished? Share your answer with me before we start building.', descBase: '' },
+    {
+      option: 'Pick the first task for this project and tell me: how would you know it\'s finished? Share your answer with me before we start building.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Tasks defined."}
+Lighter: first-task DoD before building.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is it clear how we\'ll know when each task in this project is done?', descBase: '' },
+    {
+      option: 'Is it clear how we\'ll know when each task in this project is done?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Tasks defined."}
+Minimum next step: per-task done clarity check.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1296,14 +1471,39 @@ export const ABSENCE_USER_FEEDBACK_REVIEW_BEGINNER: DecisionContent = {
   question:      'Feedback in — have we actually gone through it?',
   pinchFallback: 'Feedback not reviewed.',
   L1: [
-    { option: '1. Look at the feedback users have given about this project.\n2. Share with me: what are the most common things people are saying? What keeps coming up?\n3. Then tell me: what\'s the one piece of feedback that feels most important to address?', descBase: '' },
-    { option: 'Go through the feedback for this project and share what you find — what are users saying? Pick the most important thing they mentioned and tell me what it is.', descBase: '' },
+    {
+      option: '1. Look at the feedback users have given about this project.\n2. Share with me: what are the most common things people are saying? What keeps coming up?\n3. Then tell me: what\'s the one piece of feedback that feels most important to address?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Feedback in; I haven't gone through it yet."}
+The feedback walk-through hasn't been done.
+Walk me through: most common + most important to address.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Go through the feedback for this project and share what you find — what are users saying? Pick the most important thing they mentioned and tell me what it is.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Feedback not gone through."}
+Same moment, simpler: what users say + most important mention.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What is the most important piece of feedback about this project? Share it with me and tell me why it matters.', descBase: '' },
+    {
+      option: 'What is the most important piece of feedback about this project? Share it with me and tell me why it matters.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Feedback in."}
+Lighter: most important feedback + why-matters.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Have you gone through the feedback for this project yet, or is that still to do?', descBase: '' },
+    {
+      option: 'Have you gone through the feedback for this project yet, or is that still to do?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Feedback in."}
+Minimum next step: gone-through or still-to-do?
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1311,14 +1511,39 @@ export const ABSENCE_ITERATION_PLANNING_BEGINNER: DecisionContent = {
   question:      'Feedback reviewed — what are we building next?',
   pinchFallback: 'Next iteration unplanned.',
   L1: [
-    { option: '1. Look at the feedback for this project.\n2. Share with me: what\'s the most important thing users want fixed or added?\n3. Then tell me: what would you work on first in the next version, and why?', descBase: '' },
-    { option: 'Based on what users said about this project, what do you want to fix or build next? Share your top pick with me before we start planning.', descBase: '' },
+    {
+      option: '1. Look at the feedback for this project.\n2. Share with me: what\'s the most important thing users want fixed or added?\n3. Then tell me: what would you work on first in the next version, and why?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Feedback in; haven't decided what to build next."}
+The what-to-build-next decision hasn't been made.
+Walk me through: most important user ask + what to work on first + why.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Based on what users said about this project, what do you want to fix or build next? Share your top pick with me before we start planning.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Top next-iteration pick not shared."}
+Same moment, simpler: top next-iteration pick shared before planning.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What is the first thing to fix or build in the next version of this project based on the feedback? Share your answer with me.', descBase: '' },
+    {
+      option: 'What is the first thing to fix or build in the next version of this project based on the feedback? Share your answer with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Feedback in."}
+Lighter: first next-version item from feedback.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is it clear what to work on next for this project based on what users said?', descBase: '' },
+    {
+      option: 'Is it clear what to work on next for this project based on what users said?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Feedback in."}
+Minimum next step: clear-what-next or still-deciding?
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1328,14 +1553,39 @@ export const ABSENCE_INCREMENTAL_BUILD_BEGINNER: DecisionContent = {
   question:      'Building something — verifying each piece as you go?',
   pinchFallback: 'One piece at a time.',
   L1: [
-    { option: '1. Before adding the next thing — quickly test what was just built.\n2. Share with me: does it do what you expected, or is something off?\n3. Then tell me: is it safe to move on, or should we fix something first?', descBase: '' },
-    { option: 'Test the part that was just built before adding anything else — tell me if it works the way you expected, and share what you find.', descBase: '' },
+    {
+      option: '1. Before adding the next thing — quickly test what was just built.\n2. Share with me: does it do what you expected, or is something off?\n3. Then tell me: is it safe to move on, or should we fix something first?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Building piece by piece; I haven't tested the last piece yet."}
+The pre-next-piece test hasn't been done.
+Walk me through: quick test / works-as-expected or off / safe-to-move-on or fix-first.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Test the part that was just built before adding anything else — tell me if it works the way you expected, and share what you find.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Last-piece test not done."}
+Same moment, simpler: test last piece / share findings.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Does what was just built work the way it should? Try it and tell me before we add anything else.', descBase: '' },
+    {
+      option: 'Does what was just built work the way it should? Try it and tell me before we add anything else.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Building piece by piece."}
+Lighter: try-it-before-more.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is what was just built working before we continue?', descBase: '' },
+    {
+      option: 'Is what was just built working before we continue?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Building piece by piece."}
+Minimum next step: working-before-continuing check.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1563,14 +1813,39 @@ export const ABSENCE_SCOPE_CREEP_BEGINNER: DecisionContent = {
   question:      'Scope expanding — still on original plan?',
   pinchFallback: 'Scope check?',
   L1: [
-    { option: '1. Look at what was just built and make a list of everything it does now. 2. Compare that list to what you originally planned to build. 3. Share anything that wasn\'t in the original plan with me before we continue.', descBase: '' },
-    { option: 'Go through this feature and check — did anything extra get added that wasn\'t part of the original plan? Share what you find with me before we keep going.', descBase: '' },
+    {
+      option: '1. Look at what was just built and make a list of everything it does now. 2. Compare that list to what you originally planned to build. 3. Share anything that wasn\'t in the original plan with me before we continue.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I haven't checked whether anything extra got added beyond the original plan."}
+The original-plan-vs-now check hasn't been done.
+Walk me through: list of what it does now / compare to original / share extras.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Go through this feature and check — did anything extra get added that wasn\'t part of the original plan? Share what you find with me before we keep going.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Extras-check not done."}
+Same moment, simpler: extras-check shared before continuing.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there anything in this feature that you didn\'t originally plan to build? Tell me what it is and we\'ll decide what to do with it.', descBase: '' },
+    {
+      option: 'Is there anything in this feature that you didn\'t originally plan to build? Tell me what it is and we\'ll decide what to do with it.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Build progressed."}
+Lighter: any unplanned items — decide together.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Can you name one thing in this feature that ended up there but wasn\'t part of the original plan?', descBase: '' },
+    {
+      option: 'Can you name one thing in this feature that ended up there but wasn\'t part of the original plan?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Build progressed."}
+Minimum next step: name one extra item.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1862,14 +2137,39 @@ export const ABSENCE_FEATURE_SCOPE_BEGINNER: DecisionContent = {
   question:      'Building this — what should it actually do?',
   pinchFallback: 'Scope first.',
   L1: [
-    { option: '1. Before we keep going — help me describe in plain words what this part of the app should do and what \'finished\' looks like for it.\n2. Share that back with me so we\'re both on the same page.\n3. Then tell me: is there anything about what I want that is still unclear to you?', descBase: '' },
-    { option: 'Help me write one sentence about what we\'re building right now and how I\'d know it\'s done — then share it with me before continuing.', descBase: '' },
+    {
+      option: '1. Before we keep going — help me describe in plain words what this part of the app should do and what \'finished\' looks like for it.\n2. Share that back with me so we\'re both on the same page.\n3. Then tell me: is there anything about what I want that is still unclear to you?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Building this part of the app but I haven't said clearly what it should do."}
+The plain-words description + finished-state hasn't been done.
+Walk me through: what it should do / what finished looks like / what's still unclear.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Help me write one sentence about what we\'re building right now and how I\'d know it\'s done — then share it with me before continuing.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "What we're building + done-check unwritten."}
+Same moment, simpler: one-sentence what + how-I'd-know-done.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What is the one thing this part of the app is supposed to do — and how will I know when it\'s working the way I want? Share your answer with me first.', descBase: '' },
+    {
+      option: 'What is the one thing this part of the app is supposed to do — and how will I know when it\'s working the way I want? Share your answer with me first.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Feature in progress."}
+Lighter: one thing it does + how-I'd-know-working.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'In plain words — what exactly are we building here and how will we know it\'s done?', descBase: '' },
+    {
+      option: 'In plain words — what exactly are we building here and how will we know it\'s done?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Feature in progress."}
+Minimum next step: plain-words what + how-done.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1877,14 +2177,39 @@ export const ABSENCE_IMPLEMENTATION_CHECKPOINT_BEGINNER: DecisionContent = {
   question:      'Built something new — does it actually work?',
   pinchFallback: 'Quick check.',
   L1: [
-    { option: '1. Before adding anything else — can you quickly try out what was just built?\n2. Tell me: does it do what we expected, or is something not working yet?\n3. If something\'s off, let\'s fix it before we keep going — it\'s easier to catch now than after more code is added on top.', descBase: '' },
-    { option: 'Try what was just built and share what happens — does it work the way we want it to? One quick test before we continue building.', descBase: '' },
+    {
+      option: '1. Before adding anything else — can you quickly try out what was just built?\n2. Tell me: does it do what we expected, or is something not working yet?\n3. If something\'s off, let\'s fix it before we keep going — it\'s easier to catch now than after more code is added on top.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built something but haven't tried it yet."}
+The quick try-it hasn't been done.
+Walk me through: try it / does it work as expected / fix-before-more if off.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Try what was just built and share what happens — does it work the way we want it to? One quick test before we continue building.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Quick test on last build not done."}
+Same moment, simpler: try it / share what happens / continue-or-fix.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Does what was just built actually work? Try it and tell me what you see before we add anything else.', descBase: '' },
+    {
+      option: 'Does what was just built actually work? Try it and tell me what you see before we add anything else.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built something new."}
+Lighter: try and tell me before more.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Does this work yet? Quick check before we keep building.', descBase: '' },
+    {
+      option: 'Does this work yet? Quick check before we keep building.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built something new."}
+Minimum next step: quick check before continuing.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1892,14 +2217,39 @@ export const ABSENCE_SPEC_BEFORE_CODE_BEGINNER: DecisionContent = {
   question:      'Coding this — what\'s it supposed to do?',
   pinchFallback: 'Spec first.',
   L1: [
-    { option: '1. Before we write more code — describe in plain words what this is supposed to do.\n2. What should happen when it works correctly? Share that with me first.\n3. Then we\'ll write it — having that clear makes the code much simpler.', descBase: '' },
-    { option: 'Tell me what you want this to do — in plain English, step by step — before we start coding it. What happens when it works? Share that first.', descBase: '' },
+    {
+      option: '1. Before we write more code — describe in plain words what this is supposed to do.\n2. What should happen when it works correctly? Share that with me first.\n3. Then we\'ll write it — having that clear makes the code much simpler.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Coding this but haven't said in plain words what it's supposed to do."}
+The plain-words what-it-should-do hasn't been said.
+Walk me through: what it's supposed to do / what happens when correct / then write.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Tell me what you want this to do — in plain English, step by step — before we start coding it. What happens when it works? Share that first.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Plain-English step-by-step unwritten."}
+Same moment, simpler: plain-English step-by-step + what-happens-when-works.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What should this do and how will I know it\'s working? Describe it in plain words before we write the code.', descBase: '' },
+    {
+      option: 'What should this do and how will I know it\'s working? Describe it in plain words before we write the code.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Building this."}
+Lighter: what it should do + how-I'd-know-working.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'In plain words — what should this do? Tell me before we start coding.', descBase: '' },
+    {
+      option: 'In plain words — what should this do? Tell me before we start coding.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Building this."}
+Minimum next step: plain-words what-it-should-do.
+{R4_CLOSE}`,
+    },
   ],
 };
 
