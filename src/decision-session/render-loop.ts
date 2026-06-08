@@ -138,8 +138,116 @@ export const D2_TRUNCATION_MARKER = '...';
 /** R1.1-Sub1.4 Variant A — desc-base sub-line prefix glyph. */
 export const SUB_LINE_PREFIX = '↳ ';
 
+/** Continuation-line indent for wrapped desc-base content (visually aligned under the `↳` glyph). */
+export const SUB_LINE_CONTINUATION_INDENT = '  ';
+
 /** Default minimum maxItems floor — matches TtySelectFn precedent. */
 export const DEFAULT_MAX_ITEMS_FLOOR = 5;
+
+// ── Wrapping + truncation helpers (D1 / D2 / D5) ────────────────────────────
+
+/**
+ * Word-wrap a single line of plain text to the given visual width.
+ *
+ * Phase 4 USER basic: counts characters, ignores ANSI escape sequences for
+ * visual-width computation (desc-bases don't usually carry ANSI after the
+ * R5 + R4 substitutions). Phase 8 Bhavnesh polish handles ANSI-aware
+ * width measurement when the styler body grows real ANSI mappings.
+ *
+ * Exported for unit testability.
+ */
+export function wrapLine(text: string, width: number): string[] {
+  if (width <= 0 || text.length <= width) return [text];
+  const out:   string[] = [];
+  const words = text.split(/(\s+)/);  // preserve whitespace runs as tokens
+  let current = '';
+  for (const w of words) {
+    if (current.length + w.length <= width) {
+      current += w;
+      continue;
+    }
+    if (current.length > 0) {
+      out.push(current);
+      current = '';
+    }
+    if (w.length > width) {
+      // Hard-break a token longer than the width.
+      for (let i = 0; i < w.length; i += width) out.push(w.substring(i, i + width));
+    } else {
+      current = w;
+    }
+  }
+  if (current.length > 0) out.push(current);
+  return out.length > 0 ? out : [''];
+}
+
+/**
+ * Word-wrap arbitrary text (may contain embedded newlines) and apply a
+ * line cap with the D2 truncation marker. Used by both D1 (truncated
+ * desc-base, cap=2) and D5 (expanded desc-base, cap=8).
+ *
+ * Returns the wrapped lines, with `...` appended to the last visible
+ * line ONLY when the source overflowed the cap (per dev-plan §11.6 — no
+ * marker when content fits naturally).
+ *
+ * Exported for unit testability.
+ */
+export function wrapAndCap(
+  text:   string,
+  width:  number,
+  cap:    number,
+  marker: string,
+): { lines: readonly string[]; didTruncate: boolean } {
+  const sourceLines = text.split('\n');
+  const wrapped:     string[] = [];
+  for (const ln of sourceLines) {
+    for (const w of wrapLine(ln, width)) wrapped.push(w);
+  }
+  if (wrapped.length <= cap) return { lines: wrapped, didTruncate: false };
+
+  // Overflow — keep the first `cap` lines and append marker to the last visible line.
+  const kept = wrapped.slice(0, cap);
+  const last = kept[kept.length - 1];
+
+  // If appending the marker would overflow the width, drop characters from
+  // the END of the last line so `last + marker` fits inside width.
+  const room = width - marker.length;
+  let trimmed = last;
+  if (last.length > room) {
+    // Prefer trimming at a word boundary when room > 0; else hard-cut.
+    trimmed = last.substring(0, Math.max(0, room));
+  }
+  kept[kept.length - 1] = trimmed + marker;
+  return { lines: kept, didTruncate: true };
+}
+
+/**
+ * Render a desc-base for one option as the `↳`-prefixed sub-line block —
+ * applies wrapping at terminal width, applies the active line cap (D1 for
+ * truncated state, D5 for expanded state), appends the D2 `...` marker on
+ * overflow, and returns one entry per wrapped line so each line emits as
+ * a separate LineKind element per §11.11.
+ *
+ * Exported for unit testability.
+ */
+export function renderDescBaseSubLines(
+  descBase: string,
+  cols:     number,
+  cap:      number,
+): readonly string[] {
+  // First-line prefix consumes SUB_LINE_PREFIX.length visual cols.
+  const prefixCols = SUB_LINE_PREFIX.length;
+  const bodyWidth  = Math.max(1, cols - prefixCols);
+
+  const { lines } = wrapAndCap(descBase, bodyWidth, cap, D2_TRUNCATION_MARKER);
+  if (lines.length === 0) return [];
+
+  const out: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    out.push(i === 0 ? `${SUB_LINE_PREFIX}${lines[i]}` : `${SUB_LINE_CONTINUATION_INDENT}${lines[i]}`);
+  }
+  return out;
+}
 
 // ── Pure layout computation ─────────────────────────────────────────────────
 
@@ -212,16 +320,18 @@ export function computeLayout(opts: RenderLoopOptions, state: LayoutState): Rend
       emissions.push({ kind: 'option-label', text: item.label, optionIndex: i, isPadding: false });
 
       // desc-base sub-line — only for non-meta items with descBase content.
-      // Truncation (D1/D2/D5) lives in sub-batch 4b/4d; 4a emits the raw
-      // descBase as a single sub-line (with `↳` prefix) for structural shape.
+      // Wrap at terminal width, apply D1 cap (truncated) or D5 cap
+      // (expanded), append D2 `...` marker on overflow. Each wrapped line
+      // emits as a SEPARATE element with the same LineKind so §11.11
+      // separate-element invariant holds at the per-line granularity.
       if (!item.isMeta && item.descBase && item.descBase.length > 0) {
         const isExpanded = state.expandedOptions.has(i);
-        emissions.push({
-          kind:        isExpanded ? 'desc-base-expanded' : 'desc-base-truncated',
-          text:        `${SUB_LINE_PREFIX}${item.descBase}`,
-          optionIndex: i,
-          isPadding:   false,
-        });
+        const cap        = isExpanded ? D5_EXPANDED_LINE_CAP : D1_TRUNCATED_LINE_CAP;
+        const kind       = isExpanded ? 'desc-base-expanded' : 'desc-base-truncated';
+        const subLines   = renderDescBaseSubLines(item.descBase, opts.cols, cap);
+        for (const ln of subLines) {
+          emissions.push({ kind, text: ln, optionIndex: i, isPadding: false });
+        }
       }
     }
 

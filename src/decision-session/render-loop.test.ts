@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   computeLayout,
+  D1_TRUNCATED_LINE_CAP,
+  D2_TRUNCATION_MARKER,
   D4_PADDING_ROW_COUNT,
+  D5_EXPANDED_LINE_CAP,
+  SUB_LINE_CONTINUATION_INDENT,
   SUB_LINE_PREFIX,
+  renderDescBaseSubLines,
+  wrapAndCap,
+  wrapLine,
   type LayoutState,
   type RenderLoopOptions,
   type SelectableItem,
@@ -168,6 +175,153 @@ describe('render-loop — styler dispatch (dev-plan §11.10 D6)', () => {
     for (let i = 0; i < r.emissions.length; i++) {
       expect(r.styledLines[i]).toBe(r.emissions[i].text);
     }
+  });
+});
+
+describe('render-loop — wrapLine (basic word-wrap)', () => {
+  it('returns the input unchanged when text fits within width', () => {
+    expect(wrapLine('short text', 40)).toEqual(['short text']);
+  });
+
+  it('wraps at word boundaries when text exceeds width', () => {
+    const out = wrapLine('alpha bravo charlie delta echo', 12);
+    expect(out.length).toBeGreaterThan(1);
+    for (const ln of out) expect(ln.length).toBeLessThanOrEqual(12);
+  });
+
+  it('hard-breaks tokens longer than the width', () => {
+    const out = wrapLine('xxxxxxxxxxxxxxxxxxxx', 5);
+    expect(out).toEqual(['xxxxx', 'xxxxx', 'xxxxx', 'xxxxx']);
+  });
+
+  it('returns the input unchanged when width is non-positive (defensive)', () => {
+    expect(wrapLine('anything', 0)).toEqual(['anything']);
+    expect(wrapLine('anything', -1)).toEqual(['anything']);
+  });
+});
+
+describe('render-loop — wrapAndCap (D1 / D2 / D5 unified)', () => {
+  it('returns all lines without marker when content fits within cap (dev-plan §11.6 — no marker when fits-naturally)', () => {
+    const r = wrapAndCap('one line only', 40, 2, D2_TRUNCATION_MARKER);
+    expect(r.didTruncate).toBe(false);
+    expect(r.lines).toEqual(['one line only']);
+    expect(r.lines[0].endsWith(D2_TRUNCATION_MARKER)).toBe(false);
+  });
+
+  it('truncates to cap with `...` marker on the last visible line when content overflows', () => {
+    const r = wrapAndCap('line-a\nline-b\nline-c\nline-d', 40, 2, D2_TRUNCATION_MARKER);
+    expect(r.didTruncate).toBe(true);
+    expect(r.lines).toHaveLength(2);
+    expect(r.lines[1].endsWith(D2_TRUNCATION_MARKER)).toBe(true);
+  });
+
+  it('honours D5 8-line cap when expanded', () => {
+    const ten = Array.from({ length: 10 }, (_, i) => `l${i + 1}`).join('\n');
+    const r   = wrapAndCap(ten, 40, D5_EXPANDED_LINE_CAP, D2_TRUNCATION_MARKER);
+    expect(r.lines).toHaveLength(8);
+    expect(r.didTruncate).toBe(true);
+    expect(r.lines[7].endsWith(D2_TRUNCATION_MARKER)).toBe(true);
+  });
+
+  it('does NOT append `...` when content fits-exactly-at-cap', () => {
+    const two = 'a\nb';
+    const r   = wrapAndCap(two, 40, 2, D2_TRUNCATION_MARKER);
+    expect(r.didTruncate).toBe(false);
+    expect(r.lines).toEqual(['a', 'b']);
+  });
+
+  it('respects width when wrapping a single long source line', () => {
+    const long = 'alpha bravo charlie delta echo foxtrot golf hotel india juliet';
+    const r    = wrapAndCap(long, 20, D5_EXPANDED_LINE_CAP, D2_TRUNCATION_MARKER);
+    for (const ln of r.lines) {
+      // Last line may contain the marker which inflates length slightly; subtract marker on overflow.
+      const len = ln.length;
+      expect(len).toBeLessThanOrEqual(20 + D2_TRUNCATION_MARKER.length);
+    }
+  });
+
+  it('trims the last visible line so `line + marker` fits within width when truncating', () => {
+    const r = wrapAndCap('aaaaaaa\nbbbbbbb\nccccccc\nddddddd', 5, 2, D2_TRUNCATION_MARKER);
+    expect(r.didTruncate).toBe(true);
+    expect(r.lines[1].length).toBeLessThanOrEqual(5);
+    expect(r.lines[1].endsWith(D2_TRUNCATION_MARKER)).toBe(true);
+  });
+});
+
+describe('render-loop — renderDescBaseSubLines (↳ prefix + cap application)', () => {
+  it('emits a single ↳-prefixed line when desc-base is short (LIGHT case, dev-plan §11.5 step 3)', () => {
+    const out = renderDescBaseSubLines('short', 80, D1_TRUNCATED_LINE_CAP);
+    expect(out).toEqual([`${SUB_LINE_PREFIX}short`]);
+  });
+
+  it('emits 2 lines (↳ first, continuation-indent second) when source has 2 lines fitting natively', () => {
+    const out = renderDescBaseSubLines('line one\nline two', 80, D1_TRUNCATED_LINE_CAP);
+    expect(out).toHaveLength(2);
+    expect(out[0]).toBe(`${SUB_LINE_PREFIX}line one`);
+    expect(out[1]).toBe(`${SUB_LINE_CONTINUATION_INDENT}line two`);
+  });
+
+  it('caps at D1 (2 lines) with `...` marker when source has 3+ lines in truncated state', () => {
+    const out = renderDescBaseSubLines('one\ntwo\nthree\nfour', 80, D1_TRUNCATED_LINE_CAP);
+    expect(out).toHaveLength(2);
+    expect(out[1].endsWith(D2_TRUNCATION_MARKER)).toBe(true);
+  });
+
+  it('caps at D5 (8 lines) with `...` marker when source has 9+ lines in expanded state', () => {
+    const ten = Array.from({ length: 10 }, (_, i) => `l${i + 1}`).join('\n');
+    const out = renderDescBaseSubLines(ten, 80, D5_EXPANDED_LINE_CAP);
+    expect(out).toHaveLength(D5_EXPANDED_LINE_CAP);
+    expect(out[D5_EXPANDED_LINE_CAP - 1].endsWith(D2_TRUNCATION_MARKER)).toBe(true);
+  });
+
+  it('only the FIRST sub-line carries the ↳ prefix; continuation lines use the alignment indent', () => {
+    const out = renderDescBaseSubLines('a\nb\nc', 80, D5_EXPANDED_LINE_CAP);
+    expect(out[0].startsWith(SUB_LINE_PREFIX)).toBe(true);
+    expect(out[1].startsWith(SUB_LINE_PREFIX)).toBe(false);
+    expect(out[1].startsWith(SUB_LINE_CONTINUATION_INDENT)).toBe(true);
+    expect(out[2].startsWith(SUB_LINE_CONTINUATION_INDENT)).toBe(true);
+  });
+});
+
+describe('render-loop — computeLayout D1 + D2 integration', () => {
+  it('emits one element per WRAPPED line for the desc-base sub-line block', () => {
+    const opts: RenderLoopOptions = {
+      pinchLabel: 'P',
+      question:   'Q',
+      options:    [
+        { value: 'a', label: 'L', descBase: 'line one\nline two\nline three\nline four' },
+      ],
+      rows: 40,
+      cols: 80,
+    };
+    const r = computeLayout(opts, { focusedIndex: 0, expandedOptions: new Set(), scrollOffset: 0 });
+    const descLines = r.emissions.filter((e) => e.kind === 'desc-base-truncated');
+    expect(descLines).toHaveLength(D1_TRUNCATED_LINE_CAP);
+    expect(descLines[D1_TRUNCATED_LINE_CAP - 1].text.endsWith(D2_TRUNCATION_MARKER)).toBe(true);
+  });
+
+  it('emits more wrapped lines when the option is in the expanded set (D5 cap = 8)', () => {
+    const ten = Array.from({ length: 10 }, (_, i) => `l${i + 1}`).join('\n');
+    const opts: RenderLoopOptions = {
+      pinchLabel: 'P', question: 'Q',
+      options: [{ value: 'a', label: 'L', descBase: ten }],
+      rows: 40, cols: 80,
+    };
+    const r = computeLayout(opts, { focusedIndex: 0, expandedOptions: new Set([0]), scrollOffset: 0 });
+    const descLines = r.emissions.filter((e) => e.kind === 'desc-base-expanded');
+    expect(descLines).toHaveLength(D5_EXPANDED_LINE_CAP);
+  });
+
+  it('every wrapped desc-base line shares the same LineKind (separate elements, same kind)', () => {
+    const opts: RenderLoopOptions = {
+      pinchLabel: 'P', question: 'Q',
+      options: [{ value: 'a', label: 'L', descBase: 'one\ntwo' }],
+      rows: 40, cols: 80,
+    };
+    const r = computeLayout(opts, { focusedIndex: 0, expandedOptions: new Set(), scrollOffset: 0 });
+    const descLines = r.emissions.filter((e) => e.kind === 'desc-base-truncated');
+    expect(descLines).toHaveLength(2);
+    for (const e of descLines) expect(e.kind).toBe('desc-base-truncated');
   });
 });
 
