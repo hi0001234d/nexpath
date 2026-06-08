@@ -95,10 +95,9 @@ describe('configUnsetAction', () => {
     const { path, cleanup } = await tempDb((store) => {
       setConfig(store, 'log_level', 'debug');
     });
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    await configUnsetAction('log_level', path);
-
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await configUnsetAction('log_level', path);
+    spy.mockClear();
     await configGetAction('log_level', path);
     expect(spy.mock.calls[0][0]).toBe('log_level = info'); // back to default
     cleanup();
@@ -127,11 +126,10 @@ describe('configSetAction', () => {
 
   it('overwrites an existing value', async () => {
     const { path, cleanup } = await tempDb();
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     await configSetAction('prompt_store_max_per_project', '200', path);
     await configSetAction('prompt_store_max_per_project', '750', path);
-
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    spy.mockClear();
     await configGetAction('prompt_store_max_per_project', path);
     expect(spy.mock.calls[0][0]).toBe('prompt_store_max_per_project = 750');
     cleanup();
@@ -144,6 +142,7 @@ describe('configSetAction — advisory_frequency validation', () => {
     for (const level of validLevels) {
       const { path, cleanup } = await tempDb();
       const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      spy.mockClear();
       await configSetAction('advisory_frequency', level, path);
       expect(spy.mock.calls[0][0]).toBe(`advisory_frequency = ${level}`);
       cleanup();
