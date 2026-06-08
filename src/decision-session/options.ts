@@ -6996,6 +6996,7 @@ const ABSENCE_OBSERVABILITY_FIRST_FORMAL: DecisionContent = {
 {R5_INJECT: ~1-2 lines — "Feature about to ship without observability across the three pillars."}
 Observability instrumentation (logs / metrics / traces) hasn't been added — production behaviour invisible from day one.
 Three pillars: structured logging at event boundaries / metrics (RPS, error rate, latency) / trace spans per external call.
+Still, before you add instrumentation across multiple files you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
     {
@@ -7004,6 +7005,7 @@ Three pillars: structured logging at event boundaries / metrics (RPS, error rate
 {R5_INJECT: ~1-2 lines — "Observability strategy definition + implementation not done."}
 The strategy + implementation pair hasn't been done.
 Events logged + level / metrics emitted / trace spans per external-dep call.
+Still, before you implement instrumentation across multiple files you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
     {
@@ -7012,6 +7014,7 @@ Events logged + level / metrics emitted / trace spans per external-dep call.
 {R5_INJECT: ~1-2 lines — "Three-pillar instrumentation + dashboard wire-up + alerts not in place."}
 The instrumentation + dashboard + alerts triple hasn't been done.
 Logs + metrics + traces / metrics → dashboards / alerts defined pre-launch.
+Still, before you add instrumentation, dashboards, or alerts across the codebase you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
   ],
