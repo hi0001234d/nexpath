@@ -666,6 +666,16 @@ const L2_TRIGGER_PATTERNS: readonly { name: string; re: RegExp }[] = [
  * Falls back to a generic 'this sensitive action' phrase only when
  * `matches` is empty (defensive — callers should never invoke this
  * with an empty list).
+ *
+ * Capitalisation note: the dev-plan §10.6.1 example shows lowercase
+ * "still" (implying continuation after a preceding clause). This
+ * implementation emits capitalised "Still" to match the shipped
+ * authored static L2 safeguards in options.ts
+ * (e.g. "Still, before you add structured logging across the
+ * codebase..."), because `appendL2Safeguard` places this sentence as
+ * a NEW sentence after the direction-body line — not as a continuation
+ * within the same sentence. Capital "Still" is the grammatically
+ * correct choice for that placement.
  */
 export function buildL2SafeguardSentence(matches: ReadonlyArray<L2TriggerMatch>): string {
   const first  = matches[0];
