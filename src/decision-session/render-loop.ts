@@ -345,6 +345,22 @@ export function computeLayout(opts: RenderLoopOptions, state: LayoutState): Rend
   }
 
   // ── D4 padding row(s) between why-help and first option ────────────────────
+  //
+  // Documented deviation from dev-plan §11.3 C4 + §11.8 step 4: those
+  // sections prescribe prepending a blank-separator item to clackOptions
+  // (per the existing OPTION_SEPARATOR convention) specifically because
+  // appending a `\n` to TtySelectFn's `message` string would silently
+  // shift its `_msgLineCount` and break the `_avail` budget math.
+  //
+  // This render-loop module doesn't share that budget plumbing — it
+  // counts ALL header / why-help / D4 padding rows uniformly under
+  // `_fixedLines` (the budget-computation pass below counts emissions
+  // with optionIndex === null), so the mechanism choice is purely
+  // structural rather than budget-load-bearing. Keeping the padding as
+  // an `isPadding: true` emission (with `optionIndex: null` so it
+  // counts as a fixed header row, not an option row) preserves the
+  // §11.11 separate-element invariant and removes the need to
+  // synthesise an OPTION_SEPARATOR-shape item just for spacing.
   for (let p = 0; p < D4_PADDING_ROW_COUNT; p++) {
     // Padding row carries no semantic content — emitted as a blank popup-why-help
     // line so dispatch is uniform (styler is still called) without inventing a
