@@ -5941,6 +5941,7 @@ const ABSENCE_DEPENDENCY_ADVENTURE_CASUAL: DecisionContent = {
 {R5_INJECT: ~1-2 lines first-person — "About to add a library; necessity not evaluated."}
 Dependency necessity hasn't been evaluated — every interest-driven library becomes ongoing maintenance debt.
 Specific problem? Can-do-without-it? — before adding.
+Still, before you install this dependency you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
     {
@@ -5949,6 +5950,7 @@ Specific problem? Can-do-without-it? — before adding.
 {R5_INJECT: ~1-2 lines first-person — "About to install; alternatives not evaluated."}
 The alternatives-evaluation hasn't been done.
 Specific problem solved? alternatives evaluated? — before install.
+Still, before you install this package you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
     {
@@ -5957,6 +5959,7 @@ Specific problem solved? alternatives evaluated? — before install.
 {R5_INJECT: ~1-2 lines first-person — "Three-question gate not applied."}
 The three-question dependency gate hasn't been applied.
 Specific problem / existing tools considered / maintenance cost.
+Still, before you add this dependency you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
   ],
@@ -5966,6 +5969,7 @@ Specific problem / existing tools considered / maintenance cost.
       descBase: `{R4_OPEN}
 {R5_INJECT: ~1 line first-person — "Considering a new dependency."}
 Lighter: problem / alternatives / maintenance cost — answer all three before install.
+Still, before you install this dependency you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
     {
@@ -5973,6 +5977,7 @@ Lighter: problem / alternatives / maintenance cost — answer all three before i
       descBase: `{R4_OPEN}
 {R5_INJECT: ~1 line first-person — "Considering a new dependency."}
 Narrower: what need + long-term cost justified?
+Still, before you install this dependency you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
   ],
