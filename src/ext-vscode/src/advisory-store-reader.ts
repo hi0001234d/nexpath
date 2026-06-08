@@ -50,12 +50,16 @@ export type ReadAdvisoryRowFn = (
 ) => Promise<Record<string, unknown> | null>;
 
 /**
- * Default reader: stage-copy the DB, open it read-only with better-sqlite3, and
- * pull the newest advisory row for `projectRoot`. Mirrors the watcher's
- * `defaultReadItemTable` so the native module stays out of the eager require
- * graph and a concurrent CLI write can never corrupt the read.
+ * Stage-copy the store and run a single-row read-only query. Mirrors the
+ * watcher's `defaultReadItemTable` so the native module stays out of the eager
+ * require graph and a concurrent CLI write can never corrupt the read. Returns
+ * the first row, or null on any failure (missing file / missing table / drift).
  */
-export const defaultReadAdvisoryRow: ReadAdvisoryRowFn = async (dbPath, projectRoot) => {
+async function stagedGetRow(
+  dbPath: string,
+  sql:    string,
+  param:  string,
+): Promise<Record<string, unknown> | null> {
   const { copyFile, mkdir, rm } = await import('node:fs/promises');
   const { existsSync }          = await import('node:fs');
   const { tmpdir }              = await import('node:os');
@@ -65,7 +69,7 @@ export const defaultReadAdvisoryRow: ReadAdvisoryRowFn = async (dbPath, projectR
 
   const stagingDir = pjoin(
     tmpdir(),
-    `nexpath-advisory-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    `nexpath-store-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   );
   await mkdir(stagingDir, { recursive: true });
   const staged = pjoin(stagingDir, basename(dbPath));
@@ -93,25 +97,27 @@ export const defaultReadAdvisoryRow: ReadAdvisoryRowFn = async (dbPath, projectR
   const Database = mod.default;
   const db = new Database(staged, { readonly: true });
   try {
-    const row = db
-      .prepare(
-        `SELECT project_root, stage, flag_type, pinch_label,
-                generated_l1, generated_l2, generated_l3, created_at, status
-           FROM pending_advisories
-          WHERE project_root = ?
-          ORDER BY created_at DESC
-          LIMIT 1`,
-      )
-      .get(projectRoot);
-    return row ?? null;
+    return db.prepare(sql).get(param) ?? null;
   } catch {
-    // Table absent on a fresh store, or schema drift — treat as no advisory.
     return null;
   } finally {
     db.close();
     void rm(stagingDir, { recursive: true, force: true }).catch(() => {});
   }
-};
+}
+
+/** Default reader: newest `pending_advisories` row for `projectRoot`. */
+export const defaultReadAdvisoryRow: ReadAdvisoryRowFn = (dbPath, projectRoot) =>
+  stagedGetRow(
+    dbPath,
+    `SELECT project_root, stage, flag_type, pinch_label,
+            generated_l1, generated_l2, generated_l3, created_at, status
+       FROM pending_advisories
+      WHERE project_root = ?
+      ORDER BY created_at DESC
+      LIMIT 1`,
+    projectRoot,
+  );
 
 /** Parse a JSON string-array column (Layer C stores generated_l1/l2/l3 as JSON). */
 export function parseJsonStringArray(raw: unknown): string[] {
@@ -174,4 +180,58 @@ export async function readLatestAdvisory(
     status:      typeof row.status === 'string' ? row.status : '',
     l1, l2, l3,
   };
+}
+
+// ── Selected-prompt recovery (Windows crash-on-exit safety net) ──────────────
+
+/** Reads the `session_states.state_json` blob for a project (injectable for tests). */
+export type ReadSessionStateFn = (
+  dbPath:      string,
+  projectRoot: string,
+) => Promise<Record<string, unknown> | null>;
+
+/** Default: read the project's session_states row, staged + read-only. */
+export const defaultReadSessionState: ReadSessionStateFn = (dbPath, projectRoot) =>
+  stagedGetRow(
+    dbPath,
+    'SELECT state_json FROM session_states WHERE project_root = ?',
+    projectRoot,
+  );
+
+export interface InjectedPromptReaderDeps {
+  dbPath?:    string;
+  readState?: ReadSessionStateFn;
+}
+
+/**
+ * Recover the prompt the user just selected in the terminal popup.
+ *
+ * Layer C's `nexpath stop` persists the chosen option to
+ * `session_states.lastInjectedPrompt` BEFORE it writes stdout and force-exits.
+ * On Windows that force-exit trips a libuv assertion (the process dies with a
+ * non-zero code and stdout can be lost), so the extension can't rely on stdout
+ * to learn the selection. Reading this persisted value recovers it so the
+ * injection still happens. Read-only; returns null when absent/malformed.
+ */
+export async function readInjectedPrompt(
+  projectRoot: string,
+  deps: InjectedPromptReaderDeps = {},
+): Promise<string | null> {
+  const dbPath    = deps.dbPath ?? defaultStorePath();
+  const readState = deps.readState ?? defaultReadSessionState;
+
+  let row: Record<string, unknown> | null;
+  try {
+    row = await readState(dbPath, projectRoot);
+  } catch {
+    return null;
+  }
+  if (!row || typeof row.state_json !== 'string') return null;
+  try {
+    const state = JSON.parse(row.state_json) as { lastInjectedPrompt?: unknown };
+    const v = state?.lastInjectedPrompt;
+    return typeof v === 'string' && v.length > 0 ? v : null;
+  } catch {
+    return null;
+  }
 }

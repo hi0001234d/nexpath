@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import type { SpawnOptions } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { bringPopupToFront } from './popup-foreground.js';
+import { readInjectedPrompt } from './advisory-store-reader.js';
 
 /**
  * IPC layer between the VS Code extension (Layer B) and the existing nexpath
@@ -61,6 +62,16 @@ export interface IpcOptions {
    */
   cwd?: string;
   spawnFn?: typeof spawn;
+  /**
+   * Recover the user's terminal-popup selection from the store when `nexpath
+   * stop` exits non-zero without usable stdout. This happens on Windows, where
+   * Layer C's `process.exit(0)` after a selection trips a libuv assertion (the
+   * process dies with a non-zero code and the stdout payload can be lost) — but
+   * Layer C has already persisted the chosen prompt to
+   * `session_states.lastInjectedPrompt`. Defaults to reading that value.
+   * Injected in tests.
+   */
+  recoverSelection?: (cwd: string) => Promise<string | null>;
 }
 
 export class NexpathBinaryNotFoundError extends Error {
@@ -247,6 +258,8 @@ export function spawnStop(
   // — tests inject `spawnFn` and don't want us shelling out to wmctrl.
   if (!opts.spawnFn) bringPopupToFront();
 
+  const recover = opts.recoverSelection ?? ((cwd: string) => readInjectedPrompt(cwd));
+
   return new Promise<StopSelection | null>((resolve, reject) => {
     let stdout = '';
     let stderr = '';
@@ -264,33 +277,48 @@ export function spawnStop(
     });
     child.on('close', (code: number | null) => {
       if (errored) return;
-      if (code !== 0) {
+      void (async () => {
+        const trimmed = stdout.trim();
+
+        // 1. A selection on stdout — accept it REGARDLESS of exit code. Covers the
+        //    normal Linux/macOS path (exit 0) and a Windows crash where the stdout
+        //    payload still made it out before the process died.
+        if (trimmed.length > 0) {
+          try {
+            const p = JSON.parse(trimmed) as { decision?: unknown; reason?: unknown };
+            if (p && p.decision === 'block' && typeof p.reason === 'string' && p.reason.length > 0) {
+              resolve({ selectedPrompt: p.reason });
+              return;
+            }
+            // Valid JSON but not the selection shape — nothing to inject (clean exit).
+            if (code === 0) { resolve(null); return; }
+          } catch (err) {
+            // Non-JSON on a CLEAN exit is a genuine contract violation.
+            if (code === 0) { reject(new NexpathMalformedPayloadError(trimmed, err as Error)); return; }
+            // Non-JSON on a NON-zero exit is a truncated payload from a crash —
+            // fall through to store recovery below.
+          }
+        } else if (code === 0) {
+          // Clean exit, empty stdout → dismissed / no advisory / no TTY.
+          resolve(null);
+          return;
+        }
+
+        // 2. Non-zero exit and no usable stdout (Windows libuv crash on stop's
+        //    forced process.exit AFTER a selection). Layer C persisted the chosen
+        //    prompt before the crash — recover it so the injection still happens.
+        try {
+          const recovered = await recover(opts.cwd ?? process.cwd());
+          if (recovered) { resolve({ selectedPrompt: recovered }); return; }
+        } catch {
+          // recovery best-effort — fall through to the failure below
+        }
+
+        // 3. Genuine failure with nothing to recover.
         reject(
-          new Error(
-            `nexpath stop exited with code ${code}. stderr: ${stderr.trim()}`,
-          ),
+          new Error(`nexpath stop exited with code ${code}. stderr: ${stderr.trim()}`),
         );
-        return;
-      }
-      const trimmed = stdout.trim();
-      if (trimmed.length === 0) {
-        resolve(null);
-        return;
-      }
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(trimmed);
-      } catch (err) {
-        reject(new NexpathMalformedPayloadError(trimmed, err as Error));
-        return;
-      }
-      const p = parsed as { decision?: unknown; reason?: unknown };
-      if (p && p.decision === 'block' && typeof p.reason === 'string' && p.reason.length > 0) {
-        resolve({ selectedPrompt: p.reason });
-      } else {
-        // Valid JSON but not Layer C's selection shape — nothing to inject.
-        resolve(null);
-      }
+      })();
     });
 
     // Full StopPayload shape — Layer C requires cwd / hook_event_name /

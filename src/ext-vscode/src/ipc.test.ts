@@ -175,13 +175,44 @@ describe('spawnStop', () => {
     ).rejects.toBeInstanceOf(NexpathMalformedPayloadError);
   });
 
-  it('rejects when nexpath stop exits non-zero', async () => {
+  it('rejects when nexpath stop exits non-zero AND nothing can be recovered', async () => {
     const spawnFn = vi.fn(() =>
       makeFakeChild({ exitCode: 2, stderrChunks: ['boom\n'] }),
     );
     await expect(
-      spawnStop('s', { spawnFn: spawnFn as never }),
+      spawnStop('s', { spawnFn: spawnFn as never, recoverSelection: async () => null }),
     ).rejects.toThrow(/exited with code 2/);
+  });
+
+  it('recovers the selection from the store when stop crashes on exit (Windows libuv)', async () => {
+    // 3221226505 = 0xC0000409 — the Windows fail-fast code from stop.ts process.exit.
+    const spawnFn = vi.fn(() =>
+      makeFakeChild({ exitCode: 3221226505, stdoutChunks: [], stderrChunks: ['[nexpath] Prompt sent to Claude\n'] }),
+    );
+    const result = await spawnStop('s', {
+      spawnFn: spawnFn as never,
+      cwd: '/proj',
+      recoverSelection: async (cwd) => (cwd === '/proj' ? 'Run the test suite for this phase.' : null),
+    });
+    expect(result).toEqual({ selectedPrompt: 'Run the test suite for this phase.' });
+  });
+
+  it('prefers a stdout selection even on a non-zero exit (stdout survived the crash)', async () => {
+    const out = { decision: 'block', reason: 'Cross-confirm the spec first.' };
+    const spawnFn = vi.fn(() =>
+      makeFakeChild({ exitCode: 3221226505, stdoutChunks: [JSON.stringify(out)] }),
+    );
+    const recover = vi.fn(async () => 'should-not-be-used');
+    const result = await spawnStop('s', { spawnFn: spawnFn as never, recoverSelection: recover });
+    expect(result).toEqual({ selectedPrompt: 'Cross-confirm the spec first.' });
+    expect(recover).not.toHaveBeenCalled();
+  });
+
+  it('non-zero exit with no recovery + no stdout → rejects', async () => {
+    const spawnFn = vi.fn(() => makeFakeChild({ exitCode: 1, stdoutChunks: [] }));
+    await expect(
+      spawnStop('s', { spawnFn: spawnFn as never, recoverSelection: async () => null }),
+    ).rejects.toThrow(/exited with code 1/);
   });
 
   it('rejects with NexpathBinaryNotFoundError when spawn emits error', async () => {

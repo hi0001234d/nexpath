@@ -1,9 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   readLatestAdvisory,
+  readInjectedPrompt,
   parseJsonStringArray,
   defaultStorePath,
   type ReadAdvisoryRowFn,
+  type ReadSessionStateFn,
 } from './advisory-store-reader.js';
 
 describe('parseJsonStringArray', () => {
@@ -119,5 +121,45 @@ describe('readLatestAdvisory', () => {
       createdAt: 0,
       l1: ['x'],
     });
+  });
+});
+
+describe('readInjectedPrompt', () => {
+  it('returns the persisted lastInjectedPrompt from session_states', async () => {
+    const readState: ReadSessionStateFn = vi.fn().mockResolvedValue({
+      state_json: JSON.stringify({ lastInjectedPrompt: 'Run the full test suite.', promptCount: 7 }),
+    });
+    const out = await readInjectedPrompt('/proj', { readState, dbPath: '/db' });
+    expect(out).toBe('Run the full test suite.');
+    expect(readState).toHaveBeenCalledWith('/db', '/proj');
+  });
+
+  it('returns null when lastInjectedPrompt is absent / empty / null', async () => {
+    for (const v of [undefined, '', null, 42]) {
+      const readState: ReadSessionStateFn = vi.fn().mockResolvedValue({
+        state_json: JSON.stringify({ lastInjectedPrompt: v }),
+      });
+      expect(await readInjectedPrompt('/proj', { readState })).toBeNull();
+    }
+  });
+
+  it('returns null when there is no session_states row', async () => {
+    const readState: ReadSessionStateFn = vi.fn().mockResolvedValue(null);
+    expect(await readInjectedPrompt('/proj', { readState })).toBeNull();
+  });
+
+  it('returns null when state_json is missing or not a string', async () => {
+    const readState: ReadSessionStateFn = vi.fn().mockResolvedValue({ state_json: 123 });
+    expect(await readInjectedPrompt('/proj', { readState })).toBeNull();
+  });
+
+  it('returns null on malformed state_json', async () => {
+    const readState: ReadSessionStateFn = vi.fn().mockResolvedValue({ state_json: '{not json' });
+    expect(await readInjectedPrompt('/proj', { readState })).toBeNull();
+  });
+
+  it('never throws when the reader rejects', async () => {
+    const readState: ReadSessionStateFn = vi.fn().mockRejectedValue(new Error('locked'));
+    await expect(readInjectedPrompt('/proj', { readState })).resolves.toBeNull();
   });
 });
