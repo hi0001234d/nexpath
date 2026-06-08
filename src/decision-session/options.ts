@@ -5464,16 +5464,55 @@ const ABSENCE_FEATURE_COMPLETION_CHECK_CASUAL: DecisionContent = {
   question:      'Adding more — is the previous feature actually done?',
   pinchFallback: 'Finish before starting next.',
   L1: [
-    { option: 'Checkpoint: what\'s the state of the last feature started? Is it done and tested end-to-end? Scrum\'s Definition of Done exists because partially-done features compound — starting new ones before previous ones meet DoD means carrying technical debt through every subsequent sprint.', descBase: '' },
-    { option: 'Before adding the next thing — is the previous feature fully working end-to-end? Not \'mostly done\', not \'works here\', but actually complete and tested? Unfinished features accumulate and come back as bugs and edge cases.', descBase: '' },
-    { option: 'How complete is the most recently started feature? Rate it honestly: \'done and tested\', \'works but untested\', \'partially built\'. Starting the next feature before the previous one meets DoD is the classic unfinished-work accumulation pattern.', descBase: '' },
+    {
+      option: 'Checkpoint: what\'s the state of the last feature started? Is it done and tested end-to-end? Scrum\'s Definition of Done exists because partially-done features compound — starting new ones before previous ones meet DoD means carrying technical debt through every subsequent sprint.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I started another feature without checking whether the previous one is actually done."}
+The previous feature hasn't been verified done end-to-end — starting the next risks compounding unfinished work.
+Checkpoint last feature: done-and-tested vs partially-built — meet DoD before next.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Before adding the next thing — is the previous feature fully working end-to-end? Not \'mostly done\', not \'works here\', but actually complete and tested? Unfinished features accumulate and come back as bugs and edge cases.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Adding new things; haven't checked if the previous is actually finished."}
+The fully-working-end-to-end check on the previous feature hasn't been done.
+Not 'mostly done', not 'works here' — actually complete and tested.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'How complete is the most recently started feature? Rate it honestly: \'done and tested\', \'works but untested\', \'partially built\'. Starting the next feature before the previous one meets DoD is the classic unfinished-work accumulation pattern.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Honest completion rating not done."}
+The honest completion rating hasn't been done.
+Rate: done-and-tested / works-but-untested / partially-built — only proceed after DoD met.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is the previous feature done and tested? That\'s the bar — fully built, verified end-to-end. Start the next only after meeting it.', descBase: '' },
-    { option: 'What\'s the completion state of the last feature? Only move to the next after the previous is actually done.', descBase: '' },
+    {
+      option: 'Is the previous feature done and tested? That\'s the bar — fully built, verified end-to-end. Start the next only after meeting it.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Adding new features."}
+Lighter: previous-feature done-and-tested bar — meet it before next.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What\'s the completion state of the last feature? Only move to the next after the previous is actually done.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Adding new features."}
+Narrower: completion-state of last feature.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is the last feature actually done and tested before starting the next?', descBase: '' },
+    {
+      option: 'Is the last feature actually done and tested before starting the next?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Adding new features."}
+Minimum next step: last-feature actually-done-and-tested check.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -5481,16 +5520,55 @@ const ABSENCE_FINISHING_LINE_AWARENESS_CASUAL: DecisionContent = {
   question:      'Multiple things in progress — how many are complete?',
   pinchFallback: 'Finish one before starting next.',
   L1: [
-    { option: 'Count check: how many features are currently in-progress vs. complete end-to-end? A partially-done feature delivers zero user value. Three features 40% each is worse than one feature 100% — the user can use one, and none of three.', descBase: '' },
-    { option: 'In iterative delivery, value is delivered by reaching shippable state, not by making progress. How many features started this session have reached shippable state? Pick the one closest to completion — finish that before starting another.', descBase: '' },
-    { option: 'Before starting something new — pick the feature closest to completion and push it to done. Lean delivery: finish items, don\'t accumulate WIP. What\'s the one thing to finish right now?', descBase: '' },
+    {
+      option: 'Count check: how many features are currently in-progress vs. complete end-to-end? A partially-done feature delivers zero user value. Three features 40% each is worse than one feature 100% — the user can use one, and none of three.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I've got multiple things going at once without pushing any to done."}
+Multiple in-progress features haven't been pushed to completion — WIP accumulates without delivering value.
+Count in-progress vs complete-end-to-end / 3×40% delivers zero, 1×100% delivers one.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'In iterative delivery, value is delivered by reaching shippable state, not by making progress. How many features started this session have reached shippable state? Pick the one closest to completion — finish that before starting another.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Multiple started this session; shippable-state count not done."}
+The shippable-state count hasn't been done.
+Pick closest to completion / finish that first / value = shippable, not progress.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Before starting something new — pick the feature closest to completion and push it to done. Lean delivery: finish items, don\'t accumulate WIP. What\'s the one thing to finish right now?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Tempted to start something new; closest-to-done not pushed."}
+The one-to-finish-now pick hasn't been made.
+Closest to done → push to done / lean delivery: finish, don't accumulate WIP.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'How many things are in-progress? Complete the one closest to done before starting anything new.', descBase: '' },
-    { option: 'What would it take to bring the most-started feature to shippable state? Do that before adding more.', descBase: '' },
+    {
+      option: 'How many things are in-progress? Complete the one closest to done before starting anything new.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Multiple in-progress."}
+Lighter: in-progress count + complete-closest-to-done.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What would it take to bring the most-started feature to shippable state? Do that before adding more.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Multiple in-progress."}
+Narrower: most-started feature → what-to-do-to-ship.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Which feature is closest to done? Finish that one before starting the next.', descBase: '' },
+    {
+      option: 'Which feature is closest to done? Finish that one before starting the next.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Multiple in-progress."}
+Minimum next step: closest-to-done → finish that.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -5498,16 +5576,55 @@ const ABSENCE_POLISH_VS_FUNCTION_CASUAL: DecisionContent = {
   question:      'Working on the look — does the core work end-to-end?',
   pinchFallback: 'Function before polish.',
   L1: [
-    { option: 'Lean MVP principle: polish comes after function. Before spending more prompts on UI improvements — does the core functionality work end-to-end? \'MVP UI should be clean and usable, not museum-quality.\' Fix the working before fixing the looking.', descBase: '' },
-    { option: 'Does the core user flow work without errors from start to finish? If not, visual polish is blocked by a non-working core. Function first: build the thing that works, then make it look good.', descBase: '' },
-    { option: 'UI polish on a non-functional core creates maintenance debt — you\'ll redo the style when the function changes. Core functionality working end-to-end is the prerequisite for polish. Is it?', descBase: '' },
+    {
+      option: 'Lean MVP principle: polish comes after function. Before spending more prompts on UI improvements — does the core functionality work end-to-end? \'MVP UI should be clean and usable, not museum-quality.\' Fix the working before fixing the looking.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I'm polishing UI but haven't verified the core works end-to-end."}
+Core functionality hasn't been verified end-to-end — UI polish on a non-functional core wastes effort and compounds rework.
+Polish after function / MVP UI clean+usable, not museum-quality.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Does the core user flow work without errors from start to finish? If not, visual polish is blocked by a non-working core. Function first: build the thing that works, then make it look good.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Polishing without verifying core works."}
+The core-user-flow end-to-end check hasn't been done.
+Visual polish blocked by non-working core / function first, then looking.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'UI polish on a non-functional core creates maintenance debt — you\'ll redo the style when the function changes. Core functionality working end-to-end is the prerequisite for polish. Is it?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Polishing UI; style-redo risk not surfaced."}
+The polish-debt risk hasn't been surfaced.
+Style gets redone when function changes / prerequisite is working core.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Does the core work end-to-end before going further with styling? Function first — polish after it works.', descBase: '' },
-    { option: 'Is the working flow solid end-to-end? Lean MVP says polish after function. What\'s left to make the core work?', descBase: '' },
+    {
+      option: 'Does the core work end-to-end before going further with styling? Function first — polish after it works.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Working on styling."}
+Lighter: core-works-end-to-end check before more styling.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Is the working flow solid end-to-end? Lean MVP says polish after function. What\'s left to make the core work?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Working on styling."}
+Narrower: working-flow-solid check + what-left-to-make-core-work.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Get the core working end-to-end before focusing on how it looks.', descBase: '' },
+    {
+      option: 'Get the core working end-to-end before focusing on how it looks.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Working on styling."}
+Minimum next step: core-working-end-to-end before looks-focus.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -5515,16 +5632,55 @@ const ABSENCE_MVP_SCOPE_DISCIPLINE_CASUAL: DecisionContent = {
   question:      'Adding features — is each one actually MVP scope?',
   pinchFallback: 'MVP discipline check.',
   L1: [
-    { option: 'Eric Ries MVP heuristic: start with what you believe is needed, then eliminate half the features, then eliminate half again. Each addition should answer: does this test the core hypothesis? Is it the minimum needed to get real user feedback? If neither — it\'s gold-plating an unvalidated MVP.', descBase: '' },
-    { option: 'MVP scope discipline: for each new feature, ask — is this the minimum needed to test the core assumption, or is it a nice-to-have that could wait until after first validation? \'Lean startup MVP requires strict discipline, focusing on the minimum feature set to test a specific assumption.\'', descBase: '' },
-    { option: 'Before adding this — what specific hypothesis does it help validate? Features without a hypothesis-connection aren\'t MVP scope. List what\'s left to build and categorize: core hypothesis vs. nice-to-have.', descBase: '' },
+    {
+      option: 'Eric Ries MVP heuristic: start with what you believe is needed, then eliminate half the features, then eliminate half again. Each addition should answer: does this test the core hypothesis? Is it the minimum needed to get real user feedback? If neither — it\'s gold-plating an unvalidated MVP.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Adding features without checking each against MVP hypothesis."}
+Feature additions haven't been gated against MVP-hypothesis — risk of gold-plating an unvalidated MVP.
+Per addition: tests core hypothesis? min for real feedback? — else it's gold-plating.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'MVP scope discipline: for each new feature, ask — is this the minimum needed to test the core assumption, or is it a nice-to-have that could wait until after first validation? \'Lean startup MVP requires strict discipline, focusing on the minimum feature set to test a specific assumption.\'',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Building features without strict MVP gating."}
+The MVP-discipline gate hasn't been applied.
+Per feature: min-to-test-assumption vs nice-to-have-post-validation.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Before adding this — what specific hypothesis does it help validate? Features without a hypothesis-connection aren\'t MVP scope. List what\'s left to build and categorize: core hypothesis vs. nice-to-have.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Hypothesis-connection not checked per feature."}
+The hypothesis-connection check hasn't been done.
+List remaining-to-build / categorise: core hypothesis vs nice-to-have.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is this feature minimum-viable — needed to test the core hypothesis — or is it gold-plating? Scope check before building.', descBase: '' },
-    { option: 'What hypothesis does this feature validate? If it doesn\'t test the core assumption, it\'s post-MVP scope.', descBase: '' },
+    {
+      option: 'Is this feature minimum-viable — needed to test the core hypothesis — or is it gold-plating? Scope check before building.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Adding features."}
+Lighter: MV-needed-to-test-hypothesis vs gold-plating.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What hypothesis does this feature validate? If it doesn\'t test the core assumption, it\'s post-MVP scope.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Adding features."}
+Narrower: which hypothesis validated? else post-MVP.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is this feature MVP scope? Does it test the core hypothesis or is it a nice-to-have?', descBase: '' },
+    {
+      option: 'Is this feature MVP scope? Does it test the core hypothesis or is it a nice-to-have?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Adding features."}
+Minimum next step: MVP-scope test — hypothesis or nice-to-have?
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -5532,16 +5688,55 @@ const ABSENCE_IDEA_TO_SPEC_BRIDGE_CASUAL: DecisionContent = {
   question:      'New idea — defined what it does before building?',
   pinchFallback: 'Spec the idea first.',
   L1: [
-    { option: 'Spec-driven development principle: a feature idea is not a spec. Before building — write a one-paragraph description: what does this feature do? What does it NOT do? How does it fit into what already exists? The spec becomes the source of truth; code is its expression.', descBase: '' },
-    { option: 'Jumping from idea to code skips the bridge. Quick spec for this idea: (1) what does it do — one sentence, (2) what are its boundaries — what it explicitly does not do, (3) how does it fit into the existing product — integration points. Five minutes of spec saves hours of rework.', descBase: '' },
-    { option: 'An idea in your head is not a spec. A spec is a structured description of what the feature does and doesn\'t do, written before implementation. Write it, then build against it — this is the difference between directed building and creative wandering.', descBase: '' },
+    {
+      option: 'Spec-driven development principle: a feature idea is not a spec. Before building — write a one-paragraph description: what does this feature do? What does it NOT do? How does it fit into what already exists? The spec becomes the source of truth; code is its expression.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I have an idea but haven't bridged to a written spec before building."}
+The idea hasn't been spec'd before building — directed building gives way to creative wandering.
+One-paragraph spec: what / what-not / how-it-fits — spec is source of truth, code is expression.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Jumping from idea to code skips the bridge. Quick spec for this idea: (1) what does it do — one sentence, (2) what are its boundaries — what it explicitly does not do, (3) how does it fit into the existing product — integration points. Five minutes of spec saves hours of rework.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Jumping idea→code; bridge skipped."}
+The idea-to-code bridge spec hasn't been written.
+What does / boundaries / integration points — 5 min spec saves hours of rework.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'An idea in your head is not a spec. A spec is a structured description of what the feature does and doesn\'t do, written before implementation. Write it, then build against it — this is the difference between directed building and creative wandering.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Idea in head, not written down."}
+The structured-spec write hasn't been done.
+Structured description of does/doesn't / write then build against it.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Spec this idea before building it: what does it do, what are its boundaries, and how does it fit into what already exists? One paragraph is enough.', descBase: '' },
-    { option: 'Before implementing — write what it does and what it doesn\'t do. The spec is the source of truth; implementation is the verification.', descBase: '' },
+    {
+      option: 'Spec this idea before building it: what does it do, what are its boundaries, and how does it fit into what already exists? One paragraph is enough.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "New idea."}
+Lighter: one-paragraph spec — does / boundaries / fit.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Before implementing — write what it does and what it doesn\'t do. The spec is the source of truth; implementation is the verification.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "New idea."}
+Narrower: write does/doesn't before implement.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Define what this idea does and doesn\'t do before writing any code for it.', descBase: '' },
+    {
+      option: 'Define what this idea does and doesn\'t do before writing any code for it.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "New idea."}
+Minimum next step: does/doesn't before code.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -5549,16 +5744,55 @@ const ABSENCE_DEMO_VS_PRODUCT_CASUAL: DecisionContent = {
   question:      'Is this demo quality or production quality — explicit distinction?',
   pinchFallback: 'Demo vs. production: name which.',
   L1: [
-    { option: 'Production readiness check: what quality standard applies to what\'s being built? Demo code and production code have different requirements. If this is a demo — mark it explicitly: hardcoded data, no edge cases, visual-only. If it\'s the actual product — it needs real data connected, error states handled, and edge cases working.', descBase: '' },
-    { option: 'The difference between demo and production: demo looks right; production works right under real conditions. Treating prototype code as production without explicit upgrade creates technical debt that compounds with every sprint. \'Low quality code contains 15x more defects and takes 124% longer to resolve.\' — name which standard applies right now.', descBase: '' },
-    { option: 'Categorize explicitly what\'s being built: prototype (exploratory, disposable, no production quality required) or production (real data, real errors, edge cases, maintainable). If prototype — name it and plan the production upgrade path. If production — apply production standards now.', descBase: '' },
+    {
+      option: 'Production readiness check: what quality standard applies to what\'s being built? Demo code and production code have different requirements. If this is a demo — mark it explicitly: hardcoded data, no edge cases, visual-only. If it\'s the actual product — it needs real data connected, error states handled, and edge cases working.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Building but haven't named the quality standard — demo or production."}
+Demo-vs-production quality standard hasn't been named — prototype code risks being treated as production.
+Demo: hardcoded data / no edge cases / visual-only. Production: real data / error states / edge cases working.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'The difference between demo and production: demo looks right; production works right under real conditions. Treating prototype code as production without explicit upgrade creates technical debt that compounds with every sprint. \'Low quality code contains 15x more defects and takes 124% longer to resolve.\' — name which standard applies right now.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Looks-right vs works-right not distinguished."}
+The looks-right vs works-right distinction hasn't been named.
+Treating prototype as production = compounding tech debt — name standard now.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Categorize explicitly what\'s being built: prototype (exploratory, disposable, no production quality required) or production (real data, real errors, edge cases, maintainable). If prototype — name it and plan the production upgrade path. If production — apply production standards now.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Build categorisation not done."}
+The explicit prototype-vs-production categorisation hasn't been done.
+Prototype: disposable + name upgrade path. Production: apply standards now.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is this demo-quality or production-quality? Name it explicitly. If demo — what\'s the plan to make it production-ready? If production — is it handling real data and real error states?', descBase: '' },
-    { option: 'Demo code isn\'t wrong — treating it as production code is. What quality standard applies to what\'s being built right now?', descBase: '' },
+    {
+      option: 'Is this demo-quality or production-quality? Name it explicitly. If demo — what\'s the plan to make it production-ready? If production — is it handling real data and real error states?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Quality standard not named."}
+Lighter: name standard + demo-plan-to-prod OR prod-handling-check.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Demo code isn\'t wrong — treating it as production code is. What quality standard applies to what\'s being built right now?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Quality standard not named."}
+Narrower: demo isn't wrong, treating-as-production is — name standard now.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is this demo or production quality? Name which, explicitly.', descBase: '' },
+    {
+      option: 'Is this demo or production quality? Name which, explicitly.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Quality standard not named."}
+Minimum next step: demo or production — name which.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -5566,16 +5800,55 @@ const ABSENCE_USER_JOURNEY_CHECK_CASUAL: DecisionContent = {
   question:      'Feature being built — is the full user journey mapped?',
   pinchFallback: 'Map the user journey first.',
   L1: [
-    { option: 'Jeff Patton User Story Mapping: once a basic happy path is in place, consider edge cases, alternatives, and exceptions. Before building more — answer: (1) what does the user see the first time they encounter this feature? (2) what happens when there\'s no data — the empty state? (3) what happens when something goes wrong — the error state? Each is a must-handle state.', descBase: '' },
-    { option: 'Happy-path-only features feel complete in development but break user trust in production. \'Edge cases often reveal how thoughtful a product really is.\' Before marking this feature done — map the non-happy paths: empty state, error state, first-use experience. These are the normal user experience for many users.', descBase: '' },
-    { option: 'User journey check — beyond the happy path, which of these states has been handled? (1) Empty state — no data yet. (2) Error state — something fails. (3) First-time experience — user sees this for the first time. (4) Edge case — unexpected input. Story mapping says: reveal the states the system must handle gracefully.', descBase: '' },
+    {
+      option: 'Jeff Patton User Story Mapping: once a basic happy path is in place, consider edge cases, alternatives, and exceptions. Before building more — answer: (1) what does the user see the first time they encounter this feature? (2) what happens when there\'s no data — the empty state? (3) what happens when something goes wrong — the error state? Each is a must-handle state.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Happy-path built; non-happy states not mapped."}
+Empty / error / first-use states haven't been mapped — happy-path-only feels complete but breaks user trust.
+First-use / empty / error — each is must-handle.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Happy-path-only features feel complete in development but break user trust in production. \'Edge cases often reveal how thoughtful a product really is.\' Before marking this feature done — map the non-happy paths: empty state, error state, first-use experience. These are the normal user experience for many users.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Non-happy-path mapping not done."}
+The non-happy-path mapping hasn't been done.
+Empty / error / first-use — normal for many users.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'User journey check — beyond the happy path, which of these states has been handled? (1) Empty state — no data yet. (2) Error state — something fails. (3) First-time experience — user sees this for the first time. (4) Edge case — unexpected input. Story mapping says: reveal the states the system must handle gracefully.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Beyond-happy-path states not enumerated."}
+The state-by-state handling check hasn't been done.
+Empty / error / first-time / edge case — reveal what must be handled gracefully.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Has the full user journey been mapped? Beyond the happy path — what happens in the empty state, error state, and first-use experience?', descBase: '' },
-    { option: 'The feature may work for you — does it work for users in non-ideal conditions? Empty state, error state, first-time experience — name each.', descBase: '' },
+    {
+      option: 'Has the full user journey been mapped? Beyond the happy path — what happens in the empty state, error state, and first-use experience?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Happy-path built."}
+Lighter: full journey + empty / error / first-use.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'The feature may work for you — does it work for users in non-ideal conditions? Empty state, error state, first-time experience — name each.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Happy-path built."}
+Narrower: name each non-ideal state.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'What\'s the empty state? The error state? The first-use experience? Name all three.', descBase: '' },
+    {
+      option: 'What\'s the empty state? The error state? The first-use experience? Name all three.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Happy-path built."}
+Minimum next step: name empty / error / first-use.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -5583,16 +5856,55 @@ const ABSENCE_TECHNICAL_SPIKE_TREATMENT_CASUAL: DecisionContent = {
   question:      'Exploring / experimenting — spike or production code?',
   pinchFallback: 'Spike or production: name which.',
   L1: [
-    { option: 'XP spike solution principle (Kent Beck / James Shore): \'Never copy spike code into production code. Even if it is exactly what you need, rewrite it using TDD so that it meets production standards.\' The purpose of exploratory code is knowledge, not shipping. Name what\'s being done: spike (to learn) or production (to ship)?', descBase: '' },
-    { option: 'The output of a spike is not production code — it\'s knowledge. Time-box the exploration, answer the question it was meant to answer, then decide: throw the spike away and rewrite properly, or extract the validated pattern into clean production code. Right now — is this spike or production?', descBase: '' },
-    { option: 'Exploratory code and production code have different standards by definition. Some practitioners keep a dedicated spikes/ directory to enforce this separation. Before committing what\'s been written — spike (throwaway, learning-focused) or production (clean, tested, maintainable)? Name which.', descBase: '' },
+    {
+      option: 'XP spike solution principle (Kent Beck / James Shore): \'Never copy spike code into production code. Even if it is exactly what you need, rewrite it using TDD so that it meets production standards.\' The purpose of exploratory code is knowledge, not shipping. Name what\'s being done: spike (to learn) or production (to ship)?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Exploring code without distinguishing spike vs production."}
+Exploratory code hasn't been distinguished from production code — spike code risks being committed as production.
+Spike = knowledge / production = ship — name which now.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'The output of a spike is not production code — it\'s knowledge. Time-box the exploration, answer the question it was meant to answer, then decide: throw the spike away and rewrite properly, or extract the validated pattern into clean production code. Right now — is this spike or production?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Spike output not gated to throw-or-extract decision."}
+The throw-vs-extract decision hasn't been made.
+Time-box / answer question / throw away or extract clean.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Exploratory code and production code have different standards by definition. Some practitioners keep a dedicated spikes/ directory to enforce this separation. Before committing what\'s been written — spike (throwaway, learning-focused) or production (clean, tested, maintainable)? Name which.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Code about to be committed; spike-or-production not named."}
+The pre-commit spike-or-production naming hasn't been done.
+Spike: throwaway, learning. Production: clean, tested, maintainable. Name which.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is what\'s being written spike code (exploratory, throwaway, to learn) or production code (tested, maintainable, to ship)? Name which before committing.', descBase: '' },
-    { option: 'The XP rule: never commit spike code directly as production. If this was a spike — extract the useful pattern and rewrite it cleanly before it enters the codebase.', descBase: '' },
+    {
+      option: 'Is what\'s being written spike code (exploratory, throwaway, to learn) or production code (tested, maintainable, to ship)? Name which before committing.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Exploring code."}
+Lighter: spike vs production — name before committing.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'The XP rule: never commit spike code directly as production. If this was a spike — extract the useful pattern and rewrite it cleanly before it enters the codebase.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Spike code might enter codebase."}
+Narrower: XP rule — extract pattern, rewrite cleanly before codebase entry.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Spike code or production code? Name which before committing.', descBase: '' },
+    {
+      option: 'Spike code or production code? Name which before committing.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Exploring code."}
+Minimum next step: spike or production — name before commit.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -5600,16 +5912,55 @@ const ABSENCE_DEPENDENCY_ADVENTURE_CASUAL: DecisionContent = {
   question:      'Adding a dependency — evaluated the need and maintenance cost?',
   pinchFallback: 'Evaluate before adding.',
   L1: [
-    { option: 'Dependency management principle: \'Dependencies are not free and extract an ongoing maintenance cost.\' Every library added for interest rather than specific need becomes code you did not write but have localized responsibility for. Before adding this — what specific problem does it solve that you can\'t solve without it?', descBase: '' },
-    { option: '\'Dependency hell\' occurs when two libraries demand incompatible versions of the same dependency — resolving this can derail development schedules. Maintenance consumes 70-90% of total project costs. Before installing this package — have alternatives been evaluated? What specific problem does it solve?', descBase: '' },
-    { option: 'Three questions before adding any dependency: (1) what specific problem does it solve? (2) have existing tools or a small custom solution been considered? (3) what is the ongoing maintenance cost — updates, security patches, version conflicts? Explore-first library additions become unmaintained technical debt.', descBase: '' },
+    {
+      option: 'Dependency management principle: \'Dependencies are not free and extract an ongoing maintenance cost.\' Every library added for interest rather than specific need becomes code you did not write but have localized responsibility for. Before adding this — what specific problem does it solve that you can\'t solve without it?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "About to add a library; necessity not evaluated."}
+Dependency necessity hasn't been evaluated — every interest-driven library becomes ongoing maintenance debt.
+Specific problem? Can-do-without-it? — before adding.
+{R4_CLOSE}`,
+    },
+    {
+      option: '\'Dependency hell\' occurs when two libraries demand incompatible versions of the same dependency — resolving this can derail development schedules. Maintenance consumes 70-90% of total project costs. Before installing this package — have alternatives been evaluated? What specific problem does it solve?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "About to install; alternatives not evaluated."}
+The alternatives-evaluation hasn't been done.
+Specific problem solved? alternatives evaluated? — before install.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Three questions before adding any dependency: (1) what specific problem does it solve? (2) have existing tools or a small custom solution been considered? (3) what is the ongoing maintenance cost — updates, security patches, version conflicts? Explore-first library additions become unmaintained technical debt.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Three-question gate not applied."}
+The three-question dependency gate hasn't been applied.
+Specific problem / existing tools considered / maintenance cost.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What specific problem does this dependency solve? Have alternatives been evaluated? What\'s the maintenance cost? Answer all three before installing.', descBase: '' },
-    { option: 'Dependencies are not free — they extract ongoing maintenance. What need does this library solve that justifies its long-term cost?', descBase: '' },
+    {
+      option: 'What specific problem does this dependency solve? Have alternatives been evaluated? What\'s the maintenance cost? Answer all three before installing.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Considering a new dependency."}
+Lighter: problem / alternatives / maintenance cost — answer all three before install.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Dependencies are not free — they extract ongoing maintenance. What need does this library solve that justifies its long-term cost?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Considering a new dependency."}
+Narrower: what need + long-term cost justified?
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'What specific problem does this library solve that justifies adding it as a permanent dependency?', descBase: '' },
+    {
+      option: 'What specific problem does this library solve that justifies adding it as a permanent dependency?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Considering a new dependency."}
+Minimum next step: specific problem justifying permanent dependency.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -5617,16 +5968,55 @@ const ABSENCE_RESTART_IMPULSE_CHECK_CASUAL: DecisionContent = {
   question:      'Hitting friction — debugged before considering a restart?',
   pinchFallback: 'Debug before restarting.',
   L1: [
-    { option: 'Joel Spolsky: \'When you start from scratch there is absolutely no reason to believe that you are going to do a better job than you did the first time. Each fixed bug took weeks or years of real-world usage to be discovered — when you throw away code, all the knowledge that went into it is lost.\' Before restarting: what specifically went wrong and why?', descBase: '' },
-    { option: 'Root cause analysis principle: every restart impulse is a debugging failure. \'RCA explains why the system became vulnerable to the fault, how the fault was triggered, and what durable changes will reduce the probability of it happening again.\' Rewriting skips all three steps. Debug first — identify the root cause before deciding whether restart is warranted.', descBase: '' },
-    { option: 'The restart impulse is almost always wrong. Problems in the current code are known. Problems in the rewrite are unknown — and most of the same issues will be reproduced without the bug knowledge that accumulated in the current version. What specifically is broken? Fix that.', descBase: '' },
+    {
+      option: 'Joel Spolsky: \'When you start from scratch there is absolutely no reason to believe that you are going to do a better job than you did the first time. Each fixed bug took weeks or years of real-world usage to be discovered — when you throw away code, all the knowledge that went into it is lost.\' Before restarting: what specifically went wrong and why?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Hitting friction; tempted to restart from scratch."}
+Root-cause debugging hasn't been done — restart impulse discards accumulated bug-knowledge.
+Before restart: what specifically went wrong and why?
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Root cause analysis principle: every restart impulse is a debugging failure. \'RCA explains why the system became vulnerable to the fault, how the fault was triggered, and what durable changes will reduce the probability of it happening again.\' Rewriting skips all three steps. Debug first — identify the root cause before deciding whether restart is warranted.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Restart impulse without RCA."}
+RCA on the current friction hasn't been done.
+Why-vulnerable / how-triggered / durable change — debug first.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'The restart impulse is almost always wrong. Problems in the current code are known. Problems in the rewrite are unknown — and most of the same issues will be reproduced without the bug knowledge that accumulated in the current version. What specifically is broken? Fix that.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Tempted to rewrite; current-vs-rewrite comparison not done."}
+The known-vs-unknown-problems comparison hasn't been done.
+Current: known. Rewrite: unknown + lost-knowledge — fix specific broken part instead.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Before rewriting — what specifically went wrong? Name the root cause. Debug first, then decide whether restart is actually warranted.', descBase: '' },
-    { option: 'The current code has accumulated knowledge from real use. Rewriting discards that. What\'s the specific problem? Fix it.', descBase: '' },
+    {
+      option: 'Before rewriting — what specifically went wrong? Name the root cause. Debug first, then decide whether restart is actually warranted.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Restart impulse."}
+Lighter: specific went-wrong + root cause + debug-first.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'The current code has accumulated knowledge from real use. Rewriting discards that. What\'s the specific problem? Fix it.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Restart impulse."}
+Narrower: accumulated-knowledge / specific problem to fix.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'What specifically is broken? Debug it before deciding to restart.', descBase: '' },
+    {
+      option: 'What specifically is broken? Debug it before deciding to restart.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Restart impulse."}
+Minimum next step: specific broken part + debug before restart.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -5634,16 +6024,55 @@ const ABSENCE_CREATIVE_VS_CORE_RATIO_CASUAL: DecisionContent = {
   question:      'Session balance — how much went to core vs. creative features?',
   pinchFallback: 'Core value first.',
   L1: [
-    { option: 'Value-driven development: \'features that generate the maximum value for the users without creating the maximum cost.\' Before the next creative or aesthetic feature — look at this session: what proportion of prompts went to core product functionality vs. creative/extra features? If more than 30-40% is creative, the core is under-served.', descBase: '' },
-    { option: 'Value vs. effort check: creative features have effort cost but often low core-product value. \'Value-driven development prevents feature bloat — adding features that don\'t provide value.\' For each creative feature added this session — what core user need does it serve? If it doesn\'t serve a core need, it\'s future technical debt.', descBase: '' },
-    { option: 'Session ratio check: count prompts on core features (things users actually need) vs. creative/extra features (things that are interesting to build). If creative is outweighing core — core first. Creative features compound maintenance cost without proportional user value.', descBase: '' },
+    {
+      option: 'Value-driven development: \'features that generate the maximum value for the users without creating the maximum cost.\' Before the next creative or aesthetic feature — look at this session: what proportion of prompts went to core product functionality vs. creative/extra features? If more than 30-40% is creative, the core is under-served.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Creative features accumulating; core-ratio not checked."}
+Session ratio of core vs creative effort hasn't been audited — creative work risks outweighing core user value.
+Look at session: core vs creative — if >30-40% creative, core is under-served.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Value vs. effort check: creative features have effort cost but often low core-product value. \'Value-driven development prevents feature bloat — adding features that don\'t provide value.\' For each creative feature added this session — what core user need does it serve? If it doesn\'t serve a core need, it\'s future technical debt.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Creative features added; core-need served not verified."}
+The per-creative-feature core-need check hasn't been done.
+Effort cost + core-product-value — each creative feature serves a core need or becomes debt.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Session ratio check: count prompts on core features (things users actually need) vs. creative/extra features (things that are interesting to build). If creative is outweighing core — core first. Creative features compound maintenance cost without proportional user value.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Session ratio not counted."}
+The session-ratio count hasn't been done.
+Core (users need) vs creative (interesting to build) — if creative outweighing, core first.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the ratio of core product prompts to creative/extra feature prompts this session? If creative is outweighing core — prioritize core functionality first.', descBase: '' },
-    { option: 'Every creative feature has a maintenance cost. Does this one serve a core user need, or is it a fun-to-build extra? Core first.', descBase: '' },
+    {
+      option: 'What\'s the ratio of core product prompts to creative/extra feature prompts this session? If creative is outweighing core — prioritize core functionality first.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Session prompts mix."}
+Lighter: core-vs-creative ratio — core-first if creative outweighing.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Every creative feature has a maintenance cost. Does this one serve a core user need, or is it a fun-to-build extra? Core first.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Considering a creative feature."}
+Narrower: serves core-user-need or fun-to-build-extra?
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Has core product gotten more attention than creative extras this session? Check the ratio.', descBase: '' },
+    {
+      option: 'Has core product gotten more attention than creative extras this session? Check the ratio.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Session mix."}
+Minimum next step: core-vs-creative attention ratio.
+{R4_CLOSE}`,
+    },
   ],
 };
 

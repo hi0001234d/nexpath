@@ -1593,14 +1593,39 @@ export const ABSENCE_ERROR_UNDERSTANDING_BEGINNER: DecisionContent = {
   question:      'Got an error — do you know what it means?',
   pinchFallback: 'Understand the error.',
   L1: [
-    { option: '1. Before asking to fix this error — read the error message carefully.\n2. Share with me: what do you think it\'s saying went wrong?\n3. Then tell me: does your explanation match where the problem is in the code?', descBase: '' },
-    { option: 'Walk me through the error message — what does it say, where is it pointing, and what do you think caused it? Share your understanding before we fix anything.', descBase: '' },
+    {
+      option: '1. Before asking to fix this error — read the error message carefully.\n2. Share with me: what do you think it\'s saying went wrong?\n3. Then tell me: does your explanation match where the problem is in the code?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Got an error; about to ask to fix it without understanding it."}
+The error message hasn't been read and explained — fixing without understanding leads to repeating the same class of error.
+Walk me through: read carefully / what it's saying / does explanation match code location.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk me through the error message — what does it say, where is it pointing, and what do you think caused it? Share your understanding before we fix anything.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Got an error; understanding-before-fix not shared."}
+Same moment, simpler: walk-through of message + understanding-before-fix.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What do you think this error means? Share your best guess with me — even if you\'re not sure — before we fix it.', descBase: '' },
+    {
+      option: 'What do you think this error means? Share your best guess with me — even if you\'re not sure — before we fix it.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Got an error."}
+Lighter: best-guess meaning before fix.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Do you understand what this error is telling you, or does it need more explaining before we fix it?', descBase: '' },
+    {
+      option: 'Do you understand what this error is telling you, or does it need more explaining before we fix it?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Got an error."}
+Minimum next step: understand-or-needs-explaining check.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1690,14 +1715,39 @@ export const ABSENCE_REQUIREMENT_CLARITY_BEGINNER: DecisionContent = {
   question:      'About to build — is the requirement clear?',
   pinchFallback: 'Clarify first.',
   L1: [
-    { option: '1. Before I build this — tell me specifically what you want it to do.\n2. Share with me: what does it look like when it\'s working correctly?\n3. Then tell me: what should NOT happen — is there anything it should avoid doing?', descBase: '' },
-    { option: 'Describe what you want built in your own words — what it should do, and how you\'d know it\'s working right. Share that with me before we start.', descBase: '' },
+    {
+      option: '1. Before I build this — tell me specifically what you want it to do.\n2. Share with me: what does it look like when it\'s working correctly?\n3. Then tell me: what should NOT happen — is there anything it should avoid doing?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "About to build but haven't said specifically what 'working' looks like."}
+What 'working' looks like hasn't been described — building proceeds without a target.
+Walk me through: what to do specifically / what working looks like / what should NOT happen.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Describe what you want built in your own words — what it should do, and how you\'d know it\'s working right. Share that with me before we start.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Building this; plain-words description not shared."}
+Same moment, simpler: plain-words description — what + how-I'd-know-working.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What exactly should this do, and how will you know when it\'s working? Be specific — not just "make it work" but what does "working" look like.', descBase: '' },
+    {
+      option: 'What exactly should this do, and how will you know when it\'s working? Be specific — not just "make it work" but what does "working" look like.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Building this."}
+Lighter: exact-do + working-looks-like — specific, not 'make it work'.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'What do you want this to do? In plain words — what\'s the goal?', descBase: '' },
+    {
+      option: 'What do you want this to do? In plain words — what\'s the goal?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Building this."}
+Minimum next step: plain-words goal.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1705,14 +1755,39 @@ export const ABSENCE_COPY_PASTE_AWARENESS_BEGINNER: DecisionContent = {
   question:      'Code generated — do you understand it before using it?',
   pinchFallback: 'Understand first.',
   L1: [
-    { option: '1. Before adding the generated code to your project — read through it.\n2. Share with me: what does each part do in plain words?\n3. If there\'s a part you\'re not sure about, point it out and we\'ll go through it together before it goes in.', descBase: '' },
-    { option: 'Walk me through the code that was just generated — what does it do and how does it work? Share your understanding before we add it to the project.', descBase: '' },
+    {
+      option: '1. Before adding the generated code to your project — read through it.\n2. Share with me: what does each part do in plain words?\n3. If there\'s a part you\'re not sure about, point it out and we\'ll go through it together before it goes in.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "About to paste generated code without reading it for understanding."}
+Generated code hasn't been read for understanding — using code one can't explain creates future-debugging debt.
+Walk me through: read through / plain-words per part / point out unsure parts.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk me through the code that was just generated — what does it do and how does it work? Share your understanding before we add it to the project.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Generated code about to be added."}
+Same moment, simpler: walk-through of generated + understanding before add.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there any part of the code that was just generated that you\'re not sure you understand? Point it out and we\'ll go through it.', descBase: '' },
+    {
+      option: 'Is there any part of the code that was just generated that you\'re not sure you understand? Point it out and we\'ll go through it.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Generated code reviewed."}
+Lighter: any-unsure parts to walk through together.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Do you understand what the generated code does before adding it to your project?', descBase: '' },
+    {
+      option: 'Do you understand what the generated code does before adding it to your project?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Generated code."}
+Minimum next step: understand-before-add check.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1720,14 +1795,39 @@ export const ABSENCE_DEBUGGING_OBSERVATION_BEGINNER: DecisionContent = {
   question:      'Something\'s broken — what did you actually see?',
   pinchFallback: 'Describe it first.',
   L1: [
-    { option: '1. Before I look at the bug — describe what happened.\n2. Share with me: what did you expect to happen, and what actually happened instead?\n3. Then tell me: is there an error message, and if so, what does it say?', descBase: '' },
-    { option: 'Walk me through what\'s broken — what did you expect to happen, what actually happened, and what error or weird behaviour did you see? Share that with me and we\'ll figure it out.', descBase: '' },
+    {
+      option: '1. Before I look at the bug — describe what happened.\n2. Share with me: what did you expect to happen, and what actually happened instead?\n3. Then tell me: is there an error message, and if so, what does it say?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Something's broken; haven't described what I saw vs expected."}
+What happened vs expected hasn't been described — fixing without observation guesses at the bug.
+Walk me through: what happened / expected vs actual / error message text.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk me through what\'s broken — what did you expect to happen, what actually happened, and what error or weird behaviour did you see? Share that with me and we\'ll figure it out.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Something's broken; symptom-vs-expectation not shared."}
+Same moment, simpler: walk-through — expected / actual / error or weird behaviour.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What happened when you ran this? Describe what you expected vs what you actually saw — I need to know the difference before we fix it.', descBase: '' },
+    {
+      option: 'What happened when you ran this? Describe what you expected vs what you actually saw — I need to know the difference before we fix it.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Something's broken."}
+Lighter: expected-vs-actual delta before fix.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'What exactly went wrong — what did you see happen, and what were you expecting?', descBase: '' },
+    {
+      option: 'What exactly went wrong — what did you see happen, and what were you expecting?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Something's broken."}
+Minimum next step: what-went-wrong + saw vs expected.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1735,14 +1835,39 @@ export const ABSENCE_LEARNING_CONSOLIDATION_BEGINNER: DecisionContent = {
   question:      'We\'ve built a lot — do you feel like you understood it?',
   pinchFallback: 'Recap learning.',
   L1: [
-    { option: '1. We\'ve covered a lot in this session — take a moment and think about what you actually learned.\n2. Share with me: what\'s the most important thing you now understand that you didn\'t before?\n3. Then tell me: is there anything we covered that still feels unclear or confusing?', descBase: '' },
-    { option: 'Recap what you learned in this session in your own words — what did we build, how does it work, and what new thing do you understand now that you didn\'t before? Share that with me.', descBase: '' },
+    {
+      option: '1. We\'ve covered a lot in this session — take a moment and think about what you actually learned.\n2. Share with me: what\'s the most important thing you now understand that you didn\'t before?\n3. Then tell me: is there anything we covered that still feels unclear or confusing?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Long session of building; haven't paused to recap what I learned."}
+Session learning hasn't been recapped — built code without understanding becomes a maintenance problem.
+Walk me through: think about learned / most important now-understood / what still unclear.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Recap what you learned in this session in your own words — what did we build, how does it work, and what new thing do you understand now that you didn\'t before? Share that with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Long session; recap-in-own-words not done."}
+Same moment, simpler: own-words recap — built / how-it-works / new-understanding.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the one thing from this session that you feel like you actually understood — not just copied, but actually understood? Share it with me.', descBase: '' },
+    {
+      option: 'What\'s the one thing from this session that you feel like you actually understood — not just copied, but actually understood? Share it with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Long session."}
+Lighter: one-thing actually-understood (not just copied).
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there something we built in this session that you\'re confident you understand well enough to explain to someone else?', descBase: '' },
+    {
+      option: 'Is there something we built in this session that you\'re confident you understand well enough to explain to someone else?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Long session."}
+Minimum next step: anything understood well enough to explain to someone else.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1750,14 +1875,39 @@ export const ABSENCE_SIMPLE_SOLUTION_FIRST_BEGINNER: DecisionContent = {
   question:      'Building this — is there a simpler way to do it?',
   pinchFallback: 'Simplest first.',
   L1: [
-    { option: '1. Before building something complex — ask: is there a simpler way to get the same result? The simplest solution that works is almost always the right one to start with.\n2. Share what you\'re trying to do in plain terms. Let\'s find the simple version first.', descBase: '' },
-    { option: 'The KISS principle in engineering: if the simple solution works, use it. You can always make things more complex later — you can\'t unsimplify them. What\'s the simplest version of what you\'re building?', descBase: '' },
+    {
+      option: '1. Before building something complex — ask: is there a simpler way to get the same result? The simplest solution that works is almost always the right one to start with.\n2. Share what you\'re trying to do in plain terms. Let\'s find the simple version first.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "About to build complex; simpler-first not asked."}
+Simple-first solution hasn't been tried — complexity-first creates code that can't be unsimplified.
+Walk me through: simpler way to same result? / what I'm trying to do, plain terms.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'The KISS principle in engineering: if the simple solution works, use it. You can always make things more complex later — you can\'t unsimplify them. What\'s the simplest version of what you\'re building?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "About to build; KISS check not done."}
+Same moment, simpler: KISS — simplest version of what's being built.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there a simpler way to do this? Describe what you need — let\'s find the smallest solution.', descBase: '' },
+    {
+      option: 'Is there a simpler way to do this? Describe what you need — let\'s find the smallest solution.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Building this."}
+Lighter: simpler way + smallest solution.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'What\'s the simplest way to get this done? Start there.', descBase: '' },
+    {
+      option: 'What\'s the simplest way to get this done? Start there.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Building this."}
+Minimum next step: simplest way to get this done.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1765,14 +1915,39 @@ export const ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_BEGINNER: DecisionContent =
   question:      'Asking a lot at once — let\'s do one thing at a time',
   pinchFallback: 'One thing at a time.',
   L1: [
-    { option: '1. When you send several things at once, the results get messy and hard to check. Try focusing on just one thing per message.\n2. What\'s the most important thing to do right now? Start with that — then we\'ll move to the next.', descBase: '' },
-    { option: 'One task per message works better than many — it\'s easier to see if it worked, easier to fix if it didn\'t, and easier to understand what happened. What\'s the single next step?', descBase: '' },
+    {
+      option: '1. When you send several things at once, the results get messy and hard to check. Try focusing on just one thing per message.\n2. What\'s the most important thing to do right now? Start with that — then we\'ll move to the next.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I'm asking several things at once; single-responsibility prompting not applied."}
+Single-responsibility prompting hasn't been applied — multiple things asked in one message make responses harder to verify and harder to fix.
+Walk me through: one thing per message / most important to do right now / then next.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'One task per message works better than many — it\'s easier to see if it worked, easier to fix if it didn\'t, and easier to understand what happened. What\'s the single next step?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Combined requests becoming hard to verify."}
+Same moment, simpler: one-task-per-message — easier to see/fix/understand.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the one thing to do right now? Focus on that first — we\'ll do the rest after.', descBase: '' },
+    {
+      option: 'What\'s the one thing to do right now? Focus on that first — we\'ll do the rest after.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Asking multiple things."}
+Lighter: one-thing-right-now + focus + then-rest.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'One thing at a time — what\'s the most important next step?', descBase: '' },
+    {
+      option: 'One thing at a time — what\'s the most important next step?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Asking multiple things."}
+Minimum next step: most important single-next-step.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1780,14 +1955,39 @@ export const ABSENCE_ROLLBACK_AWARENESS_BEGINNER: DecisionContent = {
   question:      'About to change things — do you know how to undo it?',
   pinchFallback: 'Save before changing.',
   L1: [
-    { option: '1. Before making a big change to your code — do a git commit first. This saves a snapshot you can always go back to if something breaks.\n2. Not sure how? Try: git add . then git commit -m \'working before change\'. Then make your change safely.', descBase: '' },
-    { option: 'Git is your safety net. Always commit a working version of your code before changing something significant. If the change breaks everything, you can get back to where things worked with one command.', descBase: '' },
+    {
+      option: '1. Before making a big change to your code — do a git commit first. This saves a snapshot you can always go back to if something breaks.\n2. Not sure how? Try: git add . then git commit -m \'working before change\'. Then make your change safely.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "About to make a big change without saving current state."}
+Current working state hasn't been committed to git — change-without-snapshot leaves no return path.
+Walk me through: git commit first / git add . + git commit -m 'working before change' / then change safely.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Git is your safety net. Always commit a working version of your code before changing something significant. If the change breaks everything, you can get back to where things worked with one command.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Big change pending; safety-net commit not done."}
+Same moment, simpler: git as safety net — commit working before significant change.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Do a git commit before making this change — save a working snapshot first, then change.', descBase: '' },
+    {
+      option: 'Do a git commit before making this change — save a working snapshot first, then change.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "About to change code."}
+Lighter: commit + snapshot before change.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Commit your current code before changing it — so you can get back if needed.', descBase: '' },
+    {
+      option: 'Commit your current code before changing it — so you can get back if needed.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "About to change code."}
+Minimum next step: commit before change.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1795,14 +1995,39 @@ export const ABSENCE_BUILD_VS_UNDERSTAND_RATIO_BEGINNER: DecisionContent = {
   question:      'We\'ve been building — do you understand what we\'ve built?',
   pinchFallback: 'Pause and understand.',
   L1: [
-    { option: '1. We\'ve added a lot of code — can you explain in your own words what it does? Even a rough description is fine.\n2. Understanding what you\'ve built is as important as building it. Code you don\'t understand becomes a problem you can\'t fix later.', descBase: '' },
-    { option: 'Pick one part of what we just built and walk me through what it does. Not how I explained it — how YOU understand it. This is how you turn building into learning.', descBase: '' },
+    {
+      option: '1. We\'ve added a lot of code — can you explain in your own words what it does? Even a rough description is fine.\n2. Understanding what you\'ve built is as important as building it. Code you don\'t understand becomes a problem you can\'t fix later.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Lots of code added; understanding-of-built not verified."}
+Built code understanding hasn't been verified — code one can't explain becomes a problem one can't fix.
+Walk me through: explain in own words / understanding as important as building.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Pick one part of what we just built and walk me through what it does. Not how I explained it — how YOU understand it. This is how you turn building into learning.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Lots built; one-part walk-through-in-own-words not done."}
+Same moment, simpler: pick one part / own-understanding walk-through / building-into-learning.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Can you explain in your own words what the code we just wrote does? Take a moment.', descBase: '' },
+    {
+      option: 'Can you explain in your own words what the code we just wrote does? Take a moment.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Lots built."}
+Lighter: own-words explanation of what was written.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Walk me through what we just built — in your own words.', descBase: '' },
+    {
+      option: 'Walk me through what we just built — in your own words.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Lots built."}
+Minimum next step: own-words walk-through.
+{R4_CLOSE}`,
+    },
   ],
 };
 
