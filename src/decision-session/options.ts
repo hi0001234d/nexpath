@@ -61,6 +61,22 @@ export interface DecisionContent {
    * omitted.
    */
   l2SafeguardRequired?: boolean;
+  /**
+   * Per-set total-length budget that bounds the FULL desc-base after R5
+   * runtime substitution (open bookend + gap-framing + direction-body +
+   * substituted R5 content + close bookend). Three tiers:
+   *
+   *   LIGHT   — up to 2 visible lines, up to 2 expanded lines,  ≤  200 chars total
+   *   MEDIUM  — up to 2 visible lines, up to 4 expanded lines,  ≤  400 chars total
+   *   HEAVY   — up to 2 visible lines, up to 10 expanded lines, ≤ 1000 chars total
+   *
+   * Omitted = `MEDIUM` at runtime (the default tier).
+   *
+   * When the post-substitution total exceeds the set's tier, the
+   * injection module falls back to the static D-fallback string for that
+   * option — the fallback string is shorter and stays inside the budget.
+   */
+  lengthBudget?: 'LIGHT' | 'MEDIUM' | 'HEAVY';
 }
 
 // ── Per-transition content ─────────────────────────────────────────────────────
