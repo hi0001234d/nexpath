@@ -390,25 +390,91 @@ describe('r5-injection — rewriteViaLLM()', () => {
   });
 });
 
-describe('r5-injection — injectR5() entry point (skeleton)', () => {
-  const history: readonly PromptRecord[] = [makePrompt('first prompt', 0), makePrompt('second prompt', 1)];
+describe('r5-injection — injectR5() full orchestration', () => {
+  const richHistory: readonly PromptRecord[] = [
+    makePrompt('I have been refactoring the invoice rendering path today.', 0),
+    makePrompt('Building the invoice and validating with tests now.', 1),
+  ];
 
   it('returns the desc-base unchanged when no {R5_INJECT} placeholder is present', async () => {
-    const out = await injectR5(SAMPLE_DESC_BASE_NO_PLACEHOLDER, history, 'TASK_REVIEW', 'formal');
+    const out = await injectR5(SAMPLE_DESC_BASE_NO_PLACEHOLDER, richHistory, 'TASK_REVIEW', 'formal');
     expect(out).toBe(SAMPLE_DESC_BASE_NO_PLACEHOLDER);
   });
 
-  it('substitutes the placeholder via D-fallback (until Strategy C wires up)', async () => {
-    const out = await injectR5(SAMPLE_DESC_BASE_WITH_PLACEHOLDER, history, 'TASK_REVIEW', 'formal');
+  it('falls back to D when history is too short (F1)', async () => {
+    const short = [makePrompt('only one prompt', 0)];
+    const out = await injectR5(SAMPLE_DESC_BASE_WITH_PLACEHOLDER, short, 'TASK_REVIEW', 'formal');
+    expect(out).not.toContain('{R5_INJECT');  // substitution happened via D-fallback
+  });
+
+  it('falls back to D when no client is provided (Strategy-C skipped)', async () => {
+    const out = await injectR5(SAMPLE_DESC_BASE_WITH_PLACEHOLDER, richHistory, 'TASK_REVIEW', 'formal');
     expect(out).not.toContain('{R5_INJECT');
-    expect(out).toContain('{R4_OPEN}');
-    expect(out).toContain('{R4_CLOSE}');
+  });
+
+  it('uses Strategy-C output when client + concentration + length all pass', async () => {
+    const client: R5RewriteClient = {
+      // Output that hits ≥ 70% concentration on the extracted vocab.
+      rewrite: async () => 'refactoring invoice building validating tests now.',
+    };
+    const out = await injectR5(
+      SAMPLE_DESC_BASE_WITH_PLACEHOLDER,
+      richHistory,
+      'TASK_REVIEW',
+      'formal',
+      { client, exampleHint: '"example shape"' },
+    );
+    expect(out).toContain('refactoring invoice');
+    expect(out).not.toContain('{R5_INJECT');
+  });
+
+  it('falls back to D when the LLM output fails the 70-80% concentration check', async () => {
+    const client: R5RewriteClient = {
+      rewrite: async () => 'Generic filler text that has no grounding in the user vocabulary at all.',
+    };
+    const out = await injectR5(
+      SAMPLE_DESC_BASE_WITH_PLACEHOLDER,
+      richHistory,
+      'TASK_REVIEW',
+      'formal',
+      { client, exampleHint: '"example"' },
+    );
+    // D-fallback substitution — does not contain the generic LLM output.
+    expect(out).not.toContain('Generic filler text');
+    expect(out).not.toContain('{R5_INJECT');
+  });
+
+  it('falls back to D when the LLM output exceeds F4 length cap with no clean truncation', async () => {
+    const client: R5RewriteClient = {
+      rewrite: async () => 'a'.repeat(200),  // 200-char single-token, no sentence boundary
+    };
+    const out = await injectR5(
+      SAMPLE_DESC_BASE_WITH_PLACEHOLDER,
+      richHistory,
+      'TASK_REVIEW',
+      'formal',
+      { client, exampleHint: '' },
+    );
+    expect(out).not.toContain('aaaaaa');  // raw model output never appears
+    expect(out).not.toContain('{R5_INJECT');
+  });
+
+  it('falls back to D when client throws', async () => {
+    const client: R5RewriteClient = { rewrite: async () => { throw new Error('boom'); } };
+    const out = await injectR5(
+      SAMPLE_DESC_BASE_WITH_PLACEHOLDER,
+      richHistory,
+      'TASK_REVIEW',
+      'formal',
+      { client, exampleHint: '' },
+    );
+    expect(out).not.toContain('{R5_INJECT');
   });
 
   it('returns the desc-base unchanged when the (signal_type, register) pair has no fallback', async () => {
     const out = await injectR5(
       SAMPLE_DESC_BASE_WITH_PLACEHOLDER,
-      history,
+      richHistory,
       'NEVER_AUTHORED_SIGNAL_TYPE_XYZ',
       'casual',
     );
@@ -418,7 +484,7 @@ describe('r5-injection — injectR5() entry point (skeleton)', () => {
   it('accepts all 3 R5Register values without throwing', async () => {
     const registers: R5Register[] = ['formal', 'casual', 'beginner'];
     for (const reg of registers) {
-      const out = await injectR5(SAMPLE_DESC_BASE_NO_PLACEHOLDER, history, 'TASK_REVIEW', reg);
+      const out = await injectR5(SAMPLE_DESC_BASE_NO_PLACEHOLDER, richHistory, 'TASK_REVIEW', reg);
       expect(typeof out).toBe('string');
     }
   });

@@ -45,33 +45,99 @@ export function substituteR5Placeholder(descBase: string, substitution: string):
 }
 
 /**
- * R5 runtime substitution — the public entry point.
+ * Optional inputs for the Strategy-C primary path. When omitted the
+ * runtime skips Strategy C entirely and uses the Strategy-D fallback —
+ * this is the safe default for callers that don't yet have an LLM
+ * client bound (the production caller binds one; the tests bind a
+ * mock).
+ */
+export interface InjectR5Options {
+  /** Pluggable rewrite client. Omit to skip the Strategy-C LLM call. */
+  client?:      R5RewriteClient;
+  /** Format/length hint passed to the rewrite prompt (typically the `{R5_INJECT: ...}` example text from the desc-base template). */
+  exampleHint?: string;
+}
+
+/**
+ * R5 runtime substitution — the public entry point. Orchestrates the
+ * locked 8-step Strategy-C flow with Strategy-D fallback on any of the
+ * F1-F7 failure modes:
  *
- * Strategy C primary (deterministic vocab + voice-rule filter + Haiku
- * LLM rewrite) is wired up in subsequent sub-batches. The current
- * implementation falls back to Strategy D (the static D-fallback per
- * signal_type × register) whenever Strategy C is not yet wired or
- * any of the F1-F7 failure modes fires.
+ *   1. Idempotency        — return verbatim if no `{R5_INJECT}` placeholder
+ *   2. F1 early-session   — fall back to D when history.length < 2
+ *   3. F2 mask secrets    — redact PII / credentials before extraction
+ *   4. F5 dedup           — collapse repeated prompts
+ *   5. Vocab extraction   — top-N grounded tokens from masked history
+ *   6. Step-4.5 filter    — drop banned tokens from the vocab list
+ *   7. LLM rewrite        — produce 1-2-line summary (if client provided)
+ *   8. F4 length cap      — sentence-boundary truncate or fall back
+ *   9. 70-80% rule check  — fall back if summary concentration < 0.7
  *
  * Contract:
- *   - Never throws — all failures resolve to a Strategy D substitution
- *     OR (if no fallback exists for the (signal_type, register) pair)
- *     return the original desc-base unchanged.
- *   - Idempotent on inputs without `{R5_INJECT: ...}` — returns the
- *     desc-base verbatim.
+ *   - Never throws — every failure path resolves to a Strategy-D
+ *     substitution OR (if no fallback exists for the (signal_type,
+ *     register) pair) returns the desc-base verbatim.
+ *   - Idempotent on inputs without `{R5_INJECT: ...}`.
  */
 export async function injectR5(
   descBase:   string,
   history:    readonly PromptRecord[],
   signalType: string,
   register:   R5Register,
+  options:    InjectR5Options = {},
 ): Promise<string> {
   if (!hasR5Injection(descBase)) return descBase;
 
-  // Strategy C primary will be wired in subsequent sub-batches.
-  // Until then, every call falls through to Strategy D so the runtime
-  // is functional end-to-end from the moment this module lands.
-  return strategyDFallback(descBase, signalType, register);
+  // (2) F1 — early-session guard.
+  if (f1ShouldFallback(history)) {
+    return strategyDFallback(descBase, signalType, register);
+  }
+
+  // (3) F2 — mask PII / secrets BEFORE any token extraction touches them.
+  const masked = f2MaskPromptHistory(history);
+
+  // (4) F5 — collapse verbatim-repeated prompts so the extractor doesn't
+  // over-weight a copy-pasted sentence.
+  const deduped = f5DeduplicatePrompts(masked);
+
+  // (5) — deterministic vocab extraction.
+  const rawVocab = extractVocab(deduped);
+
+  // (6) — step-4.5 voice-rule filter.
+  const filteredVocab = applyVoiceRuleFilter(rawVocab);
+  if (filteredVocab.length < 2) {
+    return strategyDFallback(descBase, signalType, register);
+  }
+
+  // (7) — LLM rewrite, only when a client is bound. Without a client,
+  // the runtime falls back to Strategy D — this keeps the path
+  // production-safe in environments that haven't provisioned an LLM.
+  if (!options.client) {
+    return strategyDFallback(descBase, signalType, register);
+  }
+  const summary = await rewriteViaLLM(
+    filteredVocab,
+    signalType,
+    register,
+    options.exampleHint ?? '',
+    options.client,
+  );
+  if (summary.trim().length === 0) {
+    return strategyDFallback(descBase, signalType, register);
+  }
+
+  // (8) — F4 per-substitution length cap.
+  const capped = f4EnforceLengthCap(summary);
+  if (capped === null) {
+    return strategyDFallback(descBase, signalType, register);
+  }
+
+  // (9) — 70-80% concentration check on the user-grounded vocab.
+  if (!meetsConcentrationThreshold(capped, filteredVocab)) {
+    return strategyDFallback(descBase, signalType, register);
+  }
+
+  return substituteR5Placeholder(descBase, capped);
 }
 
 /**
