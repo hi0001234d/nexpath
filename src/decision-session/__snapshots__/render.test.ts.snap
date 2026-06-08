@@ -1,0 +1,31 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`render — full-popup snapshot (dual styled / unstyled — §11.16 + §14.2) > produces a stable styled snapshot from the fixture popup > styled 1`] = `
+"Before coding.
+Before building — is the plan written?
+You're seeing this because
+Recent prompts indicate a transition from one development stage to the next.
+— review the options below to determine the next step.
+
+Write a PRD
+↳ PRD body sentence.
+press Space to expand
+Define problem
+↳ Problem framing sentence.
+Skip for now"
+`;
+
+exports[`render — full-popup snapshot (dual styled / unstyled — §11.16 + §14.2) > produces a stable unstyled snapshot from the fixture popup (NEXPATH_STYLER_PASSTHROUGH=1) > unstyled 1`] = `
+"Before coding.
+Before building — is the plan written?
+You're seeing this because
+Recent prompts indicate a transition from one development stage to the next.
+— review the options below to determine the next step.
+
+Write a PRD
+↳ PRD body sentence.
+press Space to expand
+Define problem
+↳ Problem framing sentence.
+Skip for now"
+`;
