@@ -5,14 +5,40 @@ const IDEA_TO_PRD_BEGINNER: DecisionContent = {
   question:      'Before building — is the plan written?',
   pinchFallback: 'Before coding.',
   L1: [
-    { option: '1. Help me describe what I\'m building in plain terms — what it does and who it\'s for.\n2. Share your understanding with me before we go further so I can confirm we\'re on the same page.\n3. Then tell me: what\'s the most important thing to figure out before we start building?', descBase: '' },
-    { option: 'Help me describe what I want to build in plain terms, then share it back with me before we continue.', descBase: '' },
+    {
+      option: '1. Help me describe what I\'m building in plain terms — what it does and who it\'s for.\n2. Share your understanding with me before we go further so I can confirm we\'re on the same page.\n3. Then tell me: what\'s the most important thing to figure out before we start building?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~2 lines first-person — "I've been talking about my project idea for a few prompts but I haven't written anything down clearly yet."}
+I'm at the moment where talking about the idea turns into actually planning it; I need a shared understanding before going further.
+The steps walk me through it: I describe, you confirm what you hear, then I pick the most important thing to nail down first.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Help me describe what I want to build in plain terms, then share it back with me before we continue.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "My recent prompts have been about the idea, but nothing concrete is written."}
+Same moment, single back-and-forth instead of three steps.
+Help me describe, then share back so I can confirm.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Ask me one question to understand what I\'m building better, then summarise what you hear back to me.', descBase: '' },
+    {
+      option: 'Ask me one question to understand what I\'m building better, then summarise what you hear back to me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "I've been talking about the idea but not in enough detail for you to act on it."}
+Lighter version: one question, one summary back.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is anything about what I want to build still unclear to you?', descBase: '' },
+    {
+      option: 'Is anything about what I want to build still unclear to you?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Idea discussed; clarity not confirmed."}
+Minimum next step: just tell me what's still unclear.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -20,14 +46,39 @@ const PRD_TO_ARCHITECTURE_BEGINNER: DecisionContent = {
   question:      'Spec ready — is the architecture decided?',
   pinchFallback: 'Design first.',
   L1: [
-    { option: '1. List the main parts of what we\'re building and how they connect — in plain language, no technical terms.\n2. Share that list with me before we move on so I can confirm it covers everything.\n3. Then tell me: what\'s the one thing we need to decide before writing any code?', descBase: '' },
-    { option: 'Describe the main parts of this system and how they connect — then share it with me before we start building.', descBase: '' },
+    {
+      option: '1. List the main parts of what we\'re building and how they connect — in plain language, no technical terms.\n2. Share that list with me before we move on so I can confirm it covers everything.\n3. Then tell me: what\'s the one thing we need to decide before writing any code?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~2 lines first-person — "I have a sense of what to build but I don't know how the pieces connect yet."}
+The spec feels solid; I need to know how the pieces fit together before any code gets written.
+Walk me through it slowly: list the parts in plain language, share for confirmation, then point me at the one decision I need to make first.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Describe the main parts of this system and how they connect — then share it with me before we start building.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I know what I want to build but not how it's structured."}
+Same moment, single pass: describe the parts and how they connect, then share so I can confirm.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the most important decision to make before we start coding? Share your answer with me first.', descBase: '' },
+    {
+      option: 'What\'s the most important decision to make before we start coding? Share your answer with me first.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Spec is there; first big decision not made."}
+Lighter version: the single most important decision before coding.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything about the plan that could cause problems when we start coding?', descBase: '' },
+    {
+      option: 'Is there anything about the plan that could cause problems when we start coding?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Plan is there; trouble spots not surfaced."}
+Minimum next step: anything in the plan that will bite during coding.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -35,14 +86,40 @@ const ARCHITECTURE_TO_TASKS_BEGINNER: DecisionContent = {
   question:      'Architecture done — is the task list ordered?',
   pinchFallback: 'Break it down.',
   L1: [
-    { option: '1. Break this down into small steps — each one should be something you can build in a single session.\n2. Share the list with me so I can check the order makes sense before you start.\n3. Then tell me: what\'s the first thing to build that shows the whole thing actually works?', descBase: '' },
-    { option: 'List the first 3 steps to build this in order — then share them with me before you begin.', descBase: '' },
+    {
+      option: '1. Break this down into small steps — each one should be something you can build in a single session.\n2. Share the list with me so I can check the order makes sense before you start.\n3. Then tell me: what\'s the first thing to build that shows the whole thing actually works?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~2 lines first-person — "I understand the structure now but I don't have a list of steps to actually start."}
+I see how the pieces fit; I need this broken into steps I can actually start on, in order.
+Walk me through it: small steps, share the list for ordering confirmation, then point out the first thing that proves the whole thing works.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'List the first 3 steps to build this in order — then share them with me before you begin.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Structure is clear, no step list yet."}
+Same moment, smaller scope: just the first three steps in order.
+Share them for confirmation before starting.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the very first thing to build and why? Share your answer with me before we start.', descBase: '' },
+    {
+      option: 'What\'s the very first thing to build and why? Share your answer with me before we start.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Structure is clear, starting point not chosen."}
+Lighter version: just the first thing to build and why.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is the order of these steps clear, or is anything missing before we start?', descBase: '' },
+    {
+      option: 'Is the order of these steps clear, or is anything missing before we start?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Step list is here; clarity not confirmed."}
+Minimum next step: anything unclear or missing about the order.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -50,14 +127,39 @@ export const TASK_REVIEW_BEGINNER: DecisionContent = {
   question:      'Task done — reviewed and tested?',
   pinchFallback: 'Quick check.',
   L1: [
-    { option: '1. Review what was just built — does it do what this task asked for, in plain terms?\n2. Share your review with me before I mark this done, and flag anything that looks off.\n3. Then check: is there anything that might break something that was already working?', descBase: '' },
-    { option: 'Check if what was just built matches what the task asked for — share what you find with me first.', descBase: '' },
+    {
+      option: '1. Review what was just built — does it do what this task asked for, in plain terms?\n2. Share your review with me before I mark this done, and flag anything that looks off.\n3. Then check: is there anything that might break something that was already working?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~2 lines first-person — "I just finished a task and the last few prompts have been about building it; I haven't reviewed it yet."}
+A task just finished; I need a check before I mark it done and move on.
+Walk me through it: review in plain terms, flag anything off, then check whether it broke something that was working.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Check if what was just built matches what the task asked for — share what you find with me first.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Task just finished, no review yet."}
+Same moment, simpler: did the build match what the task asked for? Share findings before I move on.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Does what was just built look right to you? Flag anything that seems off and share it with me.', descBase: '' },
+    {
+      option: 'Does what was just built look right to you? Flag anything that seems off and share it with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Task just finished."}
+Lighter check: does the build look right? Flag the off stuff.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that looks wrong or incomplete?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that looks wrong or incomplete?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Task just finished."}
+Minimum next step: anything wrong or incomplete.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -65,14 +167,39 @@ const IMPLEMENTATION_TO_REVIEW_BEGINNER: DecisionContent = {
   question:      'Phase done — full review before moving on?',
   pinchFallback: 'Phase done?',
   L1: [
-    { option: '1. Go through everything built in this phase — does it all work together the way it should?\n2. Share that with me before we move on and flag anything that looks incomplete or broken.\n3. Then check: is there anything a real person using this could run into that we haven\'t covered?', descBase: '' },
-    { option: 'Check if everything in this phase is working as expected — share what you find with me before we move on.', descBase: '' },
+    {
+      option: '1. Go through everything built in this phase — does it all work together the way it should?\n2. Share that with me before we move on and flag anything that looks incomplete or broken.\n3. Then check: is there anything a real person using this could run into that we haven\'t covered?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~2 lines first-person — "I've been building features through this phase across many prompts; no end-of-phase check yet."}
+A whole phase just finished; I need to know it all works together before I start the next one.
+Walk me through it: full coverage check, flag incomplete or broken pieces, then think about what a real user could hit that we haven't covered.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Check if everything in this phase is working as expected — share what you find with me before we move on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Phase just wrapped, no check yet."}
+Same moment, simpler: is everything in the phase working? Share findings before moving on.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the most important thing to check before calling this phase done? Share your answer with me.', descBase: '' },
+    {
+      option: 'What\'s the most important thing to check before calling this phase done? Share your answer with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Phase just wrapped."}
+Lighter check: the single most important thing to verify before calling the phase done.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything obviously broken or missing in what was just built?', descBase: '' },
+    {
+      option: 'Is there anything obviously broken or missing in what was just built?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Phase just wrapped."}
+Minimum next step: anything obviously broken or missing.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -80,14 +207,39 @@ const REVIEW_TO_RELEASE_BEGINNER: DecisionContent = {
   question:      'Ready to ship — final checks done?',
   pinchFallback: 'Almost there.',
   L1: [
-    { option: '1. Check that everything still works — go through the main things that need to pass before we ship.\n2. Share the results with me before we release anything.\n3. Then tell me: is there anything that could go wrong once this is live that we haven\'t tested in here?', descBase: '' },
-    { option: 'Check if this is ready to ship and share what still needs to be done before we release.', descBase: '' },
+    {
+      option: '1. Check that everything still works — go through the main things that need to pass before we ship.\n2. Share the results with me before we release anything.\n3. Then tell me: is there anything that could go wrong once this is live that we haven\'t tested in here?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~2 lines first-person — "Last few prompts: I've been reviewing and testing. Haven't done the final pre-ship gut check yet."}
+Review is done; this is the last step before going live, and I need to be sure it's actually ready.
+Walk me through it: go through what has to pass, share the results, then think about what could still break in production that we missed in here.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Check if this is ready to ship and share what still needs to be done before we release.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Review wrapped, ship status not yet checked."}
+Same moment, simpler: is this ready to ship and what's still missing?
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the biggest risk in shipping this right now? Share your answer with me before we continue.', descBase: '' },
+    {
+      option: 'What\'s the biggest risk in shipping this right now? Share your answer with me before we continue.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Pre-ship moment."}
+Lighter check: the single biggest risk in shipping right now.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything that could break once this is live that we haven\'t tested?', descBase: '' },
+    {
+      option: 'Is there anything that could break once this is live that we haven\'t tested?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Pre-ship moment."}
+Minimum next step: anything that could break in production we haven't tested.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -95,14 +247,39 @@ const RELEASE_TO_FEEDBACK_BEGINNER: DecisionContent = {
   question:      'Just shipped — is the feedback loop active?',
   pinchFallback: 'Watch it live.',
   L1: [
-    { option: '1. Check that what was just built is actually working now that it\'s live — try the main thing it does and see if it works the way you expected.\n2. Share what you find with me before we move on and flag anything that looks off or unexpected.\n3. Then check: will we know if something breaks after we stop watching, or will it fail without showing an obvious error?', descBase: '' },
-    { option: 'Check if this project is set up to let us know if something goes wrong now that it\'s live — share what\'s in place and what\'s missing with me before we continue.', descBase: '' },
+    {
+      option: '1. Check that what was just built is actually working now that it\'s live — try the main thing it does and see if it works the way you expected.\n2. Share what you find with me before we move on and flag anything that looks off or unexpected.\n3. Then check: will we know if something breaks after we stop watching, or will it fail without showing an obvious error?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~2 lines first-person — "Just shipped; haven't checked it live and don't know yet if alerts would catch a silent break."}
+It just went live; I need to know it actually works in production and that I'll find out if it breaks later.
+Walk me through it: try the main thing, flag anything that looks off, then think about whether we'd know if something breaks after we stop watching.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Check if this project is set up to let us know if something goes wrong now that it\'s live — share what\'s in place and what\'s missing with me before we continue.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Just shipped; alerting/monitoring status not checked."}
+Same moment, simpler: is the project set up to tell us if something goes wrong? What's there and what's missing?
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'How would we find out if something is going wrong for a real person using this feature right now? Share your answer with me before we continue.', descBase: '' },
+    {
+      option: 'How would we find out if something is going wrong for a real person using this feature right now? Share your answer with me before we continue.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Just shipped."}
+Lighter check: how would we even find out if a real user hits a problem right now?
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that could go wrong without showing a clear error?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that could go wrong without showing a clear error?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Just shipped."}
+Minimum next step: anything in the build that could fail silently.
+{R4_CLOSE}`,
+    },
   ],
 };
 
