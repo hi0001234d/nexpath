@@ -634,14 +634,24 @@ export function computeRepetitionCounts(history: readonly PromptRecord[]): Repet
   return out;
 }
 
-/** L2 sensitive-action triggers (per CLAUDE.md L2 trigger list, used by F7). */
+/**
+ * L2 sensitive-action triggers (per CLAUDE.md L2 trigger list, used by F7).
+ *
+ * False-positive note: `\benv\b` (standalone) is per dev-plan §10.6.1
+ * literal trigger-token list but will match common non-sensitive
+ * phrasings like "env variable" / "set env" / "use env". The
+ * downstream behaviour (path-(b) strip + path-(a) safeguard append)
+ * is conservatively safe — extra escalations are noisy but not
+ * destructive — so the dev-plan literal stays. Revisit if FP rate
+ * becomes a UX issue.
+ */
 const L2_TRIGGER_PATTERNS: readonly { name: string; re: RegExp }[] = [
   { name: 'destructive-fs',    re: /\brm\s+-rf\b|\bdelete\b|\bdrop\s+table\b|\btruncate\b/i },
   { name: 'schema-migration',  re: /\bmigrate\b|\balter\s+table\b|\bdrop\s+column\b/i },
   { name: 'dep-install',       re: /\b(?:npm|pip|apt)\s+install\b|\bupgrade\b/i },
-  { name: 'secret-env',        re: /\b\.env\b|\bsecret\b|\bcredential\b/i },
+  { name: 'secret-env',        re: /\benv\b|\.env\b|\bsecret\b|\bcredential\b/i },
   { name: 'force-push',        re: /\bforce\s+push\b|--force\b|\s-f\b/i },
-  { name: 'deployment',        re: /\bdeploy\b|\brelease\b|\bproduction\b|\bstaging\b/i },
+  { name: 'deployment',        re: /\bdeploy\b|\brelease\b|\bprod\b|\bproduction\b|\bstaging\b/i },
   { name: 'multi-file-mod',    re: /\brefactor\s+across\b|\brewrite\s+all\b|\bmigrate\s+all\b/i },
 ];
 

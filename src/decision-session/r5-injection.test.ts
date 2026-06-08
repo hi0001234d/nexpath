@@ -420,6 +420,16 @@ describe('r5-injection — F7 L2 sensitive-action trigger detection', () => {
     const triggers = f7DetectL2Triggers(history);
     expect(triggers.filter((t) => t === 'deployment')).toHaveLength(1);
   });
+
+  it('detects deployment via the standalone "prod" shorthand (dev-plan §10.6.1 token list)', () => {
+    const history = [makePrompt('ship the build to prod tomorrow', 0)];
+    expect(f7DetectL2Triggers(history)).toContain('deployment');
+  });
+
+  it('detects secret-env via the standalone "env" token (dev-plan §10.6.1 token list)', () => {
+    const history = [makePrompt('let me read env to debug', 0)];
+    expect(f7DetectL2Triggers(history)).toContain('secret-env');
+  });
 });
 
 describe('r5-injection — f7DetectL2TriggerMatches() literal-text variant', () => {
