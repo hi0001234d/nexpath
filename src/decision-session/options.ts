@@ -8688,6 +8688,7 @@ export const ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL: DecisionContent = {
 {R5_INJECT: ~1-2 lines first-person — "Shipped a milestone without sharing publicly."}
 Milestone sharing hasn't been done — audience built during the build survives launch failures; audience built launch-week doesn't.
 Short post / tweet / Loom / community update — shipped + learned.
+Still, before you publish this post to any public channel you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
     {
@@ -8696,6 +8697,7 @@ Short post / tweet / Loom / community update — shipped + learned.
 {R5_INJECT: ~1-2 lines first-person — "Milestone-type + audience not picked."}
 The milestone-type + audience pick hasn't been done.
 First-feature / tech-milestone / 10-users / revenue / lesson — one-paragraph draft + audience.
+Still, before you publish the drafted post to any public channel you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
     {
@@ -8704,6 +8706,7 @@ First-feature / tech-milestone / 10-users / revenue / lesson — one-paragraph d
 {R5_INJECT: ~1-2 lines first-person — "Low-friction share format not picked."}
 The low-friction-share pick hasn't been done.
 Tweet / 60s Loom / forum paragraph — frequency over polish.
+Still, before you publish the share to any public channel you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
   ],
@@ -8713,6 +8716,7 @@ Tweet / 60s Loom / forum paragraph — frequency over polish.
       descBase: `{R4_OPEN}
 {R5_INJECT: ~1 line first-person — "Shipped a milestone."}
 Lighter: simplest format + who-specifically-sees-it.
+Still, before you publish this share publicly you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
     {
@@ -8720,6 +8724,7 @@ Lighter: simplest format + who-specifically-sees-it.
       descBase: `{R4_OPEN}
 {R5_INJECT: ~1 line first-person — "Shipped a milestone."}
 Narrower: indie-hacker-useful learning = the post / share process not just output.
+Still, before you publish this learning-post publicly you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
   ],
@@ -8729,6 +8734,7 @@ Narrower: indie-hacker-useful learning = the post / share process not just outpu
       descBase: `{R4_OPEN}
 {R5_INJECT: ~1 line first-person — "Shipped a milestone."}
 Minimum next step: short public post — built + learned.
+Still, before you publish this post publicly you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
   ],
