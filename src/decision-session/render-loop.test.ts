@@ -6,6 +6,8 @@ import {
   D2_TRUNCATION_MARKER,
   D4_PADDING_ROW_COUNT,
   D5_EXPANDED_LINE_CAP,
+  SHORTCUT_HINT_COLLAPSE,
+  SHORTCUT_HINT_EXPAND,
   SUB_LINE_CONTINUATION_INDENT,
   SUB_LINE_PREFIX,
   normaliseKeypress,
@@ -161,14 +163,23 @@ describe('render-loop — LineKind separate-element invariant (dev-plan §11.11)
     }
   });
 
-  it('option-label and its desc-base sub-line are emitted as TWO distinct elements', () => {
-    const r = computeLayout(makeOpts(), FRESH_STATE);
-    const range = r.optionLineRanges.find((rg) => rg.itemIndex === 0)!;
-    const slice = r.emissions.slice(range.startIdx, range.endIdx);
-    // 2 elements: the label + the desc-base sub-line
-    expect(slice).toHaveLength(2);
-    expect(slice[0].kind).toBe('option-label');
-    expect(slice[1].kind).toBe('desc-base-truncated');
+  it('option-label and its desc-base sub-line are emitted as DISTINCT elements (focused option also gets a shortcut-hint per §11.2)', () => {
+    // Focus the SECOND option so the first (unfocused) option emits exactly
+    // label + desc-base (2 elements). The focused option emits label + desc-base + shortcut-hint (3 elements).
+    const r           = computeLayout(makeOpts(), { ...FRESH_STATE, focusedIndex: 1 });
+    const unfocused   = r.optionLineRanges.find((rg) => rg.itemIndex === 0)!;
+    const focused     = r.optionLineRanges.find((rg) => rg.itemIndex === 1)!;
+    const unfocSlice  = r.emissions.slice(unfocused.startIdx, unfocused.endIdx);
+    const focSlice    = r.emissions.slice(focused.startIdx,   focused.endIdx);
+
+    expect(unfocSlice).toHaveLength(2);
+    expect(unfocSlice[0].kind).toBe('option-label');
+    expect(unfocSlice[1].kind).toBe('desc-base-truncated');
+
+    expect(focSlice).toHaveLength(3);
+    expect(focSlice[0].kind).toBe('option-label');
+    expect(focSlice[1].kind).toBe('desc-base-truncated');
+    expect(focSlice[2].kind).toBe('shortcut-hint');
   });
 });
 
@@ -330,6 +341,70 @@ describe('render-loop — computeLayout D1 + D2 integration', () => {
     const descLines = r.emissions.filter((e) => e.kind === 'desc-base-truncated');
     expect(descLines).toHaveLength(2);
     for (const e of descLines) expect(e.kind).toBe('desc-base-truncated');
+  });
+});
+
+describe('render-loop — shortcut-hint emission (§11.2 Gap 4 fix)', () => {
+  it('emits exactly one shortcut-hint element under the focused option when it has a desc-base', () => {
+    const r = computeLayout(makeOpts(), { ...FRESH_STATE, focusedIndex: 0 });
+    const hints = r.emissions.filter((e) => e.kind === 'shortcut-hint');
+    expect(hints).toHaveLength(1);
+    expect(hints[0].optionIndex).toBe(0);
+  });
+
+  it('shortcut-hint reads "press Space to expand" when the focused option is truncated', () => {
+    const r = computeLayout(makeOpts(), { ...FRESH_STATE, focusedIndex: 0 });
+    const hint = r.emissions.find((e) => e.kind === 'shortcut-hint')!;
+    expect(hint.text).toBe(SHORTCUT_HINT_EXPAND);
+  });
+
+  it('shortcut-hint reads "press Space to collapse" when the focused option is expanded', () => {
+    const r = computeLayout(makeOpts(), { focusedIndex: 0, expandedOptions: new Set([0]), scrollOffset: 0 });
+    const hint = r.emissions.find((e) => e.kind === 'shortcut-hint')!;
+    expect(hint.text).toBe(SHORTCUT_HINT_COLLAPSE);
+  });
+
+  it('the shortcut-hint moves with focus — emitted under whichever option is focusedIndex', () => {
+    const r0 = computeLayout(makeOpts(), { ...FRESH_STATE, focusedIndex: 0 });
+    const r1 = computeLayout(makeOpts(), { ...FRESH_STATE, focusedIndex: 1 });
+    expect(r0.emissions.find((e) => e.kind === 'shortcut-hint')!.optionIndex).toBe(0);
+    expect(r1.emissions.find((e) => e.kind === 'shortcut-hint')!.optionIndex).toBe(1);
+  });
+
+  it('no shortcut-hint is emitted under meta items (SKIP_NOW / SHOW_SIMPLER / HELP_LABEL)', () => {
+    const r = computeLayout(makeOpts({
+      options: [
+        { value: 'content', label: 'real',   descBase: 'desc' },
+        { value: 'meta',    label: 'Skip',   isMeta: true },
+      ],
+    }), { ...FRESH_STATE, focusedIndex: 1 });
+    const hints = r.emissions.filter((e) => e.kind === 'shortcut-hint');
+    expect(hints).toHaveLength(0);
+  });
+
+  it('no shortcut-hint is emitted under separator items', () => {
+    const r = computeLayout(makeOpts({
+      options: [
+        { value: 'content', label: 'real', descBase: 'desc' },
+        { value: 'sep',     label: '',     isSeparator: true },
+      ],
+    }), { ...FRESH_STATE, focusedIndex: 1 });
+    expect(r.emissions.filter((e) => e.kind === 'shortcut-hint')).toHaveLength(0);
+  });
+
+  it('no shortcut-hint is emitted when the focused option has no descBase content', () => {
+    const r = computeLayout(makeOpts({
+      options: [{ value: 'plain', label: 'no desc here' }],
+    }), { ...FRESH_STATE, focusedIndex: 0 });
+    expect(r.emissions.filter((e) => e.kind === 'shortcut-hint')).toHaveLength(0);
+  });
+
+  it('the shortcut-hint emission comes AFTER the focused option\'s desc-base sub-line block', () => {
+    const r       = computeLayout(makeOpts(), { ...FRESH_STATE, focusedIndex: 0 });
+    const hintIdx = r.emissions.findIndex((e) => e.kind === 'shortcut-hint');
+    const descIdx = r.emissions.findIndex((e) => e.kind === 'desc-base-truncated' && e.optionIndex === 0);
+    expect(descIdx).toBeGreaterThan(-1);
+    expect(hintIdx).toBeGreaterThan(descIdx);
   });
 });
 

@@ -145,6 +145,12 @@ export const SUB_LINE_CONTINUATION_INDENT = '  ';
 /** Default minimum maxItems floor — matches TtySelectFn precedent. */
 export const DEFAULT_MAX_ITEMS_FLOOR = 5;
 
+/** R8-Sub1.4 — shortcut-hint text shown under the focused option when its desc-base is currently truncated. */
+export const SHORTCUT_HINT_EXPAND   = 'press Space to expand';
+
+/** R8-Sub1.4 — shortcut-hint text shown under the focused option when its desc-base is currently expanded. */
+export const SHORTCUT_HINT_COLLAPSE = 'press Space to collapse';
+
 // ── Wrapping + truncation helpers (D1 / D2 / D5) ────────────────────────────
 
 /**
@@ -325,14 +331,28 @@ export function computeLayout(opts: RenderLoopOptions, state: LayoutState): Rend
       // (expanded), append D2 `...` marker on overflow. Each wrapped line
       // emits as a SEPARATE element with the same LineKind so §11.11
       // separate-element invariant holds at the per-line granularity.
+      const isExpanded = state.expandedOptions.has(i);
       if (!item.isMeta && item.descBase && item.descBase.length > 0) {
-        const isExpanded = state.expandedOptions.has(i);
-        const cap        = isExpanded ? D5_EXPANDED_LINE_CAP : D1_TRUNCATED_LINE_CAP;
-        const kind       = isExpanded ? 'desc-base-expanded' : 'desc-base-truncated';
-        const subLines   = renderDescBaseSubLines(item.descBase, opts.cols, cap);
+        const cap      = isExpanded ? D5_EXPANDED_LINE_CAP : D1_TRUNCATED_LINE_CAP;
+        const kind     = isExpanded ? 'desc-base-expanded' : 'desc-base-truncated';
+        const subLines = renderDescBaseSubLines(item.descBase, opts.cols, cap);
         for (const ln of subLines) {
           emissions.push({ kind, text: ln, optionIndex: i, isPadding: false });
         }
+      }
+
+      // Shortcut hint — emitted ONLY under the currently focused option,
+      // and only when the focused option carries a desc-base (no hint for
+      // meta items or items without descBase content). Hint text reflects
+      // the current truncated/expanded state per R8-Sub1.4 wording.
+      // Placement: inline-below-focused-option per §11.2 Gap 4 fix.
+      if (i === state.focusedIndex && !item.isMeta && item.descBase && item.descBase.length > 0) {
+        emissions.push({
+          kind:        'shortcut-hint',
+          text:        isExpanded ? SHORTCUT_HINT_COLLAPSE : SHORTCUT_HINT_EXPAND,
+          optionIndex: i,
+          isPadding:   false,
+        });
       }
     }
 
