@@ -36,25 +36,6 @@ export const ALL_LINE_KINDS: readonly LineKind[] = [
 ] as const;
 
 /**
- * Apply per-LineKind styling to a layout-emitted line.
- *
- * Layout has already done line-wrapping, truncation, padding, and `...`
- * marker insertion before calling this function — styler does NOT
- * re-truncate or re-wrap. ANSI escape codes are the styler's
- * responsibility; layout never emits them.
- *
- * Initial implementation is pass-through (returns input unchanged for
- * every kind). The per-kind ANSI / picocolors mapping is added by the
- * styling implementation pass.
- *
- * Default behavior for an unknown kind: return the line unchanged
- * (graceful fallback per the LineKind extensibility rule above).
- *
- * @param line  The raw text content from the layout.
- * @param kind  The line-kind tag.
- * @returns     The styled string ready to write to stdout.
- */
-/**
  * Env-var key for the styler-bypass diagnostic toggle. Set to the
  * value `'1'` to make the styler return its input unchanged regardless
  * of LineKind.
@@ -66,16 +47,50 @@ export function isStylerPassthroughActive(): boolean {
   return process.env[STYLER_PASSTHROUGH_ENV] === '1';
 }
 
+/**
+ * Apply per-LineKind styling to a layout-emitted line.
+ *
+ * Layout has already done line-wrapping, truncation, padding, and `...`
+ * marker insertion before calling this function — styler does NOT
+ * re-truncate or re-wrap. ANSI escape codes are the styler's
+ * responsibility; layout never emits them.
+ *
+ * Initial implementation is pass-through (returns input unchanged for
+ * every kind). The per-kind ANSI / picocolors mapping is added by the
+ * styling implementation pass — each case below grows its kind-specific
+ * body without restructuring the switch.
+ *
+ * Default behavior for an unknown kind: return the line unchanged
+ * (graceful fallback per the LineKind extensibility rule above).
+ *
+ * Debug bypass: when `NEXPATH_STYLER_PASSTHROUGH=1` is set, the function
+ * short-circuits to a pass-through return regardless of the dispatch
+ * body. No-op today (the body is already pass-through); becomes the
+ * diagnostic toggle once per-kind ANSI mapping lands.
+ *
+ * @param line  The raw text content from the layout.
+ * @param kind  The line-kind tag.
+ * @returns     The styled string ready to write to stdout.
+ */
 export function styler(line: string, kind: LineKind): string {
-  // Debug bypass — returns the input line verbatim regardless of LineKind.
-  // No-op while the body below is still pass-through; becomes the diagnostic
-  // toggle once the body grows the per-kind ANSI mapping.
+  // Debug bypass — return raw layout output for diagnosis. Runs FIRST so
+  // the bypass is honored even after the cases below grow ANSI bodies.
   if (isStylerPassthroughActive()) return line;
 
-  // Pass-through initial body. The styling implementation pass replaces
-  // this body with per-kind ANSI / picocolors mapping; `kind` is named (not
-  // underscored) per the documented function-signature contract so the
-  // future implementation reads kind directly without renaming.
-  void kind;
-  return line;
+  // Phase 5 USER pass-through shell — one case per LineKind. The styling
+  // implementation pass replaces each case body with its per-kind ANSI /
+  // picocolors mapping; the case skeleton stays in place.
+  switch (kind) {
+    case 'popup-why-help':
+    case 'desc-base-truncated':
+    case 'desc-base-expanded':
+    case 'shortcut-hint':
+    case 'option-label':
+    case 'pinch-label':
+    case 'question':
+      return line;
+    default:
+      // Unknown kind — graceful fallback per the LineKind extensibility rule.
+      return line;
+  }
 }
