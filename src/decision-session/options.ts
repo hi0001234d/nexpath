@@ -7056,6 +7056,7 @@ const ABSENCE_FAILURE_MODE_ANALYSIS_FORMAL: DecisionContent = {
 {R5_INJECT: ~1-2 lines — "Feature uses external dependencies without failure modes enumerated per dependency."}
 Failure modes for external dependencies haven't been enumerated — risk of cascading failure when a dependency fails.
 Per dependency: failure mode / stability pattern (circuit breaker / timeout+fallback / bulkhead / retry+backoff) / implemented pre-ship.
+Still, before you implement any stability pattern across multiple files you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
     {
@@ -7064,6 +7065,7 @@ Per dependency: failure mode / stability pattern (circuit breaker / timeout+fall
 {R5_INJECT: ~1-2 lines — "Top-3 external deps + per-failure-behaviour not defined."}
 The top-3-deps + per-behaviour definition hasn't been done.
 Slow / error / unavailable per dep / stability pattern preventing cascade.
+Still, before you implement any stability pattern in the codebase you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
     {
@@ -7072,6 +7074,7 @@ Slow / error / unavailable per dep / stability pattern preventing cascade.
 {R5_INJECT: ~1-2 lines — "Per-external-call failure-handling audit not done."}
 The per-call failure-handling audit hasn't been done.
 Timeout / defined error response / documented degradation path per external call.
+Still, before you add timeouts or error-handling across multiple call sites you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
   ],
