@@ -7290,6 +7290,7 @@ const ABSENCE_DATABASE_MIGRATION_SAFETY_FORMAL: DecisionContent = {
 {R5_INJECT: ~1-2 lines — "Schema change pending without expand-migrate-contract sequencing."}
 Expand-migrate-contract safety check for this schema change hasn't been applied — risk of destructive single-step migration without rollback.
 3 phases: backward-compatible add / data migration / cleanup — each deploys independently no-downtime no-rollback-risk.
+Still, before you run any schema migration you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
     {
@@ -7298,6 +7299,7 @@ Expand-migrate-contract safety check for this schema change hasn't been applied 
 {R5_INJECT: ~1-2 lines — "Reversibility + concurrent-write safety not verified."}
 The reversibility + concurrent-write-safety verification hasn't been done.
 No single-step destructive (DROP / NOT NULL no-default / rename) / expand-migrate-contract applies.
+Still, before you run any schema migration you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
     {
@@ -7306,6 +7308,7 @@ No single-step destructive (DROP / NOT NULL no-default / rename) / expand-migrat
 {R5_INJECT: ~1-2 lines — "Migration safety audit not done."}
 The migration safety audit hasn't been done.
 Destructive changes identified / backward compat during window / rollback per step.
+Still, before you apply any destructive schema change you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
   ],
@@ -7315,6 +7318,7 @@ Destructive changes identified / backward compat during window / rollback per st
       descBase: `{R4_OPEN}
 {R5_INJECT: ~1 line — "Schema change pending."}
 Lighter: expand-migrate-contract pattern verified — no single-step destructive.
+Still, before you run any schema migration you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
     {
@@ -7322,6 +7326,7 @@ Lighter: expand-migrate-contract pattern verified — no single-step destructive
       descBase: `{R4_OPEN}
 {R5_INJECT: ~1 line — "Schema change pending."}
 Narrower: reversible + no-data-loss-on-mid-migration-revert.
+Still, before you run any schema migration you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
   ],
@@ -7331,6 +7336,7 @@ Narrower: reversible + no-data-loss-on-mid-migration-revert.
       descBase: `{R4_OPEN}
 {R5_INJECT: ~1 line — "Schema change pending."}
 Minimum next step: phase the schema change across deployments.
+Still, before you run any schema migration you must ask me for go-ahead confirmation.
 {R4_CLOSE}`,
     },
   ],
