@@ -264,6 +264,8 @@ import {
   NEXPATH_HEADER_LINES,
 } from './DecisionSession.js';
 import type { DecisionSessionInput, SelectFn } from './DecisionSession.js';
+import { WHY_HELP_PER_CLASS } from './why-help.js';
+import { R4_USER_OPEN } from './r4-bookends.js';
 import type { Store } from '../store/db.js';
 import { openStore } from '../store/db.js';
 import { getSkippedSessions } from '../store/skipped-sessions.js';
@@ -2343,6 +2345,71 @@ describe('buildSelectMessage', () => {
   it('parts are separated by newlines', () => {
     const msg = buildSelectMessage('Hold up.', 'Is the plan written?', 2);
     expect(msg).toContain('\n');
+  });
+
+  // dev-plan §11.2 — popup why-help block extension (Phase 4f)
+  describe('§11.2 why-help block extension', () => {
+    const universalEntry = WHY_HELP_PER_CLASS.class1_stage_transition;
+
+    it('omits the why-help block when no whyHelpEntry is provided (backward-compat)', () => {
+      const msg = buildSelectMessage('Hold up.', 'Q?', 1);
+      expect(msg).not.toContain(R4_USER_OPEN);
+    });
+
+    it('appends R4_USER_OPEN + content + R4_USER_CLOSE[register] when whyHelpEntry is provided', () => {
+      const msg = buildSelectMessage('Hold up.', 'Q?', 1, {
+        whyHelpEntry: universalEntry,
+        register:     'formal',
+      });
+      expect(msg).toContain(R4_USER_OPEN);
+      expect(msg).toContain((universalEntry.content as { formal: string }).formal);
+      expect(msg).toContain('— review the options below to determine the next step.');
+    });
+
+    it('places the why-help block AFTER the question (adjacency per C3 lock)', () => {
+      const msg = buildSelectMessage('Hold up.', 'Is the plan written?', 1, {
+        whyHelpEntry: universalEntry,
+        register:     'casual',
+      });
+      const questionPos = msg.indexOf('Is the plan written?');
+      const whyHelpPos  = msg.indexOf(R4_USER_OPEN);
+      expect(questionPos).toBeLessThan(whyHelpPos);
+    });
+
+    it('falls back to no-why-help when the register is not supported by the entry (class7 + formal)', () => {
+      const c7 = WHY_HELP_PER_CLASS.class7_cool_geek_vibe_coder;
+      const msg = buildSelectMessage('Hold up.', 'Q?', 1, {
+        whyHelpEntry: c7,
+        register:     'formal',
+      });
+      expect(msg).not.toContain(R4_USER_OPEN);
+    });
+
+    it('inserts the mood sentence between content and close when mood is rushed', () => {
+      const msg = buildSelectMessage('Hold up.', 'Q?', 1, {
+        whyHelpEntry: universalEntry,
+        register:     'casual',
+        mood:         'rushed',
+      });
+      expect(msg).toContain(R4_USER_OPEN);
+      // The "rushed" casual mood sentence is non-empty and appears between content and close.
+      const closeIdx = msg.indexOf('— pick from the options below to keep moving.');
+      const openIdx  = msg.indexOf(R4_USER_OPEN);
+      expect(openIdx).toBeLessThan(closeIdx);
+      // The composed block has 4 lines for the rushed-mood case (open + content + mood + close).
+      const block = msg.slice(openIdx, closeIdx + '— pick from the options below to keep moving.'.length);
+      expect(block.split('\n')).toHaveLength(4);
+    });
+
+    it('routes class8-role-cluster via role parameter (founder → founder_casual)', () => {
+      const c8 = WHY_HELP_PER_CLASS.class8_role_cluster;
+      const msg = buildSelectMessage('Hold up.', 'Q?', 1, {
+        whyHelpEntry: c8,
+        register:     'casual',
+        role:         'founder',
+      });
+      expect(msg).toContain((c8.content as { founder_casual: string }).founder_casual);
+    });
   });
 });
 

@@ -1,5 +1,5 @@
 import { select, isCancel } from '@clack/prompts';
-import type { Stage, UserProfile } from '../classifier/types.js';
+import type { Stage, UserMood, UserProfile, UserRole } from '../classifier/types.js';
 import type { FlagType } from '../classifier/Stage2Trigger.js';
 import type { Store } from '../store/db.js';
 import { insertSkippedSession, getSkippedSessions } from '../store/skipped-sessions.js';
@@ -16,6 +16,9 @@ import {
 import type { GeneratedOptions } from './OptionGenerator.js';
 import { writeTelemetry } from '../telemetry/index.js';
 import { type RecentPromptMetadata } from '../telemetry/recent-prompts.js';
+import type { WhyHelpEntry } from './why-help.js';
+import { composeWhyHelpBlock, type WhyHelpRegister } from './why-help-compose.js';
+import { profileToRegister } from './register.js';
 
 /**
  * Decision session terminal UI (per decision-session-ux-research.md).
@@ -158,19 +161,46 @@ export type DecisionSessionResult =
 
 // ── Message builder ────────────────────────────────────────────────────────────
 
+/** Optional inputs for the dev-plan §11.2 why-help block extension to the popup message. */
+export interface BuildSelectMessageOptions {
+  whyHelpEntry?: WhyHelpEntry | null;
+  register?:     WhyHelpRegister;
+  mood?:         UserMood;
+  role?:         UserRole | null;
+}
+
 /**
  * Build the `message` string for @clack/prompts' select prompt.
- * Combines: pinch label, optional subtitle, question line.
+ * Combines: pinch label, optional subtitle, question line, and (when
+ * `options.whyHelpEntry` is provided) the dev-plan §11.2 popup
+ * why-help block (R4 user-facing open + R6 content + optional R6-Sub2
+ * mood sentence + R4 user-facing close).
+ *
+ * The extended path is non-breaking — when `options` is omitted or the
+ * `whyHelpEntry` is null/missing-register, the function returns the
+ * original pinch + subtitle + question composition unchanged.
  */
 export function buildSelectMessage(
   pinchLabel: string,
   question:   string,
   level:      1 | 2 | 3,
+  options?:   BuildSelectMessageOptions,
 ): string {
   const subtitle = getLevelSubtitle(level);
   const parts: string[] = [formatPinchLabel(pinchLabel)];
   if (subtitle) parts.push(formatSubtitle(subtitle));
   parts.push(formatQuestion(question));
+
+  if (options?.whyHelpEntry && options?.register) {
+    const wh = composeWhyHelpBlock(
+      options.whyHelpEntry,
+      options.register,
+      options.mood,
+      options.role,
+    );
+    if (wh) parts.push(wh);
+  }
+
   return parts.join('\n');
 }
 
@@ -218,7 +248,12 @@ export async function runLevel(
       }
     : content;
   const { options } = buildOptionList(effective, level);
-  const message  = buildSelectMessage(input.pinchLabel, content.question, level);
+  const message  = buildSelectMessage(input.pinchLabel, content.question, level, {
+    whyHelpEntry: content.whyHelp,
+    register:     profileToRegister(input.profile),
+    mood:         input.profile?.mood,
+    role:         input.profile?.role,
+  });
 
   // Inject blank separator items between visual groups:
   //   content options → 2 blank lines → SHOW_SIMPLER (if present) → 1 blank line → SKIP_NOW

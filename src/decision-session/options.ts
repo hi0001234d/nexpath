@@ -20,7 +20,7 @@ import {
  * Every option IS a pre-filled prompt ready to send to the agent — user hits Enter.
  */
 
-import type { WhyHelpVariants } from './why-help.js';
+import type { WhyHelpEntry } from './why-help.js';
 
 /**
  * Per-option entry — option text plus an optional desc-base template.
@@ -51,8 +51,15 @@ export interface DecisionContent {
   L1: OptionEntry[];
   L2: OptionEntry[];
   L3: OptionEntry[];
-  /** Optional popup why-help block keyed by register. Populated per signal class. */
-  whyHelp?:      WhyHelpVariants;
+  /**
+   * Optional popup why-help entry — discriminated-union shape supporting the 4
+   * register-structure groups per signal class (universal-triplet for classes
+   * 1-6, class7-vibe-coder for class 7, class8-role-cluster for class 8,
+   * class9-formal-only for class 9). Resolved per (signal class × register
+   * × role) by `composeWhyHelpBlock` and rendered as the popup why-help
+   * block per dev-plan §11.2.
+   */
+  whyHelp?:      WhyHelpEntry;
   /**
    * Per-set opt-out flag for the desc-base rendering + substitution pipeline.
    * When `false`, the runtime skips desc-base processing for this set's
