@@ -201,11 +201,15 @@ export const SUB_LINE_CONTINUATION_INDENT = '  ';
 /** Default minimum maxItems floor — matches TtySelectFn precedent. */
 export const DEFAULT_MAX_ITEMS_FLOOR = 5;
 
-/** R8-Sub1.4 — shortcut-hint text shown under the focused option when its desc-base is currently truncated. */
-export const SHORTCUT_HINT_EXPAND   = 'press Space to expand';
-
-/** R8-Sub1.4 — shortcut-hint text shown under the focused option when its desc-base is currently expanded. */
-export const SHORTCUT_HINT_COLLAPSE = 'press Space to collapse';
+/**
+ * Locked shortcut-hint wording per dev-plan §13.5 + §13.10 + §14.2
+ * (user pick W5, locked 2026-06-07). Single canonical constant —
+ * the Space key toggles desc-base detail regardless of the current
+ * truncated/expanded direction, so the wording stays static across
+ * states. Tests assert against this constant as the single source
+ * of truth (catches render leaks + accidental wording changes).
+ */
+export const SHORTCUT_HINT_TEXT = 'press Space to toggle details' as const;
 
 // ── OptionGenerator → SelectableItem bridge (§11.15) ────────────────────────
 
@@ -438,13 +442,15 @@ export function computeLayout(opts: RenderLoopOptions, state: LayoutState): Rend
 
       // Shortcut hint — emitted ONLY under the currently focused option,
       // and only when the focused option carries a desc-base (no hint for
-      // meta items or items without descBase content). Hint text reflects
-      // the current truncated/expanded state per R8-Sub1.4 wording.
+      // meta items or items without descBase content). Single locked
+      // wording per §13.5 W5 lock — the Space key toggles regardless of
+      // current direction so the hint text is state-agnostic.
       // Placement: inline-below-focused-option per §11.2 Gap 4 fix.
+      void isExpanded;
       if (i === state.focusedIndex && !item.isMeta && item.descBase && item.descBase.length > 0) {
         emissions.push({
           kind:        'shortcut-hint',
-          text:        isExpanded ? SHORTCUT_HINT_COLLAPSE : SHORTCUT_HINT_EXPAND,
+          text:        SHORTCUT_HINT_TEXT,
           optionIndex: i,
           isPadding:   false,
         });

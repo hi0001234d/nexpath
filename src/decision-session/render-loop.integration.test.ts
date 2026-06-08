@@ -212,6 +212,6 @@ describe('render-loop end-to-end — buildSelectMessage + substitution + render-
       keyEvents: eventsOf('enter'),
     });
     const written = Buffer.concat(chunks).toString('utf8');
-    expect(written).toContain('press Space to expand');
+    expect(written).toContain('press Space to toggle details');
   });
 });

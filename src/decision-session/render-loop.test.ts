@@ -6,8 +6,7 @@ import {
   D2_TRUNCATION_MARKER,
   D4_PADDING_ROW_COUNT,
   D5_EXPANDED_LINE_CAP,
-  SHORTCUT_HINT_COLLAPSE,
-  SHORTCUT_HINT_EXPAND,
+  SHORTCUT_HINT_TEXT,
   SUB_LINE_CONTINUATION_INDENT,
   SUB_LINE_PREFIX,
   normaliseKeypress,
@@ -542,16 +541,19 @@ describe('render-loop — shortcut-hint emission (§11.2 Gap 4 fix)', () => {
     expect(hints[0].optionIndex).toBe(0);
   });
 
-  it('shortcut-hint reads "press Space to expand" when the focused option is truncated', () => {
-    const r = computeLayout(makeOpts(), { ...FRESH_STATE, focusedIndex: 0 });
-    const hint = r.emissions.find((e) => e.kind === 'shortcut-hint')!;
-    expect(hint.text).toBe(SHORTCUT_HINT_EXPAND);
+  it('shortcut-hint text === SHORTCUT_HINT_TEXT regardless of truncated/expanded state (single locked wording per §13.5 W5)', () => {
+    const truncated = computeLayout(makeOpts(), { ...FRESH_STATE, focusedIndex: 0 });
+    const expanded  = computeLayout(makeOpts(), { focusedIndex: 0, expandedOptions: new Set([0]), scrollOffset: 0 });
+    const hintT = truncated.emissions.find((e) => e.kind === 'shortcut-hint')!;
+    const hintE = expanded.emissions.find((e) => e.kind === 'shortcut-hint')!;
+    expect(hintT.text).toBe(SHORTCUT_HINT_TEXT);
+    expect(hintE.text).toBe(SHORTCUT_HINT_TEXT);
   });
 
-  it('shortcut-hint reads "press Space to collapse" when the focused option is expanded', () => {
-    const r = computeLayout(makeOpts(), { focusedIndex: 0, expandedOptions: new Set([0]), scrollOffset: 0 });
-    const hint = r.emissions.find((e) => e.kind === 'shortcut-hint')!;
-    expect(hint.text).toBe(SHORTCUT_HINT_COLLAPSE);
+  it('SHORTCUT_HINT_TEXT constant value === "press Space to toggle details" (§14.2 + §13.10 locked wording assertion)', () => {
+    // Single source of truth — catches render leaks + accidental wording changes.
+    // Dev plan §13.5 LOCKED 2026-06-07 user pick W5.
+    expect(SHORTCUT_HINT_TEXT).toBe('press Space to toggle details');
   });
 
   it('the shortcut-hint moves with focus — emitted under whichever option is focusedIndex', () => {

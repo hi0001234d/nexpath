@@ -109,7 +109,7 @@ describe('render — full-popup snapshot (dual styled / unstyled — §11.16 + �
     for (const out of [styled, unstyled]) {
       expect(out).toContain('Write a PRD');
       expect(out).toContain('PRD body sentence.');
-      expect(out).toContain('press Space to expand');
+      expect(out).toContain('press Space to toggle details');
     }
   });
 
