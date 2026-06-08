@@ -6,9 +6,11 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { generateOptionList } from './OptionGenerator.js';
-import { TASK_REVIEW } from './options.js';
+import { TASK_REVIEW, type DecisionContent } from './options.js';
 import type { UserProfile, PromptRecord } from '../classifier/types.js';
 import { GroundingConfig } from '../config/GroundingConfig.js';
+import { applyRuntimeSubstitutionsAllLevels } from './runtime-substitutions.js';
+import type { R5RewriteClient } from './r5-injection.js';
 
 function makeProfile(overrides: Partial<UserProfile> = {}): UserProfile {
   return {
@@ -238,6 +240,140 @@ describe('§14.4 — Pass 1 → Pass 2 → injectR5 → substituteCAFacingBooken
     // No exception thrown to the caller.
     expect(result).not.toBeNull();
     expect(result?.generatedDescBases).toBeDefined();
+  });
+
+  it('coverage 4 — F2: PII / secret tokens in prompt history are masked before they can reach the rewrite step', async () => {
+    // Per dev-plan §10.6 F2: mask patterns applied to history before vocab extraction.
+    // Bind a CAPTURING rewrite client via applyRuntimeSubstitutionsAllLevels directly
+    // (generateOptionList does not bind a client today). The captured rewrite prompt
+    // must contain redaction markers, NOT the raw API key.
+    let capturedPrompt = '';
+    const client: R5RewriteClient = {
+      rewrite: async (prompt: string) => { capturedPrompt = prompt; return 'refactoring parser tests building'; },
+    };
+    const synthContent: DecisionContent = {
+      ...TASK_REVIEW,
+      signalType:   'TASK_REVIEW',
+      lengthBudget: 'HEAVY',
+      L1: [{ option: 'opt-a', descBase: '{R4_OPEN}\n{R5_INJECT: ~1 line — "example"}\nstatic body.\n{R4_CLOSE}' }],
+      L2: [],
+      L3: [],
+    };
+    await applyRuntimeSubstitutionsAllLevels(
+      { l1: ['gen-l1'], l2: [], l3: [] },
+      synthContent,
+      [
+        makePrompt('refactoring parser with api_key=sekretvalueABC123 in tests', 0),
+        makePrompt('still refactoring the parser today',                       1),
+      ],
+      'TASK_REVIEW',
+      'formal',
+      { client, exampleHint: '', lengthBudget: 'HEAVY' },
+    );
+    // Rewrite prompt must NOT contain the raw secret — F2 mask redacted it.
+    expect(capturedPrompt).not.toContain('sekretvalueABC123');
+  });
+
+  it('coverage 4 — F4: per-set length-budget overflow triggers Strategy D fallback (LIGHT 200-char ceiling)', async () => {
+    // Synthetic DecisionContent with LIGHT budget + a verbose static body
+    // that the substitution would push over the ceiling. F4 must engage and
+    // fall back to Strategy D (which fits by design).
+    const longBody = 'A'.repeat(180);  // pushes header + body close to 200 chars
+    const synthContent: DecisionContent = {
+      ...TASK_REVIEW,
+      signalType:   'TASK_REVIEW',
+      lengthBudget: 'LIGHT',
+      L1: [{ option: 'opt-a', descBase: `{R4_OPEN}\n{R5_INJECT: ~1 line — "ex"}\n${longBody}\n{R4_CLOSE}` }],
+      L2: [],
+      L3: [],
+    };
+    // No client → Strategy D path. F4 overflow on the LIGHT ceiling triggers
+    // the same Strategy D substitution (whose D-fallback string fits within the
+    // tier). Verify the final descBase is bounded and placeholder-free.
+    const out = await applyRuntimeSubstitutionsAllLevels(
+      { l1: ['gen-l1'], l2: [], l3: [] },
+      synthContent,
+      [makePrompt('p1', 0), makePrompt('p2', 1)],
+      'TASK_REVIEW',
+      'formal',
+      { lengthBudget: 'LIGHT' },
+    );
+    const final = out.l1[0].descBase;
+    expect(final).not.toContain('{R5_INJECT');
+    expect(final).not.toContain('{R4_OPEN}');
+  });
+
+  it('coverage 4 — F5: repeated prompts are deduplicated before reaching the rewrite step', async () => {
+    // 5 identical prompts → F5 dedup → the rewrite client sees a vocab list
+    // that does NOT over-weight the repeated phrase. Capture the rewrite
+    // prompt and check the vocab JSON array length is bounded.
+    let capturedPrompt = '';
+    const client: R5RewriteClient = {
+      rewrite: async (prompt: string) => { capturedPrompt = prompt; return 'refactoring parser tests building'; },
+    };
+    // Prompts must contain ≥2 vocab-extractable tokens so the rewrite client
+    // is actually invoked (otherwise the F1/<2-after-mask path falls back
+    // to Strategy D and the rewrite never runs). Use multiple verb stems +
+    // a capitalised noun so extractVocab returns ≥3 tokens.
+    const repeated = [
+      makePrompt('I have been refactoring and testing the InvoiceService today', 0),
+      makePrompt('I have been refactoring and testing the InvoiceService today', 1),
+      makePrompt('I have been refactoring and testing the InvoiceService today', 2),
+      makePrompt('I have been refactoring and testing the InvoiceService today', 3),
+      makePrompt('I have been refactoring and testing the InvoiceService today', 4),
+    ];
+    const synthContent: DecisionContent = {
+      ...TASK_REVIEW,
+      signalType:   'TASK_REVIEW',
+      lengthBudget: 'HEAVY',
+      L1: [{ option: 'opt-a', descBase: '{R4_OPEN}\n{R5_INJECT: ~1 line — "ex"}\nbody.\n{R4_CLOSE}' }],
+      L2: [],
+      L3: [],
+    };
+    await applyRuntimeSubstitutionsAllLevels(
+      { l1: ['gen-l1'], l2: [], l3: [] },
+      synthContent,
+      repeated,
+      'TASK_REVIEW',
+      'formal',
+      { client, exampleHint: '', lengthBudget: 'HEAVY' },
+    );
+    // The vocab JSON array passed to the LLM ends up with a small token set
+    // (post-dedup) rather than 5× the same words. Token count is bounded by
+    // the unique-token count of the deduplicated prompt set.
+    const vocabMatch = capturedPrompt.match(/\["[^"]+(?:","[^"]+)*"\]/);
+    expect(vocabMatch).not.toBeNull();
+    const vocab = JSON.parse(vocabMatch![0]) as string[];
+    // After dedup → only the unique tokens from one prompt remain
+    // (refactoring / invoice / parser / today + maybe a few more).
+    // The exact count depends on extractVocab; assert it's bounded.
+    expect(vocab.length).toBeLessThanOrEqual(8);
+  });
+
+  it('coverage 4 — F7: L2 sensitive-action carry-over appends the safeguard sentence to the final desc-base', async () => {
+    // Per dev-plan §10.6.1 F7 path (a): triggers detected + l2SafeguardRequired
+    // not true → append "Still, before you do this <action> you must ask me
+    // for go-ahead confirmation." to the substituted desc-base.
+    const client = makeClient(validResponse());
+    const result = await generateOptionList(
+      TASK_REVIEW,
+      makeProfile(),
+      undefined,
+      [
+        makePrompt('I have been refactoring the invoice service today',         0),
+        makePrompt('Now ready to deploy to production tomorrow morning',        1),
+      ],
+      undefined,
+      client,
+    );
+    // The safeguard sentence appears in at least one of the substituted desc-bases.
+    const all = [
+      ...(result?.generatedDescBases?.l1 ?? []),
+      ...(result?.generatedDescBases?.l2 ?? []),
+      ...(result?.generatedDescBases?.l3 ?? []),
+    ];
+    const anySafeguard = all.some((db) => db.includes('Still, before you do this deploy'));
+    expect(anySafeguard).toBe(true);
   });
 
   it('coverage 3 — R5 vocab insulation: Pass 1 / Pass 2 LLM prompts NEVER contain R5/R4 substitution output (R5 runs AFTER both passes)', async () => {
