@@ -1,7 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync, statSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, statSync, existsSync, accessSync, constants } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+// NTFS does not enforce POSIX permission bits. On Windows, assert the file
+// exists and is owner-accessible (R_OK | W_OK) instead of inspecting the mode.
+function expectFileLockedToOwner(path: string): void {
+  expect(existsSync(path)).toBe(true);
+  if (process.platform === 'win32') {
+    expect(() => accessSync(path, constants.R_OK | constants.W_OK)).not.toThrow();
+  } else {
+    const mode = statSync(path).mode & 0o777;
+    expect(mode).toBe(0o600);
+  }
+}
 
 vi.mock('cross-keychain', () => ({
   getPassword:    vi.fn(),
@@ -212,16 +224,14 @@ describe('storeApiKey', () => {
   it('the fallback file is created with 0600 permissions (owner read/write only)', async () => {
     vi.mocked(keychain.setPassword).mockRejectedValue(new Error('NoKeyringError'));
     await storeApiKey(VALID_KEY, { fallbackPath });
-    const mode = statSync(fallbackPath).mode & 0o777;
-    expect(mode).toBe(0o600);
+    expectFileLockedToOwner(fallbackPath);
   });
 
   it('overwriting an existing fallback file preserves 0600 mode', async () => {
     writeFileSync(fallbackPath, JSON.stringify({ openai_api_key: VALID_KEY }), { mode: 0o644 });
     vi.mocked(keychain.setPassword).mockRejectedValue(new Error('NoKeyringError'));
     await storeApiKey(VALID_KEY2, { fallbackPath });
-    const mode = statSync(fallbackPath).mode & 0o777;
-    expect(mode).toBe(0o600);
+    expectFileLockedToOwner(fallbackPath);
   });
 
   it('throws on invalid key format', async () => {
