@@ -2487,22 +2487,22 @@ export const ABSENCE_DECISION_FATIGUE_PATTERN_BEGINNER: DecisionContent = {
     {
       option: 'Look back at the last few suggestions made — is there anything that looks right but you have not double-checked?',
       descBase: `{R4_OPEN}
-{R5_INJECT: ~1-2 lines first-person — "I've been accepting Claude's suggestions without double-checking them."}
-The double-check on recent Claude suggestions hasn't been done.
+{R5_INJECT: ~1-2 lines first-person — "I've been accepting recent suggestions without double-checking them."}
+The double-check on recent suggestions hasn't been done.
 Look back at recent suggestions for anything not yet double-checked.
 {R4_CLOSE}`,
     },
     {
       option: 'Review what was built recently and identify one thing to verify or question before continuing.',
       descBase: `{R4_OPEN}
-{R5_INJECT: ~1-2 lines first-person — "Recent Claude work; one-thing-to-verify not flagged."}
+{R5_INJECT: ~1-2 lines first-person — "Recent session work; one-thing-to-verify not flagged."}
 Same moment, simpler: review recent and identify one thing to verify or question.
 {R4_CLOSE}`,
     },
     {
       option: 'Check the last few responses: is there anything you would like to confirm is correct before continuing?',
       descBase: `{R4_OPEN}
-{R5_INJECT: ~1-2 lines first-person — "Last few Claude responses; confirm-correctness check not done."}
+{R5_INJECT: ~1-2 lines first-person — "Last few responses; confirm-correctness check not done."}
 Same moment, deeper: confirm-correctness check on recent responses.
 {R4_CLOSE}`,
     },
@@ -2511,8 +2511,8 @@ Same moment, deeper: confirm-correctness check on recent responses.
     {
       option: 'Is there anything in the recent suggestions you would like to double-check before continuing?',
       descBase: `{R4_OPEN}
-{R5_INJECT: ~1 line first-person — "Recent Claude work."}
-Lighter: anything in recent Claude work to double-check.
+{R5_INJECT: ~1 line first-person — "Recent session work."}
+Lighter: anything in recent session work to double-check.
 {R4_CLOSE}`,
     },
   ],
@@ -2520,7 +2520,7 @@ Lighter: anything in recent Claude work to double-check.
     {
       option: 'Pick one thing from the recent responses to verify before continuing.',
       descBase: `{R4_OPEN}
-{R5_INJECT: ~1 line first-person — "Recent Claude work."}
+{R5_INJECT: ~1 line first-person — "Recent session work."}
 Minimum next step: one thing to verify before continuing.
 {R4_CLOSE}`,
     },
@@ -2534,15 +2534,15 @@ export const ABSENCE_WORK_RHYTHM_CHECK_BEGINNER: DecisionContent = {
     {
       option: 'Read the last response carefully before continuing — is there anything that looks right but you have not actually checked?',
       descBase: `{R4_OPEN}
-{R5_INJECT: ~1-2 lines first-person — "I've been sending prompts fast without reading Claude's responses carefully."}
-The careful read on Claude's last response hasn't been done.
+{R5_INJECT: ~1-2 lines first-person — "I've been sending prompts fast without reading the responses carefully."}
+The careful read on the last response hasn't been done.
 Read carefully; spot looks-right-but-not-checked items.
 {R4_CLOSE}`,
     },
     {
       option: 'Go back and read the last response — does everything look correct?',
       descBase: `{R4_OPEN}
-{R5_INJECT: ~1-2 lines first-person — "Rapid sends; haven't read Claude's last response."}
+{R5_INJECT: ~1-2 lines first-person — "Rapid sends; haven't read the last response."}
 Same moment, simpler: go back, read, check correctness.
 {R4_CLOSE}`,
     },
