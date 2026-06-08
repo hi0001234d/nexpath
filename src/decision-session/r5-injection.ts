@@ -17,6 +17,7 @@
 
 import type { PromptRecord } from '../classifier/types.js';
 import { getR5DFallback } from './r5-fallbacks.js';
+import { GroundingConfig } from '../config/GroundingConfig.js';
 
 /** Register key used to look up D-fallback variants. */
 export type R5Register = 'formal' | 'casual' | 'beginner';
@@ -78,6 +79,13 @@ export interface InjectR5Options {
    * extraction so the rewrite output does not echo sensitive verbs.
    */
   l2SafeguardRequired?: boolean;
+  /**
+   * Per-call override for the deterministic vocab extraction's token
+   * budget (`extractVocab` N). When omitted, the runtime falls back
+   * to `GroundingConfig.r5VocabTokenBudget` (8 by default, per
+   * dev plan §10.3). Smaller = tighter grounding; larger = broader.
+   */
+  vocabTokenBudget?: number;
 }
 
 /** Per-set length budget tier. */
@@ -194,8 +202,12 @@ export async function injectR5(
   const repetitions      = computeRepetitionCounts(strippedAll);
   const promptsForVocab  = f5DeduplicatePrompts(strippedAll);
 
-  // (6) — deterministic vocab extraction.
-  const rawVocab = extractVocab(promptsForVocab);
+  // (6) — deterministic vocab extraction. Token budget per dev plan
+  // §10.3: per-call override wins, then GroundingConfig, then the
+  // function default (kept for direct callers of extractVocab outside
+  // injectR5).
+  const tokenBudget = options.vocabTokenBudget ?? GroundingConfig.r5VocabTokenBudget;
+  const rawVocab    = extractVocab(promptsForVocab, tokenBudget);
 
   // Dev-plan §10.1 step 3: "If <2 useful tokens after masking → fall
   // back to D." This early check catches the case where F2 masking

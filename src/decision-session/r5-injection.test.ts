@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { GroundingConfig } from '../config/GroundingConfig.js';
 import type { PromptRecord } from '../classifier/types.js';
 import {
   hasR5Injection,
@@ -870,6 +871,92 @@ describe('r5-injection — per-set total length budget (§10.1.2)', () => {
   it('exports a LengthBudgetTier type covering the three locked tiers', () => {
     const tiers: LengthBudgetTier[] = ['LIGHT', 'MEDIUM', 'HEAVY'];
     expect(tiers).toHaveLength(3);
+  });
+});
+
+describe('r5-injection — token budget configurability (dev plan §10.3)', () => {
+  // A capturing rewrite client lets each test see exactly which vocab
+  // tokens reached the LLM prompt — the JSON array of extracted tokens
+  // is embedded in the rewrite prompt verbatim.
+  function makeCapturingClient() {
+    let captured = '';
+    return {
+      client: {
+        rewrite: async (prompt: string) => { captured = prompt; return 'placeholder summary'; },
+      } as R5RewriteClient,
+      promptOf: () => captured,
+      vocabOf: () => {
+        const match = captured.match(/\[(?:"[^"]*",?\s*)+\]/);
+        return match ? (JSON.parse(match[0]) as string[]) : [];
+      },
+    };
+  }
+
+  // Synthetic prompt history with > 8 distinct vocab tokens so the
+  // budget actually clips. Each prompt contributes new noun-like / verb
+  // tokens beyond the stopwords.
+  const richHistory: PromptRecord[] = [
+    makePrompt('Refactoring the InvoiceService and adding tests for billing',          0),
+    makePrompt('Building the OrderManager and validating CartProcessor responses',     1),
+    makePrompt('Migrating the UserRecord schema and updating ProfileLoader',           2),
+    makePrompt('Reviewing the AuditLogger and verifying RetryStrategy paths',          3),
+  ];
+
+  it('defaults to GroundingConfig.r5VocabTokenBudget (8) when no override is passed', async () => {
+    const cap = makeCapturingClient();
+    expect(GroundingConfig.r5VocabTokenBudget).toBe(8);
+    await injectR5(SAMPLE_DESC_BASE_WITH_PLACEHOLDER, richHistory, 'TASK_REVIEW', 'formal', {
+      client: cap.client,
+      exampleHint: '',
+      lengthBudget: 'HEAVY',
+    });
+    expect(cap.vocabOf().length).toBeLessThanOrEqual(8);
+  });
+
+  it('honours an explicit per-call InjectR5Options.vocabTokenBudget override', async () => {
+    const cap = makeCapturingClient();
+    await injectR5(SAMPLE_DESC_BASE_WITH_PLACEHOLDER, richHistory, 'TASK_REVIEW', 'formal', {
+      client: cap.client,
+      exampleHint: '',
+      lengthBudget: 'HEAVY',
+      vocabTokenBudget: 3,
+    });
+    expect(cap.vocabOf().length).toBeLessThanOrEqual(3);
+  });
+
+  it('reads GroundingConfig.r5VocabTokenBudget when no override is passed (config-level tuning)', async () => {
+    const saved = GroundingConfig.r5VocabTokenBudget;
+    GroundingConfig.r5VocabTokenBudget = 2;
+    try {
+      const cap = makeCapturingClient();
+      await injectR5(SAMPLE_DESC_BASE_WITH_PLACEHOLDER, richHistory, 'TASK_REVIEW', 'formal', {
+        client: cap.client,
+        exampleHint: '',
+        lengthBudget: 'HEAVY',
+      });
+      expect(cap.vocabOf().length).toBeLessThanOrEqual(2);
+    } finally {
+      GroundingConfig.r5VocabTokenBudget = saved;
+    }
+  });
+
+  it('per-call override beats GroundingConfig when both are set', async () => {
+    const saved = GroundingConfig.r5VocabTokenBudget;
+    GroundingConfig.r5VocabTokenBudget = 2;
+    try {
+      const cap = makeCapturingClient();
+      await injectR5(SAMPLE_DESC_BASE_WITH_PLACEHOLDER, richHistory, 'TASK_REVIEW', 'formal', {
+        client: cap.client,
+        exampleHint: '',
+        lengthBudget: 'HEAVY',
+        vocabTokenBudget: 5,
+      });
+      // override (5) wins over config (2)
+      expect(cap.vocabOf().length).toBeGreaterThanOrEqual(2);  // at least more than config would allow
+      expect(cap.vocabOf().length).toBeLessThanOrEqual(5);     // capped at override
+    } finally {
+      GroundingConfig.r5VocabTokenBudget = saved;
+    }
   });
 });
 

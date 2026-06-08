@@ -26,6 +26,20 @@ export const GroundingConfig = {
    * Must not exceed MAX_HISTORY (30) in SessionStateManager.
    */
   promptWindow: 12,
-} as const;
+
+  /**
+   * Per-call token budget for the R5 runtime substitution module's
+   * deterministic vocab extraction step (`extractVocab` in
+   * r5-injection.ts). Dev plan §10.3 fixes the canonical value at 8
+   * but locks it as configurable here. Smaller = tighter (less
+   * grounding) — bigger = broader (more user-grounded vocab passed
+   * to the rewrite LLM, potentially diluting concentration).
+   *
+   * Override per-call via `InjectR5Options.vocabTokenBudget` when
+   * a specific advisory fire needs a different budget without
+   * changing the global default.
+   */
+  r5VocabTokenBudget: 8,
+};
 
 export type GroundingConfigShape = typeof GroundingConfig;
