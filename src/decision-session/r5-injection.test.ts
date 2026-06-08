@@ -8,6 +8,12 @@ import {
   extractVocab,
   isDroppedByVoiceRuleFilter,
   applyVoiceRuleFilter,
+  f1ShouldFallback,
+  f2MaskPromptHistory,
+  maskSecretsInText,
+  f4EnforceLengthCap,
+  f5DeduplicatePrompts,
+  f7DetectL2Triggers,
   type R5Register,
 } from './r5-injection.js';
 
@@ -190,6 +196,109 @@ describe('r5-injection — step-4.5 voice-rule filter', () => {
     const out   = applyVoiceRuleFilter(input);
     expect(out).not.toBe(input as unknown as string[]);
     expect(input).toEqual(['a', 'AI', 'b']);
+  });
+});
+
+describe('r5-injection — F1 early-session guard', () => {
+  it('returns true for empty history', () => {
+    expect(f1ShouldFallback([])).toBe(true);
+  });
+  it('returns true for history with a single prompt', () => {
+    expect(f1ShouldFallback([makePrompt('alone', 0)])).toBe(true);
+  });
+  it('returns false for history with two or more prompts', () => {
+    expect(f1ShouldFallback([makePrompt('a', 0), makePrompt('b', 1)])).toBe(false);
+  });
+});
+
+describe('r5-injection — F2 PII / secret masking', () => {
+  it('redacts api key pattern', () => {
+    expect(maskSecretsInText('api_key=sk-ABCD1234EFGH5678')).toContain('[REDACTED_SECRET]');
+  });
+  it('redacts email addresses', () => {
+    expect(maskSecretsInText('mail me at foo@example.com please')).toContain('[REDACTED_EMAIL]');
+  });
+  it('redacts IPv4-shaped patterns', () => {
+    expect(maskSecretsInText('connect to 192.168.0.1 today')).toContain('[REDACTED_IP]');
+  });
+  it('redacts secret-store paths (.env / .ssh / .pem / .key)', () => {
+    expect(maskSecretsInText('cat ~/.ssh/id_rsa')).toContain('[REDACTED_SECRET_PATH]');
+    expect(maskSecretsInText('open .env now')).toContain('[REDACTED_SECRET_PATH]');
+    expect(maskSecretsInText('use cert.pem with the request')).toContain('[REDACTED_SECRET_PATH]');
+  });
+  it('does NOT redact non-secret file paths', () => {
+    expect(maskSecretsInText('edit src/api/handler.ts now')).toContain('src/api/handler.ts');
+  });
+  it('f2MaskPromptHistory returns a new array with masked text in each entry', () => {
+    const history = [makePrompt('email foo@bar.com', 0), makePrompt('clean', 1)];
+    const out = f2MaskPromptHistory(history);
+    expect(out).toHaveLength(2);
+    expect(out[0].text).toContain('[REDACTED_EMAIL]');
+    expect(out[1].text).toBe('clean');
+  });
+});
+
+describe('r5-injection — F4 per-substitution length cap', () => {
+  it('returns the input unchanged when within both line and char caps', () => {
+    const ok = 'One line.';
+    expect(f4EnforceLengthCap(ok)).toBe(ok);
+  });
+  it('truncates at sentence boundary when char cap is exceeded', () => {
+    const long = 'This is the first sentence. ' + 'a'.repeat(200);
+    const out = f4EnforceLengthCap(long);
+    expect(out).toBe('This is the first sentence.');
+  });
+  it('returns null when no clean sentence-boundary truncation is possible', () => {
+    const noBoundary = 'a'.repeat(200);
+    expect(f4EnforceLengthCap(noBoundary)).toBeNull();
+  });
+});
+
+describe('r5-injection — F5 deduplicate prompts', () => {
+  it('removes verbatim repeated prompts preserving first occurrence', () => {
+    const history = [
+      makePrompt('fix the bug', 0),
+      makePrompt('something else', 1),
+      makePrompt('Fix the bug', 2),       // case-insensitive duplicate
+      makePrompt('fix   the    bug', 3),  // whitespace-normalised duplicate
+    ];
+    const out = f5DeduplicatePrompts(history);
+    expect(out).toHaveLength(2);
+    expect(out[0].text).toBe('fix the bug');
+    expect(out[1].text).toBe('something else');
+  });
+  it('returns identical array when no duplicates are present', () => {
+    const history = [makePrompt('a', 0), makePrompt('b', 1), makePrompt('c', 2)];
+    expect(f5DeduplicatePrompts(history)).toHaveLength(3);
+  });
+});
+
+describe('r5-injection — F7 L2 sensitive-action trigger detection', () => {
+  it('detects destructive-fs / schema-migration / deployment triggers', () => {
+    const history = [
+      makePrompt('Run rm -rf /tmp/output to clean up', 0),
+      makePrompt('Migrate the users table to add the new column', 1),
+      makePrompt('Finally deploy to staging', 2),
+    ];
+    const triggers = f7DetectL2Triggers(history);
+    expect(triggers).toContain('destructive-fs');
+    expect(triggers).toContain('schema-migration');
+    expect(triggers).toContain('deployment');
+  });
+  it('returns an empty array when no triggers are present', () => {
+    const history = [
+      makePrompt('I am refactoring the parser', 0),
+      makePrompt('Adding tests for the new branch', 1),
+    ];
+    expect(f7DetectL2Triggers(history)).toEqual([]);
+  });
+  it('deduplicates the trigger-name set when multiple prompts hit the same category', () => {
+    const history = [
+      makePrompt('deploy to prod', 0),
+      makePrompt('release the new build', 1),
+    ];
+    const triggers = f7DetectL2Triggers(history);
+    expect(triggers.filter((t) => t === 'deployment')).toHaveLength(1);
   });
 });
 

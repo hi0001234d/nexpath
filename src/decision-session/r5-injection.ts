@@ -276,3 +276,142 @@ export function isDroppedByVoiceRuleFilter(token: string): boolean {
 export function applyVoiceRuleFilter(vocab: readonly string[]): string[] {
   return vocab.filter((t) => !isDroppedByVoiceRuleFilter(t));
 }
+
+// ─── F1-F7 failure-mode handlers ────────────────────────────────────────
+//
+// Each handler is a pure predicate or transformer over the inputs the
+// runtime has at each step. The orchestrating injectR5 path calls them
+// in their numbered order and switches to Strategy D whenever any
+// handler signals failure.
+//
+//   F1 — early-session guard (history.length < 2)
+//   F2 — PII / secret masking on prompt text
+//   F3 — contradiction handling: NO handler (static desc-base wins)
+//   F4 — output length cap: ≤ 2 lines / 120 chars per substitution
+//   F5 — repeated-prompts deduplication
+//   F6 — cross-project history: NO handler (scope is at the
+//        getRecentPrompts boundary)
+//   F7 — L2 sensitive-action carry-over detection
+//
+// F3 and F6 carry no runtime handler — they're satisfied structurally
+// upstream. They are exposed as no-op exports for completeness so the
+// dispatch table can iterate every numbered handler uniformly.
+
+/** F1 — early-session guard. Returns true when Strategy D should be used. */
+export function f1ShouldFallback(history: readonly PromptRecord[]): boolean {
+  return history.length < 2;
+}
+
+/** Mask patterns applied to prompt text before vocab extraction (F2). */
+const SECRET_PATTERNS: readonly { re: RegExp; replacement: string }[] = [
+  // API key / token / secret literals (prefixed)
+  { re: /(?:api[_-]?key|token|secret|bearer)\s*[:=]\s*['"]?[A-Za-z0-9_\-]{8,}['"]?/gi, replacement: '[REDACTED_SECRET]' },
+  // Email addresses
+  { re: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, replacement: '[REDACTED_EMAIL]' },
+  // Phone numbers (loose — 10+ contiguous digits or formatted)
+  { re: /\b(?:\+?\d{1,3}[\s-]?)?(?:\(\d{3}\)|\d{3})[\s-]?\d{3}[\s-]?\d{4}\b/g, replacement: '[REDACTED_PHONE]' },
+  // IPv4 addresses in code-like contexts
+  { re: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g, replacement: '[REDACTED_IP]' },
+  // Secret-store paths
+  { re: /(?:~|\$HOME)?\/\.ssh\/\S+/g,         replacement: '[REDACTED_SECRET_PATH]' },
+  { re: /(?:~|\$HOME)?\/\.aws\/credentials\b/g, replacement: '[REDACTED_SECRET_PATH]' },
+  { re: /(?:~|\$HOME)?\/\.gnupg\/\S+/g,       replacement: '[REDACTED_SECRET_PATH]' },
+  { re: /(?:^|\s)\.env(?:\.\w+)?\b/g,          replacement: ' [REDACTED_SECRET_PATH]' },
+  { re: /\S+\.(?:pem|key)\b/g,                 replacement: '[REDACTED_SECRET_PATH]' },
+];
+
+/**
+ * F2 — apply PII / secret masking to a prompt-history list. Returns a
+ * new list with the same length; each entry's `text` has secrets
+ * replaced. Other fields are passed through.
+ */
+export function f2MaskPromptHistory(history: readonly PromptRecord[]): PromptRecord[] {
+  return history.map((p) => ({ ...p, text: maskSecretsInText(p.text) }));
+}
+
+/** Apply every mask pattern to a single string. */
+export function maskSecretsInText(text: string): string {
+  let out = text;
+  for (const { re, replacement } of SECRET_PATTERNS) {
+    out = out.replace(re, replacement);
+  }
+  return out;
+}
+
+/** F4 — sentence-boundary truncation cap. */
+export const F4_MAX_LINES = 2;
+export const F4_MAX_CHARS = 120;
+
+/**
+ * F4 — enforce the per-substitution length cap. If the substitution
+ * fits, returns it as-is. If it overflows on line-count or char-count,
+ * attempts a sentence-boundary truncation. Returns null if no clean
+ * truncation is possible — the caller must fall back to Strategy D.
+ */
+export function f4EnforceLengthCap(substitution: string): string | null {
+  const lineCount = substitution.split('\n').length;
+  if (lineCount <= F4_MAX_LINES && substitution.length <= F4_MAX_CHARS) {
+    return substitution;
+  }
+  // Attempt sentence-boundary truncation. Find the last sentence
+  // terminator within the char cap; require that the line-count post-
+  // truncation is ≤ F4_MAX_LINES.
+  const truncated = substitution.slice(0, F4_MAX_CHARS);
+  const lastSentenceEnd = Math.max(
+    truncated.lastIndexOf('. '),
+    truncated.lastIndexOf('! '),
+    truncated.lastIndexOf('? '),
+    truncated.lastIndexOf('.\n'),
+  );
+  if (lastSentenceEnd < 20) return null;  // truncation would leave nothing useful
+  const candidate = substitution.slice(0, lastSentenceEnd + 1).trim();
+  if (candidate.split('\n').length > F4_MAX_LINES) return null;
+  return candidate;
+}
+
+/**
+ * F5 — deduplicate near-identical prompts. Returns a deduplicated copy
+ * of `history` preserving first-occurrence order. Comparison is
+ * case-insensitive whitespace-normalised string equality (a loose
+ * heuristic that covers verbatim repeated prompts; minor textual
+ * variation slips through, which is intentional — the LLM rewrite
+ * already handles natural language variation).
+ */
+export function f5DeduplicatePrompts(history: readonly PromptRecord[]): PromptRecord[] {
+  const seen = new Set<string>();
+  const out: PromptRecord[] = [];
+  for (const p of history) {
+    const key = p.text.toLowerCase().replace(/\s+/g, ' ').trim();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(p);
+  }
+  return out;
+}
+
+/** L2 sensitive-action triggers (per CLAUDE.md L2 trigger list, used by F7). */
+const L2_TRIGGER_PATTERNS: readonly { name: string; re: RegExp }[] = [
+  { name: 'destructive-fs',    re: /\brm\s+-rf\b|\bdelete\b|\bdrop\s+table\b|\btruncate\b/i },
+  { name: 'schema-migration',  re: /\bmigrate\b|\balter\s+table\b|\bdrop\s+column\b/i },
+  { name: 'dep-install',       re: /\b(?:npm|pip|apt)\s+install\b|\bupgrade\b/i },
+  { name: 'secret-env',        re: /\b\.env\b|\bsecret\b|\bcredential\b/i },
+  { name: 'force-push',        re: /\bforce\s+push\b|--force\b|\s-f\b/i },
+  { name: 'deployment',        re: /\bdeploy\b|\brelease\b|\bproduction\b|\bstaging\b/i },
+  { name: 'multi-file-mod',    re: /\brefactor\s+across\b|\brewrite\s+all\b|\bmigrate\s+all\b/i },
+];
+
+/**
+ * F7 — detect L2 sensitive-action triggers in the prompt history.
+ * Returns the list of detected trigger names (deduplicated, ordered
+ * by trigger-category iteration). Empty array means no L2 trigger
+ * detected.
+ */
+export function f7DetectL2Triggers(history: readonly PromptRecord[]): string[] {
+  const hits = new Set<string>();
+  for (const p of history) {
+    for (const { name, re } of L2_TRIGGER_PATTERNS) {
+      if (re.test(p.text)) hits.add(name);
+    }
+  }
+  return Array.from(hits);
+}
