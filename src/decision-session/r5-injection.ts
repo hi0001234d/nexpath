@@ -637,6 +637,18 @@ export function computeRepetitionCounts(history: readonly PromptRecord[]): Repet
 /**
  * L2 sensitive-action triggers (per CLAUDE.md L2 trigger list, used by F7).
  *
+ * Dev plan §10.6.1 lists 8 detection categories, the 8th being
+ * "Divergence triggers — any verb sharply different from prior 2-5
+ * prompts' verb set". Per the user's locked-in directive (high-risk
+ * content rule, 2026-06-08): the runtime should NOT compute
+ * algorithmic verb-divergence (false-positive risk too high on
+ * benign session evolution like "fix → commit"). Instead, treat
+ * category 8 as an EXTENSIBLE sensitive-verb LIST: any verb that is
+ * sensitive (security-wise or otherwise) goes into the existing
+ * regex categories below, and detection fires on any single
+ * occurrence regardless of repetition. Future sensitive verbs are
+ * added by extending these alternations.
+ *
  * False-positive note: `\benv\b` (standalone) is per dev-plan §10.6.1
  * literal trigger-token list but will match common non-sensitive
  * phrasings like "env variable" / "set env" / "use env". The
@@ -646,7 +658,11 @@ export function computeRepetitionCounts(history: readonly PromptRecord[]): Repet
  * becomes a UX issue.
  */
 const L2_TRIGGER_PATTERNS: readonly { name: string; re: RegExp }[] = [
-  { name: 'destructive-fs',    re: /\brm\s+-rf\b|\bdelete\b|\bdrop\s+table\b|\btruncate\b/i },
+  // destructive-fs extended (2026-06-08) with destroy/wipe/purge/erase per the
+  // user's "any sensitive verb triggers" directive — these are unambiguously
+  // destructive verbs not previously covered by the rm -rf / delete / drop / truncate
+  // alternation.
+  { name: 'destructive-fs',    re: /\brm\s+-rf\b|\bdelete\b|\bdrop\s+table\b|\btruncate\b|\bdestroy\b|\bwipe\b|\bpurge\b|\berase\b/i },
   { name: 'schema-migration',  re: /\bmigrate\b|\balter\s+table\b|\bdrop\s+column\b/i },
   { name: 'dep-install',       re: /\b(?:npm|pip|apt)\s+install\b|\bupgrade\b/i },
   { name: 'secret-env',        re: /\benv\b|\.env\b|\bsecret\b|\bcredential\b/i },

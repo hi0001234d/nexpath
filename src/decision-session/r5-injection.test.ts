@@ -442,6 +442,20 @@ describe('r5-injection — F7 L2 sensitive-action trigger detection', () => {
     const history = [makePrompt('let me read env to debug', 0)];
     expect(f7DetectL2Triggers(history)).toContain('secret-env');
   });
+
+  it('detects destroy/wipe/purge/erase under destructive-fs (extended sensitive-verb list)', () => {
+    expect(f7DetectL2Triggers([makePrompt('destroy the temp dir', 0)])).toContain('destructive-fs');
+    expect(f7DetectL2Triggers([makePrompt('wipe the cache directory', 0)])).toContain('destructive-fs');
+    expect(f7DetectL2Triggers([makePrompt('purge the old logs', 0)])).toContain('destructive-fs');
+    expect(f7DetectL2Triggers([makePrompt('erase the snapshot', 0)])).toContain('destructive-fs');
+  });
+
+  it('fires on a single occurrence — no repetition / divergence pattern required', () => {
+    // Per dev-plan §10.6.1 category 8 reinterpretation: a sensitive verb
+    // triggers regardless of how many prompts it appears in.
+    const single = [makePrompt('alpha bravo charlie wipe the staging cache', 0)];
+    expect(f7DetectL2Triggers(single)).toContain('destructive-fs');
+  });
 });
 
 describe('r5-injection — f7DetectL2TriggerMatches() literal-text variant', () => {
