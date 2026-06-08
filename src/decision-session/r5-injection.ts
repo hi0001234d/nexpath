@@ -498,8 +498,8 @@ export function f1ShouldFallback(history: readonly PromptRecord[]): boolean {
 
 /** Mask patterns applied to prompt text before vocab extraction (F2). */
 const SECRET_PATTERNS: readonly { re: RegExp; replacement: string }[] = [
-  // API key / token / secret literals (prefixed)
-  { re: /(?:api[_-]?key|token|secret|bearer)\s*[:=]\s*['"]?[A-Za-z0-9_\-]{8,}['"]?/gi, replacement: '[REDACTED_SECRET]' },
+  // API key / password / token / secret literals (prefixed)
+  { re: /(?:api[_-]?key|password|token|secret|bearer)\s*[:=]\s*['"]?[A-Za-z0-9_\-]{8,}['"]?/gi, replacement: '[REDACTED_SECRET]' },
   // Email addresses
   { re: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, replacement: '[REDACTED_EMAIL]' },
   // Phone numbers (loose — 10+ contiguous digits or formatted)

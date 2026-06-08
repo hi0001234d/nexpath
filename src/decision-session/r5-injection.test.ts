@@ -225,6 +225,18 @@ describe('r5-injection — F1 early-session guard', () => {
   });
 });
 
+describe('r5-injection — F2 password masking (dev-plan §10.6 F2 token list)', () => {
+  it('redacts password=<value> assignments', () => {
+    expect(maskSecretsInText('password=supersecret12 thanks')).toContain('[REDACTED_SECRET]');
+    expect(maskSecretsInText('password=supersecret12 thanks')).not.toContain('supersecret12');
+  });
+
+  it('redacts password: <value> assignments', () => {
+    expect(maskSecretsInText('password: hunter2lol next steps')).toContain('[REDACTED_SECRET]');
+    expect(maskSecretsInText('password: hunter2lol next steps')).not.toContain('hunter2lol');
+  });
+});
+
 describe('r5-injection — F2 PII / secret masking', () => {
   it('redacts api key pattern', () => {
     expect(maskSecretsInText('api_key=sk-ABCD1234EFGH5678')).toContain('[REDACTED_SECRET]');
