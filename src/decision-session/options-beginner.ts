@@ -287,14 +287,39 @@ const BEHAVIOUR_TESTING_BEGINNER: DecisionContent = {
   question:      'Implementation done — user scenarios tested?',
   pinchFallback: 'User scenario?',
   L1: [
-    { option: '1. Walk through this feature as if you\'re a real user — tell me each step, what you\'d click or type, and whether it works the way it should.\n2. Share what you find with me before we move on.\n3. Flag anything that feels wrong or missing along the way.', descBase: '' },
-    { option: 'Walk through this as a real user would — then share what you find with me before we continue.', descBase: '' },
+    {
+      option: '1. Walk through this feature as if you\'re a real user — tell me each step, what you\'d click or type, and whether it works the way it should.\n2. Share what you find with me before we move on.\n3. Flag anything that feels wrong or missing along the way.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I built this in the last few prompts but I haven't tried it as a user yet."}
+I haven't manually used what was just built; automated tests miss the real-user feel.
+Walk me through it as if I'm a user: each step, what I'd click or type, what I'd see, what I'd flag.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk through this as a real user would — then share what you find with me before we continue.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it; not walked through as a user."}
+Same moment, simpler: walk through as a user, share what works and what doesn't.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the most important thing to test by using it like a real person? Share that with me.', descBase: '' },
+    {
+      option: 'What\'s the most important thing to test by using it like a real person? Share that with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Lighter: the single most important real-user check.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything that feels off when you use this yourself?', descBase: '' },
+    {
+      option: 'Is there anything that feels off when you use this yourself?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: anything that feels off when I use it.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -303,14 +328,39 @@ export const ABSENCE_TEST_CREATION_BEGINNER: DecisionContent = {
   question:      'Built something — any tests written yet?',
   pinchFallback: 'Tests missing.',
   L1: [
-    { option: '1. Write a test for what was just built — start with the main thing it\'s supposed to do.\n2. Share the test with me so I can check it covers the right thing.\n3. Then tell me: is there anything else in what was just built that could break without a test catching it?', descBase: '' },
-    { option: 'Walk me through what was just built and tell me: what\'s the most important thing it does? Then write a test that checks that works correctly, and share it with me.', descBase: '' },
+    {
+      option: '1. Write a test for what was just built — start with the main thing it\'s supposed to do.\n2. Share the test with me so I can check it covers the right thing.\n3. Then tell me: is there anything else in what was just built that could break without a test catching it?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I just built something but I haven't written any tests for it."}
+Tests haven't been written; whatever I built could break next time I change something.
+Walk me through it: write a test starting with the main thing, share it so I can check coverage, then point out anything else that could break without a test.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk me through what was just built and tell me: what\'s the most important thing it does? Then write a test that checks that works correctly, and share it with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it; no tests yet."}
+Same moment, simpler: name the most important thing it does, then write a test for that.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Write one test for what was just built and share it with me — I want to see what you\'re checking and make sure it covers the right thing.', descBase: '' },
+    {
+      option: 'Write one test for what was just built and share it with me — I want to see what you\'re checking and make sure it covers the right thing.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; zero tests."}
+Lighter: write one test, share what I'm checking.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that should have a test before we move on?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that should have a test before we move on?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; zero tests."}
+Minimum next step: one thing that should have a test before I move on.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -319,14 +369,39 @@ export const ABSENCE_REGRESSION_CHECK_BEGINNER: DecisionContent = {
   question:      'Changed something — did anything break?',
   pinchFallback: 'Regression check.',
   L1: [
-    { option: '1. Run the existing tests for this project now that what was just built has been added.\n2. Share the results with me — which ones pass, which ones fail.\n3. Then tell me: is there anything that used to work that might not work anymore?', descBase: '' },
-    { option: 'Look at what was just built and tell me — what other parts of this project does it touch or depend on? Then check if those parts still work correctly and share what you find.', descBase: '' },
+    {
+      option: '1. Run the existing tests for this project now that what was just built has been added.\n2. Share the results with me — which ones pass, which ones fail.\n3. Then tell me: is there anything that used to work that might not work anymore?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I just added something but I haven't run the existing tests since."}
+Whether the changes broke things that used to work hasn't been checked.
+Walk me through it: run the existing tests, share pass/fail, then tell me if anything that used to work might not anymore.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Look at what was just built and tell me — what other parts of this project does it touch or depend on? Then check if those parts still work correctly and share what you find.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Made changes; affected-parts not mapped."}
+Same moment, deeper: what other parts of this project does my change touch? Check those still work.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Run the tests for this project and share the results with me — I want to know if anything broke after what was just built was added.', descBase: '' },
+    {
+      option: 'Run the tests for this project and share the results with me — I want to know if anything broke after what was just built was added.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Made changes; suite not run."}
+Lighter: run the suite, tell me what broke.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything that was working before that might have stopped working after what was just built was added?', descBase: '' },
+    {
+      option: 'Is there anything that was working before that might have stopped working after what was just built was added?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Made changes."}
+Minimum next step: anything that used to work and might not now.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -366,14 +441,39 @@ export const ABSENCE_SECURITY_CHECK_BEGINNER: DecisionContent = {
   question:      'Built something — any security checks done?',
   pinchFallback: 'Security gap.',
   L1: [
-    { option: '1. Look at what was just built and check if it handles anything a user types in or sends to the app.\n2. Share with me: could someone type something unexpected and cause a problem?\n3. Then check: does anything in what was just built need a login or permission to use, and is that actually enforced?', descBase: '' },
-    { option: 'Walk me through what was just built and tell me — what could go wrong if someone tried to misuse it on purpose? Share what you find with me before we move on.', descBase: '' },
+    {
+      option: '1. Look at what was just built and check if it handles anything a user types in or sends to the app.\n2. Share with me: could someone type something unexpected and cause a problem?\n3. Then check: does anything in what was just built need a login or permission to use, and is that actually enforced?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I built something that takes user input or uses login; haven't checked it for security."}
+Security check hasn't been done; the input-handling and permission paths are unchecked.
+Walk me through it: check what handles user input, share what could go wrong with unexpected typing, then check whether login/permission is actually enforced.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk me through what was just built and tell me — what could go wrong if someone tried to misuse it on purpose? Share what you find with me before we move on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it with user-input or auth; misuse path not considered."}
+Same moment, mistake-on-purpose framing: what could go wrong if someone tried to misuse it on purpose?
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there anything in what was just built that takes input from a user or checks if someone is logged in? Share how that\'s handled with me.', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that takes input from a user or checks if someone is logged in? Share how that\'s handled with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; input/auth handling unclear."}
+Lighter: anything that takes input or checks login — how is that handled?
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that a user could misuse or that isn\'t properly protected?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that a user could misuse or that isn\'t properly protected?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: anything a user could misuse or that isn't protected.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -381,14 +481,39 @@ export const ABSENCE_ERROR_HANDLING_BEGINNER: DecisionContent = {
   question:      'Feature built — what happens when it breaks?',
   pinchFallback: 'Error handling.',
   L1: [
-    { option: '1. Look at what was just built and think: what happens if it doesn\'t work the way it\'s supposed to?\n2. Share with me: is there anything that could break without showing a useful message?\n3. Then check: what happens if a user does something unexpected — does the app handle it or crash?', descBase: '' },
-    { option: 'Walk me through what was just built and tell me — what\'s the first thing that could go wrong, and what does the user see when that happens? Share what you find with me.', descBase: '' },
+    {
+      option: '1. Look at what was just built and think: what happens if it doesn\'t work the way it\'s supposed to?\n2. Share with me: is there anything that could break without showing a useful message?\n3. Then check: what happens if a user does something unexpected — does the app handle it or crash?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I built a feature but I haven't thought about what happens when it doesn't work."}
+The "what happens when it breaks" hasn't been considered.
+Walk me through it: anything that could break without a useful message, then check unexpected-user-action handling.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk me through what was just built and tell me — what\'s the first thing that could go wrong, and what does the user see when that happens? Share what you find with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it; first-thing-that-could-go-wrong not identified."}
+Same moment, deeper: the first thing that could go wrong, what the user sees when it does.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there anything in what was just built that could fail without telling the user what went wrong? Share what you find with me.', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that could fail without telling the user what went wrong? Share what you find with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Lighter: anything that could fail without telling the user what went wrong.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that could crash or fail silently when something unexpected happens?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that could crash or fail silently when something unexpected happens?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: anything that could crash or fail silently on unexpected input.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -621,14 +746,39 @@ export const ABSENCE_PROBLEM_CORRECTION_BEGINNER: DecisionContent = {
   question:      'Spotted a bug — did it actually get fixed?',
   pinchFallback: 'Bug unresolved.',
   L1: [
-    { option: '1. Think back through this session — was there anything that didn\'t work or looked wrong earlier on?\n2. Share with me: is that thing actually fixed now, or did we move on without dealing with it?\n3. Then check: are there any other problems in what was just built that haven\'t been properly sorted out?', descBase: '' },
-    { option: 'Walk me through what was just built and tell me — is there anything we said was a problem earlier that still hasn\'t been fixed? Share what you find with me.', descBase: '' },
+    {
+      option: '1. Think back through this session — was there anything that didn\'t work or looked wrong earlier on?\n2. Share with me: is that thing actually fixed now, or did we move on without dealing with it?\n3. Then check: are there any other problems in what was just built that haven\'t been properly sorted out?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Earlier in this session something didn't work or looked wrong; not sure if it got fixed."}
+A noticed-but-maybe-unfixed issue is hanging over what was just built.
+Walk me through it: was there anything broken earlier in this session, is it actually fixed now, then check for other unresolved problems.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk me through what was just built and tell me — is there anything we said was a problem earlier that still hasn\'t been fixed? Share what you find with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Issues came up earlier; status uncertain."}
+Same moment, deeper: anything I said was a problem earlier that still isn't fixed.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there anything in what was just built that was flagged as broken or wrong earlier in this session but hasn\'t been fixed yet? Share it with me.', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that was flagged as broken or wrong earlier in this session but hasn\'t been fixed yet? Share it with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Earlier issue flagged; status unclear."}
+Lighter: anything flagged broken earlier that still isn't fixed.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there any bug in what was just built that was noticed earlier but not actually fixed?', descBase: '' },
+    {
+      option: 'Is there any bug in what was just built that was noticed earlier but not actually fixed?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Earlier issue noticed."}
+Minimum next step: any bug noticed earlier but not actually fixed.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1000,14 +1150,39 @@ export const ABSENCE_OUTPUT_VERIFICATION_BEGINNER: DecisionContent = {
   question:      'Code generated — have you actually tried it?',
   pinchFallback: 'Test it first.',
   L1: [
-    { option: '1. Before moving on from what was just built — actually run it or try it.\n2. Share with me: does it behave the way you expected?\n3. If anything looks off, tell me what happened and we\'ll look at it together.', descBase: '' },
-    { option: 'Try what was just built and share what happens — does it do what you expected, or is something different?', descBase: '' },
+    {
+      option: '1. Before moving on from what was just built — actually run it or try it.\n2. Share with me: does it behave the way you expected?\n3. If anything looks off, tell me what happened and we\'ll look at it together.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Code was generated for me but I haven't actually tried running it."}
+Whether the generated code actually works hasn't been verified.
+Walk me through it: run or try it, share what happens vs what I expected, then we look at anything off together.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Try what was just built and share what happens — does it do what you expected, or is something different?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Code generated; not tried yet."}
+Same moment, simpler: try it and tell me what happens.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Have you run or tried what was just built? Tell me what it does when you use it.', descBase: '' },
+    {
+      option: 'Have you run or tried what was just built? Tell me what it does when you use it.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Code generated; not tried."}
+Lighter: have I actually run or tried it, and what does it do when I do?
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Have you actually tested what was just built to see if it works?', descBase: '' },
+    {
+      option: 'Have you actually tested what was just built to see if it works?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Code generated."}
+Minimum next step: actually test it to see if it works.
+{R4_CLOSE}`,
+    },
   ],
 };
 

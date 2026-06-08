@@ -573,16 +573,57 @@ const BEHAVIOUR_TESTING: DecisionContent = {
   question:      'Implementation done — user scenarios tested?',
   pinchFallback: 'User scenario?',
   L1: [
-    { option: 'Write a manual test scenario for the main user journey: list each step a real user would take, what they would see, and what would confirm it is working correctly.', descBase: '' },
-    { option: 'List the acceptance tests for this feature: describe 3 to 5 scenarios a real user would run through, from happy path to edge cases, and the expected outcome for each.', descBase: '' },
-    { option: 'Identify the 3 most likely ways a real user could break this feature without triggering any automated tests — then tell me how to manually verify each one.', descBase: '' },
+    {
+      option: 'Write a manual test scenario for the main user journey: list each step a real user would take, what they would see, and what would confirm it is working correctly.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Last several prompts: implementation work. No manual acceptance scenario written for the user-facing path."}
+Manual acceptance testing hasn't been done; automated tests miss the user-facing scenarios.
+Produce the scenario itself — a step-by-step user journey with confirmation criteria per step.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'List the acceptance tests for this feature: describe 3 to 5 scenarios a real user would run through, from happy path to edge cases, and the expected outcome for each.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Feature implemented; acceptance-test scenarios not enumerated."}
+Manual acceptance scenarios are missing; 3-5 scenarios across happy and edge cases form the floor.
+List the scenarios with expected outcomes per case.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Identify the 3 most likely ways a real user could break this feature without triggering any automated tests — then tell me how to manually verify each one.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Feature implemented; user-break paths not enumerated."}
+The break-paths automated tests don't catch haven't been mapped.
+Identify the top 3 user-break paths and the manual verification for each.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Describe the happy path for the main use case: what does a user do, step by step, to successfully complete the core workflow?', descBase: '' },
-    { option: 'What is the most important thing to verify manually before I call this feature done — and how do I check it?', descBase: '' },
+    {
+      option: 'Describe the happy path for the main use case: what does a user do, step by step, to successfully complete the core workflow?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Feature implemented; happy-path walkthrough not documented."}
+The lighter alternative: just the happy path, step by step.
+Walk through the core workflow.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What is the most important thing to verify manually before I call this feature done — and how do I check it?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Feature implemented; manual-verify priority not chosen."}
+Narrower scope: the single highest-value manual check.
+Name it and the verification steps.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'What is one real user scenario I should manually test right now before moving on?', descBase: '' },
+    {
+      option: 'What is one real user scenario I should manually test right now before moving on?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Feature implemented; no manual scenario tried."}
+Minimum next step: one scenario to try manually.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -591,16 +632,57 @@ const BEHAVIOUR_TESTING_CASUAL: DecisionContent = {
   question:      'Implementation done — user scenarios tested?',
   pinchFallback: 'User scenario?',
   L1: [
-    { option: 'Put yourself in a user\'s shoes and go through what was just built from start to finish — what\'s the main thing it does, does it actually work, and is anything confusing or broken along the way?', descBase: '' },
-    { option: 'Think of a few different ways someone might use this feature in real life — the obvious one and a couple of less obvious ones — and actually run through each to see what happens.', descBase: '' },
-    { option: 'Think about what could go wrong for a real user in what was just built — try the stuff that automated tests wouldn\'t catch and tell me what you see.', descBase: '' },
+    {
+      option: 'Put yourself in a user\'s shoes and go through what was just built from start to finish — what\'s the main thing it does, does it actually work, and is anything confusing or broken along the way?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I built this in the last few prompts but I haven't actually tried it as a user yet."}
+I haven't manually used what was just built; automated tests don't cover the user-feel.
+Run through it as a user from start to finish, flag anything confusing or broken.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Think of a few different ways someone might use this feature in real life — the obvious one and a couple of less obvious ones — and actually run through each to see what happens.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Feature built; I've only checked the obvious flow."}
+Different user paths haven't been tried; obvious ones plus a few less-obvious ones are what catches surprises.
+Pick a few paths, run them, tell me what happens in each.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Think about what could go wrong for a real user in what was just built — try the stuff that automated tests wouldn\'t catch and tell me what you see.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Feature built; haven't tried the things tests miss."}
+The break paths between automated coverage and real users haven't been explored.
+Try the stuff automated tests wouldn't catch and tell me what you see.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the simplest way someone would use this feature end to end — walk me through what they do and whether it actually works.', descBase: '' },
-    { option: 'Is there anything in what was just built that you haven\'t actually tried yourself yet — and what would "working" look like if you did?', descBase: '' },
+    {
+      option: 'What\'s the simplest way someone would use this feature end to end — walk me through what they do and whether it actually works.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built; end-to-end user walk not done."}
+Lighter: just the simplest end-to-end walk.
+Walk me through it and tell me if it actually works.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Is there anything in what was just built that you haven\'t actually tried yourself yet — and what would "working" look like if you did?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built; untried-by-hand bits not identified."}
+The bits that haven't been touched by hand yet are the risky ones.
+Name them and define what "working" looks like.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'What\'s one specific thing that could break for a real user in this feature that hasn\'t been tried by hand yet?', descBase: '' },
+    {
+      option: 'What\'s one specific thing that could break for a real user in this feature that hasn\'t been tried by hand yet?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built; not tried by hand."}
+Minimum next step: one specific break-by-hand risk.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -611,16 +693,57 @@ const ABSENCE_TEST_CREATION: DecisionContent = {
   question:      'Code added — where are the tests?',
   pinchFallback: 'Tests missing.',
   L1: [
-    { option: 'Write tests for what was just built: unit tests for each function added or modified, and at least one integration test that covers the main path through this feature.', descBase: '' },
-    { option: 'Identify what was just built that has no test coverage and write tests for the top 3 riskiest parts — the logic most likely to break silently if changed.', descBase: '' },
-    { option: 'Review what was just built for testability: is it structured so tests can be written without extensive mocking? Flag any parts that would be hard to test as-is.', descBase: '' },
+    {
+      option: 'Write tests for what was just built: unit tests for each function added or modified, and at least one integration test that covers the main path through this feature.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Recent prompts: feature implementation. No test files added in the visible window."}
+Tests haven't been written for what was just built; silent regressions become possible the next time anyone touches this code.
+Produce the unit-test set + one integration test covering the main path.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Identify what was just built that has no test coverage and write tests for the top 3 riskiest parts — the logic most likely to break silently if changed.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Implementation done; coverage gaps not enumerated."}
+The test gap is present and the riskiest parts inside it haven't been ranked.
+Rank the top 3 by silent-failure risk and write tests for those first.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Review what was just built for testability: is it structured so tests can be written without extensive mocking? Flag any parts that would be hard to test as-is.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Implementation done; testability not assessed."}
+Before tests can be written, the code's testability hasn't been checked.
+Audit the structure; flag what needs a small refactor before tests can land cleanly.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Write at least one test for what was just built — the most critical path through this feature.', descBase: '' },
-    { option: 'What would break silently in what was just built if a future change introduced a bug? Write a test that catches that.', descBase: '' },
+    {
+      option: 'Write at least one test for what was just built — the most critical path through this feature.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done; zero tests written."}
+The lighter floor: one test on the most critical path.
+Write that test.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What would break silently in what was just built if a future change introduced a bug? Write a test that catches that.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done; silent-failure path not identified."}
+The highest-leverage test is the one catching the silent-failure mode.
+Identify it and write the test.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Write one test for the most important behaviour in what was just built before moving on.', descBase: '' },
+    {
+      option: 'Write one test for the most important behaviour in what was just built before moving on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done; zero tests."}
+Minimum next step: one test for the most important behaviour.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -629,16 +752,55 @@ const ABSENCE_REGRESSION_CHECK: DecisionContent = {
   question:      'Changes made — regression verified?',
   pinchFallback: 'Regression check.',
   L1: [
-    { option: 'Identify which existing tests cover the code paths changed in what was just built, run them, and flag any regressions — anything that was passing before this session that is now failing.', descBase: '' },
-    { option: 'Check what was just built against the existing test suite: identify which existing tests cover the code paths that were modified, run them, and report any failures.', descBase: '' },
-    { option: 'Review what was just built for regression risk: what existing functionality could be affected by these changes, and how would you verify it still works correctly?', descBase: '' },
+    {
+      option: 'Identify which existing tests cover the code paths changed in what was just built, run them, and flag any regressions — anything that was passing before this session that is now failing.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Recent prompts: code changes touching multiple paths. Existing-test impact not assessed."}
+Regression on existing functionality hasn't been verified; changes may have broken paths that were previously passing.
+Identify the existing tests that cover the changed paths, run them, flag any new failures.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Check what was just built against the existing test suite: identify which existing tests cover the code paths that were modified, run them, and report any failures.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Code changes present; existing-suite run not done."}
+The existing test suite hasn't been run against the changes.
+Run the suite, report which tests fail and which touched the changed code.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Review what was just built for regression risk: what existing functionality could be affected by these changes, and how would you verify it still works correctly?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Code changes present; regression-risk surface not enumerated."}
+The functions and paths that could break haven't been listed yet.
+Enumerate at-risk functionality and the verification approach per item.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Run the tests for this project and report which ones fail — specifically any that touch code changed in this session.', descBase: '' },
-    { option: 'What existing functionality is most likely to be affected by what was just built? Verify it still works.', descBase: '' },
+    {
+      option: 'Run the tests for this project and report which ones fail — specifically any that touch code changed in this session.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Code changes present; suite not run."}
+Lighter: just run the suite, report failures touching changed code.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What existing functionality is most likely to be affected by what was just built? Verify it still works.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Code changes present; highest-impact area not identified."}
+Narrower: name the functionality most likely affected and verify it directly.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Run the existing tests for this project and report whether anything is now failing that wasn\'t before.', descBase: '' },
+    {
+      option: 'Run the existing tests for this project and report whether anything is now failing that wasn\'t before.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Code changes present."}
+Minimum next step: run existing tests, report what's newly failing.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -682,16 +844,57 @@ const ABSENCE_SECURITY_CHECK: DecisionContent = {
   question:      'Feature built — security reviewed?',
   pinchFallback: 'Security gap.',
   L1: [
-    { option: 'Review what was just built for security vulnerabilities: check authentication and authorization logic, input validation for injection risks (SQL, XSS, command), and any API endpoints for missing rate limiting, improper error responses, or exposed sensitive data.', descBase: '' },
-    { option: 'Audit what was just built against OWASP Top 10 exposure: does this feature handle untrusted input safely, authenticate and authorize correctly, and avoid leaking sensitive information in error messages or logs?', descBase: '' },
-    { option: 'Cross-confirm what was just built against your threat model: what assets are being protected, what attack surface has this feature introduced, and what is the highest-severity vulnerability an attacker could exploit right now?', descBase: '' },
+    {
+      option: 'Review what was just built for security vulnerabilities: check authentication and authorization logic, input validation for injection risks (SQL, XSS, command), and any API endpoints for missing rate limiting, improper error responses, or exposed sensitive data.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Recent prompts: feature with input-handling and/or auth surface. No security pass performed."}
+Security review hasn't been done; the new attack surface is unaudited.
+Audit auth/authorization, input validation (injection vectors), rate limiting, and error-response leakage. List findings.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Audit what was just built against OWASP Top 10 exposure: does this feature handle untrusted input safely, authenticate and authorize correctly, and avoid leaking sensitive information in error messages or logs?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Feature present; OWASP-axis exposure not assessed."}
+The OWASP-axis exposure of what was just built hasn't been checked.
+Audit against OWASP Top 10 — untrusted input, auth/authz, info disclosure. List findings.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Cross-confirm what was just built against your threat model: what assets are being protected, what attack surface has this feature introduced, and what is the highest-severity vulnerability an attacker could exploit right now?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Feature present; threat-model alignment not done."}
+The threat model hasn't been cross-checked against the new attack surface.
+Identify protected assets, the surface this feature adds, and the highest-severity exploit path.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Check what was just built for the most critical security gaps: input validation, proper authentication and authorization checks, and sensitive data exposure in responses or logs.', descBase: '' },
-    { option: 'What is the biggest security risk introduced by what was just built, and what would be needed to mitigate it before this ships?', descBase: '' },
+    {
+      option: 'Check what was just built for the most critical security gaps: input validation, proper authentication and authorization checks, and sensitive data exposure in responses or logs.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Feature present; critical-gap check not done."}
+Lighter: focus on input validation + auth checks + sensitive-data exposure.
+List the critical gaps.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What is the biggest security risk introduced by what was just built, and what would be needed to mitigate it before this ships?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Feature present; top-risk not identified."}
+Narrower: the single biggest security risk + its mitigation.
+Name both.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that could be exploited — untrusted input not validated, missing auth checks, or sensitive data exposed to callers?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that could be exploited — untrusted input not validated, missing auth checks, or sensitive data exposed to callers?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Feature present."}
+Minimum next step: one exploitable issue — untrusted input, missing auth, or data leakage.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -699,16 +902,57 @@ const ABSENCE_ERROR_HANDLING: DecisionContent = {
   question:      'Feature built — error paths handled?',
   pinchFallback: 'Error handling.',
   L1: [
-    { option: 'Review what was just built for error handling gaps: identify all failure modes (network errors, invalid input, missing dependencies, unexpected state), confirm each is handled explicitly, and flag any that are silently swallowed or produce unhelpful error messages.', descBase: '' },
-    { option: 'Audit the failure paths in what was just built: what happens when each external dependency fails, each input is invalid, or each assumption is violated? Is the failure propagated, logged, or recovered from correctly in each case?', descBase: '' },
-    { option: 'Cross-confirm what was just built against its error contract: are errors typed and documented, are retries or fallbacks implemented where appropriate, and are error messages safe to expose to callers without leaking internal state?', descBase: '' },
+    {
+      option: 'Review what was just built for error handling gaps: identify all failure modes (network errors, invalid input, missing dependencies, unexpected state), confirm each is handled explicitly, and flag any that are silently swallowed or produce unhelpful error messages.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Recent prompts: feature with external calls / inputs / dependencies. Error-handling audit not performed."}
+Failure modes haven't been enumerated; silent or unhelpful errors are now possible.
+Identify network / input / dependency / state failure modes. Per mode: handled or swallowed.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Audit the failure paths in what was just built: what happens when each external dependency fails, each input is invalid, or each assumption is violated? Is the failure propagated, logged, or recovered from correctly in each case?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Feature present; per-dependency failure behaviour not audited."}
+Per-dependency failure behaviour hasn't been verified.
+For each external dep / input / assumption: what happens on failure (propagated, logged, recovered).
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Cross-confirm what was just built against its error contract: are errors typed and documented, are retries or fallbacks implemented where appropriate, and are error messages safe to expose to callers without leaking internal state?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Feature present; error contract not defined."}
+The error contract hasn't been cross-confirmed.
+Audit: typed errors, documentation, retries/fallbacks, callable-safe error messages.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What failure modes in what was just built are currently unhandled or silently swallowed? Identify and fix the most critical ones.', descBase: '' },
-    { option: 'What happens in what was just built when the most likely thing goes wrong — network failure, invalid input, or missing dependency? Verify that case is handled correctly.', descBase: '' },
+    {
+      option: 'What failure modes in what was just built are currently unhandled or silently swallowed? Identify and fix the most critical ones.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Feature present; unhandled failures not identified."}
+Lighter: which failure modes are unhandled or swallowed?
+Identify the most critical ones.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What happens in what was just built when the most likely thing goes wrong — network failure, invalid input, or missing dependency? Verify that case is handled correctly.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Feature present; most-likely failure not addressed."}
+Narrower: the single most-likely failure case and how it's handled.
+Verify it.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that could fail silently or produce an unhelpful error when something unexpected happens?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that could fail silently or produce an unhelpful error when something unexpected happens?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Feature present."}
+Minimum next step: one silent or unhelpful failure path.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1023,16 +1267,56 @@ const ABSENCE_PROBLEM_CORRECTION: DecisionContent = {
   question:      'Bug noticed — explicitly corrected?',
   pinchFallback: 'Bug unresolved.',
   L1: [
-    { option: 'Review the outstanding bugs and issues identified in this session: for each one, confirm whether it has been explicitly fixed, explicitly deferred with a tracking note, or left unaddressed. Address any that are unresolved and blocking correctness of what was just built.', descBase: '' },
-    { option: 'Audit what was just built for bugs that were noticed but not fixed: identify any error, failure, or incorrect behaviour that was mentioned in this session and is still present in the current implementation.', descBase: '' },
-    { option: 'Cross-confirm the current state of what was just built: run the tests, check the known failure cases, and verify that any issue identified earlier in this session has been resolved or explicitly acknowledged as a known limitation.', descBase: '' },
+    {
+      option: 'Review the outstanding bugs and issues identified in this session: for each one, confirm whether it has been explicitly fixed, explicitly deferred with a tracking note, or left unaddressed. Address any that are unresolved and blocking correctness of what was just built.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Recent prompts: bugs / issues mentioned without explicit fix-confirmation."}
+Outstanding issues from this session haven't all been resolved or explicitly deferred.
+Per issue: fixed / deferred-with-note / blocking. Address blocking ones.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Audit what was just built for bugs that were noticed but not fixed: identify any error, failure, or incorrect behaviour that was mentioned in this session and is still present in the current implementation.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Issues mentioned earlier; current-implementation status not verified per issue."}
+The bug-noticed-but-still-present surface hasn't been audited.
+Identify each noticed-but-unfixed issue in current implementation.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Cross-confirm the current state of what was just built: run the tests, check the known failure cases, and verify that any issue identified earlier in this session has been resolved or explicitly acknowledged as a known limitation.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Implementation done; known-failure-case state not confirmed."}
+The current state of the implementation against known failure cases hasn't been confirmed.
+Run tests + known failure cases; verify earlier issues now resolved.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there any bug or issue in what was just built that was noticed earlier in this session but not explicitly fixed? Address it before moving on.', descBase: '' },
-    { option: 'Run the tests for what was just built and confirm that any failure identified earlier in this session is now resolved.', descBase: '' },
+    {
+      option: 'Is there any bug or issue in what was just built that was noticed earlier in this session but not explicitly fixed? Address it before moving on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Issue mentioned earlier; status unclear."}
+Lighter: any issue noticed earlier not explicitly fixed.
+Address before moving on.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Run the tests for what was just built and confirm that any failure identified earlier in this session is now resolved.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Earlier failure mentioned; resolution status unclear."}
+Narrower: run the tests, confirm earlier failures now pass.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there any bug in what was just built that was noticed but not explicitly corrected before moving on?', descBase: '' },
+    {
+      option: 'Is there any bug in what was just built that was noticed but not explicitly corrected before moving on?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Issue mentioned earlier."}
+Minimum next step: any noticed-but-uncorrected bug.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1235,16 +1519,57 @@ const ABSENCE_TEST_CREATION_CASUAL: DecisionContent = {
   question:      'Built something — any tests written yet?',
   pinchFallback: 'Tests missing.',
   L1: [
-    { option: 'Write tests for what was just built — unit tests for anything new or changed, and one test that runs the main flow. What\'s the most likely thing that could break?', descBase: '' },
-    { option: 'What\'s the riskiest part of what was just built that has no test? Write one test for that first, then keep going.', descBase: '' },
-    { option: 'Is what was just built easy to test as-is, or does it need a small refactor to make testing feasible? Share what you find.', descBase: '' },
+    {
+      option: 'Write tests for what was just built — unit tests for anything new or changed, and one test that runs the main flow. What\'s the most likely thing that could break?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Recent prompts have been implementation. No tests written for what I built."}
+Tests haven't been written; whatever I just built could regress silently next time someone changes it.
+Write unit tests + one main-flow integration test. Name the riskiest thing.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What\'s the riskiest part of what was just built that has no test? Write one test for that first, then keep going.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it; no tests yet."}
+The riskiest untested bit hasn't been picked.
+Pick it, write that test, then keep going.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Is what was just built easy to test as-is, or does it need a small refactor to make testing feasible? Share what you find.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it; not sure if tests can be written without restructuring."}
+The testability check hasn't been done.
+Tell me what you find — easy or needs a small refactor first.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Write at least one test for what was just built — something that would catch it breaking silently.', descBase: '' },
-    { option: 'What\'s the most likely thing to break silently in what was just built? Write a test for that.', descBase: '' },
+    {
+      option: 'Write at least one test for what was just built — something that would catch it breaking silently.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Zero tests yet."}
+Floor: one test that catches silent breakage.
+Write it.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What\'s the most likely thing to break silently in what was just built? Write a test for that.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built; silent-break paths not mapped."}
+Highest-leverage test = the one catching the most likely silent break.
+Pick it and write it.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Write one test for the most important behaviour in what was just built before moving on.', descBase: '' },
+    {
+      option: 'Write one test for the most important behaviour in what was just built before moving on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Zero tests."}
+Minimum next step: one test on the most important behaviour.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1253,16 +1578,55 @@ const ABSENCE_REGRESSION_CHECK_CASUAL: DecisionContent = {
   question:      'Changed something — did anything break?',
   pinchFallback: 'Regression check.',
   L1: [
-    { option: 'Run the tests for this project and check — did what was just built break anything that was working before? Report what\'s failing and why.', descBase: '' },
-    { option: 'What existing code is most likely affected by what was just built? Run those tests and tell me if anything broke.', descBase: '' },
-    { option: 'Look at what was just built — what could it accidentally break in what was already working? Verify those paths still work.', descBase: '' },
+    {
+      option: 'Run the tests for this project and check — did what was just built break anything that was working before? Report what\'s failing and why.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I've been changing code in the recent prompts; haven't run the existing tests since."}
+Regression on previously-working stuff hasn't been verified.
+Run the existing tests, tell me what's failing and why.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What existing code is most likely affected by what was just built? Run those tests and tell me if anything broke.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Made changes; affected-paths not identified."}
+The existing code most likely affected by what I just built hasn't been verified.
+Check those paths' tests, tell me what broke.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Look at what was just built — what could it accidentally break in what was already working? Verify those paths still work.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Made changes; what-could-break not enumerated."}
+The accidental-break paths haven't been surfaced.
+Spot them, verify they still work.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Run the test suite and flag anything that\'s now failing that wasn\'t before — especially anything near what was just built.', descBase: '' },
-    { option: 'What existing functionality is most likely affected by what was just built? Give it a quick check.', descBase: '' },
+    {
+      option: 'Run the test suite and flag anything that\'s now failing that wasn\'t before — especially anything near what was just built.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Made changes; suite not run."}
+Lighter: run the suite, flag what's newly failing near the changes.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What existing functionality is most likely affected by what was just built? Give it a quick check.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Made changes; impact-paths not checked."}
+Narrower: pick the most-likely-affected functionality and check it.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Run the tests and tell me if anything broke after what was just built was added.', descBase: '' },
+    {
+      option: 'Run the tests and tell me if anything broke after what was just built was added.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Made changes."}
+Minimum next step: run the tests, tell me if anything broke.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1306,16 +1670,55 @@ const ABSENCE_SECURITY_CHECK_CASUAL: DecisionContent = {
   question:      'Built something — any security checks done?',
   pinchFallback: 'Security gap.',
   L1: [
-    { option: 'Look at what was just built — is there anything that handles user input or touches auth that hasn\'t been checked for obvious security problems? What could an attacker do with this as it stands?', descBase: '' },
-    { option: 'Check what was just built for the easy wins an attacker would go for first — bad input handling, missing permission checks, or anything that leaks data it shouldn\'t.', descBase: '' },
-    { option: 'Walk through what was just built as if you\'re trying to break it — what\'s the first thing you\'d try? Flag anything that looks like it could be abused.', descBase: '' },
+    {
+      option: 'Look at what was just built — is there anything that handles user input or touches auth that hasn\'t been checked for obvious security problems? What could an attacker do with this as it stands?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I built something with input/auth surface; haven't checked it for security yet."}
+Security pass hasn't been done; what an attacker could do with this is unknown.
+Look for the obvious problems — bad input handling, missing checks, anything that leaks.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Check what was just built for the easy wins an attacker would go for first — bad input handling, missing permission checks, or anything that leaks data it shouldn\'t.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it; easy-wins for attackers not checked."}
+The easy-wins an attacker goes for first haven't been audited.
+Check for input handling gaps, missing permission checks, leaky data.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk through what was just built as if you\'re trying to break it — what\'s the first thing you\'d try? Flag anything that looks like it could be abused.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it; not tried breaking it."}
+The break-it-on-purpose walk hasn't been done.
+Try breaking it — flag what looks abusable.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the biggest security risk in what was just built? Flag it and explain what needs to change.', descBase: '' },
-    { option: 'Is there anything in what was just built that handles user input or auth that hasn\'t been properly validated or checked?', descBase: '' },
+    {
+      option: 'What\'s the biggest security risk in what was just built? Flag it and explain what needs to change.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; top-risk not picked."}
+Lighter: the single biggest security risk + what needs changing.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Is there anything in what was just built that handles user input or auth that hasn\'t been properly validated or checked?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; input/auth validation not checked."}
+Narrower: input-handling and auth checks specifically.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that could be exploited — untrusted input, missing auth, or data that shouldn\'t be exposed?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that could be exploited — untrusted input, missing auth, or data that shouldn\'t be exposed?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: one exploitable bit — untrusted input, missing auth, exposed data.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1323,16 +1726,55 @@ const ABSENCE_ERROR_HANDLING_CASUAL: DecisionContent = {
   question:      'Feature built — what happens when it breaks?',
   pinchFallback: 'Error handling.',
   L1: [
-    { option: 'Look at what was just built — what happens when something goes wrong? Check for unhandled errors, anything that fails silently, and cases where the error message would tell an attacker more than the user needs to know.', descBase: '' },
-    { option: 'Walk through the unhappy paths in what was just built — what happens when a network call fails, the input is weird, or a dependency isn\'t available? Are those cases handled, or does it just crash?', descBase: '' },
-    { option: 'Think about what was just built from the angle of things going wrong — what\'s the most likely failure, and what does the user or caller see when it happens? Is that the right behaviour?', descBase: '' },
+    {
+      option: 'Look at what was just built — what happens when something goes wrong? Check for unhandled errors, anything that fails silently, and cases where the error message would tell an attacker more than the user needs to know.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built something with external calls/inputs; haven't thought about what happens when things break."}
+The "what happens when it breaks" hasn't been worked through.
+Look for unhandled errors, silent failures, leaky error messages.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk through the unhappy paths in what was just built — what happens when a network call fails, the input is weird, or a dependency isn\'t available? Are those cases handled, or does it just crash?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it; unhappy-path walk not done."}
+The unhappy paths haven't been walked through.
+Network fails / weird input / missing dep — handled or crash?
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Think about what was just built from the angle of things going wrong — what\'s the most likely failure, and what does the user or caller see when it happens? Is that the right behaviour?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it; failure-feel not considered."}
+The user/caller experience on failure hasn't been considered.
+Most likely failure → what the caller sees → is that the right behaviour?
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the most likely thing to fail in what was just built, and what happens when it does? Fix it if it\'s not handled.', descBase: '' },
-    { option: 'Is there anything in what was just built that could fail without producing a useful error message or recovering gracefully?', descBase: '' },
+    {
+      option: 'What\'s the most likely thing to fail in what was just built, and what happens when it does? Fix it if it\'s not handled.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; most-likely-fail not identified."}
+Lighter: the most likely thing to fail + what happens when it does.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Is there anything in what was just built that could fail without producing a useful error message or recovering gracefully?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; useful-error check not done."}
+Narrower: anything that fails without a useful error or graceful recovery.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that fails silently or doesn\'t handle the obvious error cases?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that fails silently or doesn\'t handle the obvious error cases?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: one silent-fail or obvious-error-case gap.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1647,16 +2089,55 @@ const ABSENCE_PROBLEM_CORRECTION_CASUAL: DecisionContent = {
   question:      'Spotted a bug — did it actually get fixed?',
   pinchFallback: 'Bug unresolved.',
   L1: [
-    { option: 'Go through what was just built and check: is there anything that was flagged as broken or wrong earlier in this session that hasn\'t actually been fixed yet? Don\'t let it get buried under new code.', descBase: '' },
-    { option: 'Look at the known issues in what was just built — anything that came up as a bug or a problem in this session. Is each one fixed, or just acknowledged and skipped over?', descBase: '' },
-    { option: 'Run the tests for what was just built and check if any of the failures match issues that were mentioned earlier in this session. If yes, fix them before adding anything new.', descBase: '' },
+    {
+      option: 'Go through what was just built and check: is there anything that was flagged as broken or wrong earlier in this session that hasn\'t actually been fixed yet? Don\'t let it get buried under new code.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Earlier in this session something was flagged as broken; not sure it actually got fixed."}
+Outstanding issues from earlier may still be present.
+Don't let them get buried under new code — confirm each is fixed or flag as still open.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Look at the known issues in what was just built — anything that came up as a bug or a problem in this session. Is each one fixed, or just acknowledged and skipped over?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Issues came up in this session; not sure all were fixed."}
+The "fixed vs acknowledged-and-moved-on" status of session issues is unclear.
+Per issue: fixed or skipped?
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Run the tests for what was just built and check if any of the failures match issues that were mentioned earlier in this session. If yes, fix them before adding anything new.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Tests + earlier-issue cross-check not done."}
+The test failures vs known earlier issues haven't been mapped.
+Run the tests; for each failure, check if it matches a known issue.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there anything in what was just built that was identified as broken or wrong earlier in this session but hasn\'t been fixed yet?', descBase: '' },
-    { option: 'Run the tests for what was just built and check — are any of the failures from issues that were already noticed earlier and not resolved?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that was identified as broken or wrong earlier in this session but hasn\'t been fixed yet?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Earlier issue flagged; status unclear."}
+Lighter: anything flagged broken earlier and not yet fixed.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Run the tests for what was just built and check — are any of the failures from issues that were already noticed earlier and not resolved?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Tests + earlier-issue match not checked."}
+Narrower: run tests, check failures against earlier-noticed issues.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there any bug in what was just built that was noticed earlier in this session but not explicitly fixed?', descBase: '' },
+    {
+      option: 'Is there any bug in what was just built that was noticed earlier in this session but not explicitly fixed?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Earlier issue noticed."}
+Minimum next step: one bug noticed earlier and not explicitly fixed.
+{R4_CLOSE}`,
+    },
   ],
 };
 
