@@ -6,6 +6,8 @@ import {
   injectR5,
   strategyDFallback,
   extractVocab,
+  isDroppedByVoiceRuleFilter,
+  applyVoiceRuleFilter,
   type R5Register,
 } from './r5-injection.js';
 
@@ -147,6 +149,47 @@ describe('r5-injection — extractVocab()', () => {
     const lowered = vocab.map((t) => t.toLowerCase());
     const uniq = new Set(lowered);
     expect(uniq.size).toBe(lowered.length);
+  });
+});
+
+describe('r5-injection — step-4.5 voice-rule filter', () => {
+  it('drops bare "AI" / "Claude" / "assistant" / "it" / "its" tokens', () => {
+    expect(isDroppedByVoiceRuleFilter('AI')).toBe(true);
+    expect(isDroppedByVoiceRuleFilter('ai')).toBe(true);
+    expect(isDroppedByVoiceRuleFilter('Claude')).toBe(true);
+    expect(isDroppedByVoiceRuleFilter('assistant')).toBe(true);
+    expect(isDroppedByVoiceRuleFilter('it')).toBe(true);
+    expect(isDroppedByVoiceRuleFilter('Its')).toBe(true);
+  });
+
+  it('drops "you" / "your" tokens (USER-referent second-person)', () => {
+    expect(isDroppedByVoiceRuleFilter('you')).toBe(true);
+    expect(isDroppedByVoiceRuleFilter('Your')).toBe(true);
+  });
+
+  it('keeps first-person USER tokens', () => {
+    expect(isDroppedByVoiceRuleFilter('I')).toBe(false);
+    expect(isDroppedByVoiceRuleFilter('me')).toBe(false);
+    expect(isDroppedByVoiceRuleFilter('my')).toBe(false);
+  });
+
+  it('keeps feature names / verbs / file paths', () => {
+    expect(isDroppedByVoiceRuleFilter('OptionGenerator')).toBe(false);
+    expect(isDroppedByVoiceRuleFilter('refactored')).toBe(false);
+    expect(isDroppedByVoiceRuleFilter('handler.ts')).toBe(false);
+  });
+
+  it('applyVoiceRuleFilter strips banned tokens while preserving order', () => {
+    const input = ['refactored', 'AI', 'OptionGenerator', 'you', 'me', 'Claude', 'invoice'];
+    const out   = applyVoiceRuleFilter(input);
+    expect(out).toEqual(['refactored', 'OptionGenerator', 'me', 'invoice']);
+  });
+
+  it('applyVoiceRuleFilter is non-destructive — returns a new array', () => {
+    const input = ['a', 'AI', 'b'] as const;
+    const out   = applyVoiceRuleFilter(input);
+    expect(out).not.toBe(input as unknown as string[]);
+    expect(input).toEqual(['a', 'AI', 'b']);
   });
 });
 

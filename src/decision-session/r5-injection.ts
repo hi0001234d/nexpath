@@ -232,3 +232,47 @@ export function extractVocab(
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, maxTokens).map((s) => s.raw);
 }
+
+// ─── Step 4.5 — voice-rule filter on extracted vocab ────────────────────
+//
+// User prompts naturally carry banned-pattern tokens (`you`, `the AI`,
+// `Claude`, etc.). Letting those tokens into the LLM rewrite step would
+// produce CA-bound output that violates the L1 voice rule. This filter
+// runs BEFORE the LLM call, on the extracted-vocab set returned by
+// `extractVocab`, applying:
+//
+//   - DROP    — tokens that have no acceptable use in CA-bound output
+//               (`ai`, `claude`, `assistant`, `it`, `its`)
+//   - DROP    — second-person tokens addressing the USER as "you"
+//               (`you`, `your`). The dev-plan allows context-aware
+//               REWRITE here; the simpler safe choice is to drop and
+//               let the LLM choose grammar that doesn't need them.
+//   - KEEP    — every other token (first-person USER, verbs, feature
+//               names, file paths, quoted strings, etc.)
+
+/**
+ * Lowercase tokens dropped outright — any token whose lowercase form
+ * matches an entry in this set is removed from the vocab list.
+ */
+const DROP_TOKENS_LOWER: ReadonlySet<string> = new Set([
+  'ai',
+  'claude',
+  'assistant',
+  'it',
+  'its',
+  'you',
+  'your',
+]);
+
+/** Returns true when a token should be dropped per the L1 voice-rule filter. */
+export function isDroppedByVoiceRuleFilter(token: string): boolean {
+  return DROP_TOKENS_LOWER.has(token.toLowerCase());
+}
+
+/**
+ * Apply the step-4.5 voice-rule filter to an extracted-vocab array.
+ * Returns a new array with banned tokens removed. Order preserved.
+ */
+export function applyVoiceRuleFilter(vocab: readonly string[]): string[] {
+  return vocab.filter((t) => !isDroppedByVoiceRuleFilter(t));
+}
