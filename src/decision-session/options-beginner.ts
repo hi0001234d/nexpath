@@ -219,14 +219,41 @@ export const ABSENCE_DOCUMENTATION_BEGINNER: DecisionContent = {
   question:      'Code written — is anything documented?',
   pinchFallback: 'Docs missing.',
   L1: [
-    { option: '1. Look at what was just built and find one part that would be hard to understand for someone who didn\'t write it.\n2. Add a short explanation of why it works that way and share it with me.\n3. Then check: is there anything else in what was just built that needs explaining before we move on?', descBase: '' },
-    { option: 'Walk me through what was just built and point out the part that would confuse someone reading it for the first time — then write a short explanation for that part and share it with me.', descBase: '' },
+    {
+      option: '1. Look at what was just built and find one part that would be hard to understand for someone who didn\'t write it.\n2. Add a short explanation of why it works that way and share it with me.\n3. Then check: is there anything else in what was just built that needs explaining before we move on?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built something without writing down why parts of it work the way they do — someone reading it later might be confused."}
+A hard-to-understand part explanation hasn't been shared.
+Let's find one part that would be hard for someone else to understand; write a short explanation of why it works that way; share it; then check whether anything else needs explaining.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk me through what was just built and point out the part that would confuse someone reading it for the first time — then write a short explanation for that part and share it with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built something but didn't write down the explanation for the parts that would confuse a first-time reader."}
+The confusing-part explanation hasn't been shared.
+Let's walk through; identify the part that would confuse a first-time reader; write a short explanation; share it.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there anything in what was just built that you\'d have to explain to someone else? Write that explanation as a comment and share it with me.', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that you\'d have to explain to someone else? Write that explanation as a comment and share it with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Some parts of what was just built would need explaining to someone else."}
+A would-need-explaining-to-someone-else capture hasn't been done.
+Let's write that explanation as a comment and share it.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that isn\'t obvious — something that would confuse someone who didn\'t write it?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that isn\'t obvious — something that would confuse someone who didn\'t write it?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: anything not obvious that would confuse someone who didn't write it.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -249,14 +276,41 @@ export const ABSENCE_COMPREHENSION_BEGINNER: DecisionContent = {
   question:      'AI wrote it — do you actually get it?',
   pinchFallback: 'Comprehension check.',
   L1: [
-    { option: '1. Read through what was just built slowly — not to check if it looks right, but to understand what each part actually does.\n2. Share with me: is there anything you\'re not sure about or that doesn\'t make sense to you?\n3. Then tell me: is there any part you just accepted because it looked okay without actually understanding it?', descBase: '' },
-    { option: 'Walk me through what was just built in your own words — explain what it does step by step. Share anything you\'re not able to explain clearly with me and we\'ll go through it together.', descBase: '' },
+    {
+      option: '1. Read through what was just built slowly — not to check if it looks right, but to understand what each part actually does.\n2. Share with me: is there anything you\'re not sure about or that doesn\'t make sense to you?\n3. Then tell me: is there any part you just accepted because it looked okay without actually understanding it?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I built something but I'm not sure I understand every part of what was just made."}
+A slow read-through and shared comprehension check hasn't happened together yet.
+Let's read through it slowly: what each part actually does. I'll share anything that doesn't make sense, and we'll go through any pieces I just accepted without understanding.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk me through what was just built in your own words — explain what it does step by step. Share anything you\'re not able to explain clearly with me and we\'ll go through it together.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I went along with what was generated but couldn't explain it step by step in my own words."}
+A step-by-step walkthrough of what was just built (in my own words) hasn't been done.
+Let's walk through it together; I'll share anything I can't explain clearly and we'll work through those parts.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there any part of what was just built you couldn\'t explain to someone else right now? Share that part with me and we\'ll make sure you understand it.', descBase: '' },
+    {
+      option: 'Is there any part of what was just built you couldn\'t explain to someone else right now? Share that part with me and we\'ll make sure you understand it.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; not sure I could explain every part to someone else."}
+A can't-explain-to-someone-else check hasn't been done.
+Let's find that part and make sure I understand it before moving on.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that you\'re not sure you fully understand?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that you\'re not sure you fully understand?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: anything I'm not sure I fully understand.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -264,14 +318,41 @@ export const ABSENCE_REFACTORING_BEGINNER: DecisionContent = {
   question:      'Long build run — anything to clean up?',
   pinchFallback: 'Refactor check.',
   L1: [
-    { option: '1. Read through what was just built from start to finish — does it still feel organised and easy to follow?\n2. Share with me: is there anything that feels messy, repeated, or harder to understand than it needs to be?\n3. Then tell me: is there anything that should be tidied up before we add more features on top?', descBase: '' },
-    { option: 'Walk me through what was just built and tell me — is there any part that would be confusing or messy to someone who didn\'t write it? Share what you find with me so we can decide whether to clean it up now.', descBase: '' },
+    {
+      option: '1. Read through what was just built from start to finish — does it still feel organised and easy to follow?\n2. Share with me: is there anything that feels messy, repeated, or harder to understand than it needs to be?\n3. Then tell me: is there anything that should be tidied up before we add more features on top?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built a long stretch of code without checking whether it still feels organised and easy to follow."}
+A start-to-finish read-through for organisation + clarity hasn't been shared.
+Let's read through start to finish; share anything that feels messy / repeated / harder-than-it-needs-to-be; decide whether to tidy before adding more.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk me through what was just built and tell me — is there any part that would be confusing or messy to someone who didn\'t write it? Share what you find with me so we can decide whether to clean it up now.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it without thinking about whether it'd be confusing or messy to someone who didn't write it."}
+The confusing-or-messy-to-outsider spot-check hasn't been shared.
+Let's walk through; tell me what's confusing or messy to a new reader; we'll decide whether to clean up now.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there anything in what was just built that feels messy or repeated? Share it with me and let\'s decide whether to clean it up before moving on.', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that feels messy or repeated? Share it with me and let\'s decide whether to clean it up before moving on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; some parts feel messy or repeated."}
+The messy / repeated check hasn't been shared.
+Let's spot it; decide whether to clean up before moving on.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that should be cleaned up or simplified before we continue?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that should be cleaned up or simplified before we continue?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: anything to clean up or simplify before we continue.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -279,14 +360,41 @@ export const ABSENCE_NO_PUSHBACK_BEGINNER: DecisionContent = {
   question:      'AI keeps suggesting — are you actually evaluating?',
   pinchFallback: 'No pushback.',
   L1: [
-    { option: '1. Look at the last few suggestions made while building this feature.\n2. Share with me: is there anything you accepted just because it sounded right, without checking if it was really the best option?\n3. Then pick one and tell me: why did you go with that suggestion over other ways of doing it?', descBase: '' },
-    { option: 'Walk me through the last suggestion used in what was just built — do you actually agree with it, or did you just go with it because it seemed confident? Share your thoughts with me.', descBase: '' },
+    {
+      option: '1. Look at the last few suggestions made while building this feature.\n2. Share with me: is there anything you accepted just because it sounded right, without checking if it was really the best option?\n3. Then pick one and tell me: why did you go with that suggestion over other ways of doing it?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Accepted recent suggestions because they sounded right, without really checking if they were the best option."}
+The looked-right-without-checking pushback hasn't been talked through together.
+Let's look at the recent suggestions; I'll share any I accepted just because they sounded right, and we'll talk through why one of them got picked over other ways.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk me through the last suggestion used in what was just built — do you actually agree with it, or did you just go with it because it seemed confident? Share your thoughts with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Went with the last suggestion because it sounded confident, not because I checked it myself."}
+The agree-vs-just-went-with-it walkthrough hasn't been shared.
+Let's walk through the last suggestion together; I'll share whether I actually agree or whether I just went with it.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there anything suggested for what was just built that you said yes to without really thinking about whether it was the right choice? Share that with me.', descBase: '' },
+    {
+      option: 'Is there anything suggested for what was just built that you said yes to without really thinking about whether it was the right choice? Share that with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Said yes to some suggestions without really thinking about whether they were right."}
+A yes-without-thinking check hasn't been done.
+Let's spot that one and look at whether it was actually the right choice.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there any AI suggestion used in what was just built that you accepted without questioning whether it was actually the best approach?', descBase: '' },
+    {
+      option: 'Is there any AI suggestion used in what was just built that you accepted without questioning whether it was actually the best approach?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: let's check for any suggestion I said yes to without thinking about whether it was the best approach.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -294,14 +402,41 @@ export const ABSENCE_CORRECTION_SEEKING_BEGINNER: DecisionContent = {
   question:      'Has the AI checked its own work?',
   pinchFallback: 'No verification.',
   L1: [
-    { option: '1. Look at what was just built again — but this time, find what might be wrong with it.\n2. Share what you find with me.\n3. Then tell me: does what you found make sense, or does something still seem off?', descBase: '' },
-    { option: 'What\'s the part of what was just built you\'re least sure about? — share what you find with me so we can check together.', descBase: '' },
+    {
+      option: '1. Look at what was just built again — but this time, find what might be wrong with it.\n2. Share what you find with me.\n3. Then tell me: does what you found make sense, or does something still seem off?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it without going back through to find what might be wrong with it."}
+A find-what-might-be-wrong critique pass hasn't been shared.
+Let's look at it again to find what might be wrong; share what we find; check whether the findings make sense or something still seems off.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What\'s the part of what was just built you\'re least sure about? — share what you find with me so we can check together.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it; not sure which part I'm least confident about."}
+The least-sure-part check hasn't been shared.
+Let's spot the least-confident part; share it together; check it together.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Point out any part of what was just built that might not be right — then share what you find with me.', descBase: '' },
+    {
+      option: 'Point out any part of what was just built that might not be right — then share what you find with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; haven't pointed out what might not be right."}
+A might-not-be-right spot-check hasn't been done.
+Let's point out the part that might not be right; share it.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Find one thing in what was just built that might be wrong or could be done better.', descBase: '' },
+    {
+      option: 'Find one thing in what was just built that might be wrong or could be done better.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: one thing that might be wrong or could be done better.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -324,14 +459,41 @@ export const ABSENCE_ALTERNATIVES_BEGINNER: DecisionContent = {
   question:      'Decision made — any alternatives looked at?',
   pinchFallback: 'No alternatives.',
   L1: [
-    { option: '1. Think about the biggest decision that was made while building this feature.\n2. Share with me: what other ways could it have been done, and why did we go with this one?\n3. Then tell me: is this still the best approach now that you think about it, or would something else have been simpler?', descBase: '' },
-    { option: 'Walk me through the most important choice made in what was just built — what were the other options we could have picked, and why did we choose this one? Share your thinking with me.', descBase: '' },
+    {
+      option: '1. Think about the biggest decision that was made while building this feature.\n2. Share with me: what other ways could it have been done, and why did we go with this one?\n3. Then tell me: is this still the best approach now that you think about it, or would something else have been simpler?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I made a big decision while building this without thinking about other ways to do it."}
+The biggest decision's alternatives haven't been talked through together.
+Let's walk through it: what other ways could it have been done, why we went with this one, and whether this is still the best fit now.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk me through the most important choice made in what was just built — what were the other options we could have picked, and why did we choose this one? Share your thinking with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Made the most important choice without talking through the options first."}
+The most-important-choice's other-options walkthrough hasn't been shared.
+Let's go through the other options together and confirm why this one was picked.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there any choice made in what was just built where we just went with the first idea without thinking about other ways to do it? Share that with me.', descBase: '' },
+    {
+      option: 'Is there any choice made in what was just built where we just went with the first idea without thinking about other ways to do it? Share that with me.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Went with the first idea on some choices without thinking about other ways."}
+A first-idea-without-thinking check hasn't been done.
+Let's spot any place I just went with the first option and look at other ways now.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there any decision in what was just built that was made without thinking about other options first?', descBase: '' },
+    {
+      option: 'Is there any decision in what was just built that was made without thinking about other options first?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: let's check for any decision made without thinking about other options first.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -619,14 +781,41 @@ export const ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER: DecisionContent = {
   question:      'About to ask — have you checked the docs?',
   pinchFallback: 'Docs first.',
   L1: [
-    { option: '1. Before asking me this question — check the official documentation for this library or API.\n2. Share with me: what did you find, and is the answer there?\n3. Then ask me what you still couldn\'t find in the docs.', descBase: '' },
-    { option: 'Look up the official docs for what you\'re asking about, then share what you found — I\'ll fill in anything the docs didn\'t make clear.', descBase: '' },
+    {
+      option: '1. Before asking me this question — check the official documentation for this library or API.\n2. Share with me: what did you find, and is the answer there?\n3. Then ask me what you still couldn\'t find in the docs.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "About to ask without first checking the official documentation."}
+An official-docs check before asking hasn't been shared.
+Let's check the docs first; share what we find; then we'll handle anything not in them.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Look up the official docs for what you\'re asking about, then share what you found — I\'ll fill in anything the docs didn\'t make clear.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "About to ask without looking up the official docs for this topic."}
+The official-docs lookup walkthrough hasn't been shared.
+Let's look up the official docs together; share what we found; clarify what was unclear.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there official documentation for what you\'re asking about? Check it first and share what you find — then tell me what\'s still unclear.', descBase: '' },
+    {
+      option: 'Is there official documentation for what you\'re asking about? Check it first and share what you find — then tell me what\'s still unclear.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Haven't checked official docs for the topic I'm about to ask about."}
+The docs-first check hasn't been done.
+Let's check the docs first; tell me what's still unclear after.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Have you checked the documentation for this before asking?', descBase: '' },
+    {
+      option: 'Have you checked the documentation for this before asking?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "About to ask a question."}
+Minimum next step: docs check before asking.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -817,14 +1006,41 @@ export const ABSENCE_ACCESSIBILITY_BEGINNER: DecisionContent = {
   question:      'UI being built — accessibility checked?',
   pinchFallback: 'Accessibility?',
   L1: [
-    { option: '1. Go through what was just built and check that every button and link has a clear label describing what it does. 2. Try tabbing through the whole feature using only the keyboard — no mouse. 3. Share what you find with me before we continue.', descBase: '' },
-    { option: 'Think about someone who can\'t see the screen trying to use this feature — would a screen reader be able to tell them what everything does? Go through it and share what you notice with me before we move on.', descBase: '' },
+    {
+      option: '1. Go through what was just built and check that every button and link has a clear label describing what it does. 2. Try tabbing through the whole feature using only the keyboard — no mouse. 3. Share what you find with me before we continue.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built UI without checking labels on buttons and links, and without trying keyboard-only navigation."}
+A clear-label + keyboard-only walkthrough hasn't been shared together.
+Let's go through it: every button and link has a clear label; tab through with keyboard only; share what we find before continuing.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Think about someone who can\'t see the screen trying to use this feature — would a screen reader be able to tell them what everything does? Go through it and share what you notice with me before we move on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Didn't think about how someone who can't see the screen would use this feature."}
+The screen-reader user-perspective walkthrough hasn't been shared.
+Let's imagine someone using a screen reader; go through the feature; share what we notice (announced clearly vs silent / confusing).
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Can you go through this feature and find one thing that someone with a disability might struggle to use — and tell me what it is?', descBase: '' },
+    {
+      option: 'Can you go through this feature and find one thing that someone with a disability might struggle to use — and tell me what it is?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Didn't check what a user with a disability might struggle with."}
+A disability-impact spot check hasn't been done.
+Let's find one thing someone with a disability might struggle to use and identify it.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that someone might have trouble using if they couldn\'t use a mouse or couldn\'t see the screen clearly?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that someone might have trouble using if they couldn\'t use a mouse or couldn\'t see the screen clearly?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built the UI."}
+Minimum next step: anything mouse-only or sight-dependent that could trouble some users.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -847,14 +1063,41 @@ export const ABSENCE_DATA_VALIDATION_BEGINNER: DecisionContent = {
   question:      'Accepting input — data validation in place?',
   pinchFallback: 'Input validation?',
   L1: [
-    { option: '1. Think about what happens in this feature if someone sends the wrong data — a missing field, a number where text is expected, or something completely unexpected. 2. Try sending some bad data and see what happens. 3. Share what you find with me before we continue.', descBase: '' },
-    { option: 'Go through what was just built and check — is there anything checking that the data coming in is actually in the right format before the app tries to use it? Share what you find with me before we move on.', descBase: '' },
+    {
+      option: '1. Think about what happens in this feature if someone sends the wrong data — a missing field, a number where text is expected, or something completely unexpected. 2. Try sending some bad data and see what happens. 3. Share what you find with me before we continue.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built input handling without trying bad data to see what happens."}
+A bad-data behavior probe hasn't been done together.
+Let's try sending some bad data (missing field / wrong type / unexpected value); see what happens; share findings before continuing.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Go through what was just built and check — is there anything checking that the data coming in is actually in the right format before the app tries to use it? Share what you find with me before we move on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Didn't check that incoming data is in the right format before the app uses it."}
+The right-format input check hasn't been shared.
+Let's go through and check whether anything verifies incoming data shape before use; share what we find before continuing.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What happens in this feature if someone sends a missing or wrong value — does it give a clear error message, or does it just break? Try it and tell me what you see.', descBase: '' },
+    {
+      option: 'What happens in this feature if someone sends a missing or wrong value — does it give a clear error message, or does it just break? Try it and tell me what you see.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Didn't try sending a missing or wrong value to see what happens."}
+The missing / wrong-value behavior probe hasn't been done.
+Let's try it; tell me whether it gives a clear error or just breaks.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'What\'s one piece of data this feature accepts that isn\'t being checked before it gets used?', descBase: '' },
+    {
+      option: 'What\'s one piece of data this feature accepts that isn\'t being checked before it gets used?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: one piece of data accepted without being checked first.
+{R4_CLOSE}`,
+    },
   ],
 };
 

@@ -354,16 +354,57 @@ const ABSENCE_DOCUMENTATION: DecisionContent = {
   question:      'Code written — any documentation added?',
   pinchFallback: 'Docs missing.',
   L1: [
-    { option: 'Review what was just built for documentation coverage: identify functions, classes, and modules with non-obvious behaviour that lack docstrings or inline comments, and add documentation that explains the why — the constraint, the invariant, the tradeoff — not just the what.', descBase: '' },
-    { option: 'Audit what was just built for undocumented assumptions: what design decisions, invariants, or external constraints are embedded in this code that a future maintainer could not infer from reading it? Document those specifically.', descBase: '' },
-    { option: 'Check whether what was just built needs README updates, API reference additions, or architecture notes — not just inline comments. What context would someone need to understand this feature without asking the original author?', descBase: '' },
+    {
+      option: 'Review what was just built for documentation coverage: identify functions, classes, and modules with non-obvious behaviour that lack docstrings or inline comments, and add documentation that explains the why — the constraint, the invariant, the tradeoff — not just the what.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Recent prompts: feature implementation. Documentation coverage for non-obvious behavior / decisions / assumptions not added."}
+Documentation coverage for non-obvious behavior (functions / classes / modules) hasn't been added.
+Per such component: write docstrings or inline comments explaining the WHY — constraint / invariant / tradeoff. Don't expand to fully-obvious code.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Audit what was just built for undocumented assumptions: what design decisions, invariants, or external constraints are embedded in this code that a future maintainer could not infer from reading it? Document those specifically.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Implementation done; undocumented-assumptions audit (design decisions / invariants / external constraints) not done."}
+The undocumented-assumptions audit hasn't been performed.
+Per design decision / invariant / external constraint embedded in code: document specifically. List findings only.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Check whether what was just built needs README updates, API reference additions, or architecture notes — not just inline comments. What context would someone need to understand this feature without asking the original author?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Feature implemented; README / API reference / architecture-note updates not done."}
+README + API reference + architecture-note coverage hasn't been updated.
+Add what a new reader would need to understand this feature without asking the author. Don't backfill historical features.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What parts of what was just built would be hardest for another developer to understand without documentation? Add documentation for those first.', descBase: '' },
-    { option: 'Identify the non-obvious decisions in what was just built — the ones a future maintainer might change by mistake — and document the reasoning behind each.', descBase: '' },
+    {
+      option: 'What parts of what was just built would be hardest for another developer to understand without documentation? Add documentation for those first.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done; hardest-to-understand-without-docs spot-check not done."}
+Lighter: hardest-to-understand-without-docs parts haven't been identified.
+Identify those; document them first.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Identify the non-obvious decisions in what was just built — the ones a future maintainer might change by mistake — and document the reasoning behind each.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done; non-obvious decision reasoning capture not done."}
+Narrower: non-obvious decision reasoning capture.
+Per such decision: document the reasoning that a future maintainer might otherwise change by mistake.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that has non-obvious behaviour or hidden assumptions that are not documented?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that has non-obvious behaviour or hidden assumptions that are not documented?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done."}
+Minimum next step: anything with non-obvious behavior or hidden assumptions not documented.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -388,16 +429,57 @@ const ABSENCE_COMPREHENSION: DecisionContent = {
   question:      'AI generated it — do you understand it?',
   pinchFallback: 'Comprehension check.',
   L1: [
-    { option: 'Review what was just built for comprehension: trace through the main execution path and explain what each significant function, class, and data structure does — independently, without relying on comments generated alongside the code.', descBase: '' },
-    { option: 'Audit your understanding of what was just built: identify any part of the code you could not explain to a colleague without reading it again. For each such part, either gain that understanding now or flag it as a comprehension debt before moving on.', descBase: '' },
-    { option: 'Check whether what was just built contains any abstractions, design patterns, or external library usage you accepted without fully understanding — verify what each one does and why it was chosen for this specific context.', descBase: '' },
+    {
+      option: 'Review what was just built for comprehension: trace through the main execution path and explain what each significant function, class, and data structure does — independently, without relying on comments generated alongside the code.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Recent prompts: feature implementation accepted. Main-execution-path trace through generated code not performed."}
+Comprehension of the main execution path hasn't been verified independently — generated code may carry plausible-but-unverified logic.
+Trace each significant function / class / data structure; explain what each does without relying on inline-generated comments. Don't refactor in this pass.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Audit your understanding of what was just built: identify any part of the code you could not explain to a colleague without reading it again. For each such part, either gain that understanding now or flag it as a comprehension debt before moving on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Implementation done; comprehension-debt enumeration not done."}
+Comprehension-debt across what was just built hasn't been enumerated.
+Per component: explain to a colleague-level audience without re-reading; flag any "could-not-explain" parts as debt. List only.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Check whether what was just built contains any abstractions, design patterns, or external library usage you accepted without fully understanding — verify what each one does and why it was chosen for this specific context.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Implementation accepted; unfamiliar-abstraction / library-usage comprehension not verified."}
+Abstraction / pattern / external-library usage accepted without full comprehension hasn't been audited.
+Per each: verify what it does + why it was chosen for this specific context. Don't replace yet.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there any part of what was just built you could not confidently explain to another developer right now? Address that before moving on.', descBase: '' },
-    { option: 'Walk through what was just built and identify any code you accepted because it looked correct without actually verifying the logic yourself.', descBase: '' },
+    {
+      option: 'Is there any part of what was just built you could not confidently explain to another developer right now? Address that before moving on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done; confident-explanation test not run."}
+Lighter: confident-explain-to-developer test hasn't been done.
+Identify any part you couldn't explain confidently right now; address that part.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk through what was just built and identify any code you accepted because it looked correct without actually verifying the logic yourself.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation accepted; looked-correct-without-verification spot-check not done."}
+Narrower: looked-correct-without-verification audit.
+Walk through and flag any code accepted because it looked correct without verifying the logic.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that you haven\'t manually traced through and fully understood?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that you haven\'t manually traced through and fully understood?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done."}
+Minimum next step: anything not manually traced through + fully understood.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -405,16 +487,57 @@ const ABSENCE_REFACTORING: DecisionContent = {
   question:      'Extended implementation — code health reviewed?',
   pinchFallback: 'Refactor check.',
   L1: [
-    { option: 'Review what was just built for refactoring opportunities: identify code duplication, functions that do more than one thing, abstractions that have grown inconsistent with their usage, and naming that no longer reflects current behaviour — prioritize by maintenance risk.', descBase: '' },
-    { option: 'Audit what was just built for code health: are there patterns that have emerged across this implementation that should be abstracted, any dead code that can be removed, or any modules that have grown beyond their original responsibility?', descBase: '' },
-    { option: 'Check what was just built against existing codebase conventions: does it introduce inconsistent patterns, style deviations, or compounding technical debt that would make the next feature harder to add if not addressed now?', descBase: '' },
+    {
+      option: 'Review what was just built for refactoring opportunities: identify code duplication, functions that do more than one thing, abstractions that have grown inconsistent with their usage, and naming that no longer reflects current behaviour — prioritize by maintenance risk.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Recent prompts: feature implementation. Refactoring-opportunities scan (duplication / multi-responsibility / drift) not performed."}
+Refactoring opportunities in what was just built (duplication / multi-responsibility functions / drift / stale naming) haven't been identified.
+Scan and rank by maintenance risk; list duplication, multi-responsibility functions, inconsistent abstractions, stale naming. Don't refactor in this pass.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Audit what was just built for code health: are there patterns that have emerged across this implementation that should be abstracted, any dead code that can be removed, or any modules that have grown beyond their original responsibility?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Implementation done; code-health audit (patterns / dead code / overgrown modules) not done."}
+Code-health audit (emergent patterns to abstract / dead code / overgrown modules) hasn't been done.
+Per category: list findings. Hold off on the actual abstractions until prioritized.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Check what was just built against existing codebase conventions: does it introduce inconsistent patterns, style deviations, or compounding technical debt that would make the next feature harder to add if not addressed now?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Implementation done; codebase-convention fit + technical-debt audit not done."}
+Codebase-convention fit + compounding-tech-debt audit hasn't been done.
+Flag inconsistent patterns / style deviations / debt that would block the next feature. List only.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What is the most significant refactoring opportunity in what was just built — the thing that if left will make the next feature harder to add?', descBase: '' },
-    { option: 'Review what was just built for duplication or inconsistency that should be cleaned up before moving on to the next task.', descBase: '' },
+    {
+      option: 'What is the most significant refactoring opportunity in what was just built — the thing that if left will make the next feature harder to add?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done; most-significant refactoring spot not identified."}
+Lighter: most-significant refactoring opportunity (next-feature blocker) hasn't been identified.
+Name the one that, if left, makes the next feature harder.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Review what was just built for duplication or inconsistency that should be cleaned up before moving on to the next task.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done; duplication / inconsistency spot-check not done."}
+Narrower: duplication / inconsistency cleanup spot-check.
+List what should be cleaned up before moving on.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that should be refactored or cleaned up before moving on?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that should be refactored or cleaned up before moving on?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done."}
+Minimum next step: anything that should be refactored or cleaned up before moving on.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -422,16 +545,57 @@ const ABSENCE_NO_PUSHBACK: DecisionContent = {
   question:      'AI suggesting — are you evaluating critically?',
   pinchFallback: 'No pushback.',
   L1: [
-    { option: 'Review the recent generated outputs used in what was just built: identify any decisions, implementations, or suggestions you accepted without explicitly verifying the reasoning, checking for alternatives, or questioning the assumptions embedded in the response.', descBase: '' },
-    { option: 'Audit your acceptance pattern while building this feature: for each significant AI output, ask whether you evaluated it independently or accepted it because it was confident and plausible. Flag any output where you would struggle to justify the implementation choice to a peer reviewer.', descBase: '' },
-    { option: 'Cross-confirm the most recent suggestion used in what was just built: what assumptions were made that were not in your prompt, what alternatives were not considered, and is the approach chosen actually the best fit for this project?', descBase: '' },
+    {
+      option: 'Review the recent generated outputs used in what was just built: identify any decisions, implementations, or suggestions you accepted without explicitly verifying the reasoning, checking for alternatives, or questioning the assumptions embedded in the response.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Recent prompts: generated output accepted without independent verification of reasoning / alternatives / embedded assumptions."}
+The independent-verification audit of recent generated output hasn't been done.
+Per significant decision / implementation / suggestion accepted: verify reasoning, check for unexplored alternatives, question embedded assumptions. List findings only.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Audit your acceptance pattern while building this feature: for each significant AI output, ask whether you evaluated it independently or accepted it because it was confident and plausible. Flag any output where you would struggle to justify the implementation choice to a peer reviewer.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Recent acceptance pattern unevaluated — confidence-plausibility-based acceptance may have replaced critical evaluation."}
+The acceptance-pattern audit (confidence-plausibility vs critical-evaluation) hasn't been performed.
+Per significant accepted output: would I struggle to justify it to a peer reviewer? Flag those. Listing only.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Cross-confirm the most recent suggestion used in what was just built: what assumptions were made that were not in your prompt, what alternatives were not considered, and is the approach chosen actually the best fit for this project?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Latest accepted output not cross-confirmed — embedded assumptions / un-considered alternatives unaudited."}
+Cross-confirmation of the most recently accepted output hasn't been done.
+For that output: surface embedded-but-unstated assumptions; identify alternatives it did not consider; assess whether the chosen approach is the best fit for this project. Don't replace — flag.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Take the last significant AI output used in what was just built and evaluate it critically: do you agree with the approach, and if so, can you explain why it is better than the alternatives?', descBase: '' },
-    { option: 'Is there any AI output used in what was just built that you accepted because it sounded right rather than because you verified it was right?', descBase: '' },
+    {
+      option: 'Take the last significant AI output used in what was just built and evaluate it critically: do you agree with the approach, and if so, can you explain why it is better than the alternatives?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Last significant output accepted without critical evaluation."}
+Lighter: critical evaluation of the last significant output hasn't been applied.
+Take that output; evaluate the approach; articulate why it's better than alternatives (or flag if not).
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Is there any AI output used in what was just built that you accepted because it sounded right rather than because you verified it was right?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Acceptance based on sounded-right pattern not separated from verified-right pattern."}
+Narrower: sounded-right vs verified-right separation.
+Identify any output accepted because it sounded right rather than verified-right.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there any AI suggestion used in what was just built that you accepted without questioning the reasoning or checking for better alternatives?', descBase: '' },
+    {
+      option: 'Is there any AI suggestion used in what was just built that you accepted without questioning the reasoning or checking for better alternatives?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done."}
+Minimum next step: any accepted output where reasoning wasn't questioned + alternatives weren't checked.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -439,16 +603,57 @@ const ABSENCE_CORRECTION_SEEKING: DecisionContent = {
   question:      'AI output — self-verification requested?',
   pinchFallback: 'No verification.',
   L1: [
-    { option: 'Self-review what was just built: identify any assumptions that may be incorrect, logic that could fail under edge cases, and any parts of the implementation you are not confident about.', descBase: '' },
-    { option: 'Argue against your own implementation of what was just built — what would a skeptical senior engineer flag, what alternative approaches were not considered, and what are the weakest parts of this solution?', descBase: '' },
-    { option: 'Produce a failure analysis of what was just built: what are the most likely ways this implementation fails in production, what inputs would cause incorrect behaviour, and what would you change if rebuilding this from scratch?', descBase: '' },
+    {
+      option: 'Self-review what was just built: identify any assumptions that may be incorrect, logic that could fail under edge cases, and any parts of the implementation you are not confident about.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Recent prompts: implementation accepted. Self-review (incorrect-assumptions / edge-case-failures / low-confidence parts) not done."}
+Self-review of what was just built (incorrect assumptions / edge-case failures / low-confidence parts) hasn't been performed.
+List assumptions that might be wrong, logic that could fail under edge cases, and parts I'm not confident about. Don't fix — flag only.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Argue against your own implementation of what was just built — what would a skeptical senior engineer flag, what alternative approaches were not considered, and what are the weakest parts of this solution?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Implementation accepted; skeptical-senior-engineer critique not surfaced."}
+The skeptical-senior-engineer critique of what was just built hasn't been surfaced.
+Argue against the implementation: what would a skeptical senior flag / what alternatives weren't considered / weakest parts. Listing only.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Produce a failure analysis of what was just built: what are the most likely ways this implementation fails in production, what inputs would cause incorrect behaviour, and what would you change if rebuilding this from scratch?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Implementation accepted; production-failure analysis not done."}
+The production-failure analysis (likely failure modes / incorrect-behaviour inputs / rebuild-from-scratch changes) hasn't been done.
+List the failure modes, the incorrect-behaviour inputs, and the rebuild-from-scratch changes. Findings only — no rewrite.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Review what was just built critically — what would you change or flag if reviewing this as a senior engineer rather than as the author?', descBase: '' },
-    { option: 'Self-critique what was just built: what are the weakest parts, and what were you least confident about when generating this?', descBase: '' },
+    {
+      option: 'Review what was just built critically — what would you change or flag if reviewing this as a senior engineer rather than as the author?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation accepted; senior-engineer-perspective review not done."}
+Lighter: senior-engineer-perspective review hasn't been applied.
+List what to change or flag if reviewing this as a senior engineer rather than author.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Self-critique what was just built: what are the weakest parts, and what were you least confident about when generating this?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation accepted; weakest-parts self-critique not surfaced."}
+Narrower: weakest-parts + least-confident-during-generation audit.
+Surface the weakest parts and the points of generation-time uncertainty.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Identify the part of what was just built you are least confident is correct.', descBase: '' },
+    {
+      option: 'Identify the part of what was just built you are least confident is correct.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation accepted."}
+Minimum next step: the one part least confident as correct.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -473,16 +678,57 @@ const ABSENCE_ALTERNATIVES: DecisionContent = {
   question:      'Decision made — alternatives considered?',
   pinchFallback: 'No alternatives.',
   L1: [
-    { option: 'Review the key decisions made in what was just built: name the alternatives that were not chosen, explain the tradeoffs between each approach, and confirm that the chosen solution is the best fit for the constraints of this project — not just the first viable option.', descBase: '' },
-    { option: 'Audit the key technical choices made while building this feature: for each significant decision (architecture, library, algorithm, data structure), identify at least one alternative that was not explored and evaluate whether the chosen approach is still the right one given the project\'s constraints.', descBase: '' },
-    { option: 'Cross-confirm the approach taken in what was just built: what would a different engineering team have done differently, what are the known weaknesses of the chosen approach, and is there a simpler solution that would meet the requirements with fewer dependencies or moving parts?', descBase: '' },
+    {
+      option: 'Review the key decisions made in what was just built: name the alternatives that were not chosen, explain the tradeoffs between each approach, and confirm that the chosen solution is the best fit for the constraints of this project — not just the first viable option.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Recent prompts: key decisions made during implementation. Alternatives-vs-chosen approach not weighed."}
+Alternatives to the chosen approach haven't been weighed against the project's constraints.
+For each key decision: name unselected alternatives, articulate tradeoffs, confirm the chosen approach beats them. Don't refactor in this pass.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Audit the key technical choices made while building this feature: for each significant decision (architecture, library, algorithm, data structure), identify at least one alternative that was not explored and evaluate whether the chosen approach is still the right one given the project\'s constraints.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Feature implementation chose first viable options without alternative exploration."}
+Per-decision alternative exploration (architecture / library / algorithm / data structure) hasn't been done.
+Per significant choice: identify one un-explored alternative + evaluate fit vs constraints. Listing only — no refactor.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Cross-confirm the approach taken in what was just built: what would a different engineering team have done differently, what are the known weaknesses of the chosen approach, and is there a simpler solution that would meet the requirements with fewer dependencies or moving parts?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Approach chosen; outside-perspective check + simpler-solution check not performed."}
+The outside-perspective check (different team / simpler solution) hasn't been applied to the chosen approach.
+Articulate what a different team would have done; identify known weaknesses; flag any simpler-solution option with fewer dependencies. List only.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What was the most significant technical decision made in what was just built? Name the alternatives that were not explored and confirm the chosen approach is the right tradeoff.', descBase: '' },
-    { option: 'Is there any part of what was just built where a different approach would have been simpler, more maintainable, or better suited to the project\'s constraints?', descBase: '' },
+    {
+      option: 'What was the most significant technical decision made in what was just built? Name the alternatives that were not explored and confirm the chosen approach is the right tradeoff.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done; key-decision alternatives not enumerated."}
+Lighter: most-significant-decision's alternatives haven't been enumerated.
+Name the unselected alternatives + confirm the chosen tradeoff is right.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Is there any part of what was just built where a different approach would have been simpler, more maintainable, or better suited to the project\'s constraints?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done; simpler-approach check not run."}
+Narrower: any-part-where-simpler-approach-fits check hasn't been done.
+List spots where a different approach would have been simpler or better-suited.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there any decision in what was just built that was made without considering alternatives — where the first approach was taken without evaluating other options?', descBase: '' },
+    {
+      option: 'Is there any decision in what was just built that was made without considering alternatives — where the first approach was taken without evaluating other options?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done."}
+Minimum next step: any decision made without evaluating other options at all.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -732,16 +978,57 @@ const ABSENCE_DOCUMENTATION_CASUAL: DecisionContent = {
   question:      'Code written — is anything documented?',
   pinchFallback: 'Docs missing.',
   L1: [
-    { option: 'Look at what was just built — what parts would confuse someone reading it for the first time? Add short comments explaining the why, not just the what, for anything that isn\'t obvious from the code itself.', descBase: '' },
-    { option: 'Check what was just built for undocumented decisions — things that would make a future developer go "why did they do it this way?" Write a quick note for each before the context is forgotten.', descBase: '' },
-    { option: 'Does anything in what was just built need a README update or a note in the docs? What would someone need to know to use or maintain this feature without asking you directly?', descBase: '' },
+    {
+      option: 'Look at what was just built — what parts would confuse someone reading it for the first time? Add short comments explaining the why, not just the what, for anything that isn\'t obvious from the code itself.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Wrote code without commenting the non-obvious parts that would confuse someone reading it for the first time."}
+The would-confuse-first-time-reader documentation check hasn't been done.
+Spot the confusing parts; add short comments on the WHY (not the what); skip obvious-from-code spots.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Check what was just built for undocumented decisions — things that would make a future developer go "why did they do it this way?" Write a quick note for each before the context is forgotten.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Made decisions that would make a future dev ask 'why did they do it this way?' without leaving notes."}
+The why-did-they-do-this-way decision-note coverage hasn't been done.
+Write a quick note per such decision before context fades.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Does anything in what was just built need a README update or a note in the docs? What would someone need to know to use or maintain this feature without asking you directly?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built the feature but didn't update README or docs for what someone would need to use or maintain it."}
+README + docs coverage for use-or-maintain context hasn't been updated.
+Note what a new user / maintainer needs to know to work with this feature without asking directly.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the most confusing part of what was just built for someone who didn\'t write it? Add a comment or doc for that.', descBase: '' },
-    { option: 'Are there any decisions in what was just built that future-you would wonder about in six months? Document them now.', descBase: '' },
+    {
+      option: 'What\'s the most confusing part of what was just built for someone who didn\'t write it? Add a comment or doc for that.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; didn't comment the most confusing parts."}
+The most-confusing-part documentation hasn't been added.
+Identify and add a comment / doc for that part.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Are there any decisions in what was just built that future-you would wonder about in six months? Document them now.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Made decisions future-me will wonder about in 6 months without writing them down."}
+Narrower: future-you decision-context capture.
+Document the decisions that will be unclear later.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that needs a comment or note to explain why it works the way it does?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that needs a comment or note to explain why it works the way it does?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: anything needing a comment or note to explain why it works the way it does.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -766,16 +1053,57 @@ const ABSENCE_COMPREHENSION_CASUAL: DecisionContent = {
   question:      'AI wrote it — do you actually get it?',
   pinchFallback: 'Comprehension check.',
   L1: [
-    { option: 'Look at what was just built — is there any part you couldn\'t explain to someone else right now? Find the bit you\'re least confident about and trace through it until you actually understand what it does.', descBase: '' },
-    { option: 'Walk through what was just built and spot the parts you accepted because they looked right, not because you verified them. Pick the riskiest one and make sure you understand it properly.', descBase: '' },
-    { option: 'Is there anything in what was just built that uses a library or approach you haven\'t used before? Make sure you understand what it does — not just that it works — before moving on.', descBase: '' },
+    {
+      option: 'Look at what was just built — is there any part you couldn\'t explain to someone else right now? Find the bit you\'re least confident about and trace through it until you actually understand what it does.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I went along with what was generated without fully understanding all the parts."}
+The least-confident part of what was just built hasn't been traced through.
+Find the bit I'm least confident about; trace through until I actually understand what it does. Don't rewrite — just trace.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk through what was just built and spot the parts you accepted because they looked right, not because you verified them. Pick the riskiest one and make sure you understand it properly.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Accepted some parts of what was just built because they looked right, not because I verified them."}
+The looked-right-without-verifying check hasn't been done.
+Pick the riskiest accepted-without-verifying piece; trace its logic; confirm I actually get it.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Is there anything in what was just built that uses a library or approach you haven\'t used before? Make sure you understand what it does — not just that it works — before moving on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Used a library / approach I haven't used before in what was just built; only know that it works, not why."}
+Comprehension of any unfamiliar library / approach used hasn't been verified.
+Confirm what it does and why it fits — not just that it works. Don't broaden into other comprehension gaps.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the part of what was just built you\'re least confident you understand? Trace through it and make sure you get it.', descBase: '' },
-    { option: 'Is there anything in what was just built you accepted without really checking the logic? Flag it and go back through it.', descBase: '' },
+    {
+      option: 'What\'s the part of what was just built you\'re least confident you understand? Trace through it and make sure you get it.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; not sure I understand every part."}
+The least-confident-piece comprehension check hasn't been done.
+Trace through that one piece; make sure I actually get it.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Is there anything in what was just built you accepted without really checking the logic? Flag it and go back through it.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Took some parts as-is without really checking the logic."}
+Narrower: accepted-without-checking-logic audit.
+Flag the spot; go back through the logic now.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that you haven\'t fully understood and verified yourself?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that you haven\'t fully understood and verified yourself?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: anything I haven't fully understood + verified myself.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -783,16 +1111,57 @@ const ABSENCE_REFACTORING_CASUAL: DecisionContent = {
   question:      'Long build run — anything to clean up?',
   pinchFallback: 'Refactor check.',
   L1: [
-    { option: 'Look at what was just built as a whole — is there anything that\'s gotten messy, duplicated, or harder to read than it needs to be? Flag the bits that would slow down the next person who touches this.', descBase: '' },
-    { option: 'Walk through what was just built and find the thing you\'d be embarrassed to show in a code review — the copy-pasted section, the function that does too much, the name that doesn\'t mean what it says anymore. Flag it and address it.', descBase: '' },
-    { option: 'Check if what was just built fits cleanly with the rest of the codebase or if it\'s starting to diverge in style or structure. Flag anything that would make future changes harder than they need to be.', descBase: '' },
+    {
+      option: 'Look at what was just built as a whole — is there anything that\'s gotten messy, duplicated, or harder to read than it needs to be? Flag the bits that would slow down the next person who touches this.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built a long stretch of code without checking for messy / duplicated / harder-than-it-needs-to-be parts."}
+The messy / duplicated / harder-than-needs-to-be spot-check hasn't been done.
+Flag the bits that would slow down the next person who touches this. List only.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Walk through what was just built and find the thing you\'d be embarrassed to show in a code review — the copy-pasted section, the function that does too much, the name that doesn\'t mean what it says anymore. Flag it and address it.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it without surfacing the parts I'd be embarrassed to show in a code review."}
+The embarrassing-in-code-review spot-check (copy-paste / too-many-responsibilities / misleading-name) hasn't been done.
+Flag the one part; address it before moving on.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Check if what was just built fits cleanly with the rest of the codebase or if it\'s starting to diverge in style or structure. Flag anything that would make future changes harder than they need to be.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it without checking whether it fits cleanly with the rest of the codebase."}
+The codebase-fit check (style / structure / divergence) hasn't been done.
+Flag anything diverging that would make future changes harder. List only.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the messiest part of what was just built? Is it worth cleaning up now before it compounds?', descBase: '' },
-    { option: 'Is there anything in what was just built that\'s duplicated, overly complex, or inconsistent with the rest of the codebase?', descBase: '' },
+    {
+      option: 'What\'s the messiest part of what was just built? Is it worth cleaning up now before it compounds?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; haven't found the messiest part."}
+The messiest-part spot-check hasn't been done.
+Identify it; decide whether to clean up now before compounding.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Is there anything in what was just built that\'s duplicated, overly complex, or inconsistent with the rest of the codebase?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; didn't audit for duplicated or overly-complex parts."}
+Narrower: duplicated / overly-complex / inconsistent-with-codebase audit.
+List the bits.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there anything in what was just built that should be cleaned up or simplified before moving on?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that should be cleaned up or simplified before moving on?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: anything to clean up or simplify before moving on.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -800,16 +1169,57 @@ const ABSENCE_NO_PUSHBACK_CASUAL: DecisionContent = {
   question:      'AI keeps suggesting — are you actually evaluating?',
   pinchFallback: 'No pushback.',
   L1: [
-    { option: 'Look at the recent responses that produced what was just built — is there anything you accepted without really thinking about whether it was the right call? Pick the one you\'re least sure about and push back on it now.', descBase: '' },
-    { option: 'Check how you\'ve been accepting AI suggestions for this feature — have you been approving them because they look reasonable, or because you\'ve actually thought through the alternatives? Flag the ones where you\'re not sure.', descBase: '' },
-    { option: 'Take the most recent AI suggestion used in what was just built and challenge it: what assumptions did it make, what did it not consider, and is this actually the best way to do it for this project?', descBase: '' },
+    {
+      option: 'Look at the recent responses that produced what was just built — is there anything you accepted without really thinking about whether it was the right call? Pick the one you\'re least sure about and push back on it now.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Accepted recent suggestions without really pushing back on whether they were the right call."}
+The pushback-on-recent-accepts audit hasn't been done.
+Pick the suggestion I'm least sure about; push back on it now; see if it still holds up.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Check how you\'ve been accepting AI suggestions for this feature — have you been approving them because they look reasonable, or because you\'ve actually thought through the alternatives? Flag the ones where you\'re not sure.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Approving suggestions because they looked reasonable, not because I thought through alternatives."}
+The looks-reasonable vs alternatives-actually-considered separation hasn't been audited.
+Flag spots where I went on "looks reasonable" without checking alternatives. List only.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Take the most recent AI suggestion used in what was just built and challenge it: what assumptions did it make, what did it not consider, and is this actually the best way to do it for this project?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Latest suggestion accepted without challenging its assumptions or fit for this project."}
+The challenge-latest-suggestion review hasn't been done.
+Take the most recent significant suggestion; surface assumptions it made; identify what it didn't consider; assess whether it's actually the best way to do it here.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the last AI output used in what was just built that you accepted without questioning it? Push back on it now and see if it holds up.', descBase: '' },
-    { option: 'Is there anything in what was just built where you accepted a recent suggestion because it sounded confident, not because you verified it yourself?', descBase: '' },
+    {
+      option: 'What\'s the last AI output used in what was just built that you accepted without questioning it? Push back on it now and see if it holds up.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Accepted the last output without really questioning it."}
+The last-output question-pushback hasn't been applied.
+Push back on it now; check if it holds up.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Is there anything in what was just built where you accepted a recent suggestion because it sounded confident, not because you verified it yourself?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Accepted some output because it sounded confident, not because I verified it."}
+Narrower: sounded-confident vs verified-right separation.
+Identify the spot where confidence-plausibility replaced verification.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there any AI suggestion used in what was just built that you accepted without actually evaluating whether it was the right approach?', descBase: '' },
+    {
+      option: 'Is there any AI suggestion used in what was just built that you accepted without actually evaluating whether it was the right approach?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: any suggestion accepted without evaluating whether the approach was right.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -817,16 +1227,57 @@ const ABSENCE_CORRECTION_SEEKING_CASUAL: DecisionContent = {
   question:      'Has the AI checked its own work?',
   pinchFallback: 'No verification.',
   L1: [
-    { option: 'Take a second look at what was just built — not to explain it, but to actually critique it. What would you do differently, what assumptions did you make that might be wrong, and what are the riskiest parts?', descBase: '' },
-    { option: 'Argue against your own output for what was just built: what\'s the case against this approach, what did you not consider, and what\'s the part you\'re least confident about?', descBase: '' },
-    { option: 'If you had to find a bug or a flaw in what was just built, what would it be? Don\'t let yourself off the hook with "it looks fine."', descBase: '' },
+    {
+      option: 'Take a second look at what was just built — not to explain it, but to actually critique it. What would you do differently, what assumptions did you make that might be wrong, and what are the riskiest parts?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it; haven't taken a second look to critique it instead of just explain it."}
+The second-look critique (different from re-explanation) hasn't been done.
+Take a critical second look — what to do differently, which assumptions might be wrong, riskiest parts. Listing only.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Argue against your own output for what was just built: what\'s the case against this approach, what did you not consider, and what\'s the part you\'re least confident about?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it; didn't argue against my own output."}
+The argue-against-own-output critique hasn't been surfaced.
+Case against the approach / what wasn't considered / least-confident part. Listing only.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'If you had to find a bug or a flaw in what was just built, what would it be? Don\'t let yourself off the hook with "it looks fine."',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built it; gave myself the 'looks fine' pass without hunting for bugs or flaws."}
+The find-a-bug-or-flaw hunt hasn't been done.
+Force the question: if I had to find a bug or flaw, what would it be? Skip the "looks fine" out.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Review what was just built as if you hadn\'t written it — what would you flag or change?', descBase: '' },
-    { option: 'Identify the weakest part of what was just built and explain what you\'re not sure about.', descBase: '' },
+    {
+      option: 'Review what was just built as if you hadn\'t written it — what would you flag or change?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; haven't reviewed it as if I didn't write it."}
+The review-as-if-not-author pass hasn't been done.
+List what to flag or change from that perspective.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Identify the weakest part of what was just built and explain what you\'re not sure about.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; haven't named the weakest part or what I'm unsure about."}
+Narrower: weakest-part + uncertainty surface.
+Identify the weakest part and explain what's unsure.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Identify the part of what was just built you\'re least confident is correct.', descBase: '' },
+    {
+      option: 'Identify the part of what was just built you\'re least confident is correct.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: the one part least confident is correct.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -851,16 +1302,57 @@ const ABSENCE_ALTERNATIVES_CASUAL: DecisionContent = {
   question:      'Decision made — any alternatives looked at?',
   pinchFallback: 'No alternatives.',
   L1: [
-    { option: 'Look at the biggest decision made in what was just built — is it the right call, or just the first thing that came to mind? Name one or two other ways it could have been done and explain why this approach beats them.', descBase: '' },
-    { option: 'Check the key choices made while building this feature: is there anything where you went with the first option without stopping to think if there was a better or simpler way? Flag those and evaluate them now.', descBase: '' },
-    { option: 'Think about what was just built from the angle of a different developer on a different stack — what would they have done differently, and is the current approach actually the best fit for this project?', descBase: '' },
+    {
+      option: 'Look at the biggest decision made in what was just built — is it the right call, or just the first thing that came to mind? Name one or two other ways it could have been done and explain why this approach beats them.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I made a big decision while building this without stopping to think about other ways to do it."}
+Alternatives to the biggest decision haven't been weighed.
+Name one or two other approaches; explain why the chosen one beats them. Don't redo the work yet.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Check the key choices made while building this feature: is there anything where you went with the first option without stopping to think if there was a better or simpler way? Flag those and evaluate them now.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I picked the first option for some choices without stopping to consider alternatives."}
+The first-option-without-thinking check hasn't been done across recent decisions.
+Flag the spots; evaluate now whether a better or simpler way would have worked. List only.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Think about what was just built from the angle of a different developer on a different stack — what would they have done differently, and is the current approach actually the best fit for this project?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Took my own approach without imagining how someone on a different stack would have built it."}
+The outside-developer-perspective check hasn't been applied to the chosen approach.
+Imagine what another dev would have done differently; confirm the current approach is actually the best fit. List only.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What\'s the most important technical choice in what was just built? Name the alternatives you didn\'t go with and confirm this is still the right call.', descBase: '' },
-    { option: 'Is there anything in what was just built where a simpler or different approach would have worked just as well — or better?', descBase: '' },
+    {
+      option: 'What\'s the most important technical choice in what was just built? Name the alternatives you didn\'t go with and confirm this is still the right call.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Made the key technical choice; didn't name what else I could have picked."}
+Most-important-choice alternatives haven't been named.
+Name the alternatives + confirm this is still the right call.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Is there anything in what was just built where a simpler or different approach would have worked just as well — or better?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it the way that came first; didn't check for simpler alternatives."}
+Narrower: any-spot-where-simpler-approach-fits check.
+List where a simpler or different approach would have worked just as well or better.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Is there any decision in what was just built that was made without really looking at other options first?', descBase: '' },
+    {
+      option: 'Is there any decision in what was just built that was made without really looking at other options first?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: any decision where I didn't look at other options first.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1337,16 +1829,57 @@ const ABSENCE_ACCESSIBILITY: DecisionContent = {
   question:      'UI being built — accessibility checked?',
   pinchFallback: 'Accessibility?',
   L1: [
-    { option: 'Audit the ARIA labelling and semantic structure of what was just built: identify every interactive element and confirm it has an accessible name — via native semantics, aria-label, or aria-labelledby — and that its role is correctly communicated to assistive technologies.', descBase: '' },
-    { option: 'Test keyboard navigation for this feature: tab through every interactive element and confirm the tab order is logical, all interactive elements are reachable by keyboard, no focus is trapped unexpectedly, and all actions achievable with a mouse are also achievable without one.', descBase: '' },
-    { option: 'Review the visual accessibility of what was just built: check that all text meets WCAG AA contrast ratios against its background, that focus states are visually distinct, and that no information is conveyed by colour alone.', descBase: '' },
+    {
+      option: 'Audit the ARIA labelling and semantic structure of what was just built: identify every interactive element and confirm it has an accessible name — via native semantics, aria-label, or aria-labelledby — and that its role is correctly communicated to assistive technologies.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Recent prompts: UI implementation. Accessibility audit (ARIA / semantic structure / labels) not performed."}
+Accessibility audit for what was just built (ARIA labelling, semantic structure, assistive-tech compatibility) hasn't been performed.
+Per interactive element: confirm accessible name (native / aria-label / aria-labelledby) + correct role for assistive tech. List findings only — don't fix in this pass.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Test keyboard navigation for this feature: tab through every interactive element and confirm the tab order is logical, all interactive elements are reachable by keyboard, no focus is trapped unexpectedly, and all actions achievable with a mouse are also achievable without one.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Feature implemented; keyboard-navigation audit not done."}
+Keyboard-only navigation audit hasn't been done for this feature.
+Tab through every interactive element; verify tab order is logical, all reachable, no focus traps, every mouse action achievable via keyboard. List gaps.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Review the visual accessibility of what was just built: check that all text meets WCAG AA contrast ratios against its background, that focus states are visually distinct, and that no information is conveyed by colour alone.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Feature implemented; visual-accessibility audit (contrast / focus / colour-only signaling) not done."}
+Visual accessibility (WCAG AA contrast, focus visibility, non-colour-only signaling) hasn't been reviewed.
+Check text contrast ratios, focus state visibility, and any information conveyed by colour alone. Flag gaps only.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Can a keyboard-only user complete the primary workflow in this feature without a mouse — and is the focus order logical as they tab through?', descBase: '' },
-    { option: 'Does every interactive element in what was just built have an accessible name that a screen reader would announce correctly?', descBase: '' },
+    {
+      option: 'Can a keyboard-only user complete the primary workflow in this feature without a mouse — and is the focus order logical as they tab through?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Feature implemented; keyboard-only primary-workflow check not done."}
+Lighter: keyboard-only primary-workflow + logical tab-order check.
+Confirm keyboard-only completion of the primary workflow with logical focus order.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Does every interactive element in what was just built have an accessible name that a screen reader would announce correctly?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Feature implemented; per-element accessible-name verification not done."}
+Narrower: per-element accessible-name verification.
+Confirm every interactive element has a screen-reader-announceable name.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'What is the most significant accessibility gap in this feature that a user with a disability would encounter right now?', descBase: '' },
+    {
+      option: 'What is the most significant accessibility gap in this feature that a user with a disability would encounter right now?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Feature implemented."}
+Minimum next step: most-significant accessibility gap a user with a disability would encounter now.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1371,16 +1904,57 @@ const ABSENCE_DATA_VALIDATION: DecisionContent = {
   question:      'Accepting input — data validation in place?',
   pinchFallback: 'Input validation?',
   L1: [
-    { option: 'Define the input schema for what was just built: for every endpoint or form, document the expected shape — required fields, optional fields, data types, and any constraints (min/max, allowed values) — and implement schema validation using a library such as Zod, Yup, or Joi.', descBase: '' },
-    { option: 'Audit the validation coverage for this feature: for each input accepted, confirm there is an explicit check for required fields, correct data types, and acceptable value ranges — and that invalid inputs return a clear, descriptive error rather than failing silently or crashing.', descBase: '' },
-    { option: 'Write the unhappy-path scenarios for data validation in this project: what happens when a required field is missing, when a value is the wrong type, and when the payload structure is completely unexpected — confirm the implementation handles each case explicitly.', descBase: '' },
+    {
+      option: 'Define the input schema for what was just built: for every endpoint or form, document the expected shape — required fields, optional fields, data types, and any constraints (min/max, allowed values) — and implement schema validation using a library such as Zod, Yup, or Joi.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Recent prompts: input-accepting feature implementation. Input schema + schema-validation library coverage not established."}
+Input schema definition (required / optional / types / constraints) + schema-validation coverage hasn't been established for what was just built.
+Define schemas per endpoint or form; implement validation via Zod / Yup / Joi (or equivalent). Don't expand to unrelated endpoints in this pass.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Audit the validation coverage for this feature: for each input accepted, confirm there is an explicit check for required fields, correct data types, and acceptable value ranges — and that invalid inputs return a clear, descriptive error rather than failing silently or crashing.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Implementation done; per-input validation audit (required / types / ranges / error path) not done."}
+Per-input validation audit hasn't been done for what was just built.
+Per input accepted: confirm required-field check, type check, range check, descriptive error on invalid. Flag silent-fail / crash paths.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Write the unhappy-path scenarios for data validation in this project: what happens when a required field is missing, when a value is the wrong type, and when the payload structure is completely unexpected — confirm the implementation handles each case explicitly.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines — "Implementation done; unhappy-path scenarios (missing field / wrong type / unexpected payload) not enumerated."}
+Unhappy-path scenarios for input handling haven't been written.
+Per scenario (missing field / wrong type / unexpected payload): confirm explicit handling. List findings only.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there a schema validation layer for what was just built that rejects malformed inputs before they reach the business logic — and which library or approach is being used?', descBase: '' },
-    { option: 'What are the required fields for each input accepted by this feature, and what happens if any of them are missing or the wrong type?', descBase: '' },
+    {
+      option: 'Is there a schema validation layer for what was just built that rejects malformed inputs before they reach the business logic — and which library or approach is being used?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done; schema-validation layer presence not confirmed."}
+Lighter: schema-validation layer (rejecting malformed inputs before business logic) hasn't been confirmed.
+Identify the validation library / approach in use; confirm coverage.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What are the required fields for each input accepted by this feature, and what happens if any of them are missing or the wrong type?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done; required-fields + missing-field handling not enumerated."}
+Narrower: per-input required-fields + missing-field handling.
+Enumerate required fields + describe what happens on missing-or-wrong-type.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'What is one input accepted by this feature that currently has no validation — and what is the worst-case outcome if it receives unexpected data?', descBase: '' },
+    {
+      option: 'What is one input accepted by this feature that currently has no validation — and what is the worst-case outcome if it receives unexpected data?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line — "Implementation done."}
+Minimum next step: one un-validated input + its worst-case unexpected-data outcome.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1526,16 +2100,57 @@ const ABSENCE_ACCESSIBILITY_CASUAL: DecisionContent = {
   question:      'UI being built — accessibility checked?',
   pinchFallback: 'Accessibility?',
   L1: [
-    { option: 'Go through what was just built and check whether a screen reader could make sense of it — does every button and link have a clear label, and are there any parts that would be confusing or silent for someone using one?', descBase: '' },
-    { option: 'Try using this feature with just the keyboard — no mouse. Can you get to everything, use everything, and does the tab order feel natural? Note anything that gets stuck or hard to reach.', descBase: '' },
-    { option: 'Take a look at the visual design of this feature from an accessibility angle — is the contrast readable, are focus states visible when you tab through, and is anything communicated only through colour that a colour-blind user might miss?', descBase: '' },
+    {
+      option: 'Go through what was just built and check whether a screen reader could make sense of it — does every button and link have a clear label, and are there any parts that would be confusing or silent for someone using one?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I built UI without checking whether a screen reader could make sense of it."}
+The screen-reader sense check for what was just built hasn't been done.
+Go through every button and link; confirm clear labels; flag silent or confusing parts. Note only — no fixing yet.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Try using this feature with just the keyboard — no mouse. Can you get to everything, use everything, and does the tab order feel natural? Note anything that gets stuck or hard to reach.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I built this feature without trying it keyboard-only."}
+The keyboard-only walkthrough hasn't been done.
+Try the feature with no mouse — get to everything, use everything, confirm tab order natural. Note stuck or hard-to-reach spots.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Take a look at the visual design of this feature from an accessibility angle — is the contrast readable, are focus states visible when you tab through, and is anything communicated only through colour that a colour-blind user might miss?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built the UI without checking contrast, focus states, or colour-only signaling."}
+Visual accessibility check (contrast / focus visibility / colour-only signaling) hasn't been done.
+Confirm contrast readable, focus states visible while tabbing, no information conveyed via colour alone.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Could someone who can\'t use a mouse still complete the main task in this feature using only the keyboard — and does tabbing through it feel natural?', descBase: '' },
-    { option: 'Does everything in what was just built have a label that a screen reader would announce — so someone who can\'t see the screen knows what each button and input is for?', descBase: '' },
+    {
+      option: 'Could someone who can\'t use a mouse still complete the main task in this feature using only the keyboard — and does tabbing through it feel natural?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Didn't try the feature without a mouse."}
+The mouse-free primary-task completion check hasn't been done.
+Confirm someone keyboard-only can finish the main task + tab order feels natural.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Does everything in what was just built have a label that a screen reader would announce — so someone who can\'t see the screen knows what each button and input is for?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Didn't check screen-reader labels on each control."}
+Narrower: per-control screen-reader-label verification.
+Confirm each button / input announces what it's for.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'What\'s the one accessibility issue in this feature that would most get in the way of someone with a disability using it?', descBase: '' },
+    {
+      option: 'What\'s the one accessibility issue in this feature that would most get in the way of someone with a disability using it?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: the one accessibility issue that would most block a disabled user.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1560,16 +2175,57 @@ const ABSENCE_DATA_VALIDATION_CASUAL: DecisionContent = {
   question:      'Accepting input — data validation in place?',
   pinchFallback: 'Input validation?',
   L1: [
-    { option: 'Take a look at what was just built and check what happens when someone sends unexpected data — a missing field, the wrong type, or a completely random value. Is the app handling it gracefully or just crashing?', descBase: '' },
-    { option: 'Go through the inputs this feature accepts and think about what you\'re actually checking before using that data — are the required fields being verified, are the types right, and is there a clear error when something is off?', descBase: '' },
-    { option: 'Think about the worst data someone could realistically send to this project — a payload that\'s completely wrong, a value that would confuse the logic, or a field that shouldn\'t be there at all — and confirm the current code handles it.', descBase: '' },
+    {
+      option: 'Take a look at what was just built and check what happens when someone sends unexpected data — a missing field, the wrong type, or a completely random value. Is the app handling it gracefully or just crashing?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built input handling without checking what happens with missing fields, wrong types, or random values."}
+The unexpected-data resilience check hasn't been done.
+Probe with missing / wrong-type / random values; confirm graceful handling vs crash. Note findings.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Go through the inputs this feature accepts and think about what you\'re actually checking before using that data — are the required fields being verified, are the types right, and is there a clear error when something is off?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Took inputs without thinking through required / types / clear-error checks."}
+Per-input verification coverage (required / types / clear-error) hasn't been done.
+Confirm required-field + type checks + clear error on bad input. Flag silent-fail spots.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Think about the worst data someone could realistically send to this project — a payload that\'s completely wrong, a value that would confuse the logic, or a field that shouldn\'t be there at all — and confirm the current code handles it.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Didn't think about the worst data someone could realistically send."}
+The worst-case-data probe hasn't been done.
+Imagine the worst realistic payload; confirm current code handles it.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is there anything in what was just built that accepts data from outside and uses it directly without first checking that it\'s in the right shape?', descBase: '' },
-    { option: 'What happens in this feature if a required field is missing from the input — does it fail clearly with a useful message, or does it just break in a confusing way?', descBase: '' },
+    {
+      option: 'Is there anything in what was just built that accepts data from outside and uses it directly without first checking that it\'s in the right shape?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Took outside data and used it directly without shape-checking."}
+The direct-use vs shape-checking separation hasn't been audited.
+Flag inputs used without a shape check; add the check.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What happens in this feature if a required field is missing from the input — does it fail clearly with a useful message, or does it just break in a confusing way?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Didn't pin down missing-field behavior."}
+Narrower: missing-field clear-error vs confusing-break separation.
+Verify what happens on missing required field; clear message or confusing break?
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'What\'s one input this feature accepts that isn\'t being validated yet?', descBase: '' },
+    {
+      option: 'What\'s one input this feature accepts that isn\'t being validated yet?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it."}
+Minimum next step: one input that isn't being validated.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1889,16 +2545,57 @@ const ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL: DecisionContent = {
   question:      'Complex logic added — documented the why?',
   pinchFallback: 'Add the why comment.',
   L1: [
-    { option: 'Clean Code principle: \'Don\'t use comments to explain WHAT the code is doing — use them to explain WHY you did it.\' For the non-obvious logic just added — add a comment explaining the reasoning, constraint, or edge case it handles. Future maintainers (including you) will need this context.', descBase: '' },
-    { option: 'Two things to add for complex code: (1) an inline comment explaining WHY this approach was chosen — what constraint, edge case, or tradeoff it addresses; (2) a docstring for any public function that explains parameters, return value, and edge behavior. Complex code without this context becomes invisible debt.', descBase: '' },
-    { option: 'The WHY behind non-obvious code is not preserved in the implementation — only a comment captures it. What\'s the reasoning behind what was just written? The algorithm choice, the edge case it handles, the tradeoff it makes — add that as an inline comment now before the context is gone.', descBase: '' },
+    {
+      option: 'Clean Code principle: \'Don\'t use comments to explain WHAT the code is doing — use them to explain WHY you did it.\' For the non-obvious logic just added — add a comment explaining the reasoning, constraint, or edge case it handles. Future maintainers (including you) will need this context.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Just added non-obvious logic without a WHY-comment explaining the reasoning, constraint, or edge case it handles."}
+The WHY behind non-obvious code just written hasn't been captured in comments.
+Add a WHY-comment per non-obvious block: reasoning / constraint / edge-case. Don't comment WHAT — only WHY. Just this code; skip historical sweeps.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Two things to add for complex code: (1) an inline comment explaining WHY this approach was chosen — what constraint, edge case, or tradeoff it addresses; (2) a docstring for any public function that explains parameters, return value, and edge behavior. Complex code without this context becomes invisible debt.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Wrote complex code without leaving inline WHY comments or public-function docstrings explaining edge behavior."}
+The two-piece doc capture (inline WHY + public-function docstring) hasn't been done.
+Add inline WHY comments on complex logic + docstrings (params / returns / edge behavior) on public functions. Don't expand to obvious-from-code paths.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'The WHY behind non-obvious code is not preserved in the implementation — only a comment captures it. What\'s the reasoning behind what was just written? The algorithm choice, the edge case it handles, the tradeoff it makes — add that as an inline comment now before the context is gone.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Wrote non-obvious logic without preserving the reasoning — algorithm choice / edge case / tradeoff — in a comment."}
+The reasoning preservation (algorithm choice / edge case / tradeoff) hasn't been recorded in comments.
+Add the reasoning as inline comments NOW before context fades. Just this logic; don't backfill prior code.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'For the complex logic just added — add an inline comment explaining WHY this approach was chosen. What constraint or edge case does it address?', descBase: '' },
-    { option: 'Docstrings for public interfaces, inline comments for non-obvious logic. Add the \'why\' before moving on — it becomes invisible after the context is gone.', descBase: '' },
+    {
+      option: 'For the complex logic just added — add an inline comment explaining WHY this approach was chosen. What constraint or edge case does it address?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Added complex logic; haven't added the WHY-comment."}
+Lighter: WHY-comment for the complex logic hasn't been added.
+Add the comment explaining why this approach + what constraint or edge case it addresses.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Docstrings for public interfaces, inline comments for non-obvious logic. Add the \'why\' before moving on — it becomes invisible after the context is gone.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Public interfaces + non-obvious logic without docstrings / inline WHY."}
+Narrower: public-interface docstrings + non-obvious-logic inline WHY.
+Add both before context fades.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Add an inline comment explaining why this logic works the way it does before continuing.', descBase: '' },
+    {
+      option: 'Add an inline comment explaining why this logic works the way it does before continuing.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Added complex logic."}
+Minimum next step: inline WHY-comment explaining why this logic works this way.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1906,16 +2603,57 @@ const ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL: DecisionContent = {
   question:      'Shortcut taken — tagged it as debt?',
   pinchFallback: 'Tag the shortcut.',
   L1: [
-    { option: 'Martin Fowler\'s Technical Debt Quadrant: \'Prudent Deliberate\' debt — acknowledged and added to the backlog — is acceptable. \'Reckless Deliberate\' — shortcuts taken without acknowledgment — compounds invisibly. Tag any shortcut with a TODO or FIXME comment before moving on.', descBase: '' },
-    { option: 'Ward Cunningham\'s debt metaphor: taking a shortcut is a legitimate decision — not tagging it is the anti-pattern. Minimum: // TODO: [what needs fixing] — [why it was deferred]. Takes 10 seconds, prevents invisible accumulation across every subsequent sprint.', descBase: '' },
-    { option: 'Shortcut taken without a debt tag means it\'s invisible — no backlog item, no reminder, no context for the next person who reads it. Add a // TODO: or // FIXME: with what needs to be fixed and why it was deferred. Then it\'s Prudent Deliberate debt, not Reckless.', descBase: '' },
+    {
+      option: 'Martin Fowler\'s Technical Debt Quadrant: \'Prudent Deliberate\' debt — acknowledged and added to the backlog — is acceptable. \'Reckless Deliberate\' — shortcuts taken without acknowledgment — compounds invisibly. Tag any shortcut with a TODO or FIXME comment before moving on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Took a shortcut without tagging it as debt — sliding from Prudent-Deliberate into Reckless-Deliberate territory."}
+The just-taken shortcut hasn't been tagged as debt — invisible accumulation risk.
+Add a TODO or FIXME comment with what needs fixing and why it was deferred. Just this shortcut.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Ward Cunningham\'s debt metaphor: taking a shortcut is a legitimate decision — not tagging it is the anti-pattern. Minimum: // TODO: [what needs fixing] — [why it was deferred]. Takes 10 seconds, prevents invisible accumulation across every subsequent sprint.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Took a shortcut without leaving a 10-second TODO behind to convert it from Reckless to Prudent debt."}
+The TODO/FIXME conversion (Reckless → Prudent debt) hasn't been done.
+Add \`// TODO: [what needs fixing] — [why it was deferred]\`. 10 seconds; prevents compounding.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Shortcut taken without a debt tag means it\'s invisible — no backlog item, no reminder, no context for the next person who reads it. Add a // TODO: or // FIXME: with what needs to be fixed and why it was deferred. Then it\'s Prudent Deliberate debt, not Reckless.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Shortcut taken without a backlog item, reminder, or context for the next reader — invisible debt formed."}
+The visibility-tag for this shortcut hasn't been added.
+Add \`// TODO:\` or \`// FIXME:\` with what to fix + why deferred. Then it's Prudent, not Reckless.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Is the shortcut tagged with a TODO/FIXME? That\'s the minimum for Prudent Deliberate debt — acknowledge it so it\'s not forgotten.', descBase: '' },
-    { option: 'Untagged shortcuts are invisible debt. Add // TODO: [what to fix] before continuing.', descBase: '' },
+    {
+      option: 'Is the shortcut tagged with a TODO/FIXME? That\'s the minimum for Prudent Deliberate debt — acknowledge it so it\'s not forgotten.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Shortcut taken; not tagged with TODO/FIXME."}
+The minimum debt-tag (TODO/FIXME) hasn't been added.
+Add it now — acknowledge before forgetting.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Untagged shortcuts are invisible debt. Add // TODO: [what to fix] before continuing.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Untagged shortcut sitting in the code — invisible debt."}
+Narrower: untagged shortcut visibility.
+Add \`// TODO: [what to fix]\` before continuing.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Tag any shortcut with TODO/FIXME before moving on — untagged debt accumulates invisibly.', descBase: '' },
+    {
+      option: 'Tag any shortcut with TODO/FIXME before moving on — untagged debt accumulates invisibly.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Shortcut taken."}
+Minimum next step: tag the shortcut with TODO/FIXME before moving on.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1923,16 +2661,57 @@ const ABSENCE_TEST_DEPTH_CHECK_CASUAL: DecisionContent = {
   question:      'Tests written — covering beyond the happy path?',
   pinchFallback: 'Add edge and error path tests.',
   L1: [
-    { option: 'Testing pyramid (Mike Cohn, 2009): tests must cover happy paths, edge cases, and negative scenarios. \'Start with happy path tests, then add error cases that verify graceful failure handling.\' Happy-path-only tests provide false confidence — everything looks green but real-world conditions break the code.', descBase: '' },
-    { option: 'Branch coverage over line coverage: every decision path needs a test. For what was just written — what are the edge cases? (empty input, null, boundary values). What are the error paths? (what happens when this fails). Add at least one test for each non-happy-path scenario.', descBase: '' },
-    { option: 'Add tests beyond the happy path in three categories: (1) boundary values — empty, null, max, min; (2) error paths — what happens when the operation fails; (3) negative tests — invalid input, unexpected state. Write at least one test per category for what was just built before moving on.', descBase: '' },
+    {
+      option: 'Testing pyramid (Mike Cohn, 2009): tests must cover happy paths, edge cases, and negative scenarios. \'Start with happy path tests, then add error cases that verify graceful failure handling.\' Happy-path-only tests provide false confidence — everything looks green but real-world conditions break the code.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Wrote tests for the happy path only — no edge cases or negative scenarios yet."}
+Test coverage beyond happy-path (edge cases + negative scenarios) hasn't been added.
+Add edge-case + error-path tests; happy-path only is false confidence. Don't audit unrelated test suites.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Branch coverage over line coverage: every decision path needs a test. For what was just written — what are the edge cases? (empty input, null, boundary values). What are the error paths? (what happens when this fails). Add at least one test for each non-happy-path scenario.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Wrote tests by line coverage without ensuring branch coverage (every decision path tested)."}
+Branch coverage for what was just built hasn't been verified — non-happy-path scenarios.
+Per non-happy-path: empty input / null / boundary / error path. Add at least one test per scenario.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Add tests beyond the happy path in three categories: (1) boundary values — empty, null, max, min; (2) error paths — what happens when the operation fails; (3) negative tests — invalid input, unexpected state. Write at least one test per category for what was just built before moving on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Tests don't yet cover boundary values / error paths / negative tests."}
+The three test-depth categories (boundary / error / negative) haven't been added.
+One test per category: boundary (empty / null / max / min), error (operation failure), negative (invalid input / unexpected state).
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Do the tests cover edge cases (empty, null, boundary values) and error paths (what happens when this fails)? Happy path only is false confidence.', descBase: '' },
-    { option: 'Add at least one edge case test and one error path test for what was just implemented before the tests are considered adequate.', descBase: '' },
+    {
+      option: 'Do the tests cover edge cases (empty, null, boundary values) and error paths (what happens when this fails)? Happy path only is false confidence.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Happy-path-only tests; edge cases + error paths not covered."}
+Edge case + error path coverage hasn't been added.
+Add the missing tests before considering coverage adequate.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Add at least one edge case test and one error path test for what was just implemented before the tests are considered adequate.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Tests don't yet cover at-least-one edge / error scenario."}
+Narrower: at-least-one-edge + at-least-one-error test.
+Add one of each before moving on.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Add edge case and error path tests — happy path only is incomplete coverage.', descBase: '' },
+    {
+      option: 'Add edge case and error path tests — happy path only is incomplete coverage.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Wrote happy-path tests."}
+Minimum next step: edge case + error path tests.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -1940,16 +2719,57 @@ const ABSENCE_ARCHITECTURE_NOTE_ABSENCE_CASUAL: DecisionContent = {
   question:      'Architecture decision made — noted the rationale?',
   pinchFallback: 'Add an architecture note.',
   L1: [
-    { option: 'Architecture Decision Records (Michael Nygard, 2011): \'An ADR captures a single architectural decision and its rationale. People months or years later need to understand why the system is constructed the way that it is.\' For the structural decision just made — add a short note: context, decision, consequences. A code comment block or doc entry works.', descBase: '' },
-    { option: 'The question future maintainers will ask: \'why was it built this way?\' Without a note, that question has no answer. Minimum viable ADR: what was decided, why, and what the tradeoffs are. Keep doc/adr/ in the repo for significant decisions.', descBase: '' },
-    { option: 'Pattern choice, new abstraction layer, architectural tradeoff — these deserve a note. The code shows WHAT was done; only documentation shows WHY. Add a short rationale note before continuing — context disappears from memory faster than the code does.', descBase: '' },
+    {
+      option: 'Architecture Decision Records (Michael Nygard, 2011): \'An ADR captures a single architectural decision and its rationale. People months or years later need to understand why the system is constructed the way that it is.\' For the structural decision just made — add a short note: context, decision, consequences. A code comment block or doc entry works.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I made an architectural decision but didn't write down why."}
+The rationale for the architectural decision just made hasn't been recorded.
+Write a short ADR-style note now: context, decision, consequences. Code-comment block or doc entry. Don't expand scope to other decisions.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'The question future maintainers will ask: \'why was it built this way?\' Without a note, that question has no answer. Minimum viable ADR: what was decided, why, and what the tradeoffs are. Keep doc/adr/ in the repo for significant decisions.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Picked an approach; didn't capture what was decided + why + tradeoffs."}
+The minimum-viable ADR (what / why / tradeoffs) hasn't been written.
+Capture the three in doc/adr/ — one paragraph is enough. Skip historical decisions; just this one.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Pattern choice, new abstraction layer, architectural tradeoff — these deserve a note. The code shows WHAT was done; only documentation shows WHY. Add a short rationale note before continuing — context disappears from memory faster than the code does.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Picked a pattern / introduced an abstraction layer without leaving a rationale note."}
+The "why" behind the structural choice hasn't been documented — code shows WHAT, not WHY.
+Add a short rationale note before context fades. Just this decision; don't backfill.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'What was the rationale for the architectural decision just made? Add a short note — context, decision, and consequences. Even one paragraph captures what\'s needed.', descBase: '' },
-    { option: 'Code shows what; only documentation shows why. Add an architecture note before the context is gone.', descBase: '' },
+    {
+      option: 'What was the rationale for the architectural decision just made? Add a short note — context, decision, and consequences. Even one paragraph captures what\'s needed.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Made an architectural call; didn't capture the rationale."}
+Architectural-rationale capture (context / decision / consequences) hasn't been done.
+Write the one-paragraph capture now.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Code shows what; only documentation shows why. Add an architecture note before the context is gone.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Took an architectural approach; context will fade if I don't note it."}
+Narrower: rationale note before context fades.
+Capture the why now — code already shows what.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Add a brief rationale note for the architectural decision — why this approach was chosen.', descBase: '' },
+    {
+      option: 'Add a brief rationale note for the architectural decision — why this approach was chosen.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Made an architectural decision."}
+Minimum next step: brief rationale note — why this approach.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -2018,16 +2838,57 @@ const ABSENCE_SECURITY_REVIEW_GAP_CASUAL: DecisionContent = {
   question:      'Security surface touched — applied security checks?',
   pinchFallback: 'Apply security checks now.',
   L1: [
-    { option: 'OWASP Secure by Design: security must be designed in, not bolted on. For what was just implemented — what security surfaces were introduced? Input validation (are all inputs sanitized?), authorization (is access properly gated?), injection prevention (SQL, command, path traversal). These checks belong during implementation, not as a post-implementation audit. Shift-left: add the check when the surface is created.', descBase: '' },
-    { option: 'Three security checks for implementation work: (1) input validation — all user-supplied values must be validated/sanitized before use; (2) authorization — is the action properly gated to the user who should be able to perform it; (3) injection prevention — SQL queries parameterized, shell commands avoided, file paths validated. Add these now while the code is in context, not after the feature is shipped.', descBase: '' },
-    { option: 'Security surfaces introduced during implementation: auth endpoints, data storage, user input, file handling. For each: is input validated? Is access gated? Is there injection risk? OWASP Top 10 covers the categories — what was just built touches which of these? Add the check as part of completing the feature, not as a separate hardening pass.', descBase: '' },
+    {
+      option: 'OWASP Secure by Design: security must be designed in, not bolted on. For what was just implemented — what security surfaces were introduced? Input validation (are all inputs sanitized?), authorization (is access properly gated?), injection prevention (SQL, command, path traversal). These checks belong during implementation, not as a post-implementation audit. Shift-left: add the check when the surface is created.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Touched security-relevant code (auth / data storage / input handling) without applying shift-left security checks."}
+Security review (input validation / authorization / injection prevention) of the just-touched surfaces hasn't been done.
+Per surface: confirm input sanitized, access gated, injection-safe (SQL / shell / path). Don't expand to unrelated surfaces.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Three security checks for implementation work: (1) input validation — all user-supplied values must be validated/sanitized before use; (2) authorization — is the action properly gated to the user who should be able to perform it; (3) injection prevention — SQL queries parameterized, shell commands avoided, file paths validated. Add these now while the code is in context, not after the feature is shipped.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Wrote implementation without the three implementation-phase security checks (input validation / authorization / injection prevention)."}
+The three implementation-phase security checks haven't been done.
+Add the three now while code is in context: input validation, authorization gating, injection-safe queries / commands / paths.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Security surfaces introduced during implementation: auth endpoints, data storage, user input, file handling. For each: is input validated? Is access gated? Is there injection risk? OWASP Top 10 covers the categories — what was just built touches which of these? Add the check as part of completing the feature, not as a separate hardening pass.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Touched auth / data storage / user input / file handling surfaces without the per-surface security check."}
+The per-surface security check (validated / gated / injection-risk) hasn't been done.
+Per surface: confirm the check; add as part of completing the feature, not a separate hardening pass.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'For what was just implemented: is input validated, is access properly authorized, and is there injection risk? These are implementation-phase checks, not post-ship.', descBase: '' },
-    { option: 'Security checks (input validation, authorization, injection) belong during implementation — add them now before moving on.', descBase: '' },
+    {
+      option: 'For what was just implemented: is input validated, is access properly authorized, and is there injection risk? These are implementation-phase checks, not post-ship.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Implementation done; security review (input / auth / injection) not done."}
+The implementation-phase security review hasn't been done.
+Verify input validation + authorization + injection risk before moving on.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Security checks (input validation, authorization, injection) belong during implementation — add them now before moving on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Wrote implementation; security checks deferred to post-ship instead of in-implementation."}
+Narrower: security-check shift-left.
+Add the checks now during implementation — not as a separate post-ship pass.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Apply input validation, authorization checks, and injection prevention for what was just built.', descBase: '' },
+    {
+      option: 'Apply input validation, authorization checks, and injection prevention for what was just built.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Implementation done."}
+Minimum next step: input validation + authorization + injection prevention check.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -2035,16 +2896,57 @@ const ABSENCE_API_CONTRACT_DEFINITION_CASUAL: DecisionContent = {
   question:      'API being built — defined the contract first?',
   pinchFallback: 'Define the interface before implementing.',
   L1: [
-    { option: 'OpenAPI contract-first principle: define the API interface before writing the handler. For the endpoint being built — what does it accept (request schema: required fields, types, validation rules)? What does it return (response schema: success shape, error shape, status codes)? What is the error response format? Defining this first prevents implicit contracts that drift between callers and implementors — and makes mock servers and tests possible before the backend exists.', descBase: '' },
-    { option: 'Contract-first API development: the request schema, response schema, and error response format must be defined before implementation. Three things to specify: (1) what the request body/params accept; (2) what a successful response returns; (3) what error responses look like and under what conditions. Write these as a schema or doc comment before writing the handler logic.', descBase: '' },
-    { option: 'Building a route without a defined interface creates an implicit contract — the caller infers what to send and what to expect from the implementation, and both sides drift independently. Define the interface first: request shape, response shape, error cases. Minimum viable contract: a comment block with the schema above the handler.', descBase: '' },
+    {
+      option: 'OpenAPI contract-first principle: define the API interface before writing the handler. For the endpoint being built — what does it accept (request schema: required fields, types, validation rules)? What does it return (response schema: success shape, error shape, status codes)? What is the error response format? Defining this first prevents implicit contracts that drift between callers and implementors — and makes mock servers and tests possible before the backend exists.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Started building an endpoint without defining the request / response / error contract first."}
+The API contract (request schema, response schema, error format) hasn't been defined before implementation.
+Define request schema (fields + types + validation), response schema (success + error), error format now — before the handler. Just this endpoint.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Contract-first API development: the request schema, response schema, and error response format must be defined before implementation. Three things to specify: (1) what the request body/params accept; (2) what a successful response returns; (3) what error responses look like and under what conditions. Write these as a schema or doc comment before writing the handler logic.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Coded the handler before specifying what the request and response look like."}
+The three contract specs (request / response / error) haven't been written.
+Write the three as schema or doc-comment above the handler. Don't refactor other endpoints in this pass.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Building a route without a defined interface creates an implicit contract — the caller infers what to send and what to expect from the implementation, and both sides drift independently. Define the interface first: request shape, response shape, error cases. Minimum viable contract: a comment block with the schema above the handler.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Wrote the route without an explicit interface — the contract is implicit in the handler code."}
+The explicit interface (request shape / response shape / error cases) hasn't been defined — callers infer from the implementation.
+Write a comment block with the schema above the handler. Just this route.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Before implementing the endpoint: define the request schema, response schema, and error response format. Interface-first prevents implicit contracts.', descBase: '' },
-    { option: 'What does this API accept and return? Define the contract before writing the handler logic — implicit contracts drift between callers and implementors.', descBase: '' },
+    {
+      option: 'Before implementing the endpoint: define the request schema, response schema, and error response format. Interface-first prevents implicit contracts.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Implementing the endpoint without defining the contract first."}
+Pre-implementation contract definition (request / response / error) hasn't been done.
+Write the three now — interface-first prevents implicit-contract drift.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What does this API accept and return? Define the contract before writing the handler logic — implicit contracts drift between callers and implementors.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Building the handler; what it accepts and returns hasn't been pinned down explicitly."}
+Narrower: accepts / returns / error definition.
+Define the contract above the handler before continuing.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Define the request schema, response schema, and error response format before writing the handler.', descBase: '' },
+    {
+      option: 'Define the request schema, response schema, and error response format before writing the handler.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Writing an endpoint."}
+Minimum next step: define request schema + response schema + error format.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -2052,16 +2954,57 @@ const ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL: DecisionContent = {
   question:      'Implementation done — covered the error paths?',
   pinchFallback: 'Add error handling for failure cases.',
   L1: [
-    { option: 'McConnell\'s defensive programming (Code Complete): \'Defensive programming mandates covering all failure paths, not just happy paths.\' For what was just implemented — what are the error states? What happens when an external call fails? What happens when input is malformed? What happens when a database write fails? Each needs explicit handling: error state, fallback behavior, user-facing message. Code that only works on the happy path is incomplete by construction standards.', descBase: '' },
-    { option: 'Three error-path categories for every implementation: (1) external service failures — what if the API call, database query, or file operation fails; (2) input validation failures — malformed data, missing required fields, out-of-range values; (3) edge state failures — empty result sets, concurrent writes, unexpected null. Add explicit handling for each category before the feature is considered done.', descBase: '' },
-    { option: 'The happy path is the easy path — every real-world user hits an error case eventually. For what was just built: what error states exist? Is there an error boundary? Is there a fallback? Does the error surface as a useful message or as a silent failure? Add error handling now while the implementation is in context, not during the first production incident.', descBase: '' },
+    {
+      option: 'McConnell\'s defensive programming (Code Complete): \'Defensive programming mandates covering all failure paths, not just happy paths.\' For what was just implemented — what are the error states? What happens when an external call fails? What happens when input is malformed? What happens when a database write fails? Each needs explicit handling: error state, fallback behavior, user-facing message. Code that only works on the happy path is incomplete by construction standards.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Wrote happy-path logic without explicit handling for external-call failures, malformed input, or DB-write failures."}
+Error-path coverage (external failures / malformed input / DB / edge states) for what was just built hasn't been verified.
+Per error state: explicit handling + fallback + user-facing message. Happy-path-only is incomplete by construction standards.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Three error-path categories for every implementation: (1) external service failures — what if the API call, database query, or file operation fails; (2) input validation failures — malformed data, missing required fields, out-of-range values; (3) edge state failures — empty result sets, concurrent writes, unexpected null. Add explicit handling for each category before the feature is considered done.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Implementation done; three error-path categories (external / input / edge) not handled explicitly."}
+The three error-path categories haven't been covered.
+Per category — external service failures / input validation failures / edge state failures — add explicit handling. Before "done".
+{R4_CLOSE}`,
+    },
+    {
+      option: 'The happy path is the easy path — every real-world user hits an error case eventually. For what was just built: what error states exist? Is there an error boundary? Is there a fallback? Does the error surface as a useful message or as a silent failure? Add error handling now while the implementation is in context, not during the first production incident.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Happy path implemented; error states + boundaries + fallbacks not explicitly handled."}
+The error-state / error-boundary / fallback / user-facing-message coverage hasn't been added.
+Per error state: confirm explicit handling now while implementation is in context — not during first production incident.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Does the implementation cover error paths — external failures, malformed input, and edge states? Happy path only is incomplete by construction standards.', descBase: '' },
-    { option: 'Add explicit error handling for failure cases before moving on — what happens when this breaks in production?', descBase: '' },
+    {
+      option: 'Does the implementation cover error paths — external failures, malformed input, and edge states? Happy path only is incomplete by construction standards.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Implementation done; error-path coverage (external / input / edge) not confirmed."}
+Error-path coverage hasn't been confirmed.
+Walk through external failures / malformed input / edge states; add handling per category.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Add explicit error handling for failure cases before moving on — what happens when this breaks in production?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Implementation done; failure-mode handling not explicit."}
+Narrower: explicit failure-mode handling.
+Add it now — what happens when this breaks in production?
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Add error handling for failure paths — external failures, malformed input, and edge states.', descBase: '' },
+    {
+      option: 'Add error handling for failure paths — external failures, malformed input, and edge states.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Implementation done."}
+Minimum next step: error handling for failure paths — external / input / edge.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -2071,16 +3014,57 @@ const ABSENCE_REFACTORING_CHECKPOINT_CASUAL: DecisionContent = {
   question:      'Adding to messy code — refactored first?',
   pinchFallback: 'Do a cleanup pass before extending.',
   L1: [
-    { option: 'Boy Scout Rule (Clean Code): \'Leave the code cleaner than you found it.\' Before adding a feature to code that was already acknowledged as messy or complex — do a refactoring pass first. The alternative is adding features on top of complexity, which makes the next change harder, not the same difficulty. The refactoring pass before extending is the investment that prevents compound complexity debt.', descBase: '' },
-    { option: 'Adding to messy code without cleaning it first means the next developer (including future you) inherits the original mess plus the new feature built on top of it. Before extending: extract repeated logic into helpers, simplify conditionals, rename confusing variables. The feature addition is then built on clean ground, not on accumulated complexity.', descBase: '' },
-    { option: 'Three things to do before extending complex code: (1) extract any repeated logic into well-named helpers; (2) simplify long conditionals or deeply nested blocks; (3) rename anything that required a comment to explain. Then add the feature. The Boy Scout Rule applies here: leave the code cleaner than you found it, not messier than you found it.', descBase: '' },
+    {
+      option: 'Boy Scout Rule (Clean Code): \'Leave the code cleaner than you found it.\' Before adding a feature to code that was already acknowledged as messy or complex — do a refactoring pass first. The alternative is adding features on top of complexity, which makes the next change harder, not the same difficulty. The refactoring pass before extending is the investment that prevents compound complexity debt.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "About to add a feature to code I already noticed was messy without doing a refactor pass first."}
+A pre-extension refactor pass on the existing messy code hasn't been done.
+Apply Boy Scout Rule: clean before extending — extract repeated logic, simplify conditionals, rename confusing parts. Stop at the cleanup; defer the feature add until after.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Adding to messy code without cleaning it first means the next developer (including future you) inherits the original mess plus the new feature built on top of it. Before extending: extract repeated logic into helpers, simplify conditionals, rename confusing variables. The feature addition is then built on clean ground, not on accumulated complexity.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "About to extend messy code without first cleaning it — feature would land on top of accumulated mess."}
+The pre-extension cleanup hasn't been done — feature add would land on accumulated mess.
+Extract repeated logic into named helpers; simplify the messy spots; rename confusing variables; then extend. Don't extend yet.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Three things to do before extending complex code: (1) extract any repeated logic into well-named helpers; (2) simplify long conditionals or deeply nested blocks; (3) rename anything that required a comment to explain. Then add the feature. The Boy Scout Rule applies here: leave the code cleaner than you found it, not messier than you found it.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "About to extend complex code without first extracting / simplifying / renaming."}
+The three pre-extension cleanup steps (extract / simplify / rename) haven't been done.
+Apply the three: extract repeated logic, simplify nested blocks, rename anything that needed a comment. Cleaner ground first, feature second.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Before adding to the existing messy or complex code: do a refactoring pass first. Extract, simplify, rename — then extend. Building on top of complexity doubles it.', descBase: '' },
-    { option: 'The cleanup pass before the feature is the investment that prevents compound debt. What can be extracted, simplified, or renamed before adding to this?', descBase: '' },
+    {
+      option: 'Before adding to the existing messy or complex code: do a refactoring pass first. Extract, simplify, rename — then extend. Building on top of complexity doubles it.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "About to add to messy code without a cleanup pass."}
+Lighter: cleanup pass before the feature add hasn't been done.
+Extract / simplify / rename first — building on complexity doubles it.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'The cleanup pass before the feature is the investment that prevents compound debt. What can be extracted, simplified, or renamed before adding to this?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "About to extend the code; haven't surveyed what to extract / simplify / rename first."}
+Narrower: extract / simplify / rename survey.
+Identify what to refactor before adding to this.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Do a refactoring pass on the existing code before extending — leave it cleaner than you found it.', descBase: '' },
+    {
+      option: 'Do a refactoring pass on the existing code before extending — leave it cleaner than you found it.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "About to extend messy code."}
+Minimum next step: a refactor pass on the existing code before extending.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -2088,16 +3072,57 @@ const ABSENCE_BACKWARDS_COMPATIBILITY_CHECK_CASUAL: DecisionContent = {
   question:      'Interface changed — checked existing consumers?',
   pinchFallback: 'Check what calls this before changing.',
   L1: [
-    { option: 'Semantic Versioning (semver.org): MAJOR version = backwards-incompatible change. The formal rule: any change to an interface used by existing callers must enumerate those callers and assess the impact before implementation. For the function signature, API contract, or interface just changed — what calls it? What are the downstream effects? Have those callers been updated or is the change backwards-compatible?', descBase: '' },
-    { option: 'Hyrum\'s Law: \'With a sufficient number of users of an API, it does not matter what you promise in the contract — all observable behaviors will be depended on by somebody.\' The practical implication: before changing any interface, find all callers (grep the codebase), assess what each expects, and either maintain compatibility or update each caller explicitly. Silent interface breaks cause runtime errors that show up later, not at the point of change.', descBase: '' },
-    { option: 'Three steps before changing a function signature or API contract: (1) grep for all callers; (2) check whether the change is backwards-compatible or breaking; (3) if breaking — update all callers, or version the interface. A change made without step 1 is a change made blind. The downstream breakage shows up at runtime, not at compile.', descBase: '' },
+    {
+      option: 'Semantic Versioning (semver.org): MAJOR version = backwards-incompatible change. The formal rule: any change to an interface used by existing callers must enumerate those callers and assess the impact before implementation. For the function signature, API contract, or interface just changed — what calls it? What are the downstream effects? Have those callers been updated or is the change backwards-compatible?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Changed an interface signature / API contract without first enumerating who depends on it."}
+Existing callers of the interface haven't been enumerated before the change.
+Grep for callers; assess each one's expectation; confirm backwards-compatible OR plan caller updates. Just this interface; don't audit unrelated ones.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Hyrum\'s Law: \'With a sufficient number of users of an API, it does not matter what you promise in the contract — all observable behaviors will be depended on by somebody.\' The practical implication: before changing any interface, find all callers (grep the codebase), assess what each expects, and either maintain compatibility or update each caller explicitly. Silent interface breaks cause runtime errors that show up later, not at the point of change.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Changed an interface — assumed callers handle it without checking what they actually rely on."}
+Caller-impact assessment for the interface change hasn't been done.
+Find all callers (grep), check what each expects, decide: maintain compatibility OR update each caller. List + plan only; no caller edits yet.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Three steps before changing a function signature or API contract: (1) grep for all callers; (2) check whether the change is backwards-compatible or breaking; (3) if breaking — update all callers, or version the interface. A change made without step 1 is a change made blind. The downstream breakage shows up at runtime, not at compile.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Made a signature change without grepping for callers first."}
+The pre-change caller-grep + compatibility-vs-breaking decision hasn't been made.
+Run the three steps: grep callers, classify compat-vs-break, plan version-or-update path. Don't ship the change yet.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Before the interface change: enumerate all callers, assess whether the change is backwards-compatible, and update any affected consumers. Changes made blind cause silent runtime breaks.', descBase: '' },
-    { option: 'What calls this? Grep for it before changing — then decide whether to maintain compatibility or update all callers explicitly.', descBase: '' },
+    {
+      option: 'Before the interface change: enumerate all callers, assess whether the change is backwards-compatible, and update any affected consumers. Changes made blind cause silent runtime breaks.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "About to change an interface; haven't enumerated callers yet."}
+Pre-change caller-enumeration hasn't been done.
+Find callers + assess compat + plan path before the change ships.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'What calls this? Grep for it before changing — then decide whether to maintain compatibility or update all callers explicitly.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Changing the interface; didn't check what calls it."}
+Narrower: what-calls-this caller grep.
+Run the grep + decide compatible-or-update path.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Check all callers of this interface before changing it — update or version any that are affected.', descBase: '' },
+    {
+      option: 'Check all callers of this interface before changing it — update or version any that are affected.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Interface change in progress."}
+Minimum next step: check all callers before changing — update or version any affected.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -2105,16 +3130,57 @@ const ABSENCE_SELF_REVIEW_HABIT_CASUAL: DecisionContent = {
   question:      'Long implementation run — done a review pass?',
   pinchFallback: 'Read back through what was built.',
   L1: [
-    { option: 'Google Engineering Practices: \'The author is the first reviewer.\' Before submitting or continuing, read back through the diff: does the code do what was intended? Are there naming inconsistencies? Is anything more complex than it needs to be? Are tests missing? The self-review pass catches what was obvious in the context of writing but invisible in isolation — logic errors, naming drift, gaps in coverage.', descBase: '' },
-    { option: 'A 15-prompt implementation run without a review pass is a run where each decision was made in context but never assessed as a whole. Read back through what was built: does the overall structure make sense? Are there inconsistencies between early and late decisions? Did anything get added that\'s redundant or conflicts with earlier code? The review pass is the quality gate that catches accumulated drift.', descBase: '' },
-    { option: 'Three things to check in a self-review pass: (1) does the implementation match the original intent — were any assumptions made that drifted from the goal; (2) naming and structure coherence — do variable and function names still make sense given the full implementation; (3) coverage gaps — are there paths or states that were implemented but not tested. Read the diff before moving on.', descBase: '' },
+    {
+      option: 'Google Engineering Practices: \'The author is the first reviewer.\' Before submitting or continuing, read back through the diff: does the code do what was intended? Are there naming inconsistencies? Is anything more complex than it needs to be? Are tests missing? The self-review pass catches what was obvious in the context of writing but invisible in isolation — logic errors, naming drift, gaps in coverage.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Long implementation run without a diff-readback self-review pass."}
+The diff-readback self-review hasn't been done.
+Read back through the diff: intent match / naming inconsistencies / unneeded complexity / missing tests. Catch what was obvious in writing but invisible in isolation.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'A 15-prompt implementation run without a review pass is a run where each decision was made in context but never assessed as a whole. Read back through what was built: does the overall structure make sense? Are there inconsistencies between early and late decisions? Did anything get added that\'s redundant or conflicts with earlier code? The review pass is the quality gate that catches accumulated drift.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "15+ prompt implementation run without an end-to-end whole-implementation assessment."}
+The end-to-end whole-implementation assessment hasn't been done.
+Read back through; check overall structure / early-vs-late decision consistency / redundancy / conflicts. Quality gate against accumulated drift.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Three things to check in a self-review pass: (1) does the implementation match the original intent — were any assumptions made that drifted from the goal; (2) naming and structure coherence — do variable and function names still make sense given the full implementation; (3) coverage gaps — are there paths or states that were implemented but not tested. Read the diff before moving on.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Implementation run finished without the three self-review checks (intent-match / naming-structure-coherence / coverage gaps)."}
+The three self-review checks haven't been done.
+Read the diff: intent-match + naming-structure coherence + coverage gaps. Before continuing.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Read back through the implementation before continuing: does it make sense as a whole? Check for naming drift, structural inconsistencies, and coverage gaps.', descBase: '' },
-    { option: 'The self-review pass catches what was invisible in the context of writing. Read the diff — does this all hang together?', descBase: '' },
+    {
+      option: 'Read back through the implementation before continuing: does it make sense as a whole? Check for naming drift, structural inconsistencies, and coverage gaps.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Long implementation run; haven't read back through the diff."}
+The diff-readback hasn't been done.
+Read it; check naming drift / structural inconsistencies / coverage gaps.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'The self-review pass catches what was invisible in the context of writing. Read the diff — does this all hang together?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Run done; whole-implementation cohesion check not done."}
+Narrower: whole-implementation cohesion check.
+Read the diff — does it all hang together?
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Do a review pass on what was built — read the diff and check for drift, gaps, and inconsistencies.', descBase: '' },
+    {
+      option: 'Do a review pass on what was built — read the diff and check for drift, gaps, and inconsistencies.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Long implementation run done."}
+Minimum next step: diff-readback for drift / gaps / inconsistencies.
+{R4_CLOSE}`,
+    },
   ],
 };
 
@@ -2122,16 +3188,57 @@ const ABSENCE_PERFORMANCE_AWARENESS_CASUAL: DecisionContent = {
   question:      'Data-heavy operation — considered performance?',
   pinchFallback: 'Check for performance implications.',
   L1: [
-    { option: 'Knuth (1974): \'We should not pass up our opportunities in that critical 3%.\' The full quote is not an excuse to avoid performance — it\'s a prioritization rule: ignore the 97% of noncritical paths, but act on the critical 3%. For what was just built — is this in the critical 3%? A full-table fetch, N+1 in a loop, or unthrottled list render qualifies. The check here is awareness, not micro-optimization: is there an obvious performance problem worth addressing before it ships?', descBase: '' },
-    { option: 'Three data-heavy patterns that require a performance check before shipping: (1) N+1 queries — does this loop trigger a database call per iteration; (2) full-table fetches — is the query unbounded and potentially returning thousands of records; (3) expensive renders — is a large list rendering without virtualization, memoization, or lazy loading. These are not premature optimization targets — they\'re known problem patterns with well-understood solutions.', descBase: '' },
-    { option: 'Performance awareness for this operation: what is the data volume? What happens at 10x, 100x the expected load? Is there an N+1 pattern? Is there pagination? Is there a memo or cache in front of an expensive computation? The question is not \'is this perfectly optimized?\' — it is \'is there an obvious performance problem that will hit in production that could be caught now?\'', descBase: '' },
+    {
+      option: 'Knuth (1974): \'We should not pass up our opportunities in that critical 3%.\' The full quote is not an excuse to avoid performance — it\'s a prioritization rule: ignore the 97% of noncritical paths, but act on the critical 3%. For what was just built — is this in the critical 3%? A full-table fetch, N+1 in a loop, or unthrottled list render qualifies. The check here is awareness, not micro-optimization: is there an obvious performance problem worth addressing before it ships?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built data-heavy operation without checking if it falls into the Knuth-3%-critical-path category (N+1 / full-table / unthrottled render)."}
+Critical-3%-path awareness check (N+1 / full-table fetch / unthrottled render) hasn't been done.
+Identify whether this falls in the critical 3%; if yes, flag the obvious performance problem before ship. Don't micro-optimize unrelated code.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Three data-heavy patterns that require a performance check before shipping: (1) N+1 queries — does this loop trigger a database call per iteration; (2) full-table fetches — is the query unbounded and potentially returning thousands of records; (3) expensive renders — is a large list rendering without virtualization, memoization, or lazy loading. These are not premature optimization targets — they\'re known problem patterns with well-understood solutions.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Built data-heavy operation; haven't audited for N+1 / full-table / expensive-render patterns."}
+The three data-heavy-pattern check (N+1 / unbounded fetch / expensive unthrottled render) hasn't been done.
+Per pattern: confirm presence-or-absence; flag the obvious-problem instances. Just this operation.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Performance awareness for this operation: what is the data volume? What happens at 10x, 100x the expected load? Is there an N+1 pattern? Is there pagination? Is there a memo or cache in front of an expensive computation? The question is not \'is this perfectly optimized?\' — it is \'is there an obvious performance problem that will hit in production that could be caught now?\'',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Wrote the operation; haven't asked what happens at 10x / 100x the expected load."}
+The data-volume + load-projection awareness hasn't been done.
+Ask: data volume / 10x-100x behavior / N+1 / pagination / memo or cache. Flag obvious problems; not micro-optimization.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'For the data-heavy operation just built: check for N+1 queries, unbounded fetches, and expensive unthrottled renders before this ships.', descBase: '' },
-    { option: 'Performance awareness at the right time — not micro-optimization, just checking: is there an obvious performance problem in what was just built?', descBase: '' },
+    {
+      option: 'For the data-heavy operation just built: check for N+1 queries, unbounded fetches, and expensive unthrottled renders before this ships.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Data-heavy operation done; performance check not done."}
+The performance awareness check (N+1 / unbounded fetches / expensive renders) hasn't been done.
+Check the three; flag findings.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Performance awareness at the right time — not micro-optimization, just checking: is there an obvious performance problem in what was just built?',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Built it; haven't asked is-there-an-obvious-perf-problem."}
+Narrower: obvious-performance-problem awareness.
+Check now; address before ship.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Check for N+1 queries, unbounded fetches, or expensive renders before this feature ships.', descBase: '' },
+    {
+      option: 'Check for N+1 queries, unbounded fetches, or expensive renders before this feature ships.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Data-heavy operation built."}
+Minimum next step: check for N+1 / unbounded fetches / expensive renders before ship.
+{R4_CLOSE}`,
+    },
   ],
 };
 
