@@ -1959,16 +1959,58 @@ const ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL: DecisionContent = {
   question:      'New dependency added — evaluated it before adopting?',
   pinchFallback: 'Check the dependency before adding.',
   L1: [
-    { option: 'NIST SSDF requires evaluating third-party components for maintenance status, license compatibility, and security properties before integration. For the dependency just added: Is it actively maintained (last release date, open issues trend)? Is the license compatible? Are there lighter-weight alternatives? A few minutes of evaluation now prevents being stuck with an abandoned or license-incompatible package later.', descBase: '' },
-    { option: 'Three things to check before committing to a new dependency: (1) maintenance status — last release date, whether the repo is active; (2) license compatibility — MIT/Apache are generally safe, GPL has restrictions; (3) bundle size impact — what does this add to the build? The smaller the scope of what\'s needed, the more alternatives to compare. Evaluate first, install after.', descBase: '' },
-    { option: 'Dependencies aren\'t free — they\'re ongoing maintenance commitments. Before adopting: check when it was last released, check whether there are lighter-weight alternatives that cover the needed scope, and confirm the license is compatible with the project. A package left unevaluated is a silent risk every time a security advisory hits.', descBase: '' },
+    {
+      option: 'NIST SSDF requires evaluating third-party components for maintenance status, license compatibility, and security properties before integration. For the dependency just added: Is it actively maintained (last release date, open issues trend)? Is the license compatible? Are there lighter-weight alternatives? A few minutes of evaluation now prevents being stuck with an abandoned or license-incompatible package later.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "I just added a new dependency without evaluating it for maintenance status, license, or alternatives."}
+The new dependency hasn't been evaluated against the third-party-component checks (maintenance, license, alternatives) before adoption.
+Run the eval pass now: maintenance signals (last release, open issues), license compatibility, and lighter-weight alternative comparisons. Don't broaden into existing-deps audit in this pass.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Three things to check before committing to a new dependency: (1) maintenance status — last release date, whether the repo is active; (2) license compatibility — MIT/Apache are generally safe, GPL has restrictions; (3) bundle size impact — what does this add to the build? The smaller the scope of what\'s needed, the more alternatives to compare. Evaluate first, install after.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Added the dependency; didn't run the maintenance / license / bundle-size checks first."}
+Pre-commit evaluation of this dependency (maintenance / license / bundle-size) hasn't been recorded.
+Run the three checks: maintenance signals, license compatibility, bundle-size impact. Stop before broader project-deps audit.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Dependencies aren\'t free — they\'re ongoing maintenance commitments. Before adopting: check when it was last released, check whether there are lighter-weight alternatives that cover the needed scope, and confirm the license is compatible with the project. A package left unevaluated is a silent risk every time a security advisory hits.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1-2 lines first-person — "Pulled in a new dependency without thinking about whether it's actively maintained or whether a lighter alternative exists."}
+The maintenance-commitment evaluation for this dependency hasn't been done — last-release / alternatives / license remain unverified.
+Confirm the dep is actively released, confirm no lighter-scope alternative exists, and confirm the license is compatible. Don't audit unrelated existing deps in this pass.
+{R4_CLOSE}`,
+    },
   ],
   L2: [
-    { option: 'Before committing to this dependency: check maintenance status (last release date, open issues), license compatibility, and whether alternatives exist.', descBase: '' },
-    { option: 'Dependencies are ongoing maintenance commitments. Evaluate maintenance status, license, and alternatives before adopting.', descBase: '' },
+    {
+      option: 'Before committing to this dependency: check maintenance status (last release date, open issues), license compatibility, and whether alternatives exist.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Added a new dep; didn't evaluate maintenance / license / alternatives."}
+Pre-commit dependency evaluation hasn't been done.
+Check maintenance status, license, and alternatives now before continuing.
+{R4_CLOSE}`,
+    },
+    {
+      option: 'Dependencies are ongoing maintenance commitments. Evaluate maintenance status, license, and alternatives before adopting.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Took on a new dependency without weighing the maintenance commitment."}
+This dependency's ongoing-maintenance signals (status, license, alternatives) haven't been weighed.
+Evaluate the three before continuing. Don't expand into a full project-wide deps sweep.
+{R4_CLOSE}`,
+    },
   ],
   L3: [
-    { option: 'Check maintenance status, license compatibility, and alternatives before adding this dependency.', descBase: '' },
+    {
+      option: 'Check maintenance status, license compatibility, and alternatives before adding this dependency.',
+      descBase: `{R4_OPEN}
+{R5_INJECT: ~1 line first-person — "Added a dep; didn't audit it first."}
+Pre-add dependency check (maintenance / license / alternatives) hasn't been done.
+Run the minimum check on this single dependency now.
+{R4_CLOSE}`,
+    },
   ],
 };
 
