@@ -11,6 +11,7 @@ import {
   SUB_LINE_CONTINUATION_INDENT,
   SUB_LINE_PREFIX,
   normaliseKeypress,
+  optionEntriesToSelectableItems,
   renderDescBaseSubLines,
   renderLoop,
   wrapAndCap,
@@ -341,6 +342,47 @@ describe('render-loop — computeLayout D1 + D2 integration', () => {
     const descLines = r.emissions.filter((e) => e.kind === 'desc-base-truncated');
     expect(descLines).toHaveLength(2);
     for (const e of descLines) expect(e.kind).toBe('desc-base-truncated');
+  });
+});
+
+describe('render-loop — optionEntriesToSelectableItems (§11.15 OptionGenerator → render-loop bridge)', () => {
+  it('maps each OptionEntry to a SelectableItem with value === label === option text', () => {
+    const items = optionEntriesToSelectableItems([
+      { option: 'Write a PRD',     descBase: 'PRD body' },
+      { option: 'Define problem',  descBase: 'Problem framing' },
+    ]);
+    expect(items).toHaveLength(2);
+    expect(items[0].value).toBe('Write a PRD');
+    expect(items[0].label).toBe('Write a PRD');
+    expect(items[0].descBase).toBe('PRD body');
+    expect(items[1].value).toBe('Define problem');
+    expect(items[1].label).toBe('Define problem');
+    expect(items[1].descBase).toBe('Problem framing');
+  });
+
+  it('returns an empty array when given an empty OptionEntry list', () => {
+    expect(optionEntriesToSelectableItems([])).toEqual([]);
+  });
+
+  it('preserves descBase content verbatim (no truncation / no substitution here)', () => {
+    const longDesc = '{R4_OPEN}\nfoo bar baz\n{R4_CLOSE}';
+    const items    = optionEntriesToSelectableItems([{ option: 'A', descBase: longDesc }]);
+    expect(items[0].descBase).toBe(longDesc);
+  });
+
+  it('does NOT emit any meta / separator items (those live outside the OptionEntry data model)', () => {
+    const items = optionEntriesToSelectableItems([{ option: 'real', descBase: 'desc' }]);
+    expect(items.every((it) => !it.isMeta && !it.isSeparator)).toBe(true);
+  });
+
+  it('output is directly consumable by computeLayout (round-trip into emissions)', () => {
+    const items = optionEntriesToSelectableItems([{ option: 'A', descBase: 'a desc' }]);
+    const r     = computeLayout({
+      pinchLabel: 'P', question: 'Q', options: items, rows: 40, cols: 80,
+    }, FRESH_STATE);
+    // Sanity: the option-label emission carries the option text.
+    const labelEmission = r.emissions.find((e) => e.kind === 'option-label');
+    expect(labelEmission!.text).toBe('A');
   });
 });
 

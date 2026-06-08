@@ -46,6 +46,7 @@
 import { emitKeypressEvents } from 'node:readline';
 import type { LineKind } from './styler.js';
 import { styler } from './styler.js';
+import type { OptionEntry } from './options.js';
 
 // ── Public types ────────────────────────────────────────────────────────────
 
@@ -205,6 +206,29 @@ export const SHORTCUT_HINT_EXPAND   = 'press Space to expand';
 
 /** R8-Sub1.4 — shortcut-hint text shown under the focused option when its desc-base is currently expanded. */
 export const SHORTCUT_HINT_COLLAPSE = 'press Space to collapse';
+
+// ── OptionGenerator → SelectableItem bridge (§11.15) ────────────────────────
+
+/**
+ * Convert a list of OptionEntry records (the post-R5 + R4 substitution
+ * output of OptionGenerator / runtime-substitutions) into the
+ * SelectableItem shape `renderLoop` consumes — one SelectableItem per
+ * OptionEntry per dev-plan §11.15 wiring contract.
+ *
+ *   - SelectableItem.value    ← OptionEntry.option (the prompt text;
+ *                                doubles as the selection sentinel)
+ *   - SelectableItem.label    ← OptionEntry.option
+ *   - SelectableItem.descBase ← OptionEntry.descBase
+ *
+ * Meta items (SHOW_SIMPLER / SKIP_NOW / HELP_LABEL) and OPTION_SEPARATOR
+ * blanks are NOT produced here — they live outside the OptionEntry data
+ * model. Callers compose the final SelectableItem[] by concatenating
+ * this helper's output with the meta items in the order the popup
+ * needs them.
+ */
+export function optionEntriesToSelectableItems(entries: readonly OptionEntry[]): SelectableItem[] {
+  return entries.map((e) => ({ value: e.option, label: e.option, descBase: e.descBase }));
+}
 
 // ── Wrapping + truncation helpers (D1 / D2 / D5) ────────────────────────────
 
