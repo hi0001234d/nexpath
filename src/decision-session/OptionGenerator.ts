@@ -569,3 +569,5 @@ export async function generateOptionList(
     return pass1Output;
   }
 }
+
+// Post-Pass-2 substitution pipeline lives in ./runtime-substitutions.ts
