@@ -8,6 +8,22 @@ const E2E_ENDPOINT = process.env.E2E_POSTHOG_ENDPOINT ?? DEFAULT_POSTHOG_ENDPOIN
 
 const runE2E = E2E_TOKEN !== undefined && E2E_TOKEN.length > 0;
 
+if (!runE2E) {
+  process.stderr.write(
+    [
+      '',
+      '[TelemetrySync E2E] Skipped — E2E_POSTHOG_TOKEN is not set.',
+      'To run these end-to-end tests against the live PostHog /capture/ endpoint,',
+      'export a real PostHog project key and re-run:',
+      '',
+      '  export E2E_POSTHOG_TOKEN="phc_xxx_your_real_token"',
+      '  npm test',
+      '',
+      '',
+    ].join('\n'),
+  );
+}
+
 describe.skipIf(!runE2E)('end-to-end against live PostHog /capture/ (gated by E2E_POSTHOG_TOKEN)', () => {
   it('sends a minimal single-event ping envelope and receives 200', async () => {
     const envelope: PostHogSingleEnvelope = {
