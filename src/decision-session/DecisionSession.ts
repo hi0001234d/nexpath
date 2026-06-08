@@ -19,6 +19,7 @@ import { type RecentPromptMetadata } from '../telemetry/recent-prompts.js';
 import type { WhyHelpEntry } from './why-help.js';
 import { composeWhyHelpBlock, type WhyHelpRegister } from './why-help-compose.js';
 import { profileToRegister } from './register.js';
+import { SHORTCUT_HINT_TEXT } from './render-loop.js';
 
 /**
  * Decision session terminal UI (per decision-session-ux-research.md).
@@ -300,7 +301,16 @@ export async function runLevel(
       .filter(o => !o.value.startsWith(OPTION_SEPARATOR) || o.label !== '')
       .map(o => `  ${o.label}`)
       .join('\n');
-    process.stdout.write(`\n[SIM] level:${level} options:${optionKind}\n${message}\n${allOptions}\n[SIM] Auto-selecting: ${label}\n`);
+    const levelEntries = level === 1 ? effective.L1 : level === 2 ? effective.L2 : effective.L3;
+    const descBaseLines = levelEntries
+      .map((entry, idx) => `  ${idx + 1}. ${entry.descBase || '(no desc-base)'}`)
+      .join('\n');
+    process.stdout.write(
+      `\n[SIM] level:${level} options:${optionKind}\n${message}\n${allOptions}\n` +
+      `[SIM] desc-base per option:\n${descBaseLines}\n` +
+      `[SIM] shortcut-hint: ${SHORTCUT_HINT_TEXT}\n` +
+      `[SIM] Auto-selecting: ${label}\n`
+    );
     await new Promise<void>(r => setTimeout(r, 400));
     writeTelemetry(input.projectRoot, 'decision_session_sim_dismissed', {
       level, autoSelectedText: label.slice(0, 120),
