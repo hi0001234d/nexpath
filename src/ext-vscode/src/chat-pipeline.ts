@@ -1,20 +1,23 @@
 import type { ChatHistoryEvent } from './chat-history-types.js';
-import type { DecisionSessionPayload } from './ipc.js';
+import type { StopSelection } from './ipc.js';
 
 /**
  * Chat pipeline orchestrator (M13 of M2 Branch 5).
  *
  * Glues the chat-history watcher to the existing nexpath pipeline (`auto`
- * + `stop`) and to the view provider. For each user prompt the watcher
- * captures, this handler:
+ * + `stop`). For each user prompt the watcher captures, this handler:
  *
  *   1. Calls `nexpath auto <prompt> <session-id>` via ipc — forwards the
  *      prompt to the existing capture/classify/advisory stages
  *      (Layer C, untouched).
- *   2. Immediately calls `nexpath stop <session-id>` via ipc — reads the
- *      pending advisory and produces a `DecisionSessionPayload | null`.
- *   3. If the payload is non-null, publishes it to the view provider,
- *      which auto-reveals the webview with the advisory + options.
+ *   2. Immediately calls `nexpath stop <session-id>` via ipc — Layer C opens
+ *      its terminal popup and blocks until the user acts.
+ *   3a. If the user SELECTED an option in the popup, `stop` returns a
+ *       `StopSelection`; the handler injects that prompt into the host's chat
+ *       input (`injectSelection`).
+ *   3b. If `stop` returned no selection (dismissed / no-advisory / the popup
+ *       couldn't open), the handler calls `onNoSelection` so the caller can
+ *       surface the in-editor advisory fallback if one is waiting.
  *
  * **Timing simplification for B5 smoke test:** `auto` and `stop` are
  * called back-to-back. In production we'd want `stop` to fire after the
@@ -53,9 +56,18 @@ export interface ChatPipelineDeps {
   spawnStop: (
     sessionId: string,
     event: ChatHistoryEvent,
-  ) => Promise<DecisionSessionPayload | null>;
-  /** Inject the view-provider's `publishPayload`. Tests pass a mock. */
-  publishPayload: (payload: DecisionSessionPayload) => void;
+  ) => Promise<StopSelection | null>;
+  /**
+   * Inject the selected prompt back into the host's chat input. Called only
+   * when the user picked an option in Layer C's terminal popup.
+   */
+  injectSelection: (selectedPrompt: string, event: ChatHistoryEvent) => Promise<void> | void;
+  /**
+   * Optional: called when a cycle finished with NO terminal selection. The
+   * caller uses it to surface the in-editor advisory fallback (status bar /
+   * webview) if Layer C parked an advisory the popup didn't deliver.
+   */
+  onNoSelection?: (event: ChatHistoryEvent) => Promise<void> | void;
   /**
    * Optional session-id composer. Production passes a function that prefixes
    * the host workspace id; tests omit this and just use `event.rawSessionId`.
@@ -90,18 +102,27 @@ export function createChatEventHandler(
       logger.error('[nexpath] spawnAuto failed:', err);
       return;
     }
-    let payload: DecisionSessionPayload | null;
+    let selection: StopSelection | null;
     try {
-      payload = await deps.spawnStop(sessionId, event);
+      selection = await deps.spawnStop(sessionId, event);
     } catch (err) {
       logger.error('[nexpath] spawnStop failed:', err);
       return;
     }
-    if (payload === null) return;
+    if (selection === null) {
+      if (deps.onNoSelection) {
+        try {
+          await deps.onNoSelection(event);
+        } catch (err) {
+          logger.error('[nexpath] onNoSelection failed:', err);
+        }
+      }
+      return;
+    }
     try {
-      deps.publishPayload(payload);
+      await deps.injectSelection(selection.selectedPrompt, event);
     } catch (err) {
-      logger.error('[nexpath] publishPayload failed:', err);
+      logger.error('[nexpath] injectSelection failed:', err);
     }
   };
 }

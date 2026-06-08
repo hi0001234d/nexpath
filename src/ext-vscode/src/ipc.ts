@@ -27,6 +27,27 @@ export interface DecisionSessionPayload {
   options: Array<{ id: string; label: string }>;
 }
 
+/**
+ * The result of `nexpath stop` when the user picked an option in Layer C's
+ * terminal popup. Layer C emits `{ decision: 'block', reason: <option text> }`
+ * to stdout on selection (see `src/cli/commands/stop.ts`); `reason` is the
+ * pre-filled prompt the user chose. The extension injects it into the host's
+ * chat input. (The legacy `DecisionSessionPayload` shape was never what Layer C
+ * emits here — see `spawnStop`.)
+ */
+export interface StopSelection {
+  /** The prompt text the user selected in the terminal popup. */
+  selectedPrompt: string;
+}
+
+/** Cap accumulated child stderr so a runaway process can't balloon extension memory. */
+const MAX_STDERR_BYTES = 64 * 1024;
+
+function appendCapped(buffer: string, chunk: string): string {
+  if (buffer.length >= MAX_STDERR_BYTES) return buffer;
+  return (buffer + chunk).slice(0, MAX_STDERR_BYTES);
+}
+
 export interface IpcOptions {
   binaryPath?: string;
   dbPath?: string;
@@ -160,7 +181,7 @@ export function spawnAuto(
       reject(new NexpathBinaryNotFoundError(bin, err));
     });
     child.stderr?.on('data', (chunk: Buffer) => {
-      stderr += chunk.toString();
+      stderr = appendCapped(stderr, chunk.toString());
     });
     child.on('close', (code: number | null) => {
       if (errored) return;
@@ -200,14 +221,20 @@ export function spawnAuto(
  * omitted (the watcher emits user-prompt events only; the assistant
  * response isn't part of our captured signal).
  *
- * Resolves with `null` when stdout is empty (no advisory generated).
- * Resolves with the parsed payload otherwise.
- * Rejects on spawn failure, non-zero exit, or malformed JSON.
+ * `nexpath stop` opens Layer C's terminal popup and blocks until the user acts.
+ * It writes `{ decision: 'block', reason: <selected option text> }` to stdout
+ * ONLY when the user selects an option there; on dismiss / no-advisory / no-TTY
+ * it writes nothing. So:
+ *   - empty stdout                        → resolve(null)   (no selection to act on)
+ *   - `{ decision:'block', reason:string }`→ resolve({ selectedPrompt: reason })
+ *   - any other JSON shape                → resolve(null)   (nothing actionable)
+ *   - non-JSON                            → reject(NexpathMalformedPayloadError)
+ * Rejects on spawn failure or non-zero exit.
  */
 export function spawnStop(
   sessionId: string,
   opts: IpcOptions = {},
-): Promise<DecisionSessionPayload | null> {
+): Promise<StopSelection | null> {
   const bin = resolveBinaryPath(opts);
   const args = buildArgs('stop', opts.dbPath);
   const spawner = opts.spawnFn ?? spawn;
@@ -220,7 +247,7 @@ export function spawnStop(
   // — tests inject `spawnFn` and don't want us shelling out to wmctrl.
   if (!opts.spawnFn) bringPopupToFront();
 
-  return new Promise<DecisionSessionPayload | null>((resolve, reject) => {
+  return new Promise<StopSelection | null>((resolve, reject) => {
     let stdout = '';
     let stderr = '';
     let errored = false;
@@ -233,7 +260,7 @@ export function spawnStop(
       stdout += chunk.toString();
     });
     child.stderr?.on('data', (chunk: Buffer) => {
-      stderr += chunk.toString();
+      stderr = appendCapped(stderr, chunk.toString());
     });
     child.on('close', (code: number | null) => {
       if (errored) return;
@@ -250,10 +277,19 @@ export function spawnStop(
         resolve(null);
         return;
       }
+      let parsed: unknown;
       try {
-        resolve(JSON.parse(trimmed) as DecisionSessionPayload);
+        parsed = JSON.parse(trimmed);
       } catch (err) {
         reject(new NexpathMalformedPayloadError(trimmed, err as Error));
+        return;
+      }
+      const p = parsed as { decision?: unknown; reason?: unknown };
+      if (p && p.decision === 'block' && typeof p.reason === 'string' && p.reason.length > 0) {
+        resolve({ selectedPrompt: p.reason });
+      } else {
+        // Valid JSON but not Layer C's selection shape — nothing to inject.
+        resolve(null);
       }
     });
 

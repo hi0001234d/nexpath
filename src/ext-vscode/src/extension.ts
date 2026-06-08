@@ -23,7 +23,11 @@ import {
 import { createChatEventHandler } from './chat-pipeline.js';
 import { spawnAuto, spawnStop } from './ipc.js';
 import { resolveWorkspaceFromDbPath, canonicalizeCwd } from './resolve-db-workspace.js';
+import { createAdvisoryFallback, type AdvisoryFallback } from './advisory-fallback.js';
 import type { ChatHistoryEvent, WatchTarget } from './chat-history-types.js';
+
+/** globalState key gating the one-time "use the status bar fallback" hint. */
+const FALLBACK_HINT_KEY = 'nexpath.fallbackHintShown';
 
 /**
  * Module-level state held across activate / deactivate so the watcher's
@@ -61,16 +65,54 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // 2. Construct + register the view provider with the B4 injectFn-aware
   //    onSelect. injectFn falls through to clipboard when the host has no
   //    matching command (the safe default; see chat-input-injector.ts).
-  const onSelect = (text: string): Promise<void> =>
+  //    The same path injects a terminal-popup selection and a webview-fallback
+  //    selection, so define it once and reuse.
+  const injectIntoChat = (text: string): Promise<void> =>
     handleOptionSelection(text, {
       injectFn: (t) => chatInputInject(t, { host }),
     });
   viewProvider = new NexpathDecisionSessionViewProvider(
     context.extensionUri,
-    onSelect,
+    injectIntoChat,
   );
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(VIEW_ID, viewProvider),
+  );
+
+  // 2b. In-editor advisory fallback. Layer C's terminal popup is the primary
+  //     advisory surface, but it is environment-fragile (needs a GUI terminal +
+  //     $DISPLAY + session bus on Linux, and can land behind the editor). When a
+  //     prompt cycle produces an advisory the popup didn't deliver, this lights a
+  //     status-bar item that reveals the advisory in the webview — a surface that
+  //     works on every OS with no terminal. It reads Layer C's store read-only;
+  //     no Layer C code changes.
+  const statusBarItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Right,
+    100,
+  );
+  statusBarItem.command = 'nexpath.showAdvisory';
+  context.subscriptions.push(statusBarItem);
+
+  const advisoryFallback: AdvisoryFallback = createAdvisoryFallback({
+    publishPayload: (payload) => viewProvider?.publishPayload(payload),
+    statusBar: {
+      show: (text, tooltip) => {
+        statusBarItem.text = text;
+        statusBarItem.tooltip = tooltip;
+        statusBarItem.show();
+      },
+      hide: () => statusBarItem.hide(),
+    },
+    showInfoOnce: (message) => {
+      if (context.globalState.get<boolean>(FALLBACK_HINT_KEY) === true) return;
+      void context.globalState.update(FALLBACK_HINT_KEY, true);
+      void vscode.window.showInformationMessage(message);
+    },
+  });
+  context.subscriptions.push(
+    vscode.commands.registerCommand('nexpath.showAdvisory', () =>
+      advisoryFallback.showAdvisory(),
+    ),
   );
 
   // 3. On hosts that route non-modal info messages to the silent
@@ -226,7 +268,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     spawnAuto: (prompt, sid, event) =>
       spawnAuto(prompt, sid, { cwd: cwdForEvent(event) }),
     spawnStop: (sid, event) => spawnStop(sid, { cwd: cwdForEvent(event) }),
-    publishPayload: (payload) => viewProvider?.publishPayload(payload),
+    // The user picked an option in the terminal popup → inject it into the chat
+    // input and clear any waiting fallback (they've handled this advisory).
+    injectSelection: async (selectedPrompt) => {
+      advisoryFallback.clear();
+      await injectIntoChat(selectedPrompt);
+    },
+    // No terminal selection → if Layer C parked a fresh advisory the popup
+    // didn't deliver, surface the in-editor fallback.
+    onNoSelection: (event) =>
+      advisoryFallback.noteCycleWithoutSelection(cwdForEvent(event)),
     composeSessionId: (event) => `${cwdForEvent(event)}|${event.rawSessionId}`,
     // Wire IPC failures (e.g. nexpath binary not on PATH → ENOENT) into
     // the Nexpath OutputChannel so they surface to the user. Default logger

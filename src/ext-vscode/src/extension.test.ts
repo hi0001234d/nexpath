@@ -42,6 +42,14 @@ vi.mock('vscode', () => ({
       appendLine: vi.fn(),
       dispose: vi.fn(),
     })),
+    createStatusBarItem: vi.fn(() => ({
+      text: '',
+      tooltip: '',
+      command: '',
+      show: vi.fn(),
+      hide: vi.fn(),
+      dispose: vi.fn(),
+    })),
   },
   workspace: {
     workspaceFolders: undefined,
@@ -50,7 +58,9 @@ vi.mock('vscode', () => ({
   commands: {
     executeCommand: mockExecuteCommand,
     getCommands: vi.fn().mockResolvedValue([]),
+    registerCommand: vi.fn(() => ({ dispose: vi.fn() })),
   },
+  StatusBarAlignment: { Left: 1, Right: 2 },
 }));
 vi.mock('./onboarding.js', () => ({
   CONSENT_KEY: 'nexpath.consentGranted',
@@ -93,6 +103,13 @@ vi.mock('./chat-pipeline.js', () => ({
 vi.mock('./ipc.js', () => ({
   spawnAuto: vi.fn(),
   spawnStop: vi.fn(),
+}));
+vi.mock('./advisory-fallback.js', () => ({
+  createAdvisoryFallback: vi.fn(() => ({
+    noteCycleWithoutSelection: vi.fn(),
+    clear: vi.fn(),
+    showAdvisory: vi.fn(),
+  })),
 }));
 
 import { activate, deactivate, getViewProvider } from './extension.js';

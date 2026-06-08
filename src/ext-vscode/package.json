@@ -61,7 +61,14 @@
           "type": "webview"
         }
       ]
-    }
+    },
+    "commands": [
+      {
+        "command": "nexpath.showAdvisory",
+        "title": "Show pending advisory",
+        "category": "Nexpath"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run build",

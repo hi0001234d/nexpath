@@ -121,22 +121,38 @@ describe('spawnAuto', () => {
 });
 
 describe('spawnStop', () => {
-  it('parses a valid JSON payload from stdout', async () => {
-    const payload = {
-      advisory: 'be careful',
-      options: [{ id: 'a', label: 'Continue' }],
-    };
+  it('returns the selected prompt from Layer C\'s {decision:"block", reason} output', async () => {
+    // This is the ONLY shape Layer C's `nexpath stop` writes to stdout — on
+    // selection in the terminal popup. `reason` is the chosen option text.
+    const out = { decision: 'block', reason: 'Run the full test suite for this phase.' };
     const spawnFn = vi.fn(() =>
       makeFakeChild({
-        stdoutChunks: [JSON.stringify(payload)],
+        stdoutChunks: [JSON.stringify(out)],
         exitCode: 0,
       }),
     );
     const result = await spawnStop('s', { spawnFn: spawnFn as never });
-    expect(result).toEqual(payload);
+    expect(result).toEqual({ selectedPrompt: 'Run the full test suite for this phase.' });
   });
 
-  it('resolves null when stdout is empty (no advisory generated)', async () => {
+  it('resolves null when stdout is valid JSON but not the selection shape', async () => {
+    // Any non-{decision:block} JSON carries no actionable selection.
+    const spawnFn = vi.fn(() =>
+      makeFakeChild({ stdoutChunks: [JSON.stringify({ decision: 'approve' })], exitCode: 0 }),
+    );
+    const result = await spawnStop('s', { spawnFn: spawnFn as never });
+    expect(result).toBeNull();
+  });
+
+  it('resolves null when {decision:"block"} has an empty reason', async () => {
+    const spawnFn = vi.fn(() =>
+      makeFakeChild({ stdoutChunks: [JSON.stringify({ decision: 'block', reason: '' })], exitCode: 0 }),
+    );
+    const result = await spawnStop('s', { spawnFn: spawnFn as never });
+    expect(result).toBeNull();
+  });
+
+  it('resolves null when stdout is empty (no selection / no advisory)', async () => {
     const spawnFn = vi.fn(() => makeFakeChild({ stdoutChunks: [], exitCode: 0 }));
     const result = await spawnStop('s', { spawnFn: spawnFn as never });
     expect(result).toBeNull();
