@@ -645,6 +645,54 @@ describe('r5-injection — injectR5() full orchestration', () => {
     }
   });
 
+  it('F3 — static gap-framing + direction-body lines survive R5 substitution verbatim (no contradiction handler needed)', async () => {
+    // F3 has no runtime handler by design (dev plan §10.6 F3 row).
+    // This test locks the invariant: only the {R5_INJECT} slot is
+    // touched; the static gap-framing line + direction-body line
+    // pass through unchanged regardless of what the LLM rewrite
+    // (or Strategy-D fallback) produces.
+    const GAP_FRAMING    = 'STATIC_GAP_FRAMING_SENTENCE_DO_NOT_TOUCH.';
+    const DIRECTION_BODY = 'STATIC_DIRECTION_BODY_SENTENCE_DO_NOT_TOUCH.';
+    const desc = [
+      '{R4_OPEN}',
+      '{R5_INJECT: ~1 line — "example"}',
+      GAP_FRAMING,
+      DIRECTION_BODY,
+      '{R4_CLOSE}',
+    ].join('\n');
+
+    // Path A — Strategy-C with a permissive rewrite client.
+    const client: R5RewriteClient = {
+      rewrite: async () => 'refactoring invoice building rendering service today.',
+    };
+    const outC = await injectR5(
+      desc,
+      [
+        makePrompt('I have been refactoring the invoice rendering path today.', 0),
+        makePrompt('Building the invoice and validating with tests now.',       1),
+      ],
+      'TASK_REVIEW',
+      'formal',
+      { client, exampleHint: '', lengthBudget: 'HEAVY' },
+    );
+    expect(outC).toContain(GAP_FRAMING);
+    expect(outC).toContain(DIRECTION_BODY);
+
+    // Path B — Strategy-D (no client bound) over the same template.
+    const outD = await injectR5(
+      desc,
+      [
+        makePrompt('I have been refactoring the invoice rendering path today.', 0),
+        makePrompt('Building the invoice and validating with tests now.',       1),
+      ],
+      'TASK_REVIEW',
+      'formal',
+      { exampleHint: '', lengthBudget: 'HEAVY' },
+    );
+    expect(outD).toContain(GAP_FRAMING);
+    expect(outD).toContain(DIRECTION_BODY);
+  });
+
   it('falls back to Strategy D when F2 masking + F7 stripping leave fewer than 2 useful tokens (dev plan §10.1 step 3)', async () => {
     // Every meaningful word in these prompts matches a redaction
     // pattern: API key + email + secret-store path. After masking,
