@@ -28,15 +28,64 @@ describe('styler — line-kind contract + pass-through function', () => {
   });
 
   // ── styler() function — initial pass-through body ──────────────────────────
+  // One test per LineKind per dev-plan §11.13 test-surface spec: a regression
+  // in a single kind reports as one targeted failure instead of collapsing
+  // into a loop iteration that loses the failing-kind context.
 
-  it('styler() returns the input line unchanged for every LineKind', () => {
+  it('styler() preserves input for kind=popup-why-help', () => {
     const sample = 'sample line content';
-    for (const kind of ALL_LINE_KINDS) {
-      expect(styler(sample, kind)).toBe(sample);
-    }
+    expect(styler(sample, 'popup-why-help')).toBe(sample);
   });
 
-  it('styler() preserves an empty input string', () => {
+  it('styler() preserves input for kind=desc-base-truncated', () => {
+    const sample = 'sample line content';
+    expect(styler(sample, 'desc-base-truncated')).toBe(sample);
+  });
+
+  it('styler() preserves input for kind=desc-base-expanded', () => {
+    const sample = 'sample line content';
+    expect(styler(sample, 'desc-base-expanded')).toBe(sample);
+  });
+
+  it('styler() preserves input for kind=shortcut-hint', () => {
+    const sample = 'sample line content';
+    expect(styler(sample, 'shortcut-hint')).toBe(sample);
+  });
+
+  it('styler() preserves input for kind=option-label', () => {
+    const sample = 'sample line content';
+    expect(styler(sample, 'option-label')).toBe(sample);
+  });
+
+  it('styler() preserves input for kind=pinch-label', () => {
+    const sample = 'sample line content';
+    expect(styler(sample, 'pinch-label')).toBe(sample);
+  });
+
+  it('styler() preserves input for kind=question', () => {
+    const sample = 'sample line content';
+    expect(styler(sample, 'question')).toBe(sample);
+  });
+
+  it('styler() covers EVERY LineKind value declared in ALL_LINE_KINDS (exhaustiveness sentinel)', () => {
+    // Forward-looking guard: if a future change adds an 8th kind without
+    // adding the corresponding per-kind test above, this exhaustiveness
+    // check flags the gap so the per-kind coverage stays in lockstep.
+    const covered: LineKind[] = [
+      'popup-why-help', 'desc-base-truncated', 'desc-base-expanded',
+      'shortcut-hint', 'option-label', 'pinch-label', 'question',
+    ];
+    for (const kind of ALL_LINE_KINDS) {
+      expect(covered).toContain(kind);
+    }
+    expect(covered.length).toBe(ALL_LINE_KINDS.length);
+  });
+
+  it('styler() preserves an empty input string for every LineKind', () => {
+    // Empty-input regression is a single-kind concern in practice (any one
+    // case-body that silently injects content on `''` would surface here);
+    // keeping this as a loop is intentional — the focus is the empty-string
+    // contract across all kinds, not per-kind body behaviour.
     for (const kind of ALL_LINE_KINDS) {
       expect(styler('', kind)).toBe('');
     }
