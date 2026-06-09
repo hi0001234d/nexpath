@@ -2291,6 +2291,7 @@ export const ABSENCE_ENV_AND_SECRETS_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_ENV_AND_SECRETS",
   question:      'Credentials in use — secrets management reviewed?',
   pinchFallback: 'Secrets setup?',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_ENV_AND_SECRETS'],
   L1: [
     {
       option: '1. Go through what was just built and check — are any passwords, API keys, or other secrets written directly in the code? 2. If they are, those need to be moved to a separate `.env` file. 3. Share what you find with me before we continue.',
@@ -2378,6 +2379,7 @@ export const ABSENCE_CI_PIPELINE_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_CI_PIPELINE",
   question:      'Moving toward release — CI pipeline configured?',
   pinchFallback: 'CI pipeline?',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_CI_PIPELINE'],
   L1: [
     {
       option: '1. Check whether this project has anything set up to run the tests automatically whenever code is pushed. 2. If not, this is a good time to set that up so mistakes get caught before they reach the final code. 3. Share what you find with me before we continue.',
@@ -2420,6 +2422,7 @@ export const ABSENCE_RATE_LIMITING_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_RATE_LIMITING",
   question:      'API endpoint built — rate limiting designed?',
   pinchFallback: 'Rate limiting?',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_RATE_LIMITING'],
   L1: [
     {
       option: '1. Think about what would happen if someone sent a huge number of requests to this feature very quickly. 2. Check whether the app has any limit on how many times it can be called in a short period. 3. Share what you find with me before we continue.',

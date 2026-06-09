@@ -4507,6 +4507,7 @@ const ABSENCE_ENV_AND_SECRETS: DecisionContent = {
   signalType:   "ABSENCE_ENV_AND_SECRETS",
   question:      'Credentials in use — secrets management reviewed?',
   pinchFallback: 'Secrets setup?',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_ENV_AND_SECRETS'],
   L1: [
     {
       option: 'Audit the secrets storage pattern for what was just built: identify every credential, API key, and environment-specific value used — confirm none are hardcoded in source, all are loaded from environment variables, and the variable names are documented in a `.env.example` file.',
@@ -4626,6 +4627,7 @@ const ABSENCE_CI_PIPELINE: DecisionContent = {
   signalType:   "ABSENCE_CI_PIPELINE",
   question:      'Moving toward release — CI pipeline configured?',
   pinchFallback: 'CI pipeline?',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_CI_PIPELINE'],
   L1: [
     {
       option: 'Confirm automated test execution is configured for this project: check that a CI workflow (e.g. GitHub Actions) runs the full test suite on every pull request and push to main — verify the workflow file exists, the test command is correct, and test failures block merges.',
@@ -4684,6 +4686,7 @@ const ABSENCE_RATE_LIMITING: DecisionContent = {
   signalType:   "ABSENCE_RATE_LIMITING",
   question:      'API endpoint built — rate limiting designed?',
   pinchFallback: 'Rate limiting?',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_RATE_LIMITING'],
   L1: [
     {
       option: 'Define the rate limiting strategy for what was just built: specify the throttle limits per user, per API key, or per IP address — confirm which identifier is used for tracking, what the limit is (requests per second or per minute), and what happens when the limit is exceeded.',
@@ -5147,6 +5150,7 @@ const ABSENCE_ENV_AND_SECRETS_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_ENV_AND_SECRETS",
   question:      'Credentials in use — secrets management reviewed?',
   pinchFallback: 'Secrets setup?',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_ENV_AND_SECRETS'],
   L1: [
     {
       option: 'Take a look at what was just built and check whether any API keys, passwords, or credentials are written directly into the code — if so, move them out now and load them from a separate config file instead.',
@@ -5266,6 +5270,7 @@ const ABSENCE_CI_PIPELINE_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_CI_PIPELINE",
   question:      'Moving toward release — CI pipeline configured?',
   pinchFallback: 'CI pipeline?',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_CI_PIPELINE'],
   L1: [
     {
       option: 'Take a look at whether this project has something set up to automatically run the tests whenever code is pushed — if not, setting up a simple GitHub Actions workflow now means you catch failures before they reach the main branch.',
@@ -5324,6 +5329,7 @@ const ABSENCE_RATE_LIMITING_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_RATE_LIMITING",
   question:      'API endpoint built — rate limiting designed?',
   pinchFallback: 'Rate limiting?',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_RATE_LIMITING'],
   L1: [
     {
       option: 'Take a look at what was just built and think about what happens if someone calls this endpoint way too many times in a short period — is there anything stopping them from doing that, and if not, what would happen to the app?',
@@ -6548,6 +6554,7 @@ const ABSENCE_DEPENDENCY_AUDIT_GAP_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_DEPENDENCY_AUDIT_GAP",
   question:      'New dependency added — evaluated it before adopting?',
   pinchFallback: 'Check the dependency before adding.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_DEPENDENCY_AUDIT_GAP'],
   L1: [
     {
       option: 'NIST SSDF requires evaluating third-party components for maintenance status, license compatibility, and security properties before integration. For the dependency just added: Is it actively maintained (last release date, open issues trend)? Is the license compatible? Are there lighter-weight alternatives? A few minutes of evaluation now prevents being stuck with an abandoned or license-incompatible package later.',
