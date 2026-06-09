@@ -24,6 +24,7 @@ import { createChatEventHandler } from './chat-pipeline.js';
 import { spawnAuto, spawnStop } from './ipc.js';
 import { resolveWorkspaceFromDbPath, canonicalizeCwd } from './resolve-db-workspace.js';
 import { createAdvisoryFallback, type AdvisoryFallback } from './advisory-fallback.js';
+import { createAdvisoryPoller, type AdvisoryPoller } from './advisory-poller.js';
 import type { ChatHistoryEvent, WatchTarget } from './chat-history-types.js';
 
 /** globalState key gating the one-time "use the status bar fallback" hint. */
@@ -37,6 +38,7 @@ const FALLBACK_HINT_KEY = 'nexpath.fallbackHintShown';
  */
 let viewProvider: NexpathDecisionSessionViewProvider | undefined;
 let watcher: ChatHistoryWatcher | undefined;
+let advisoryPoller: AdvisoryPoller | undefined;
 let logChannel: vscode.OutputChannel | undefined;
 
 /**
@@ -152,6 +154,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   if (host === 'vscode-generic') {
     log('[nexpath] host is plain VS Code — no chat to watch');
     return;
+  }
+
+  // 5b. Windsurf delivery bridge. Windsurf encrypts Cascade at rest, so the
+  //     extension can't capture prompts here — capture comes from the native
+  //     Cascade hooks (`nexpath auto`, a separate process) which park advisories
+  //     in the store. Poll the store and hand fresh advisories to the same
+  //     in-editor fallback the watcher uses on Cursor (status bar → webview →
+  //     chat-input inject). This is what gives Windsurf the Cursor-style
+  //     auto-inject the read-only hooks can't. Started before the watcher setup
+  //     so it runs even when no state.vscdb exists to watch.
+  if (host === 'windsurf') {
+    const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
+    const roots = Array.from(new Set([canonicalizeCwd(ws), ws]));
+    advisoryPoller = createAdvisoryPoller({
+      projectRoots: roots,
+      onFreshAdvisory: (root) => advisoryFallback.armIfPending(root),
+    });
+    advisoryPoller.start();
+    context.subscriptions.push({ dispose: () => advisoryPoller?.stop() });
+    log(`[nexpath] windsurf advisory poller started for roots: ${roots.join(' | ')}`);
   }
 
   const wsStorage = workspaceStorageDir({ host });
@@ -332,6 +354,8 @@ export function deactivate(): void {
   log('[nexpath] extension deactivated');
   watcher?.stop();
   watcher = undefined;
+  advisoryPoller?.stop();
+  advisoryPoller = undefined;
   viewProvider = undefined;
   logChannel = undefined;
 }
