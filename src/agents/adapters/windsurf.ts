@@ -1,6 +1,11 @@
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { registerAdapter } from '../registry.js';
+import {
+  getWindsurfHooksPath,
+  writeWindsurfHooks,
+  removeWindsurfHooks,
+} from '../../windsurf-hook/install.js';
 import type {
   InstallContext,
   InstallResult,
@@ -108,14 +113,22 @@ export const windsurfAdapter: VSCodeExtensionAdapter = {
       console.log(`-  ${'Windsurf'.padEnd(12)} — not detected; skipping`);
       return { status: 'skipped', notes: 'Windsurf not installed on this machine' };
     }
-    console.log(`✓ ${'Windsurf'.padEnd(12)} — install the Nexpath extension to activate guidance:`);
+    // Capture: write the Cascade hook (pre_user_prompt → nexpath auto) so prompts
+    // are captured even though Windsurf encrypts Cascade at rest. The advisory is
+    // then delivered by the extension's poller (read-only hooks can't inject).
+    const hooksPath = getWindsurfHooksPath(ctx.home);
+    writeWindsurfHooks(hooksPath, resolve(process.argv[1]));
+    console.log(`✓ ${'Windsurf'.padEnd(12)} — Cascade capture hook written to ${hooksPath}`);
+
+    // Delivery: the extension must be installed for the advisory UI + inject.
+    console.log(`   ${' '.repeat(12)}   Then install the Nexpath extension to deliver guidance:`);
     console.log(`    Open VSX:            ${OPEN_VSX_URL}`);
     console.log(`    VS Code Marketplace: ${VS_CODE_MARKETPLACE_URL}`);
     console.log(`    Or via CLI:          windsurf --install-extension ${MARKETPLACE_ID}`);
     return {
       status: 'installed',
       notes:
-        'Deep-link instructions printed; the user must install the VS Code extension manually before guidance activates.',
+        'Cascade capture hook written; the user must also install the VS Code extension (deep-link printed) for advisory delivery.',
     };
   },
 
@@ -124,7 +137,11 @@ export const windsurfAdapter: VSCodeExtensionAdapter = {
       console.log(`-  ${'Windsurf'.padEnd(12)} — not detected; skipping`);
       return;
     }
-    console.log(`-  ${'Windsurf'.padEnd(12)} — uninstall the Nexpath extension from the Windsurf Extensions panel`);
+    const removed = removeWindsurfHooks(getWindsurfHooksPath(ctx.home));
+    console.log(removed
+      ? `✓ ${'Windsurf'.padEnd(12)} — Cascade capture hook removed`
+      : `-  ${'Windsurf'.padEnd(12)} — no Cascade capture hook found`);
+    console.log(`   ${' '.repeat(12)}   Uninstall the Nexpath extension from the Windsurf Extensions panel`);
     console.log(`    Or via CLI:          windsurf --uninstall-extension ${MARKETPLACE_ID}`);
   },
 };

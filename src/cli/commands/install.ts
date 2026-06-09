@@ -5,7 +5,6 @@ import { homedir } from 'node:os';
 import { confirm, isCancel } from '@clack/prompts';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
 import { isConfigSet, setConfig } from '../../store/config.js';
-import { getWindsurfHooksPath, writeWindsurfHooks, removeWindsurfHooks } from '../../windsurf-hook/install.js';
 
 // Side-effect import: registers all coding-agent adapters with the in-process
 // registry. Must precede any getAdapter() / detectAll() call in installAction below.
@@ -365,13 +364,9 @@ export async function installAction(
         } else {
           writeMcpEntry(agent.configPath, buildStandardEntry(isWin));
           console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
-          if (agent.id === 'windsurf') {
-            // Windsurf capture runs through Cascade Hooks (live-validated), NOT the
-            // MCP path \u2014 write ~/.codeium/windsurf/hooks.json pointing at this CLI.
-            const hooksPath = getWindsurfHooksPath(homedir());
-            writeWindsurfHooks(hooksPath, resolve(process.argv[1]));
-            console.log(`\u2713 ${'Windsurf'.padEnd(12)} \u2014 Cascade capture hooks written to ${hooksPath}`);
-          }
+          // Windsurf's Cascade capture hook is written by the windsurf adapter's
+          // install() in the registry loop below \u2014 so it runs regardless of the
+          // REGISTER_MCP_SERVER gate.
         }
       }
     } catch (err) {
@@ -540,14 +535,8 @@ export async function uninstallAction(
         removed = removeOpenCodeEntry(agent.configPath);
       } else {
         removed = removeMcpEntry(agent.configPath);
-        if (agent.id === 'windsurf') {
-          // Remove the Cascade capture hooks written by install.
-          const hooksRemoved = removeWindsurfHooks(getWindsurfHooksPath(homedir()));
-          if (hooksRemoved) {
-            console.log(`✓ ${'Windsurf'.padEnd(12)} — Cascade capture hooks removed`);
-            removed = true;
-          }
-        }
+        // Windsurf's Cascade capture hook is removed by the windsurf adapter's
+        // uninstall() in the registry loop below.
       }
 
       if (removed) {

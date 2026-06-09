@@ -13,8 +13,21 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
+/** Every Cascade event nexpath has ever owned — iterated on cleanup/removal. */
 export const WINDSURF_HOOK_EVENTS = ['pre_user_prompt', 'post_cascade_response'] as const;
 export type WindsurfHookEvent = (typeof WINDSURF_HOOK_EVENTS)[number];
+
+/**
+ * Events nexpath WRITES today: capture only (`pre_user_prompt` → `nexpath auto`).
+ * `post_cascade_response` is intentionally NOT written: Windsurf hooks are
+ * read-only (they can't inject a selection back into Cascade), so the advisory is
+ * delivered by the nexpath VS Code extension (the advisory poller), not a terminal
+ * popup. Writing `post_cascade_response` would only spawn a redundant, dead-end
+ * popup. Removal still cleans BOTH events so older installs get the stale
+ * `post_cascade_response` stripped on the next write/uninstall.
+ */
+export const WINDSURF_WRITE_EVENTS = ['pre_user_prompt'] as const;
+export type WindsurfWriteEvent = (typeof WINDSURF_WRITE_EVENTS)[number];
 
 interface HookEntry { command?: string; [k: string]: unknown }
 
@@ -38,11 +51,10 @@ export function isNexpathWindsurfHook(entry: HookEntry): boolean {
   return typeof entry.command === 'string' && entry.command.includes('windsurf-hook');
 }
 
-/** Build the two hook entries nexpath owns, for the given cli path. */
-export function buildWindsurfHooksConfig(cliPath: string): Record<WindsurfHookEvent, HookEntry[]> {
+/** Build the hook entries nexpath writes (capture only — `pre_user_prompt`). */
+export function buildWindsurfHooksConfig(cliPath: string): Record<WindsurfWriteEvent, HookEntry[]> {
   return {
     pre_user_prompt: [{ command: buildWindsurfHookCommand(cliPath, 'pre_user_prompt') }],
-    post_cascade_response: [{ command: buildWindsurfHookCommand(cliPath, 'post_cascade_response') }],
   };
 }
 
@@ -71,10 +83,16 @@ function writeJson(filePath: string, data: unknown): void {
 export function writeWindsurfHooks(filePath: string, cliPath: string): void {
   const data = readJsonSafe(filePath);
   const hooks = (data.hooks && typeof data.hooks === 'object' ? data.hooks : {}) as Record<string, HookEntry[]>;
-  const cfg = buildWindsurfHooksConfig(cliPath);
+  const cfg = buildWindsurfHooksConfig(cliPath) as Record<string, HookEntry[]>;
+  // Iterate ALL events: strip any prior nexpath entries (so a stale
+  // post_cascade_response from an older install is dropped), then re-add only
+  // the events we write today. Other tools' hooks are preserved; an event left
+  // with no entries is removed entirely rather than written as an empty array.
   for (const event of WINDSURF_HOOK_EVENTS) {
-    const existing = Array.isArray(hooks[event]) ? hooks[event].filter((h) => !isNexpathWindsurfHook(h)) : [];
-    hooks[event] = [...existing, ...cfg[event]];
+    const kept = Array.isArray(hooks[event]) ? hooks[event].filter((h) => !isNexpathWindsurfHook(h)) : [];
+    const merged = [...kept, ...(cfg[event] ?? [])];
+    if (merged.length === 0) delete hooks[event];
+    else hooks[event] = merged;
   }
   data.hooks = hooks;
   writeJson(filePath, data);
