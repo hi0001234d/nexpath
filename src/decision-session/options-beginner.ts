@@ -644,6 +644,7 @@ export const ABSENCE_OBSERVABILITY_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_OBSERVABILITY",
   question:      'Feature built — will you know when it breaks?',
   pinchFallback: 'No observability.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_OBSERVABILITY'],
   L1: [
     {
       option: '1. Think about what was just built running in the real world — if it stopped working, how would you find out?\n2. Share with me: is there anything that records what it\'s doing, or would it just fail without warning?\n3. Then tell me: what\'s the most important thing to log so you\'d know it\'s working?',
@@ -1031,6 +1032,7 @@ export const ABSENCE_ROLLBACK_PLANNING_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_ROLLBACK_PLANNING",
   question:      'Shipping soon — what\'s the rollback plan?',
   pinchFallback: 'No rollback plan.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_ROLLBACK_PLANNING'],
   L1: [
     {
       option: '1. Think about what would happen if this feature caused a problem when it went live.\n2. Share with me: what would you do to undo the deployment if something went wrong?\n3. Then check: is there anything in this feature that would be hard to reverse once it\'s live?',
@@ -1073,6 +1075,7 @@ export const ABSENCE_DEPLOYMENT_PLANNING_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_DEPLOYMENT_PLANNING",
   question:      'Shipping soon — is the deployment actually planned?',
   pinchFallback: 'No deploy plan.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_DEPLOYMENT_PLANNING'],
   L1: [
     {
       option: '1. Think about how this feature is going to get from your computer to where users will use it.\n2. Share with me: is there a plan for that, or is it still not figured out?\n3. Then check: is there anything the live environment needs that isn\'t set up yet — like settings or secret keys?',
@@ -1115,6 +1118,7 @@ export const ABSENCE_DEPENDENCY_MGMT_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_DEPENDENCY_MGMT",
   question:      'Added packages — any issues checked?',
   pinchFallback: 'Dependency risk.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_DEPENDENCY_MGMT'],
   L1: [
     {
       option: '1. Look at the new packages that were added while building this feature.\n2. Share with me: do any of them have known problems, or did you just install them because they looked like what you needed?\n3. Then check: do they work alongside everything else that\'s already installed, or could they cause a conflict?',

@@ -1172,6 +1172,7 @@ const ABSENCE_OBSERVABILITY: DecisionContent = {
   signalType:   "ABSENCE_OBSERVABILITY",
   question:      'Feature built — how will you know it\'s working?',
   pinchFallback: 'No observability.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_OBSERVABILITY'],
   L1: [
     {
       option: 'Review what was just built for observability gaps: identify what this feature does in production that is currently invisible — requests, failures, latency, state changes — and add structured logging for the events that would allow you to diagnose a production incident without SSH access.',
@@ -1704,6 +1705,7 @@ const ABSENCE_ROLLBACK_PLANNING: DecisionContent = {
   signalType:   "ABSENCE_ROLLBACK_PLANNING",
   question:      'Release pending — rollback plan defined?',
   pinchFallback: 'No rollback plan.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_ROLLBACK_PLANNING'],
   L1: [
     {
       option: 'Define the rollback procedure for this feature before shipping: identify the steps to revert if the deployment fails, confirm the rollback can be completed within your acceptable downtime window, and verify that database migrations or data changes are reversible.',
@@ -1762,6 +1764,7 @@ const ABSENCE_DEPLOYMENT_PLANNING: DecisionContent = {
   signalType:   "ABSENCE_DEPLOYMENT_PLANNING",
   question:      'Release pending — deployment plan confirmed?',
   pinchFallback: 'No deploy plan.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_DEPLOYMENT_PLANNING'],
   L1: [
     {
       option: 'Define the deployment plan for this feature before shipping: confirm the target environment configuration, document any environment variables or secrets that need to be provisioned, and verify that the deployment process has been tested outside of production.',
@@ -1820,6 +1823,7 @@ const ABSENCE_DEPENDENCY_MGMT: DecisionContent = {
   signalType:   "ABSENCE_DEPENDENCY_MGMT",
   question:      'Dependencies added — conflicts and risks reviewed?',
   pinchFallback: 'Dependency risk.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_DEPENDENCY_MGMT'],
   L1: [
     {
       option: 'Review the new dependencies introduced in what was just built: check for version conflicts with existing packages, known security vulnerabilities in the chosen version, and whether a more stable or widely-adopted alternative exists for the same purpose.',
@@ -2467,6 +2471,7 @@ const ABSENCE_OBSERVABILITY_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_OBSERVABILITY",
   question:      'Feature built — will you know when it breaks?',
   pinchFallback: 'No observability.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_OBSERVABILITY'],
   L1: [
     {
       option: 'Look at what was just built — if it breaks in production tonight, what would you see in your logs? If the answer is "not much", add logging for the key events: requests coming in, failures happening, anything that changed state.',
@@ -2998,6 +3003,7 @@ const ABSENCE_ROLLBACK_PLANNING_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_ROLLBACK_PLANNING",
   question:      'Shipping soon — what\'s the rollback plan?',
   pinchFallback: 'No rollback plan.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_ROLLBACK_PLANNING'],
   L1: [
     {
       option: 'Before you ship this feature, work out what you\'d do if the deployment goes wrong — what\'s the rollback plan, how long would it take, and is there anything in this feature that can\'t be undone cleanly?',
@@ -3056,6 +3062,7 @@ const ABSENCE_DEPLOYMENT_PLANNING_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_DEPLOYMENT_PLANNING",
   question:      'Shipping soon — is the deployment actually planned?',
   pinchFallback: 'No deploy plan.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_DEPLOYMENT_PLANNING'],
   L1: [
     {
       option: 'Before shipping this feature, check: do you actually have a deployment plan? What environment config does it need, what secrets need to be in place, and has anything been tested outside your local setup?',
@@ -3114,6 +3121,7 @@ const ABSENCE_DEPENDENCY_MGMT_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_DEPENDENCY_MGMT",
   question:      'Added packages — any issues checked?',
   pinchFallback: 'Dependency risk.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_DEPENDENCY_MGMT'],
   L1: [
     {
       option: 'Check the packages added in what was just built — do they conflict with anything already installed, is there a security issue with the version you picked, and is there a better or more popular alternative you didn\'t consider?',
