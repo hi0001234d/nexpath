@@ -43,11 +43,13 @@ type ClipboardCmd = [cmd: string, args: string[]];
  */
 function buildMjsScript(
   clackUrl: string,
+  renderLoopUrl: string,
   optFileFwd: string,
   resultFileFwd: string,
   clipboardCmds: ClipboardCmd[],
 ): string {
   return `import { select, isCancel } from '${clackUrl}';
+import { renderLoop, eventsFromReadline } from '${renderLoopUrl}';
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { emitKeypressEvents } from 'node:readline';
@@ -144,15 +146,43 @@ process.stdin.on('keypress', (ch, key) => {
   }
 });
 
+// Path A: custom render loop replaces @clack/prompts.select for the main
+// popup (dev-plan §11.12 + §11.15 line 2184). renderLoop renders the
+// full popup including the why-help block in \`message\` (legacy) AND
+// per-option desc-base sub-lines + shortcut hint — neither of which
+// clack's select widget can show. \`eventsFromReadline\` adapts the
+// process.stdin keypress stream into the renderLoop's AsyncIterable
+// contract; the cancel() handle stops the queue when we're done.
+const { events: _kev, cancel: _kevCancel } = eventsFromReadline(process.stdin);
 let picked;
-do {
-  picked = await select({ message: opts.message, options: _selOptions, maxItems: _maxItems });
-} while (typeof picked === 'string' && picked.startsWith(opts.separatorPrefix));
+try {
+  while (true) {
+    const _pickedItem = await renderLoop({
+      layout: {
+        pinchLabel:    opts.pinchLabel,
+        subtitle:      opts.subtitle,
+        question:      opts.question,
+        whyHelpBlock:  opts.whyHelpBlock,
+        options:       _selOptions,
+        rows:          process.stdout.rows,
+        cols:          process.stdout.columns,
+        maxItemsFloor: _maxItems,
+      },
+      keyEvents: _kev,
+    });
+    if (_pickedItem === null) { picked = undefined; break; }
+    if (typeof _pickedItem.value === 'string' && _pickedItem.value.startsWith(opts.separatorPrefix)) continue;
+    picked = _pickedItem.value;
+    break;
+  }
+} finally {
+  _kevCancel();
+}
 
 process.stdout.write = _ow;
 _log('done: writes=' + _wc + ' nlTotal=' + _nlTotal);
 
-if (!isCancel(picked) && typeof picked === 'string'
+if (typeof picked === 'string'
     && picked !== opts.skipNow && picked !== opts.showSimpler) {
 
   process.stdout.write('\\n\\x1b[2;3m  \\u21b5 hit enter to send directly to Claude\\x1b[0m\\n\\n');
@@ -177,7 +207,7 @@ if (!isCancel(picked) && typeof picked === 'string'
       writeFileSync('${resultFileFwd}', '__CLIP__', 'utf8');
     }
   }
-} else if (!isCancel(picked) && typeof picked === 'string') {
+} else if (typeof picked === 'string') {
   writeFileSync('${resultFileFwd}', picked, 'utf8');
 }
 
@@ -435,7 +465,8 @@ function readCurrentRole(store: Store | undefined, projectRoot: string | undefin
  * which reliably brings the new window to the foreground.
  */
 function buildWindowsNewWindowSelectFn(store?: Store, projectRoot?: string): SelectFn {
-  const clackUrl = resolveClackEsmUrl();
+  const clackUrl      = resolveClackEsmUrl();
+  const renderLoopUrl = resolveRenderLoopEsmUrl();
 
   return (opts) =>
     new Promise<string | symbol>((resolve) => {
@@ -469,7 +500,7 @@ function buildWindowsNewWindowSelectFn(store?: Store, projectRoot?: string): Sel
         'utf8',
       );
 
-      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, [['clip', []]]), 'utf8');
+      writeFileSync(scriptFile, buildMjsScript(clackUrl, renderLoopUrl, optFileFwd, resultFileFwd, [['clip', []]]), 'utf8');
 
       // Textual cue in Claude terminal regardless of whether window is visible
       process.stderr.write('\n[nexpath] Please select an action in the new window\n');
@@ -655,7 +686,8 @@ function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): Selec
   const terminal = detectLinuxTerminal();
   if (!terminal) return null;
 
-  const clackUrl = resolveClackEsmUrl();
+  const clackUrl      = resolveClackEsmUrl();
+  const renderLoopUrl = resolveRenderLoopEsmUrl();
 
   return (opts) =>
     new Promise<string | symbol>((resolve) => {
@@ -686,7 +718,7 @@ function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): Selec
         'utf8',
       );
 
-      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, LINUX_CLIPBOARD_CMDS), 'utf8');
+      writeFileSync(scriptFile, buildMjsScript(clackUrl, renderLoopUrl, optFileFwd, resultFileFwd, LINUX_CLIPBOARD_CMDS), 'utf8');
 
       process.stderr.write('\n[nexpath] Please select an action in the new window\n');
 
@@ -760,7 +792,8 @@ end tell`;
 }
 
 function buildMacNewWindowSelectFn(store?: Store, projectRoot?: string): SelectFn {
-  const clackUrl = resolveClackEsmUrl();
+  const clackUrl      = resolveClackEsmUrl();
+  const renderLoopUrl = resolveRenderLoopEsmUrl();
 
   return (opts) =>
     new Promise<string | symbol>((resolve) => {
@@ -791,7 +824,7 @@ function buildMacNewWindowSelectFn(store?: Store, projectRoot?: string): SelectF
         'utf8',
       );
 
-      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, MAC_CLIPBOARD_CMDS), 'utf8');
+      writeFileSync(scriptFile, buildMjsScript(clackUrl, renderLoopUrl, optFileFwd, resultFileFwd, MAC_CLIPBOARD_CMDS), 'utf8');
 
       process.stderr.write('\n[nexpath] Please select an action in the new window\n');
 
