@@ -1,7 +1,21 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ALL_LINE_KINDS, isStylerPassthroughActive, STYLER_PASSTHROUGH_ENV, styler, type LineKind } from './styler.js';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { ALL_LINE_KINDS, isStylePassthroughActive, STYLE_PASSTHROUGH_ENV, styler, type LineKind } from './styler.js';
 
-describe('styler — line-kind contract + pass-through function', () => {
+// Force isTTY=true at module scope so the styler safeguards do not short-
+// circuit ANSI emission when tests run in a non-TTY worker (vitest workers
+// typically have stdout.isTTY undefined when run from a piped CLI). The
+// dedicated S-1 safeguard tests below explicitly flip isTTY to false to
+// exercise the non-TTY return path.
+let origIsTTY: boolean | undefined;
+beforeAll(() => {
+  origIsTTY = process.stdout.isTTY;
+  process.stdout.isTTY = true;
+});
+afterAll(() => {
+  process.stdout.isTTY = origIsTTY;
+});
+
+describe('styler — line-kind contract', () => {
   it('ALL_LINE_KINDS contains exactly the 7 locked kinds', () => {
     expect(ALL_LINE_KINDS).toHaveLength(7);
     expect(ALL_LINE_KINDS).toEqual([
@@ -26,128 +40,130 @@ describe('styler — line-kind contract + pass-through function', () => {
       expect(typeof k).toBe('string');
     }
   });
+});
 
-  // ── styler() function — initial pass-through body ──────────────────────────
-  // One test per LineKind per dev-plan §11.13 test-surface spec: a regression
-  // in a single kind reports as one targeted failure instead of collapsing
-  // into a loop iteration that loses the failing-kind context.
+// ── styler() per-LineKind dispatch — one test per kind so a regression
+// in a single kind reports as one targeted failure instead of collapsing
+// into a loop iteration that loses the failing-kind context.
+//
+// Four kinds receive ANSI styling (popup-why-help, desc-base-truncated,
+// desc-base-expanded, shortcut-hint); three kinds inherit (option-label,
+// pinch-label, question) and are returned unchanged.
 
-  it('styler() preserves input for kind=popup-why-help', () => {
+describe('styler — per-kind styled dispatch', () => {
+  it('wraps popup-why-help with gray styling', () => {
     const sample = 'sample line content';
-    expect(styler(sample, 'popup-why-help')).toBe(sample);
+    const out = styler(sample, 'popup-why-help');
+    expect(out).not.toBe(sample);
+    expect(out).toContain(sample);
+    expect(out).toMatch(/\x1b\[/);
   });
 
-  it('styler() preserves input for kind=desc-base-truncated', () => {
+  it('wraps desc-base-truncated with dim+gray styling', () => {
     const sample = 'sample line content';
-    expect(styler(sample, 'desc-base-truncated')).toBe(sample);
+    const out = styler(sample, 'desc-base-truncated');
+    expect(out).not.toBe(sample);
+    expect(out).toContain(sample);
+    expect(out).toMatch(/\x1b\[/);
   });
 
-  it('styler() preserves input for kind=desc-base-expanded', () => {
+  it('wraps desc-base-expanded with gray styling', () => {
     const sample = 'sample line content';
-    expect(styler(sample, 'desc-base-expanded')).toBe(sample);
+    const out = styler(sample, 'desc-base-expanded');
+    expect(out).not.toBe(sample);
+    expect(out).toContain(sample);
+    expect(out).toMatch(/\x1b\[/);
   });
 
-  it('styler() preserves input for kind=shortcut-hint', () => {
+  it('wraps shortcut-hint with dim+italic styling', () => {
     const sample = 'sample line content';
-    expect(styler(sample, 'shortcut-hint')).toBe(sample);
+    const out = styler(sample, 'shortcut-hint');
+    expect(out).not.toBe(sample);
+    expect(out).toContain(sample);
+    expect(out).toMatch(/\x1b\[/);
   });
+});
 
-  it('styler() preserves input for kind=option-label', () => {
+describe('styler — per-kind inherit dispatch', () => {
+  it('returns option-label unchanged (inherits existing option-label styling)', () => {
     const sample = 'sample line content';
     expect(styler(sample, 'option-label')).toBe(sample);
   });
 
-  it('styler() preserves input for kind=pinch-label', () => {
+  it('returns pinch-label unchanged (inherits existing pinch-label styling)', () => {
     const sample = 'sample line content';
     expect(styler(sample, 'pinch-label')).toBe(sample);
   });
 
-  it('styler() preserves input for kind=question', () => {
+  it('returns question unchanged (plain reads naturally)', () => {
     const sample = 'sample line content';
     expect(styler(sample, 'question')).toBe(sample);
   });
+});
 
-  it('styler() covers EVERY LineKind value declared in ALL_LINE_KINDS (exhaustiveness sentinel)', () => {
-    // Forward-looking guard: if a future change adds an 8th kind without
-    // adding the corresponding per-kind test above, this exhaustiveness
-    // check flags the gap so the per-kind coverage stays in lockstep.
-    const covered: LineKind[] = [
-      'popup-why-help', 'desc-base-truncated', 'desc-base-expanded',
-      'shortcut-hint', 'option-label', 'pinch-label', 'question',
-    ];
+describe('styler — defensive contracts', () => {
+  it('covers every LineKind in ALL_LINE_KINDS without throwing', () => {
     for (const kind of ALL_LINE_KINDS) {
-      expect(covered).toContain(kind);
-    }
-    expect(covered.length).toBe(ALL_LINE_KINDS.length);
-  });
-
-  it('styler() preserves an empty input string for every LineKind', () => {
-    // Empty-input regression is a single-kind concern in practice (any one
-    // case-body that silently injects content on `''` would surface here);
-    // keeping this as a loop is intentional — the focus is the empty-string
-    // contract across all kinds, not per-kind body behaviour.
-    for (const kind of ALL_LINE_KINDS) {
-      expect(styler('', kind)).toBe('');
+      expect(() => styler('hello', kind)).not.toThrow();
     }
   });
 
-  it('styler() preserves multi-line input verbatim', () => {
+  it('preserves multi-line input for inherit kinds (no wrap injection mid-line)', () => {
     const multiline = 'line one\nline two\nline three';
     expect(styler(multiline, 'option-label')).toBe(multiline);
   });
 
-  it('styler() preserves input containing ANSI escape sequences (pass-through promise)', () => {
-    const ansi = '\x1b[31mred\x1b[0m';
-    expect(styler(ansi, 'question')).toBe(ansi);
-  });
-
-  it('styler() returns the line unchanged for an unrecognised kind (graceful-fallback contract)', () => {
-    // Forward-looking invariant: if a new LineKind is added in the future
-    // and the dispatch table is not yet updated, the styler must still
-    // return the input unchanged rather than throw or strip content. The
-    // pass-through body satisfies this trivially today; this test pins
-    // the contract so the future per-kind dispatch keeps the default
-    // branch intact.
+  it('returns input unchanged for an unrecognised kind (graceful-fallback contract)', () => {
     const unknownKind = 'future-kind-not-yet-locked' as unknown as LineKind;
     const sample = 'unchanged content';
     expect(styler(sample, unknownKind)).toBe(sample);
   });
+
+  it('throws in dev builds when the input contains an ESC byte for any LineKind (layout-leak guard)', () => {
+    // Layout's contract is to emit raw text for every line-kind, including
+    // inherit kinds — the guard surfaces a leak regardless of where it
+    // originates so the diagnostic is uniform.
+    const preStyled = '\x1b[31mred\x1b[0m';
+    for (const kind of ALL_LINE_KINDS) {
+      expect(() => styler(preStyled, kind)).toThrow(/styler received pre-styled input/);
+    }
+  });
 });
 
-describe('styler — NEXPATH_STYLER_PASSTHROUGH diagnostic bypass', () => {
+describe('styler — NEXPATH_STYLE_PASSTHROUGH diagnostic bypass', () => {
   let saved: string | undefined;
 
   beforeEach(() => {
-    saved = process.env[STYLER_PASSTHROUGH_ENV];
+    saved = process.env[STYLE_PASSTHROUGH_ENV];
   });
 
   afterEach(() => {
-    if (saved === undefined) delete process.env[STYLER_PASSTHROUGH_ENV];
-    else                     process.env[STYLER_PASSTHROUGH_ENV] = saved;
+    if (saved === undefined) delete process.env[STYLE_PASSTHROUGH_ENV];
+    else                     process.env[STYLE_PASSTHROUGH_ENV] = saved;
   });
 
-  it('exports STYLER_PASSTHROUGH_ENV as the dev-plan-locked env-var key', () => {
-    expect(STYLER_PASSTHROUGH_ENV).toBe('NEXPATH_STYLER_PASSTHROUGH');
+  it('exports STYLE_PASSTHROUGH_ENV as the locked env-var key', () => {
+    expect(STYLE_PASSTHROUGH_ENV).toBe('NEXPATH_STYLE_PASSTHROUGH');
   });
 
-  it('isStylerPassthroughActive() returns true when env-var === "1"', () => {
-    process.env[STYLER_PASSTHROUGH_ENV] = '1';
-    expect(isStylerPassthroughActive()).toBe(true);
+  it('isStylePassthroughActive() returns true when env-var === "1"', () => {
+    process.env[STYLE_PASSTHROUGH_ENV] = '1';
+    expect(isStylePassthroughActive()).toBe(true);
   });
 
-  it('isStylerPassthroughActive() returns false for unset / empty / non-"1" values', () => {
-    delete process.env[STYLER_PASSTHROUGH_ENV];
-    expect(isStylerPassthroughActive()).toBe(false);
-    process.env[STYLER_PASSTHROUGH_ENV] = '';
-    expect(isStylerPassthroughActive()).toBe(false);
-    process.env[STYLER_PASSTHROUGH_ENV] = '0';
-    expect(isStylerPassthroughActive()).toBe(false);
-    process.env[STYLER_PASSTHROUGH_ENV] = 'true';
-    expect(isStylerPassthroughActive()).toBe(false);
+  it('isStylePassthroughActive() returns false for unset / empty / non-"1" values', () => {
+    delete process.env[STYLE_PASSTHROUGH_ENV];
+    expect(isStylePassthroughActive()).toBe(false);
+    process.env[STYLE_PASSTHROUGH_ENV] = '';
+    expect(isStylePassthroughActive()).toBe(false);
+    process.env[STYLE_PASSTHROUGH_ENV] = '0';
+    expect(isStylePassthroughActive()).toBe(false);
+    process.env[STYLE_PASSTHROUGH_ENV] = 'true';
+    expect(isStylePassthroughActive()).toBe(false);
   });
 
   it('styler() returns input unchanged for every LineKind when bypass is active', () => {
-    process.env[STYLER_PASSTHROUGH_ENV] = '1';
+    process.env[STYLE_PASSTHROUGH_ENV] = '1';
     const sample = 'sample bypass content';
     for (const kind of ALL_LINE_KINDS) {
       expect(styler(sample, kind)).toBe(sample);
@@ -155,7 +171,7 @@ describe('styler — NEXPATH_STYLER_PASSTHROUGH diagnostic bypass', () => {
   });
 
   it('styler() bypass survives multi-line + ANSI inputs (defensive contract)', () => {
-    process.env[STYLER_PASSTHROUGH_ENV] = '1';
+    process.env[STYLE_PASSTHROUGH_ENV] = '1';
     const multiline = 'one\ntwo\nthree';
     const ansi      = '\x1b[31mred\x1b[0m';
     expect(styler(multiline, 'option-label')).toBe(multiline);
@@ -163,13 +179,65 @@ describe('styler — NEXPATH_STYLER_PASSTHROUGH diagnostic bypass', () => {
   });
 
   it('unset env-var falls through to the normal styler dispatch body', () => {
-    delete process.env[STYLER_PASSTHROUGH_ENV];
+    delete process.env[STYLE_PASSTHROUGH_ENV];
     const sample = 'normal path';
-    // With the current pass-through body, both branches produce the same
-    // output; this test pins the structural contract that the unset path
-    // exercises the normal dispatch (verified once the body grows per-kind
-    // ANSI mapping by Bhavnesh — at that point this test asserts that the
-    // styler emits styled output when bypass is OFF).
+    // Inherit kinds still return input unchanged; styled kinds wrap with ANSI.
     expect(styler(sample, 'question')).toBe(sample);
+    expect(styler(sample, 'popup-why-help')).not.toBe(sample);
+  });
+});
+
+describe('styler — cross-terminal safeguards (NO_COLOR + isTTY)', () => {
+  let savedNoColor: string | undefined;
+  let savedIsTTY:   boolean | undefined;
+
+  beforeEach(() => {
+    savedNoColor = process.env['NO_COLOR'];
+    savedIsTTY   = process.stdout.isTTY;
+  });
+
+  afterEach(() => {
+    if (savedNoColor === undefined) delete process.env['NO_COLOR'];
+    else                            process.env['NO_COLOR'] = savedNoColor;
+    process.stdout.isTTY = savedIsTTY;
+  });
+
+  it('NO_COLOR set → styler returns input unchanged for every LineKind', () => {
+    process.env['NO_COLOR'] = '1';
+    process.stdout.isTTY    = true;
+    const sample = 'no-color content';
+    for (const kind of ALL_LINE_KINDS) {
+      expect(styler(sample, kind)).toBe(sample);
+    }
+  });
+
+  it('NO_COLOR set to any non-empty value triggers the safeguard', () => {
+    process.env['NO_COLOR'] = 'anything';
+    process.stdout.isTTY    = true;
+    expect(styler('hello', 'popup-why-help')).toBe('hello');
+  });
+
+  it('stdout.isTTY=false → styler returns input unchanged for every LineKind', () => {
+    delete process.env['NO_COLOR'];
+    process.stdout.isTTY = false;
+    const sample = 'non-tty content';
+    for (const kind of ALL_LINE_KINDS) {
+      expect(styler(sample, kind)).toBe(sample);
+    }
+  });
+
+  it('stdout.isTTY=undefined (piped output) → styler returns input unchanged', () => {
+    delete process.env['NO_COLOR'];
+    process.stdout.isTTY = undefined as unknown as boolean;
+    expect(styler('hello', 'popup-why-help')).toBe('hello');
+  });
+
+  it('isTTY=true AND NO_COLOR unset → styler applies styling on styled kinds', () => {
+    delete process.env['NO_COLOR'];
+    process.stdout.isTTY = true;
+    const sample = 'styled content';
+    const out = styler(sample, 'popup-why-help');
+    expect(out).not.toBe(sample);
+    expect(out).toContain(sample);
   });
 });

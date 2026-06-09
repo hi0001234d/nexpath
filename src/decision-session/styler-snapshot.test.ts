@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { STYLER_PASSTHROUGH_ENV, styler, type LineKind } from './styler.js';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { STYLE_PASSTHROUGH_ENV, styler, type LineKind } from './styler.js';
 import {
   captureStyledAndUnstyled,
   captureStyledAndUnstyledAsync,
@@ -8,32 +8,44 @@ import {
 } from './styler-snapshot.js';
 import { computeLayout, type RenderLoopOptions } from './render-loop.js';
 
+// Force isTTY=true so the styler safeguards do not short-circuit ANSI
+// emission in non-TTY test workers — captureStyledAndUnstyled is only
+// meaningful when the OFF path actually applies styling.
+let origIsTTY: boolean | undefined;
+beforeAll(() => {
+  origIsTTY = process.stdout.isTTY;
+  process.stdout.isTTY = true;
+});
+afterAll(() => {
+  process.stdout.isTTY = origIsTTY;
+});
+
 describe('styler-snapshot — withStylerEnv', () => {
   let saved: string | undefined;
-  beforeEach(() => { saved = process.env[STYLER_PASSTHROUGH_ENV]; });
+  beforeEach(() => { saved = process.env[STYLE_PASSTHROUGH_ENV]; });
   afterEach(() => {
-    if (saved === undefined) delete process.env[STYLER_PASSTHROUGH_ENV];
-    else                     process.env[STYLER_PASSTHROUGH_ENV] = saved;
+    if (saved === undefined) delete process.env[STYLE_PASSTHROUGH_ENV];
+    else                     process.env[STYLE_PASSTHROUGH_ENV] = saved;
   });
 
   it('sets the env-var inside the callback and restores it afterwards', () => {
-    delete process.env[STYLER_PASSTHROUGH_ENV];
-    const observed = withStylerEnv('1', () => process.env[STYLER_PASSTHROUGH_ENV]);
+    delete process.env[STYLE_PASSTHROUGH_ENV];
+    const observed = withStylerEnv('1', () => process.env[STYLE_PASSTHROUGH_ENV]);
     expect(observed).toBe('1');
-    expect(process.env[STYLER_PASSTHROUGH_ENV]).toBeUndefined();
+    expect(process.env[STYLE_PASSTHROUGH_ENV]).toBeUndefined();
   });
 
   it('deletes the env-var inside the callback when value is undefined and restores afterwards', () => {
-    process.env[STYLER_PASSTHROUGH_ENV] = '1';
-    const observed = withStylerEnv(undefined, () => process.env[STYLER_PASSTHROUGH_ENV]);
+    process.env[STYLE_PASSTHROUGH_ENV] = '1';
+    const observed = withStylerEnv(undefined, () => process.env[STYLE_PASSTHROUGH_ENV]);
     expect(observed).toBeUndefined();
-    expect(process.env[STYLER_PASSTHROUGH_ENV]).toBe('1');
+    expect(process.env[STYLE_PASSTHROUGH_ENV]).toBe('1');
   });
 
   it('restores the prior env-var on thrown exception inside the callback', () => {
-    process.env[STYLER_PASSTHROUGH_ENV] = 'prior-value';
+    process.env[STYLE_PASSTHROUGH_ENV] = 'prior-value';
     expect(() => withStylerEnv('1', () => { throw new Error('boom'); })).toThrow('boom');
-    expect(process.env[STYLER_PASSTHROUGH_ENV]).toBe('prior-value');
+    expect(process.env[STYLE_PASSTHROUGH_ENV]).toBe('prior-value');
   });
 
   it('returns the callback\'s value', () => {
@@ -44,34 +56,34 @@ describe('styler-snapshot — withStylerEnv', () => {
 
 describe('styler-snapshot — withStylerEnvAsync', () => {
   let saved: string | undefined;
-  beforeEach(() => { saved = process.env[STYLER_PASSTHROUGH_ENV]; });
+  beforeEach(() => { saved = process.env[STYLE_PASSTHROUGH_ENV]; });
   afterEach(() => {
-    if (saved === undefined) delete process.env[STYLER_PASSTHROUGH_ENV];
-    else                     process.env[STYLER_PASSTHROUGH_ENV] = saved;
+    if (saved === undefined) delete process.env[STYLE_PASSTHROUGH_ENV];
+    else                     process.env[STYLE_PASSTHROUGH_ENV] = saved;
   });
 
   it('handles a resolved promise + restores env afterwards', async () => {
-    delete process.env[STYLER_PASSTHROUGH_ENV];
-    const observed = await withStylerEnvAsync('1', async () => process.env[STYLER_PASSTHROUGH_ENV]);
+    delete process.env[STYLE_PASSTHROUGH_ENV];
+    const observed = await withStylerEnvAsync('1', async () => process.env[STYLE_PASSTHROUGH_ENV]);
     expect(observed).toBe('1');
-    expect(process.env[STYLER_PASSTHROUGH_ENV]).toBeUndefined();
+    expect(process.env[STYLE_PASSTHROUGH_ENV]).toBeUndefined();
   });
 
   it('restores the prior env-var on a rejected promise', async () => {
-    process.env[STYLER_PASSTHROUGH_ENV] = 'prior-async';
+    process.env[STYLE_PASSTHROUGH_ENV] = 'prior-async';
     await expect(
       withStylerEnvAsync('1', async () => { throw new Error('async-boom'); }),
     ).rejects.toThrow('async-boom');
-    expect(process.env[STYLER_PASSTHROUGH_ENV]).toBe('prior-async');
+    expect(process.env[STYLE_PASSTHROUGH_ENV]).toBe('prior-async');
   });
 });
 
 describe('styler-snapshot — captureStyledAndUnstyled', () => {
   let saved: string | undefined;
-  beforeEach(() => { saved = process.env[STYLER_PASSTHROUGH_ENV]; });
+  beforeEach(() => { saved = process.env[STYLE_PASSTHROUGH_ENV]; });
   afterEach(() => {
-    if (saved === undefined) delete process.env[STYLER_PASSTHROUGH_ENV];
-    else                     process.env[STYLER_PASSTHROUGH_ENV] = saved;
+    if (saved === undefined) delete process.env[STYLE_PASSTHROUGH_ENV];
+    else                     process.env[STYLE_PASSTHROUGH_ENV] = saved;
   });
 
   it('invokes the produce callback twice — once per env-var state', () => {
@@ -85,14 +97,16 @@ describe('styler-snapshot — captureStyledAndUnstyled', () => {
     expect(out).toEqual({ styled: 'demo', unstyled: 'demo' });
   });
 
-  it('captures styler output that reflects the env-var during each call', () => {
-    // Inside each invocation, the styler observes the env-var state.
-    // Today's pass-through body returns input unchanged in BOTH paths,
-    // so styled and unstyled match — Bhavnesh's Phase 6 styler body
-    // will diverge them.
+  it('captures styler output that diverges on styled kinds (styled wraps ANSI; unstyled passes through)', () => {
     const allKinds: LineKind[] = ['popup-why-help', 'option-label', 'question'];
     const out = captureStyledAndUnstyled(() => allKinds.map((k) => styler('sample', k)));
-    expect(out.styled).toEqual(out.unstyled);
+    // Styled output: popup-why-help wrapped with ANSI; option-label + question pass through.
+    expect(out.styled[0]).not.toBe('sample');
+    expect(out.styled[0]).toContain('sample');
+    expect(out.styled[1]).toBe('sample');
+    expect(out.styled[2]).toBe('sample');
+    // Unstyled output (bypass ON): all three pass through.
+    expect(out.unstyled).toEqual(['sample', 'sample', 'sample']);
   });
 
   it('snapshot-ready demo — capturing computeLayout output via the helper', () => {
@@ -104,21 +118,21 @@ describe('styler-snapshot — captureStyledAndUnstyled', () => {
     const out = captureStyledAndUnstyled(
       () => computeLayout(opts, { focusedIndex: 0, expandedOptions: new Set(), scrollOffset: 0 }).styledLines,
     );
-    // Phase 5 baseline: pass-through styler → equal arrays.
-    expect(out.styled).toEqual(out.unstyled);
-    // Both arrays remain snapshot-able when Bhavnesh's Phase 6 work
-    // diverges them — the helper API does not change.
+    // Styled and unstyled both remain snapshot-able; the styled variant
+    // contains ANSI on the styled line-kinds while the unstyled variant
+    // matches the raw layout output verbatim.
     expect(Array.isArray(out.styled)).toBe(true);
     expect(Array.isArray(out.unstyled)).toBe(true);
+    expect(out.styled).not.toEqual(out.unstyled);
   });
 });
 
 describe('styler-snapshot — captureStyledAndUnstyledAsync', () => {
   let saved: string | undefined;
-  beforeEach(() => { saved = process.env[STYLER_PASSTHROUGH_ENV]; });
+  beforeEach(() => { saved = process.env[STYLE_PASSTHROUGH_ENV]; });
   afterEach(() => {
-    if (saved === undefined) delete process.env[STYLER_PASSTHROUGH_ENV];
-    else                     process.env[STYLER_PASSTHROUGH_ENV] = saved;
+    if (saved === undefined) delete process.env[STYLE_PASSTHROUGH_ENV];
+    else                     process.env[STYLE_PASSTHROUGH_ENV] = saved;
   });
 
   it('produces styled + unstyled keys from an async producer', async () => {

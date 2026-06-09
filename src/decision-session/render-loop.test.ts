@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PassThrough } from 'node:stream';
 import {
   computeLayout,
@@ -21,6 +21,18 @@ import {
   type SelectableItem,
 } from './render-loop.js';
 import { ALL_LINE_KINDS } from './styler.js';
+
+// Force isTTY=true so the styler emits ANSI on its styled kinds — without
+// this the non-TTY safeguard short-circuits the styler dispatch to
+// pass-through and the styledLines vs emissions divergence collapses.
+let origIsTTY: boolean | undefined;
+beforeAll(() => {
+  origIsTTY = process.stdout.isTTY;
+  process.stdout.isTTY = true;
+});
+afterAll(() => {
+  process.stdout.isTTY = origIsTTY;
+});
 
 async function* eventsOf(...names: KeyEvent['name'][]): AsyncIterable<KeyEvent> {
   for (const name of names) yield { name };
@@ -183,17 +195,30 @@ describe('render-loop — LineKind separate-element invariant (dev-plan §11.11)
   });
 });
 
-describe('render-loop — styler dispatch (dev-plan §11.10 D6)', () => {
+describe('render-loop — styler dispatch', () => {
   it('runs every emission through styler — styledLines has the same length as emissions', () => {
     const r = computeLayout(makeOpts({ subtitle: 's', whyHelpBlock: 'a\nb\nc' }), FRESH_STATE);
     expect(r.styledLines).toHaveLength(r.emissions.length);
   });
 
-  it('pass-through styler keeps text identical to emissions (Phase 1 styler body is pass-through)', () => {
-    const r = computeLayout(makeOpts(), FRESH_STATE);
+  it('styled kinds wrap the emission text with ANSI; inherit kinds pass through verbatim', () => {
+    const r = computeLayout(makeOpts({ subtitle: 's', whyHelpBlock: 'a\nb\nc' }), FRESH_STATE);
+    const styledKinds = new Set(['popup-why-help', 'desc-base-truncated', 'desc-base-expanded', 'shortcut-hint']);
+    let sawAtLeastOneStyledWrap = false;
     for (let i = 0; i < r.emissions.length; i++) {
-      expect(r.styledLines[i]).toBe(r.emissions[i].text);
+      const { text, kind } = r.emissions[i];
+      if (styledKinds.has(kind)) {
+        if (text.length > 0) {
+          expect(r.styledLines[i]).not.toBe(text);
+          expect(r.styledLines[i]).toContain(text);
+          expect(r.styledLines[i]).toMatch(/\x1b\[/);
+          sawAtLeastOneStyledWrap = true;
+        }
+      } else {
+        expect(r.styledLines[i]).toBe(text);
+      }
     }
+    expect(sawAtLeastOneStyledWrap).toBe(true);
   });
 });
 
