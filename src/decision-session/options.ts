@@ -9785,6 +9785,7 @@ export const ABSENCE_DECISION_FATIGUE_PATTERN_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_DECISION_FATIGUE_PATTERN",
   question:      'Long acceptance streak — applied critical review recently?',
   pinchFallback: 'Streak alert.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_DECISION_FATIGUE_PATTERN'],
   L1: [
     {
       option: 'Review the last few AI responses critically — especially for edge cases, hidden assumptions, and anything that was accepted without being read carefully.',
@@ -9842,6 +9843,7 @@ export const ABSENCE_WORK_RHYTHM_CHECK_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_WORK_RHYTHM_CHECK",
   question:      'Rapid prompting — verified each response before continuing?',
   pinchFallback: 'Slow down.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_WORK_RHYTHM_CHECK'],
   L1: [
     {
       option: 'Read and verify the last AI response before continuing — check for anything that looks right at a glance but might be wrong: logic gaps, unchecked edge cases, incomplete error handling.',
@@ -9899,6 +9901,7 @@ export const ABSENCE_FOCUS_DRIFT_DETECTION_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_FOCUS_DRIFT_DETECTION",
   question:      'Multiple areas open — completed any end-to-end?',
   pinchFallback: 'Focus drift.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_FOCUS_DRIFT_DETECTION'],
   L1: [
     {
       option: 'Finish one thing before starting another: identify what is open right now, pick the most important one, and close it completely before touching anything else.',
@@ -9956,6 +9959,7 @@ export const ABSENCE_SESSION_LENGTH_CHECKPOINT_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_SESSION_LENGTH_CHECKPOINT",
   question:      'Extended session — context checkpoint done?',
   pinchFallback: 'Checkpoint due.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_SESSION_LENGTH_CHECKPOINT'],
   L1: [
     {
       option: 'Drop a context checkpoint before continuing: what has been built, what decisions were made, what is still open, and what the current goal is.',
@@ -10072,6 +10076,7 @@ export const ABSENCE_DECISION_FATIGUE_PATTERN_FORMAL: DecisionContent = {
   signalType:   "ABSENCE_DECISION_FATIGUE_PATTERN",
   question:      'Long acceptance streak — applied critical review recently?',
   pinchFallback: 'Streak alert.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_DECISION_FATIGUE_PATTERN'],
   L1: [
     {
       option: 'Apply deliberate critical review to the most recent AI responses: identify any assumptions that have not been validated, logic that could fail under edge cases, and changes made without explicit verification.',
@@ -10129,6 +10134,7 @@ export const ABSENCE_WORK_RHYTHM_CHECK_FORMAL: DecisionContent = {
   signalType:   "ABSENCE_WORK_RHYTHM_CHECK",
   question:      'Rapid prompting — verified each response before continuing?',
   pinchFallback: 'Slow down.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_WORK_RHYTHM_CHECK'],
   L1: [
     {
       option: 'Read and verify the last AI response in full before sending the next prompt: check any logic or state assumptions, confirm any generated code is complete and correct, and identify anything that was not explicitly validated.',
@@ -10186,6 +10192,7 @@ export const ABSENCE_FOCUS_DRIFT_DETECTION_FORMAL: DecisionContent = {
   signalType:   "ABSENCE_FOCUS_DRIFT_DETECTION",
   question:      'Multiple areas open — completed any end-to-end?',
   pinchFallback: 'Focus drift.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_FOCUS_DRIFT_DETECTION'],
   L1: [
     {
       option: 'Sequence your work: identify the highest-priority open concern in this session, complete it end-to-end, and define done for that domain before opening any additional concerns.',
@@ -10243,6 +10250,7 @@ export const ABSENCE_SESSION_LENGTH_CHECKPOINT_FORMAL: DecisionContent = {
   signalType:   "ABSENCE_SESSION_LENGTH_CHECKPOINT",
   question:      'Extended session — context checkpoint done?',
   pinchFallback: 'Checkpoint due.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_SESSION_LENGTH_CHECKPOINT'],
   L1: [
     {
       option: 'Summarize the current state of what was just built: what decisions have been made, what is working, what remains incomplete, and what has changed since the session started — use this as a re-anchor before continuing.',

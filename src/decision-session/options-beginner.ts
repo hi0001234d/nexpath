@@ -2590,6 +2590,7 @@ export const ABSENCE_DECISION_FATIGUE_PATTERN_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_DECISION_FATIGUE_PATTERN",
   question:      'Accepting without reviewing — applied critical check recently?',
   pinchFallback: 'Streak alert.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_DECISION_FATIGUE_PATTERN'],
   L1: [
     {
       option: 'Look back at the last few suggestions made — is there anything that looks right but you have not double-checked?',
@@ -2638,6 +2639,7 @@ export const ABSENCE_WORK_RHYTHM_CHECK_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_WORK_RHYTHM_CHECK",
   question:      'Sending fast — read the last response fully before continuing?',
   pinchFallback: 'Slow down.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_WORK_RHYTHM_CHECK'],
   L1: [
     {
       option: 'Read the last response carefully before continuing — is there anything that looks right but you have not actually checked?',
@@ -2686,6 +2688,7 @@ export const ABSENCE_FOCUS_DRIFT_DETECTION_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_FOCUS_DRIFT_DETECTION",
   question:      'Working on many things — finished any of them yet?',
   pinchFallback: 'Focus drift.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_FOCUS_DRIFT_DETECTION'],
   L1: [
     {
       option: 'Let us focus on one thing at a time — what is the most important thing to finish in this session before we start anything new?',
@@ -2734,6 +2737,7 @@ export const ABSENCE_SESSION_LENGTH_CHECKPOINT_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_SESSION_LENGTH_CHECKPOINT",
   question:      'Working for a while — what have you built so far?',
   pinchFallback: 'Checkpoint due.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_SESSION_LENGTH_CHECKPOINT'],
   L1: [
     {
       option: 'Summarize what we have built so far in this session — what is working, what is still in progress, and what we still need to do.',
