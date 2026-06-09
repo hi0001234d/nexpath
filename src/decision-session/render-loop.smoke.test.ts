@@ -19,7 +19,8 @@
 //     effective cap
 //   - the focused option remains inside the viewport's auto-scrolled window
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { existsSync, readFileSync, unlinkSync } from 'node:fs';
 import {
   D1_TRUNCATED_LINE_CAP,
   D2_TRUNCATION_MARKER,
@@ -31,6 +32,7 @@ import {
   type LayoutState,
   type RenderLoopOptions,
 } from './render-loop.js';
+import { RENDER_DEBUG_ENV, RENDER_DEBUG_FILE } from './render-telemetry.js';
 
 const TERMINAL_ROWS    = [12, 20, 40, 80] as const;
 const DESC_LINE_COUNTS = [1, 2, 4, 8, 10, 15] as const;
@@ -143,6 +145,72 @@ describe('render-loop smoke matrix (4 rows × 6 desc-lengths × 3 positions = 72
       });
     },
   );
+});
+
+// Refusal-telemetry coverage — the locked matrix dimensions above start
+// at rows=12, where effectiveExpandedCap(avail) == D5_MIN_EFFECTIVE_CAP
+// and expansion is the minimum-allowed case. The `whyhelp_expand_skipped_too_short`
+// event only fires when avail-5 < D5_MIN_EFFECTIVE_CAP (rows < 12), so
+// the matrix itself can't exercise the iff. The two tests below pin both
+// directions of the iff outside the matrix, exercising the actual debug
+// file write so the integration between layout refusal + the telemetry
+// sink is verified end-to-end.
+describe('render-loop smoke matrix — refusal telemetry (outside the locked matrix)', () => {
+  let savedEnv: string | undefined;
+
+  beforeEach(() => {
+    savedEnv = process.env[RENDER_DEBUG_ENV];
+    process.env[RENDER_DEBUG_ENV] = '1';
+    if (existsSync(RENDER_DEBUG_FILE)) {
+      try { unlinkSync(RENDER_DEBUG_FILE); } catch { /* best-effort */ }
+    }
+  });
+
+  afterEach(() => {
+    if (savedEnv === undefined) delete process.env[RENDER_DEBUG_ENV];
+    else                        process.env[RENDER_DEBUG_ENV] = savedEnv;
+    if (existsSync(RENDER_DEBUG_FILE)) {
+      try { unlinkSync(RENDER_DEBUG_FILE); } catch { /* best-effort */ }
+    }
+  });
+
+  function readEvents(eventName: string): Array<Record<string, unknown>> {
+    if (!existsSync(RENDER_DEBUG_FILE)) return [];
+    const lines = readFileSync(RENDER_DEBUG_FILE, 'utf-8').trim().split('\n').filter(Boolean);
+    return lines
+      .map((l) => JSON.parse(l) as Record<string, unknown>)
+      .filter((r) => r['event'] === eventName);
+  }
+
+  it('emits whyhelp_expand_skipped_too_short when the terminal is too short for the secondary cap', () => {
+    // rows=8 → avail = 8 - 3 - 2 = 3 → effectiveExpandedCap = min(8, max(0, -2)) = 0 → < D5_MIN_EFFECTIVE_CAP → refused
+    const opts = makeOpts(8, 4, 0);
+    const state: LayoutState = {
+      focusedIndex:    0,
+      expandedOptions: new Set([0]),
+      scrollOffset:    0,
+    };
+    computeLayout(opts, state);
+    const events = readEvents('whyhelp_expand_skipped_too_short');
+    expect(events.length).toBeGreaterThanOrEqual(1);
+    const refused = events.find((e) => e['optionIndex'] === 0)!;
+    expect(refused).toBeDefined();
+    expect(refused['availBudget']).toBe(3);
+    expect(refused['minRequired']).toBe(D5_MIN_EFFECTIVE_CAP);
+  });
+
+  it('does NOT emit whyhelp_expand_skipped_too_short when the terminal has room for the secondary cap', () => {
+    // rows=20 → avail = 15 → effectiveExpandedCap = min(8, 10) = 8 → ≥ D5_MIN_EFFECTIVE_CAP → allowed
+    const opts = makeOpts(20, 4, 0);
+    const state: LayoutState = {
+      focusedIndex:    0,
+      expandedOptions: new Set([0]),
+      scrollOffset:    0,
+    };
+    computeLayout(opts, state);
+    const events = readEvents('whyhelp_expand_skipped_too_short');
+    expect(events).toHaveLength(0);
+  });
 });
 
 describe('render-loop smoke matrix — sanity bounds (matrix wiring + caps)', () => {
