@@ -6001,6 +6001,7 @@ const ABSENCE_DEMO_VS_PRODUCT_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_DEMO_VS_PRODUCT",
   question:      'Is this demo quality or production quality — explicit distinction?',
   pinchFallback: 'Demo vs. production: name which.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_DEMO_VS_PRODUCT'],
   L1: [
     {
       option: 'Production readiness check: what quality standard applies to what\'s being built? Demo code and production code have different requirements. If this is a demo — mark it explicitly: hardcoded data, no edge cases, visual-only. If it\'s the actual product — it needs real data connected, error states handled, and edge cases working.',
@@ -6058,6 +6059,7 @@ const ABSENCE_USER_JOURNEY_CHECK_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_USER_JOURNEY_CHECK",
   question:      'Feature being built — is the full user journey mapped?',
   pinchFallback: 'Map the user journey first.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_USER_JOURNEY_CHECK'],
   L1: [
     {
       option: 'Jeff Patton User Story Mapping: once a basic happy path is in place, consider edge cases, alternatives, and exceptions. Before building more — answer: (1) what does the user see the first time they encounter this feature? (2) what happens when there\'s no data — the empty state? (3) what happens when something goes wrong — the error state? Each is a must-handle state.',
@@ -6115,6 +6117,7 @@ const ABSENCE_TECHNICAL_SPIKE_TREATMENT_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_TECHNICAL_SPIKE_TREATMENT",
   question:      'Exploring / experimenting — spike or production code?',
   pinchFallback: 'Spike or production: name which.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_TECHNICAL_SPIKE_TREATMENT'],
   L1: [
     {
       option: 'XP spike solution principle (Kent Beck / James Shore): \'Never copy spike code into production code. Even if it is exactly what you need, rewrite it using TDD so that it meets production standards.\' The purpose of exploratory code is knowledge, not shipping. Name what\'s being done: spike (to learn) or production (to ship)?',
@@ -6172,6 +6175,7 @@ const ABSENCE_DEPENDENCY_ADVENTURE_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_DEPENDENCY_ADVENTURE",
   question:      'Adding a dependency — evaluated the need and maintenance cost?',
   pinchFallback: 'Evaluate before adding.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_DEPENDENCY_ADVENTURE'],
   L1: [
     {
       option: 'Dependency management principle: \'Dependencies are not free and extract an ongoing maintenance cost.\' Every library added for interest rather than specific need becomes code you did not write but have localized responsibility for. Before adding this — what specific problem does it solve that you can\'t solve without it?',
@@ -6235,6 +6239,7 @@ const ABSENCE_RESTART_IMPULSE_CHECK_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_RESTART_IMPULSE_CHECK",
   question:      'Hitting friction — debugged before considering a restart?',
   pinchFallback: 'Debug before restarting.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_RESTART_IMPULSE_CHECK'],
   L1: [
     {
       option: 'Joel Spolsky: \'When you start from scratch there is absolutely no reason to believe that you are going to do a better job than you did the first time. Each fixed bug took weeks or years of real-world usage to be discovered — when you throw away code, all the knowledge that went into it is lost.\' Before restarting: what specifically went wrong and why?',
