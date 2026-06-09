@@ -3829,6 +3829,7 @@ const ABSENCE_TASK_SIZING: DecisionContent = {
   signalType:   "ABSENCE_TASK_SIZING",
   question:      'Tasks defined — are they scoped to single sessions?',
   pinchFallback: 'Tasks oversized.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_TASK_SIZING'],
   L1: [
     {
       option: 'Review the task list for this project and validate sizing: each task should be completable in a single focused session. Identify any tasks that span multiple concerns, require too many unknowns to resolve in one sitting, or are so large that progress cannot be verified at the end of a session.',
@@ -3886,6 +3887,7 @@ const ABSENCE_TASK_SIZING_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_TASK_SIZING",
   question:      'Tasks listed — are they small enough to do in one go?',
   pinchFallback: 'Tasks too big.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_TASK_SIZING'],
   L1: [
     {
       option: 'Go through the tasks for this project — are any of them too big to finish in one session? If so, break them down into smaller pieces that each have a clear endpoint.',
@@ -3943,6 +3945,7 @@ const ABSENCE_TASK_DEFINITION_OF_DONE: DecisionContent = {
   signalType:   "ABSENCE_TASK_DEFINITION_OF_DONE",
   question:      'Tasks ordered — does each task have a definition of done?',
   pinchFallback: 'No done criteria.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_TASK_DEFINITION_OF_DONE'],
   L1: [
     {
       option: 'Define the completion criteria for each task in this project: for every task, state what must be true for the task to be considered complete — what output exists, what has been verified, and what has not been left in an ambiguous or partially done state.',
@@ -4000,6 +4003,7 @@ const ABSENCE_TASK_DEFINITION_OF_DONE_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_TASK_DEFINITION_OF_DONE",
   question:      'Tasks set — how do we know when each one\'s done?',
   pinchFallback: 'Done criteria missing.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_TASK_DEFINITION_OF_DONE'],
   L1: [
     {
       option: 'For each task in this project, define what done looks like — not just \'it works\' but what specifically is true when the task is finished. What can be checked? What exists that didn\'t before?',
@@ -4059,6 +4063,7 @@ const ABSENCE_USER_FEEDBACK_REVIEW: DecisionContent = {
   signalType:   "ABSENCE_USER_FEEDBACK_REVIEW",
   question:      'Feedback received — has it been reviewed systematically?',
   pinchFallback: 'Feedback not reviewed.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_USER_FEEDBACK_REVIEW'],
   L1: [
     {
       option: 'Review the feedback received for this project systematically: collect all available feedback, categorize it by theme or feature area, and identify the recurring complaints, requests, and points of confusion that appear across multiple users.',
@@ -4116,6 +4121,7 @@ const ABSENCE_USER_FEEDBACK_REVIEW_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_USER_FEEDBACK_REVIEW",
   question:      'Feedback in — have we actually gone through it?',
   pinchFallback: 'Feedback not reviewed.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_USER_FEEDBACK_REVIEW'],
   L1: [
     {
       option: 'Go through the feedback for this project — collect what users have said, group it by theme, and tell me what comes up over and over. What are the most common complaints or requests?',
@@ -4173,6 +4179,7 @@ const ABSENCE_ITERATION_PLANNING: DecisionContent = {
   signalType:   "ABSENCE_ITERATION_PLANNING",
   question:      'Feedback reviewed — has the next iteration been planned?',
   pinchFallback: 'Next iteration unplanned.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_ITERATION_PLANNING'],
   L1: [
     {
       option: 'Define the priorities for the next iteration of this project based on the feedback: rank the issues identified, determine what must be addressed in this iteration versus what can be deferred, and establish the scope of the next version.',
@@ -4230,6 +4237,7 @@ const ABSENCE_ITERATION_PLANNING_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_ITERATION_PLANNING",
   question:      'Feedback reviewed — what are we building next?',
   pinchFallback: 'Next iteration unplanned.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_ITERATION_PLANNING'],
   L1: [
     {
       option: 'Figure out what to build next for this project based on the feedback — what needs to be fixed or added in the next round, what can wait, and what\'s the scope of the next version?',
@@ -4289,6 +4297,7 @@ const ABSENCE_SCOPE_CREEP: DecisionContent = {
   signalType:   "ABSENCE_SCOPE_CREEP",
   question:      'Scope expanding — still on original plan?',
   pinchFallback: 'Scope check?',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_SCOPE_CREEP'],
   L1: [
     {
       option: 'Audit what was just built against the original scope for this iteration: list what is complete, what is still in progress, and what has been added that was not in the original plan — and decide whether each addition stays in scope, gets deferred, or gets cut.',
@@ -4933,6 +4942,7 @@ const ABSENCE_SCOPE_CREEP_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_SCOPE_CREEP",
   question:      'Scope expanding — still on original plan?',
   pinchFallback: 'Scope check?',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_SCOPE_CREEP'],
   L1: [
     {
       option: 'Take a look at what was just built and compare it to what you originally set out to do — is anything in there that wasn\'t part of the plan? Go through it and flag any extras before adding more.',

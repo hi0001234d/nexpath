@@ -1463,6 +1463,7 @@ export const ABSENCE_TASK_SIZING_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_TASK_SIZING",
   question:      'Tasks listed — are they small enough to do in one go?',
   pinchFallback: 'Tasks too big.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_TASK_SIZING'],
   L1: [
     {
       option: '1. Look at the tasks for this project.\n2. Share with me: is there any task that feels too big to finish in one sitting?\n3. Then tell me: how would you split that task into smaller pieces that are easier to finish one at a time?',
@@ -1504,6 +1505,7 @@ export const ABSENCE_TASK_DEFINITION_OF_DONE_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_TASK_DEFINITION_OF_DONE",
   question:      'Tasks set — how do we know when each one\'s done?',
   pinchFallback: 'Done criteria missing.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_TASK_DEFINITION_OF_DONE'],
   L1: [
     {
       option: '1. Pick one task from this project.\n2. Share with me: how would you know when that task is finished? What would you check?\n3. Then do the same for each of the other tasks — for each one, tell me what \'done\' looks like.',
@@ -1547,6 +1549,7 @@ export const ABSENCE_USER_FEEDBACK_REVIEW_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_USER_FEEDBACK_REVIEW",
   question:      'Feedback in — have we actually gone through it?',
   pinchFallback: 'Feedback not reviewed.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_USER_FEEDBACK_REVIEW'],
   L1: [
     {
       option: '1. Look at the feedback users have given about this project.\n2. Share with me: what are the most common things people are saying? What keeps coming up?\n3. Then tell me: what\'s the one piece of feedback that feels most important to address?',
@@ -1588,6 +1591,7 @@ export const ABSENCE_ITERATION_PLANNING_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_ITERATION_PLANNING",
   question:      'Feedback reviewed — what are we building next?',
   pinchFallback: 'Next iteration unplanned.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_ITERATION_PLANNING'],
   L1: [
     {
       option: '1. Look at the feedback for this project.\n2. Share with me: what\'s the most important thing users want fixed or added?\n3. Then tell me: what would you work on first in the next version, and why?',
@@ -2130,6 +2134,7 @@ export const ABSENCE_SCOPE_CREEP_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_SCOPE_CREEP",
   question:      'Scope expanding — still on original plan?',
   pinchFallback: 'Scope check?',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_SCOPE_CREEP'],
   L1: [
     {
       option: '1. Look at what was just built and make a list of everything it does now. 2. Compare that list to what you originally planned to build. 3. Share anything that wasn\'t in the original plan with me before we continue.',
