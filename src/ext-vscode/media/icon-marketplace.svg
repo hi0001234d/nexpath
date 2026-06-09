@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 24 24">
+  <!-- Source for media/icon.png used by VS Code Marketplace / Open VSX listings.
+       The Marketplace rejects SVG icons (only PNG/JPG), so we render this to
+       PNG via `convert -density 384 -resize 128x128 icon-marketplace.svg icon.png`.
+       Distinct from icon.svg, which is the activity-bar contribution icon and
+       uses currentColor so VS Code can theme it. -->
+  <rect width="24" height="24" fill="#1e1e2e"/>
+  <path d="M12 4 v8 m0 0 l-6 8 m6 -8 l6 8" stroke="#cdd6f4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="12" cy="4" r="2" fill="#cba6f7"/>
+  <circle cx="6" cy="20" r="2" fill="#94e2d5"/>
+  <circle cx="18" cy="20" r="2" fill="#f9e2af"/>
+</svg>
