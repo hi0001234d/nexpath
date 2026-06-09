@@ -22,6 +22,7 @@
 // an environment-adaptive no-styling fallback path.
 
 import { createColors } from 'picocolors';
+import { writeRenderDebug } from './render-telemetry.js';
 
 // Force-enabled picocolors instance — the styler's own safeguards
 // (NEXPATH_STYLE_PASSTHROUGH bypass, NO_COLOR env-var, !isTTY) are the
@@ -111,6 +112,19 @@ export function isStylePassthroughActive(): boolean {
  * @returns     The styled string ready to write to stdout.
  */
 export function styler(line: string, kind: LineKind): string {
+  const out = stylerInner(line, kind);
+  // Per-line render-debug trace — no-op unless NEXPATH_RENDER_DEBUG=1 is set.
+  writeRenderDebug({
+    event:     'line_styled',
+    kind,
+    inputLen:  line.length,
+    outputLen: out.length,
+    hadAnsi:   out.length !== line.length,
+  });
+  return out;
+}
+
+function stylerInner(line: string, kind: LineKind): string {
   // Debug bypass — return raw layout output for diagnosis. Runs FIRST so
   // the bypass is honoured even when the dispatch body grows.
   if (isStylePassthroughActive()) return line;

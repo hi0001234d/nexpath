@@ -47,6 +47,7 @@ import { emitKeypressEvents } from 'node:readline';
 import type { LineKind } from './styler.js';
 import { styler } from './styler.js';
 import type { OptionEntry } from './options.js';
+import { writeRenderDebug } from './render-telemetry.js';
 
 // ── Public types ────────────────────────────────────────────────────────────
 
@@ -200,6 +201,27 @@ export const SUB_LINE_CONTINUATION_INDENT = '  ';
 
 /** Default minimum maxItems floor — matches TtySelectFn precedent. */
 export const DEFAULT_MAX_ITEMS_FLOOR = 5;
+
+/**
+ * Minimum effective expanded cap. If the secondary cap drops below this
+ * (terminal too short to fit a meaningful expansion plus the surrounding
+ * option-list context), the layout refuses to expand and silently falls
+ * back to the truncated D1 cap. Surfaced via the
+ * `whyhelp_expand_skipped_too_short` telemetry event.
+ */
+export const D5_MIN_EFFECTIVE_CAP = 2;
+
+/**
+ * Compute the effective expanded cap for the desc-base. Applies the
+ * secondary cap `min(D5_EXPANDED_LINE_CAP, max(0, avail - 5))` so at
+ * least 5 other rows remain visible in the option region. Returns 0
+ * when the terminal is too short for any expansion — callers compare
+ * against `D5_MIN_EFFECTIVE_CAP` to decide whether to refuse the
+ * expansion and stay in the truncated state.
+ */
+export function effectiveExpandedCap(avail: number): number {
+  return Math.min(D5_EXPANDED_LINE_CAP, Math.max(0, avail - 5));
+}
 
 /**
  * Locked shortcut-hint wording per dev-plan §13.5 + §13.10 + §14.2
@@ -367,6 +389,21 @@ export function renderDescBaseSubLines(
 export function computeLayout(opts: RenderLoopOptions, state: LayoutState): RenderedLayout {
   const emissions: LineEmission[] = [];
 
+  // ── Pre-compute fixedLines + avail (needed before the option loop so
+  //    the per-option desc-base cap can apply the secondary terminal-
+  //    size cap deterministically — D5 edge case (c)). The earlier
+  //    inline emission-filter recount is preserved below as a defensive
+  //    cross-check.
+  let preFixedLines = 2;  // pinch-label + question (always emitted)
+  if (opts.subtitle && opts.subtitle.length > 0) preFixedLines += 1;
+  if (opts.whyHelpBlock && opts.whyHelpBlock.length > 0) {
+    preFixedLines += opts.whyHelpBlock.split('\n').length;
+  }
+  preFixedLines += D4_PADDING_ROW_COUNT;
+  const preAvail        = Math.max(0, opts.rows - preFixedLines - 2);
+  const preExpandedCap  = effectiveExpandedCap(preAvail);
+  const expansionAllowed = preExpandedCap >= D5_MIN_EFFECTIVE_CAP;
+
   // ── Header pair ────────────────────────────────────────────────────────────
   emissions.push({ kind: 'pinch-label', text: opts.pinchLabel, optionIndex: null, isPadding: false });
 
@@ -430,13 +467,32 @@ export function computeLayout(opts: RenderLoopOptions, state: LayoutState): Rend
       // (expanded), append D2 `...` marker on overflow. Each wrapped line
       // emits as a SEPARATE element with the same LineKind so §11.11
       // separate-element invariant holds at the per-line granularity.
-      const isExpanded = state.expandedOptions.has(i);
+      const requestedExpanded = state.expandedOptions.has(i);
+      // D5 edge case (c): when the terminal is too short for the secondary
+      // cap to leave at least D5_MIN_EFFECTIVE_CAP rows of body, refuse the
+      // expansion and silently fall back to the truncated state. The
+      // refusal is surfaced via the whyhelp_expand_skipped_too_short
+      // telemetry event below.
+      const isExpanded = requestedExpanded && expansionAllowed;
       if (!item.isMeta && item.descBase && item.descBase.length > 0) {
-        const cap      = isExpanded ? D5_EXPANDED_LINE_CAP : D1_TRUNCATED_LINE_CAP;
+        const cap      = isExpanded ? preExpandedCap : D1_TRUNCATED_LINE_CAP;
         const kind     = isExpanded ? 'desc-base-expanded' : 'desc-base-truncated';
         const subLines = renderDescBaseSubLines(item.descBase, opts.cols, cap);
         for (const ln of subLines) {
           emissions.push({ kind, text: ln, optionIndex: i, isPadding: false });
+        }
+        // Refusal surface — emit once per refused-expansion so external
+        // observability can count occurrences. Only fires when the user
+        // requested expansion (state.expandedOptions had the index) but
+        // the terminal was too short to honour it.
+        if (requestedExpanded && !isExpanded) {
+          writeRenderDebug({
+            event:       'whyhelp_expand_skipped_too_short',
+            optionIndex: i,
+            availBudget: preAvail,
+            secondaryCap: preExpandedCap,
+            minRequired: D5_MIN_EFFECTIVE_CAP,
+          });
         }
       }
 
@@ -446,7 +502,6 @@ export function computeLayout(opts: RenderLoopOptions, state: LayoutState): Rend
       // wording per §13.5 W5 lock — the Space key toggles regardless of
       // current direction so the hint text is state-agnostic.
       // Placement: inline-below-focused-option per §11.2 Gap 4 fix.
-      void isExpanded;
       if (i === state.focusedIndex && !item.isMeta && item.descBase && item.descBase.length > 0) {
         emissions.push({
           kind:        'shortcut-hint',
@@ -558,17 +613,43 @@ export interface RenderLoopRunOptions {
   /** Async iterable of keypress events. Caller wires readline (or a mock in tests). */
   keyEvents:   AsyncIterable<KeyEvent>;
   /**
-   * D3 Space-key handler hook — Bhavnesh Phase 6 task wires the actual
-   * truncated ↔ expanded toggle here. Default = identity (Space is a no-op).
-   * The hook receives the current state + the focused item; returns the
-   * new state (typically toggling membership in `expandedOptions`).
+   * D3 Space-key handler. Default flips the focused option's index in
+   * `state.expandedOptions` — adds when not present, removes when present.
+   * Returns the original state unchanged when the focused item is a
+   * separator, a meta item, or carries no desc-base content (nothing to
+   * expand). Callers can override to add custom toggle behaviour.
    */
   onSpace?:    (state: LayoutState, focusedItem: SelectableItem | undefined) => LayoutState;
+  /**
+   * Optional structured-telemetry sink. Called by the render loop after
+   * each state-changing key event with a stable event name + payload.
+   * Render-loop has no projectRoot context, so callers wire this to
+   * writeTelemetry (or similar) with their own context. No-op when
+   * omitted.
+   */
+  telemetryHook?: (event: string, payload: Record<string, unknown>) => void;
 }
 
-/** Default D3 Space hook — no-op. Bhavnesh Phase 6 replaces this. */
-function defaultOnSpace(state: LayoutState): LayoutState {
-  return state;
+/**
+ * Default D3 Space hook — toggles the focused option's index in
+ * `state.expandedOptions`. Returns the original state unchanged when
+ * the focused item has nothing to expand (separator, meta, or missing
+ * desc-base content).
+ *
+ * The terminal-size precondition (D5 edge case (c) — refuse to expand
+ * when avail-5 is below D5_MIN_EFFECTIVE_CAP) is enforced inside
+ * computeLayout, NOT here. This keeps the hook decoupled from layout
+ * dimensions so it can be invoked without the full RenderLoopOptions
+ * context.
+ */
+function defaultOnSpace(state: LayoutState, focusedItem: SelectableItem | undefined): LayoutState {
+  if (!focusedItem || focusedItem.isSeparator || focusedItem.isMeta) return state;
+  if (!focusedItem.descBase || focusedItem.descBase.length === 0)    return state;
+
+  const next = new Set(state.expandedOptions);
+  if (next.has(state.focusedIndex)) next.delete(state.focusedIndex);
+  else                              next.add(state.focusedIndex);
+  return { ...state, expandedOptions: next };
 }
 
 /** Advance focus while skipping isSeparator items (R2 C1 + existing pattern). */
@@ -639,8 +720,36 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
         state = { ...state, focusedIndex: moveFocus(opts.layout.options, state.focusedIndex,  1) };
         break;
       case 'space': {
-        const focusedItem = opts.layout.options[state.focusedIndex];
+        const focusedItem  = opts.layout.options[state.focusedIndex];
+        const prevExpanded = state.expandedOptions.has(state.focusedIndex);
+        const prevFocus    = state.focusedIndex;
         state = onSpace(state, focusedItem);
+
+        // Recompute layout to populate the telemetry payload with the
+        // post-toggle budget + focused-option range. Cheap (pure function;
+        // the same recompute happens inside writeFrame() below).
+        const layout         = computeLayout(opts.layout, state);
+        const nowExpanded    = state.expandedOptions.has(state.focusedIndex);
+        const focusedRange   = layout.optionLineRanges.find((r) => r.itemIndex === state.focusedIndex);
+        const expandedHeight = focusedRange ? focusedRange.endIdx - focusedRange.startIdx : 0;
+        const finalCap       = nowExpanded
+          ? effectiveExpandedCap(layout.budget.avail)
+          : D1_TRUNCATED_LINE_CAP;
+        const descLineCount  = focusedItem?.descBase ? focusedItem.descBase.split('\n').length : 0;
+
+        const payload = {
+          optionIndex:    state.focusedIndex,
+          descLineCount,
+          expandedHeight,
+          availBudget:    layout.budget.avail,
+          finalCap,
+          didTruncate:    expandedHeight > finalCap + 1,
+          focusRetained:  state.focusedIndex === prevFocus,
+          prevExpanded,
+          nowExpanded,
+        };
+        writeRenderDebug({ event: 'whyhelp_expand_toggled', ...payload });
+        opts.telemetryHook?.('whyhelp_expand_toggled', payload);
         break;
       }
       case 'enter': {
