@@ -8620,6 +8620,7 @@ export const ABSENCE_MANUAL_BEFORE_AUTOMATE_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_MANUAL_BEFORE_AUTOMATE",
   question: 'Have you done this manually to confirm it works before automating?',
   pinchFallback: 'Do it manually first, then automate the proven version.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_MANUAL_BEFORE_AUTOMATE'],
   L1: [
     {
       option: 'Apply Paul Graham\'s "do things that don\'t scale" rule: do this workflow manually for the first users before automating it. Run the process by hand, capture what users actually need vs what you assumed, and only then automate the validated version.',
@@ -8677,6 +8678,7 @@ export const ABSENCE_TECH_STACK_COMPLEXITY_CHECK_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_TECH_STACK_COMPLEXITY_CHECK",
   question: 'Can you maintain this architecture alone, at 2am, when it breaks?',
   pinchFallback: 'Apply the solo maintainability test before adding this complexity.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_TECH_STACK_COMPLEXITY_CHECK'],
   L1: [
     {
       option: 'Every technology choice for a solo indie project is a choice you\'ll maintain alone — debugging it at 2am, extending it when requirements change, understanding it after 3 months away. Complexity that would be distributed across a team of engineers is complexity a solo builder pays in full. The right lens: "is this the simplest stack I can maintain alone, or is this the most impressive stack I can technically justify?"',
@@ -8734,6 +8736,7 @@ export const ABSENCE_LAUNCH_STRATEGY_ABSENCE_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_LAUNCH_STRATEGY_ABSENCE",
   question: 'How are people going to find out this product exists when you launch?',
   pinchFallback: 'Define a launch strategy before getting closer to ship date.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_LAUNCH_STRATEGY_ABSENCE'],
   L1: [
     {
       option: 'Shipping without a launch plan means launching into silence. Good products do not attract users by themselves — distribution is a discipline that must be planned and executed, not discovered. The minimum viable launch strategy: name one specific channel where you will announce this product, write the post before launch day, and identify who in your network or community should see it. That\'s a launch plan.',
@@ -8797,6 +8800,7 @@ export const ABSENCE_EARLY_USER_FEEDBACK_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_EARLY_USER_FEEDBACK",
   question: 'When did you last get a real user\'s reaction to what you\'re building?',
   pinchFallback: 'Show what you\'ve built to at least one real user before continuing.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_EARLY_USER_FEEDBACK'],
   L1: [
     {
       option: 'Break out of silo-building before more is built: identify one real user to show the current build to today — for a 10-minute screen-share, a Loom walk-through, or a screenshot review. Capture their actual reaction, not your interpretation, and adjust direction based on what you see.',
@@ -8854,6 +8858,7 @@ export const ABSENCE_SOLO_MAINTAINABILITY_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_SOLO_MAINTAINABILITY",
   question: 'Is this addition maintainable by you alone, long-term?',
   pinchFallback: 'Run the solo maintainability check before adding this complexity.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_SOLO_MAINTAINABILITY'],
   L1: [
     {
       option: 'Every integration, service, or abstraction you add to a solo project is complexity you\'ll maintain alone — debugging it in production, extending it when requirements change, understanding it after weeks away. The solo maintainability question is not "does this work?" but "can I own the full blast radius of this when it breaks, by myself, without help?" If the answer requires reading documentation for 30 minutes every time something goes wrong, the complexity cost is real and ongoing.',
@@ -8911,6 +8916,7 @@ export const ABSENCE_DISTRIBUTION_THINKING_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_DISTRIBUTION_THINKING",
   question: 'How will users discover and access this feature?',
   pinchFallback: 'Consider the distribution angle before building this feature.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_DISTRIBUTION_THINKING'],
   L1: [
     {
       option: 'Distribution is a design constraint, not a marketing task. Features that assume users will discover them organically are features built on distribution magic. Before building any significant feature, answer: what is the specific path through which a new user discovers this feature exists and reaches it for the first time? The answer shapes the implementation — SEO-friendly URLs, in-product sharing mechanics, referral hooks, and community-compatible output formats are all distribution design, not afterthoughts.',
@@ -8968,6 +8974,7 @@ export const ABSENCE_MONETIZATION_PATH_CLARITY_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_MONETIZATION_PATH_CLARITY",
   question: 'How does this feature connect to how the product makes money?',
   pinchFallback: 'Consider the monetization connection before building this feature.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_MONETIZATION_PATH_CLARITY'],
   L1: [
     {
       option: 'Building features without monetization awareness builds a free product by default — regardless of intent. Every significant feature should have an articulated answer to "how does this connect to the revenue model?" It doesn\'t need to be direct: "this is a retention feature that reduces churn, which improves LTV" is a valid connection. "This makes the product better" is not — it\'s the answer that leads to technically excellent, commercially unsustainable products.',
