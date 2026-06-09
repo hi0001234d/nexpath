@@ -175,12 +175,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       // Popup selection → inject into Cascade + clear the fallback.
       onSelection: async (prompt) => {
         advisoryFallback.clear();
+        log('[nexpath] windsurf: bridging popup selection → Cascade via windsurf.sendTextToChat');
         await injectIntoChat(prompt);
       },
       // Popup ran but no selection → surface the in-editor fallback.
       onArm: (root) => advisoryFallback.armIfPending(root),
     });
     advisoryPoller.start();
+    // Confirm the verified inject command is present on THIS Windsurf build.
+    void vscode.commands.getCommands(true).then(
+      (all) => log(`[nexpath] windsurf.sendTextToChat available: ${all.includes('windsurf.sendTextToChat')}`),
+      () => {},
+    );
     context.subscriptions.push({ dispose: () => advisoryPoller?.stop() });
     log(`[nexpath] windsurf advisory poller started for roots: ${roots.join(' | ')}`);
   }
