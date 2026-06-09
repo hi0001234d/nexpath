@@ -688,6 +688,7 @@ export const ABSENCE_COMPREHENSION_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_COMPREHENSION",
   question:      'AI wrote it — do you actually get it?',
   pinchFallback: 'Comprehension check.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_COMPREHENSION'],
   L1: [
     {
       option: '1. Read through what was just built slowly — not to check if it looks right, but to understand what each part actually does.\n2. Share with me: is there anything you\'re not sure about or that doesn\'t make sense to you?\n3. Then tell me: is there any part you just accepted because it looked okay without actually understanding it?',
@@ -775,6 +776,7 @@ export const ABSENCE_NO_PUSHBACK_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_NO_PUSHBACK",
   question:      'AI keeps suggesting — are you actually evaluating?',
   pinchFallback: 'No pushback.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_NO_PUSHBACK'],
   L1: [
     {
       option: '1. Look at the last few suggestions made while building this feature.\n2. Share with me: is there anything you accepted just because it sounded right, without checking if it was really the best option?\n3. Then pick one and tell me: why did you go with that suggestion over other ways of doing it?',
@@ -2164,6 +2166,7 @@ export const ABSENCE_CONTEXT_LOSS_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_CONTEXT_LOSS",
   question:      'Long session — context recapped?',
   pinchFallback: 'Context recap?',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_CONTEXT_LOSS'],
   L1: [
     {
       option: '1. Think about everything we\'ve done with what was just built this session. 2. Write down what\'s working and what still needs to be done. 3. Share that with me before we keep going — it\'ll help us stay on track.',
@@ -2786,6 +2789,7 @@ export const ABSENCE_PROGRESS_CONSOLIDATION_GAP_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_PROGRESS_CONSOLIDATION_GAP",
   question:      'Built a lot — have you written down what you made?',
   pinchFallback: 'Document now.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_PROGRESS_CONSOLIDATION_GAP'],
   L1: [
     {
       option: 'Write a short note about what we built in this session, even just a few sentences, before we continue.',

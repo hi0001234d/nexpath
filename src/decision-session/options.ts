@@ -1232,6 +1232,7 @@ const ABSENCE_COMPREHENSION: DecisionContent = {
   signalType:   "ABSENCE_COMPREHENSION",
   question:      'AI generated it — do you understand it?',
   pinchFallback: 'Comprehension check.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_COMPREHENSION'],
   L1: [
     {
       option: 'Review what was just built for comprehension: trace through the main execution path and explain what each significant function, class, and data structure does — independently, without relying on comments generated alongside the code.',
@@ -1351,6 +1352,7 @@ const ABSENCE_NO_PUSHBACK: DecisionContent = {
   signalType:   "ABSENCE_NO_PUSHBACK",
   question:      'AI suggesting — are you evaluating critically?',
   pinchFallback: 'No pushback.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_NO_PUSHBACK'],
   L1: [
     {
       option: 'Review the recent generated outputs used in what was just built: identify any decisions, implementations, or suggestions you accepted without explicitly verifying the reasoning, checking for alternatives, or questioning the assumptions embedded in the response.',
@@ -2531,6 +2533,7 @@ const ABSENCE_COMPREHENSION_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_COMPREHENSION",
   question:      'AI wrote it — do you actually get it?',
   pinchFallback: 'Comprehension check.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_COMPREHENSION'],
   L1: [
     {
       option: 'Look at what was just built — is there any part you couldn\'t explain to someone else right now? Find the bit you\'re least confident about and trace through it until you actually understand what it does.',
@@ -2650,6 +2653,7 @@ const ABSENCE_NO_PUSHBACK_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_NO_PUSHBACK",
   question:      'AI keeps suggesting — are you actually evaluating?',
   pinchFallback: 'No pushback.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_NO_PUSHBACK'],
   L1: [
     {
       option: 'Look at the recent responses that produced what was just built — is there anything you accepted without really thinking about whether it was the right call? Pick the one you\'re least sure about and push back on it now.',
@@ -4332,6 +4336,7 @@ const ABSENCE_CONTEXT_LOSS: DecisionContent = {
   signalType:   "ABSENCE_CONTEXT_LOSS",
   question:      'Long session — context recapped?',
   pinchFallback: 'Context recap?',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_CONTEXT_LOSS'],
   L1: [
     {
       option: 'Summarize the current state of what was just built: what decisions have been made, what is working, what remains incomplete, and what has changed since the session started — use this as a re-anchor before continuing.',
@@ -4975,6 +4980,7 @@ const ABSENCE_CONTEXT_LOSS_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_CONTEXT_LOSS",
   question:      'Long session — context recapped?',
   pinchFallback: 'Context recap?',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_CONTEXT_LOSS'],
   L1: [
     {
       option: 'Let\'s get back on the same page — go through what was just built and give me a quick rundown: what\'s done, what\'s working, and what\'s still left to do.',
@@ -10017,6 +10023,7 @@ export const ABSENCE_PROGRESS_CONSOLIDATION_GAP_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_PROGRESS_CONSOLIDATION_GAP",
   question:      'Extended implementation — progress documented?',
   pinchFallback: 'Document now.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_PROGRESS_CONSOLIDATION_GAP'],
   L1: [
     {
       option: 'Consolidate: update the README, write a brief description of what was built, or add clarifying comments before continuing.',
@@ -10308,6 +10315,7 @@ export const ABSENCE_PROGRESS_CONSOLIDATION_GAP_FORMAL: DecisionContent = {
   signalType:   "ABSENCE_PROGRESS_CONSOLIDATION_GAP",
   question:      'Extended implementation — progress documented?',
   pinchFallback: 'Document now.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_PROGRESS_CONSOLIDATION_GAP'],
   L1: [
     {
       option: 'Consolidate the current build state: document what has been implemented, capture the key decisions made, and record any outstanding work before continuing.',
