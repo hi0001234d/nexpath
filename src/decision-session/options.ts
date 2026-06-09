@@ -6282,6 +6282,7 @@ const ABSENCE_CODE_DOCUMENTATION_GAP_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_CODE_DOCUMENTATION_GAP",
   question:      'Complex logic added — documented the why?',
   pinchFallback: 'Add the why comment.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_CODE_DOCUMENTATION_GAP'],
   L1: [
     {
       option: 'Clean Code principle: \'Don\'t use comments to explain WHAT the code is doing — use them to explain WHY you did it.\' For the non-obvious logic just added — add a comment explaining the reasoning, constraint, or edge case it handles. Future maintainers (including you) will need this context.',
@@ -6341,6 +6342,7 @@ const ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT",
   question:      'Shortcut taken — tagged it as debt?',
   pinchFallback: 'Tag the shortcut.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT'],
   L1: [
     {
       option: 'Martin Fowler\'s Technical Debt Quadrant: \'Prudent Deliberate\' debt — acknowledged and added to the backlog — is acceptable. \'Reckless Deliberate\' — shortcuts taken without acknowledgment — compounds invisibly. Tag any shortcut with a TODO or FIXME comment before moving on.',
@@ -6400,6 +6402,7 @@ const ABSENCE_TEST_DEPTH_CHECK_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_TEST_DEPTH_CHECK",
   question:      'Tests written — covering beyond the happy path?',
   pinchFallback: 'Add edge and error path tests.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_TEST_DEPTH_CHECK'],
   L1: [
     {
       option: 'Testing pyramid (Mike Cohn, 2009): tests must cover happy paths, edge cases, and negative scenarios. \'Start with happy path tests, then add error cases that verify graceful failure handling.\' Happy-path-only tests provide false confidence — everything looks green but real-world conditions break the code.',
@@ -6580,6 +6583,7 @@ const ABSENCE_SECURITY_REVIEW_GAP_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_SECURITY_REVIEW_GAP",
   question:      'Security surface touched — applied security checks?',
   pinchFallback: 'Apply security checks now.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_SECURITY_REVIEW_GAP'],
   L1: [
     {
       option: 'OWASP Secure by Design: security must be designed in, not bolted on. For what was just implemented — what security surfaces were introduced? Input validation (are all inputs sanitized?), authorization (is access properly gated?), injection prevention (SQL, command, path traversal). These checks belong during implementation, not as a post-implementation audit. Shift-left: add the check when the surface is created.',
@@ -6698,6 +6702,7 @@ const ABSENCE_ERROR_HANDLING_COVERAGE_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_ERROR_HANDLING_COVERAGE",
   question:      'Implementation done — covered the error paths?',
   pinchFallback: 'Add error handling for failure cases.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_ERROR_HANDLING_COVERAGE'],
   L1: [
     {
       option: 'McConnell\'s defensive programming (Code Complete): \'Defensive programming mandates covering all failure paths, not just happy paths.\' For what was just implemented — what are the error states? What happens when an external call fails? What happens when input is malformed? What happens when a database write fails? Each needs explicit handling: error state, fallback behavior, user-facing message. Code that only works on the happy path is incomplete by construction standards.',
@@ -6878,6 +6883,7 @@ const ABSENCE_SELF_REVIEW_HABIT_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_SELF_REVIEW_HABIT",
   question:      'Long implementation run — done a review pass?',
   pinchFallback: 'Read back through what was built.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_SELF_REVIEW_HABIT'],
   L1: [
     {
       option: 'Google Engineering Practices: \'The author is the first reviewer.\' Before submitting or continuing, read back through the diff: does the code do what was intended? Are there naming inconsistencies? Is anything more complex than it needs to be? Are tests missing? The self-review pass catches what was obvious in the context of writing but invisible in isolation — logic errors, naming drift, gaps in coverage.',
@@ -6937,6 +6943,7 @@ const ABSENCE_PERFORMANCE_AWARENESS_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_PERFORMANCE_AWARENESS",
   question:      'Data-heavy operation — considered performance?',
   pinchFallback: 'Check for performance implications.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_PERFORMANCE_AWARENESS'],
   L1: [
     {
       option: 'Knuth (1974): \'We should not pass up our opportunities in that critical 3%.\' The full quote is not an excuse to avoid performance — it\'s a prioritization rule: ignore the 97% of noncritical paths, but act on the critical 3%. For what was just built — is this in the critical 3%? A full-table fetch, N+1 in a loop, or unthrottled list render qualifies. The check here is awareness, not micro-optimization: is there an obvious performance problem worth addressing before it ships?',
