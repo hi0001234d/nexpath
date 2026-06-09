@@ -990,6 +990,7 @@ const ABSENCE_SECURITY_CHECK: DecisionContent = {
   signalType:   "ABSENCE_SECURITY_CHECK",
   question:      'Feature built — security reviewed?',
   pinchFallback: 'Security gap.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_SECURITY_CHECK'],
   L1: [
     {
       option: 'Review what was just built for security vulnerabilities: check authentication and authorization logic, input validation for injection risks (SQL, XSS, command), and any API endpoints for missing rate limiting, improper error responses, or exposed sensitive data.',
@@ -1049,6 +1050,7 @@ const ABSENCE_ERROR_HANDLING: DecisionContent = {
   signalType:   "ABSENCE_ERROR_HANDLING",
   question:      'Feature built — error paths handled?',
   pinchFallback: 'Error handling.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_ERROR_HANDLING'],
   L1: [
     {
       option: 'Review what was just built for error handling gaps: identify all failure modes (network errors, invalid input, missing dependencies, unexpected state), confirm each is handled explicitly, and flag any that are silently swallowed or produce unhelpful error messages.',
@@ -1462,6 +1464,7 @@ const ABSENCE_PROBLEM_CORRECTION: DecisionContent = {
   signalType:   "ABSENCE_PROBLEM_CORRECTION",
   question:      'Bug noticed — explicitly corrected?',
   pinchFallback: 'Bug unresolved.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_PROBLEM_CORRECTION'],
   L1: [
     {
       option: 'Review the outstanding bugs and issues identified in this session: for each one, confirm whether it has been explicitly fixed, explicitly deferred with a tracking note, or left unaddressed. Address any that are unresolved and blocking correctness of what was just built.',
@@ -2276,6 +2279,7 @@ const ABSENCE_SECURITY_CHECK_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_SECURITY_CHECK",
   question:      'Built something — any security checks done?',
   pinchFallback: 'Security gap.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_SECURITY_CHECK'],
   L1: [
     {
       option: 'Look at what was just built — is there anything that handles user input or touches auth that hasn\'t been checked for obvious security problems? What could an attacker do with this as it stands?',
@@ -2333,6 +2337,7 @@ const ABSENCE_ERROR_HANDLING_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_ERROR_HANDLING",
   question:      'Feature built — what happens when it breaks?',
   pinchFallback: 'Error handling.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_ERROR_HANDLING'],
   L1: [
     {
       option: 'Look at what was just built — what happens when something goes wrong? Check for unhandled errors, anything that fails silently, and cases where the error message would tell an attacker more than the user needs to know.',
@@ -2744,6 +2749,7 @@ const ABSENCE_PROBLEM_CORRECTION_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_PROBLEM_CORRECTION",
   question:      'Spotted a bug — did it actually get fixed?',
   pinchFallback: 'Bug unresolved.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_PROBLEM_CORRECTION'],
   L1: [
     {
       option: 'Go through what was just built and check: is there anything that was flagged as broken or wrong earlier in this session that hasn\'t actually been fixed yet? Don\'t let it get buried under new code.',

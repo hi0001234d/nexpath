@@ -514,6 +514,7 @@ export const ABSENCE_SECURITY_CHECK_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_SECURITY_CHECK",
   question:      'Built something — any security checks done?',
   pinchFallback: 'Security gap.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_SECURITY_CHECK'],
   L1: [
     {
       option: '1. Look at what was just built and check if it handles anything a user types in or sends to the app.\n2. Share with me: could someone type something unexpected and cause a problem?\n3. Then check: does anything in what was just built need a login or permission to use, and is that actually enforced?',
@@ -555,6 +556,7 @@ export const ABSENCE_ERROR_HANDLING_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_ERROR_HANDLING",
   question:      'Feature built — what happens when it breaks?',
   pinchFallback: 'Error handling.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_ERROR_HANDLING'],
   L1: [
     {
       option: '1. Look at what was just built and think: what happens if it doesn\'t work the way it\'s supposed to?\n2. Share with me: is there anything that could break without showing a useful message?\n3. Then check: what happens if a user does something unexpected — does the app handle it or crash?',
@@ -854,6 +856,7 @@ export const ABSENCE_PROBLEM_CORRECTION_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_PROBLEM_CORRECTION",
   question:      'Spotted a bug — did it actually get fixed?',
   pinchFallback: 'Bug unresolved.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_PROBLEM_CORRECTION'],
   L1: [
     {
       option: '1. Think back through this session — was there anything that didn\'t work or looked wrong earlier on?\n2. Share with me: is that thing actually fixed now, or did we move on without dealing with it?\n3. Then check: are there any other problems in what was just built that haven\'t been properly sorted out?',
@@ -1732,6 +1735,7 @@ export const ABSENCE_OUTPUT_VERIFICATION_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_OUTPUT_VERIFICATION",
   question:      'Code generated — have you actually tried it?',
   pinchFallback: 'Test it first.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_OUTPUT_VERIFICATION'],
   L1: [
     {
       option: '1. Before moving on from what was just built — actually run it or try it.\n2. Share with me: does it behave the way you expected?\n3. If anything looks off, tell me what happened and we\'ll look at it together.',
