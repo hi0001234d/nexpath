@@ -1884,6 +1884,7 @@ const ABSENCE_PHASE_TRANSITION: DecisionContent = {
   signalType:   "ABSENCE_PHASE_TRANSITION",
   question:      'Extended phase — transition readiness assessed?',
   pinchFallback: 'Phase check.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_PHASE_TRANSITION'],
   L1: [
     {
       option: 'Assess transition readiness for this project: define what must be complete before moving to the next phase, confirm which of those criteria are currently met, and identify what is blocking the transition. If no criteria are defined, define them now.',
@@ -3184,6 +3185,7 @@ const ABSENCE_PHASE_TRANSITION_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_PHASE_TRANSITION",
   question:      'Been in this phase a while — what comes next?',
   pinchFallback: 'Phase check.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_PHASE_TRANSITION'],
   L1: [
     {
       option: 'Step back from this project and think about where you are in the overall flow — have you actually finished this phase, or have you just been in it for a while? What needs to be done before it makes sense to move on?',
@@ -3361,6 +3363,7 @@ const ABSENCE_IDEA_SCOPING: DecisionContent = {
   signalType:   "ABSENCE_IDEA_SCOPING",
   question:      'Idea in mind — is the scope defined?',
   pinchFallback: 'Scope undefined.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_IDEA_SCOPING'],
   L1: [
     {
       option: 'Define the scope of this project precisely: what is the core problem it solves, what are the primary capabilities it must deliver, and what does a complete first version look like?',
@@ -3418,6 +3421,7 @@ const ABSENCE_IDEA_SCOPING_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_IDEA_SCOPING",
   question:      'Idea forming — what exactly are we building?',
   pinchFallback: 'Scope unclear.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_IDEA_SCOPING'],
   L1: [
     {
       option: 'Walk me through this project — what\'s the main idea, what problem does it solve, and what\'s in vs out for the first version?',
@@ -3475,6 +3479,7 @@ const ABSENCE_IDEA_CONSTRAINT_CHECK: DecisionContent = {
   signalType:   "ABSENCE_IDEA_CONSTRAINT_CHECK",
   question:      'Idea scoped — are the non-goals defined?',
   pinchFallback: 'Non-goals missing.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_IDEA_CONSTRAINT_CHECK'],
   L1: [
     {
       option: 'Define the constraints and non-goals for this project: what is explicitly out of scope for the first version, what functionality will not be built, and what technical constraints limit the solution space?',
@@ -3532,6 +3537,7 @@ const ABSENCE_IDEA_CONSTRAINT_CHECK_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_IDEA_CONSTRAINT_CHECK",
   question:      'Idea forming — what\'s out of scope?',
   pinchFallback: 'No non-goals set.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_IDEA_CONSTRAINT_CHECK'],
   L1: [
     {
       option: 'What are we NOT building in the first version of this project? Walk me through what\'s intentionally out of scope — things that could be asked for but we\'re not doing yet.',
@@ -3589,6 +3595,7 @@ const ABSENCE_IDEA_USER_DEFINITION: DecisionContent = {
   signalType:   "ABSENCE_IDEA_USER_DEFINITION",
   question:      'Idea scoped — is the target user defined?',
   pinchFallback: 'Target user undefined.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_IDEA_USER_DEFINITION'],
   L1: [
     {
       option: 'Define the target user for this project precisely: who is the primary user, what is their context and skill level, what problem do they have that this project solves, and what does success look like from their perspective?',
@@ -3646,6 +3653,7 @@ const ABSENCE_IDEA_USER_DEFINITION_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_IDEA_USER_DEFINITION",
   question:      'Idea forming — who is this actually for?',
   pinchFallback: 'User not defined.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_IDEA_USER_DEFINITION'],
   L1: [
     {
       option: 'Who is this project for? Walk me through who the main user is, what they\'re trying to do, and what they know going in — be specific enough that we could make decisions about this project on their behalf.',
@@ -3705,6 +3713,7 @@ const ABSENCE_TASK_ORDERING: DecisionContent = {
   signalType:   "ABSENCE_TASK_ORDERING",
   question:      'Tasks listed — have they been ordered?',
   pinchFallback: 'Tasks unordered.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_TASK_ORDERING'],
   L1: [
     {
       option: 'Order the tasks for this project by dependency and priority: identify which tasks block others, which can be done in parallel, and establish the sequence that minimises rework and delivers the earliest working state.',
@@ -3762,6 +3771,7 @@ const ABSENCE_TASK_ORDERING_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_TASK_ORDERING",
   question:      'Tasks listed — what order do we do them in?',
   pinchFallback: 'No order set.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_TASK_ORDERING'],
   L1: [
     {
       option: 'Put the tasks for this project in order — which ones have to happen before others, which ones are independent, and what\'s the sequence that gets us to something working as fast as possible?',

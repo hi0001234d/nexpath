@@ -1163,6 +1163,7 @@ export const ABSENCE_PHASE_TRANSITION_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_PHASE_TRANSITION",
   question:      'Been in this phase a while — what comes next?',
   pinchFallback: 'Phase check.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_PHASE_TRANSITION'],
   L1: [
     {
       option: '1. Think about what phase of development this project is currently in.\n2. Share with me: have you finished what you set out to do in this phase, or are you still in the middle of it?\n3. Then tell me: what needs to be done before it makes sense to move on to the next phase?',
@@ -1292,6 +1293,7 @@ export const ABSENCE_IDEA_SCOPING_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_IDEA_SCOPING",
   question:      'Idea forming — what exactly are we building?',
   pinchFallback: 'Scope unclear.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_IDEA_SCOPING'],
   L1: [
     {
       option: '1. Help me describe this project in plain words — what it does and what problem it solves.\n2. Share your description with me before we go further so I can check it sounds right.\n3. Then tell me: is there anything about what we\'re building that\'s still unclear or not decided yet?',
@@ -1333,6 +1335,7 @@ export const ABSENCE_IDEA_CONSTRAINT_CHECK_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_IDEA_CONSTRAINT_CHECK",
   question:      'Idea forming — what\'s out of scope?',
   pinchFallback: 'No non-goals set.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_IDEA_CONSTRAINT_CHECK'],
   L1: [
     {
       option: '1. Think about this project — what is it NOT going to do?\n2. Share a list of at least two things we\'re leaving out of this project on purpose, even if they seem obvious.\n3. Then tell me: why is it helpful to say those things out loud now?',
@@ -1374,6 +1377,7 @@ export const ABSENCE_IDEA_USER_DEFINITION_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_IDEA_USER_DEFINITION",
   question:      'Idea forming — who is this actually for?',
   pinchFallback: 'User not defined.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_IDEA_USER_DEFINITION'],
   L1: [
     {
       option: '1. Think about who will use this project — who is the main person it\'s for?\n2. Share a description of that person with me: who they are and what they\'re trying to do.\n3. Then tell me: what does that mean for how we build this project?',
@@ -1417,6 +1421,7 @@ export const ABSENCE_TASK_ORDERING_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_TASK_ORDERING",
   question:      'Tasks listed — what order do we do them in?',
   pinchFallback: 'No order set.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_TASK_ORDERING'],
   L1: [
     {
       option: '1. Look at the tasks for this project.\n2. Share with me: which one should we do first, and which ones can\'t be done until something else is finished?\n3. Then tell me: what\'s the order we should follow to build this?',
