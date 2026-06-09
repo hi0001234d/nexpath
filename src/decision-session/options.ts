@@ -4769,6 +4769,7 @@ const ABSENCE_FEATURE_SCOPE: DecisionContent = {
   signalType:   "ABSENCE_FEATURE_SCOPE",
   question:      'Feature started — Definition of Ready confirmed?',
   pinchFallback: 'Scope this first.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_FEATURE_SCOPE'],
   L1: [
     {
       option: 'Define the scope and acceptance criteria for this feature before implementation continues: what is the feature doing, what are the explicit out-of-scope items, and what conditions must be true for the feature to be accepted as done? This is the Definition of Ready for sprint planning.',
@@ -4826,6 +4827,7 @@ const ABSENCE_IMPLEMENTATION_CHECKPOINT: DecisionContent = {
   signalType:   "ABSENCE_IMPLEMENTATION_CHECKPOINT",
   question:      'Implementation continued — current state verified?',
   pinchFallback: 'Verify first.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_IMPLEMENTATION_CHECKPOINT'],
   L1: [
     {
       option: 'Run an implementation checkpoint before continuing: verify the last unit of work is in a passing state — either by running the relevant tests or by manually tracing the main path through the recently added code. Per TDD Red-Green-Refactor practice, only continue building once the current state is green.',
@@ -4883,6 +4885,7 @@ const ABSENCE_SPEC_BEFORE_CODE: DecisionContent = {
   signalType:   "ABSENCE_SPEC_BEFORE_CODE",
   question:      'Implementation started — behaviour specified first?',
   pinchFallback: 'Spec before code.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_SPEC_BEFORE_CODE'],
   L1: [
     {
       option: 'Write a behaviour specification before continuing implementation: using BDD Given/When/Then format, define at least the primary scenario — Given [context], When [action], Then [expected outcome]. Per spec-driven development practice, the specification is the source of truth; code is the verification.',
@@ -5414,6 +5417,7 @@ const ABSENCE_FEATURE_SCOPE_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_FEATURE_SCOPE",
   question:      'Started building — is scope defined?',
   pinchFallback: 'What\'s in scope?',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_FEATURE_SCOPE'],
   L1: [
     {
       option: 'Before going further — write a quick scope statement for this feature: what it does, what it doesn\'t do, and what done looks like. One paragraph is enough. This prevents mid-build scope drift.',
@@ -5471,6 +5475,7 @@ const ABSENCE_IMPLEMENTATION_CHECKPOINT_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_IMPLEMENTATION_CHECKPOINT",
   question:      'Kept building — is the last change verified?',
   pinchFallback: 'Checkpoint.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_IMPLEMENTATION_CHECKPOINT'],
   L1: [
     {
       option: 'Quick checkpoint before continuing — does what was last built actually work end to end? Try running it or walk through the main path manually. If it\'s broken, fix it now before the next change makes the bug harder to locate.',
@@ -5528,6 +5533,7 @@ const ABSENCE_SPEC_BEFORE_CODE_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_SPEC_BEFORE_CODE",
   question:      'Building this — behaviour defined first?',
   pinchFallback: 'Spec it first.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_SPEC_BEFORE_CODE'],
   L1: [
     {
       option: 'Before writing more code — write a quick behaviour spec: what inputs does this take, what should it do, and what output or side effect should it produce? One paragraph is enough. Spec before code avoids building the wrong thing.',
@@ -5587,6 +5593,7 @@ const ABSENCE_INCREMENTAL_BUILD_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_INCREMENTAL_BUILD",
   question:      'Building incrementally — verifying between steps?',
   pinchFallback: 'Verify between steps.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_INCREMENTAL_BUILD'],
   L1: [
     {
       option: 'Between each change — stop and verify what was just built actually works before adding the next layer. Debugging compound changes is harder than debugging one change at a time.',
@@ -5644,6 +5651,7 @@ const ABSENCE_INCREMENTAL_BUILD: DecisionContent = {
   signalType:   "ABSENCE_INCREMENTAL_BUILD",
   question:      'Incremental build — is each step verified before the next?',
   pinchFallback: 'Verify before proceeding.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_INCREMENTAL_BUILD'],
   L1: [
     {
       option: 'Review the build cadence: is each incremental change being verified before the next is added? Compounding unverified changes increases debugging complexity — verify at each increment.',

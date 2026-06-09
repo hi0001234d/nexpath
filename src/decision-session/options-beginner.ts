@@ -1635,6 +1635,7 @@ export const ABSENCE_INCREMENTAL_BUILD_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_INCREMENTAL_BUILD",
   question:      'Building something — verifying each piece as you go?',
   pinchFallback: 'One piece at a time.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_INCREMENTAL_BUILD'],
   L1: [
     {
       option: '1. Before adding the next thing — quickly test what was just built.\n2. Share with me: does it do what you expected, or is something off?\n3. Then tell me: is it safe to move on, or should we fix something first?',
@@ -2478,6 +2479,7 @@ export const ABSENCE_FEATURE_SCOPE_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_FEATURE_SCOPE",
   question:      'Building this — what should it actually do?',
   pinchFallback: 'Scope first.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_FEATURE_SCOPE'],
   L1: [
     {
       option: '1. Before we keep going — help me describe in plain words what this part of the app should do and what \'finished\' looks like for it.\n2. Share that back with me so we\'re both on the same page.\n3. Then tell me: is there anything about what I want that is still unclear to you?',
@@ -2519,6 +2521,7 @@ export const ABSENCE_IMPLEMENTATION_CHECKPOINT_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_IMPLEMENTATION_CHECKPOINT",
   question:      'Built something new — does it actually work?',
   pinchFallback: 'Quick check.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_IMPLEMENTATION_CHECKPOINT'],
   L1: [
     {
       option: '1. Before adding anything else — can you quickly try out what was just built?\n2. Tell me: does it do what we expected, or is something not working yet?\n3. If something\'s off, let\'s fix it before we keep going — it\'s easier to catch now than after more code is added on top.',
@@ -2560,6 +2563,7 @@ export const ABSENCE_SPEC_BEFORE_CODE_BEGINNER: DecisionContent = {
   signalType:   "ABSENCE_SPEC_BEFORE_CODE",
   question:      'Coding this — what\'s it supposed to do?',
   pinchFallback: 'Spec first.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_SPEC_BEFORE_CODE'],
   L1: [
     {
       option: '1. Before we write more code — describe in plain words what this is supposed to do.\n2. What should happen when it works correctly? Share that with me first.\n3. Then we\'ll write it — having that clear makes the code much simpler.',
