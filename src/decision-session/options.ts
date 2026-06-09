@@ -9032,6 +9032,7 @@ export const ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY",
   question: 'Is this a milestone worth sharing publicly?',
   pinchFallback: 'Consider sharing this milestone publicly before moving to the next.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY'],
   L1: [
     {
       option: 'Share this milestone publicly today before continuing: draft a short post (tweet, Loom, community update) describing what you just shipped and what you learned. Audiences built during the build survive launch-day failures; audiences built launch-week do not.',
@@ -9096,6 +9097,7 @@ export const ABSENCE_SCOPE_VS_TIME_CHECK_CASUAL: DecisionContent = {
   signalType:   "ABSENCE_SCOPE_VS_TIME_CHECK",
   question: 'Is the current scope still within your available time and energy?',
   pinchFallback: 'Run a scope-vs-time check before adding more to the build.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_SCOPE_VS_TIME_CHECK'],
   L1: [
     {
       option: 'Run the scope-vs-time check on this build before more is added: name the current scope, estimate the shipping date at current pace, and compare to the original target. If the date has slipped twice in a row, cut scope to fit the original timeline — list specifically what gets deferred to post-launch.',
@@ -9155,6 +9157,7 @@ export const ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_FORMAL: DecisionContent = {
   signalType:   "ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV",
   question: 'Are acceptance criteria defined for this story before development begins?',
   pinchFallback: 'Define acceptance criteria for this story before starting implementation.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV'],
   L1: [
     {
       option: 'Write the acceptance criteria for this story before any implementation prompt: state each criterion as an independently verifiable condition, in Given/When/Then or "this is done when [X]" form. List at least three covering the primary scenario and the most likely edge case.',
@@ -9212,6 +9215,7 @@ export const ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_FORMAL: DecisionContent = {
   signalType:   "ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK",
   question: 'Have relevant stakeholders been aligned on this feature before development begins?',
   pinchFallback: 'Verify stakeholder alignment before proceeding with significant development work.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK'],
   L1: [
     {
       option: 'Identify every stakeholder with a legitimate opinion on this feature, name the alignment touchpoint required for each (sign-off, design review, security review, eng-lead consult), and confirm each is completed or scheduled before implementation begins. Document the date and outcome.',
@@ -9274,6 +9278,7 @@ export const ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_FORMAL: DecisionContent = {
   signalType:   "ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG",
   question: 'Are there ambiguous quality attributes in these requirements that need a measurable definition?',
   pinchFallback: 'Resolve ambiguous quality attributes to measurable criteria before implementation.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG'],
   L1: [
     {
       option: 'Audit this feature\'s requirements for ambiguity: identify every quality-attribute placeholder ("better", "faster", "improved", "user-friendly") and replace each with a measurable target — name the metric, the measurement method, and the success threshold.',
@@ -9331,6 +9336,7 @@ export const ABSENCE_DEPENDENCY_MAPPING_FORMAL: DecisionContent = {
   signalType:   "ABSENCE_DEPENDENCY_MAPPING",
   question: 'Have upstream and downstream dependencies for this work been identified before starting?',
   pinchFallback: 'Map dependencies before beginning this work to prevent blocked integration.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_DEPENDENCY_MAPPING'],
   L1: [
     {
       option: 'Dependency identification is a foundational project management discipline (WBS, critical path method). Before any work begins: what does this work depend on (upstream), and what depends on this work completing (downstream)? Unmapped upstream dependencies create blocked work discovered mid-sprint; unmapped downstream dependencies create integration surprises at the worst time — when another team has built against an unstated assumption.',
@@ -9388,6 +9394,7 @@ export const ABSENCE_DEFINITION_OF_DONE_FORMAL: DecisionContent = {
   signalType:   "ABSENCE_DEFINITION_OF_DONE",
   question: 'Is there an explicit Definition of Done for this sprint item?',
   pinchFallback: 'Define the completion criteria for this item before starting work.',
+  whyHelp:       WHY_HELP_BY_SIGNAL_TYPE['ABSENCE_DEFINITION_OF_DONE'],
   L1: [
     {
       option: 'Write the Definition of Done for this sprint item before work begins: state the functional condition, the quality gate (testing or review pass), the documentation requirement, and the target deployment state. Use the form "this item is done when [X] AND [Y]."',
