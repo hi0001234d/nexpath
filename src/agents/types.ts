@@ -20,6 +20,17 @@ export interface InstallContext {
   yes: boolean;
   /** Path to ~/.nexpath/prompt-store.db (or ':memory:' for tests). */
   dbPath: string;
+  /**
+   * Optional override for the target settings/config file the adapter writes to.
+   * If omitted, the adapter derives the path from `home`. Tests (and non-default
+   * install locations) pass this to decouple the file path from `home` —
+   * preserving the pre-refactor behaviour where `paths.claudeSettings` was
+   * passed independently of `homedir()`.
+   *
+   * Adapters that don't write a single settings file (e.g. CLIWrapAdapter,
+   * BrowserExtensionAdapter) ignore this field.
+   */
+  settingsPath?: string;
 }
 
 export interface InstallResult {

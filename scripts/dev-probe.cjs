@@ -163,7 +163,9 @@ function storeToday() {
   const rows = db.prepare(
     'SELECT * FROM prompts WHERE captured_at >= ? AND captured_at <= ? ORDER BY id DESC'
   ).all(startOfDay.getTime(), now);
-  console.log(`Prompts captured today (${startOfDay.toISOString().slice(0,10)}): ${rows.length}`);
+  // Format local-time date — toISOString() returns UTC which looks wrong by 1 day in non-UTC timezones.
+  const localDate = `${startOfDay.getFullYear()}-${String(startOfDay.getMonth()+1).padStart(2,'0')}-${String(startOfDay.getDate()).padStart(2,'0')}`;
+  console.log(`Prompts captured today (${localDate}, local time): ${rows.length}`);
   for (const r of rows) printRow(r);
   db.close();
 }

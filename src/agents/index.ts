@@ -1,4 +1,8 @@
 // Adapter registrations live here as side-effect imports.
-// Branch 2 (`v0.1.3/m1/claude-code-refactor`) will add:
-//   import './adapters/claude-code.js';
-// Subsequent milestones add Cursor, Windsurf, CLI-wrap, browser adapters.
+// Each adapter module calls registerAdapter() at module load.
+//
+// Subsequent milestones add CLI-wrap (Codex CLI + Aider) and browser
+// adapters (Replit / Bolt.new / Lovable / ChatGPT).
+import './adapters/claude-code.js';
+import './adapters/cursor.js';
+import './adapters/windsurf.js';

@@ -6,8 +6,9 @@ import {
 } from './index.js';
 
 describe('extractor registry', () => {
-  it('lists all four extractors in newest-first order', () => {
+  it('lists all extractors in newest-first order, composer-bubble first (cursorDiskKV-table-owner)', () => {
     expect(ALL_EXTRACTORS.map((e) => e.id)).toEqual([
+      'cursor-composer-bubble',
       'cursor-v2025-q2',
       'cursor-v2025-q1',
       'cursor-v2024-q4',
@@ -17,6 +18,9 @@ describe('extractor registry', () => {
 
   it('getExtractorById returns the matching extractor', () => {
     expect(getExtractorById('cursor-v2025-q2')?.id).toBe('cursor-v2025-q2');
+    expect(getExtractorById('cursor-composer-bubble')?.id).toBe(
+      'cursor-composer-bubble',
+    );
     expect(getExtractorById('windsurf')?.id).toBe('windsurf');
   });
 

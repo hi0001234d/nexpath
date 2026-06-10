@@ -31,13 +31,7 @@ exports[`installAction snapshot (M1 zero-diff safety net) > writes the same sett
   }
 }
 ",
-  "stdout": "
-Before installing nexpath, a few things to know:
-  1. An OpenAI API key is required (OPENAI_API_KEY) for advisory generation
-  2. Prompts are stored locally at $HOME/.nexpath/prompt-store.db — nothing leaves your machine
-  3. To opt out at any time: press Ctrl+X during an advisory, or run nexpath uninstall
-
-Detected: Claude Code
+  "stdout": "Detected: Claude Code
 ✓ Claude Code  — advisory hook written to $HOME/.claude/settings.json
 
 Restart your agents to activate nexpath-prompt-store.

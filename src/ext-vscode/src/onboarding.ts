@@ -12,7 +12,12 @@ import * as vscode from 'vscode';
  *      The notice persists so it is not re-shown on subsequent launches.
  */
 
-const CONSENT_KEY = 'nexpath.consentGranted';
+/**
+ * Exported so `extension.ts` (and any other module that needs to gate work
+ * on consent) reads the same globalState key the onboarding writes to.
+ * Do not rename without updating every reader.
+ */
+export const CONSENT_KEY = 'nexpath.consentGranted';
 const FDA_NOTICE_KEY = 'nexpath.fdaNoticeShown';
 
 const FDA_URI =
