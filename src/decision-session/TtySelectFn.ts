@@ -49,8 +49,10 @@ function buildMjsScript(
   optFileFwd: string,
   resultFileFwd: string,
   clipboardCmds: ClipboardCmd[],
+  renderLoopUrl: string,
 ): string {
   return `import { select, isCancel } from '${clackUrl}';
+import { renderLoop, eventsFromReadline } from '${renderLoopUrl}';
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { emitKeypressEvents } from 'node:readline';
@@ -147,15 +149,49 @@ process.stdin.on('keypress', (ch, key) => {
   }
 });
 
-let picked;
-do {
-  picked = await select({ message: opts.message, options: _selOptions, maxItems: _maxItems });
-} while (typeof picked === 'string' && picked.startsWith(opts.separatorPrefix));
+// MAIN popup — driven by the local render-loop renderer. Sub-menu action
+// prompt below still uses clack select. The structured fields plumbed into
+// the optFile by the parent process (pinchLabel / subtitle / question /
+// whyHelpBlock / per-option descBase / isSeparator / isMeta) feed the
+// renderLoop layout directly.
+const _layout = {
+  pinchLabel:   opts.pinchLabel,
+  subtitle:     opts.subtitle,
+  question:     opts.question,
+  whyHelpBlock: opts.whyHelpBlock,
+  options:      opts.options.map((o) => ({
+    value:       o.value,
+    label:       o.label,
+    descBase:    o.descBase,
+    isSeparator: Boolean(o.isSeparator),
+    isMeta:      Boolean(o.isMeta),
+  })),
+  rows: process.stdout.rows    ?? 24,
+  cols: process.stdout.columns ?? 80,
+};
+const _events = eventsFromReadline(process.stdin);
+const _rlResult = await renderLoop({
+  layout:    _layout,
+  out:       process.stdout,
+  keyEvents: _events.events,
+});
+_events.cancel();
 
 process.stdout.write = _ow;
 _log('done: writes=' + _wc + ' nlTotal=' + _nlTotal);
 
-if (!isCancel(picked) && typeof picked === 'string'
+if (_rlResult === null) {
+  // Esc / Ctrl+C cancel — write empty result-file string. The parent
+  // process treats an empty result-file as a soft dismissal; explicit
+  // opt-out (Ctrl+X) is captured by the dedicated keypress listener
+  // above which terminates the process before reaching this branch.
+  writeFileSync('${resultFileFwd}', '', 'utf8');
+  process.exit(0);
+}
+
+let picked = _rlResult.value;
+
+if (typeof picked === 'string'
     && picked !== opts.skipNow && picked !== opts.showSimpler) {
 
   process.stdout.write('\\n\\x1b[2;3m  \\u21b5 hit enter to send directly to Claude\\x1b[0m\\n\\n');
@@ -180,7 +216,7 @@ if (!isCancel(picked) && typeof picked === 'string'
       writeFileSync('${resultFileFwd}', '__CLIP__', 'utf8');
     }
   }
-} else if (!isCancel(picked) && typeof picked === 'string') {
+} else if (typeof picked === 'string') {
   writeFileSync('${resultFileFwd}', picked, 'utf8');
 }
 
@@ -476,7 +512,7 @@ function buildWindowsNewWindowSelectFn(store?: Store, projectRoot?: string): Sel
         'utf8',
       );
 
-      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, [['clip', []]]), 'utf8');
+      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, [['clip', []]], resolveRenderLoopEsmUrl()), 'utf8');
 
       // Textual cue in Claude terminal regardless of whether window is visible
       process.stderr.write('\n[nexpath] Please select an action in the new window\n');
@@ -694,7 +730,7 @@ function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): Selec
         'utf8',
       );
 
-      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, LINUX_CLIPBOARD_CMDS), 'utf8');
+      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, LINUX_CLIPBOARD_CMDS, resolveRenderLoopEsmUrl()), 'utf8');
 
       process.stderr.write('\n[nexpath] Please select an action in the new window\n');
 
@@ -803,7 +839,7 @@ function buildMacNewWindowSelectFn(store?: Store, projectRoot?: string): SelectF
         'utf8',
       );
 
-      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, MAC_CLIPBOARD_CMDS), 'utf8');
+      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, MAC_CLIPBOARD_CMDS, resolveRenderLoopEsmUrl()), 'utf8');
 
       process.stderr.write('\n[nexpath] Please select an action in the new window\n');
 

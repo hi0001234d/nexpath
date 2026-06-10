@@ -417,6 +417,87 @@ describe('createTtySelectFn — Windows — optFile structured fields (render-lo
   });
 });
 
+// ── MAIN popup renderer — the .mjs child uses renderLoop (not clack
+// select) for the main popup, per the structured-fields path. Sub-menu
+// action prompt + freq + role + root menus continue on clack select.
+
+describe('createTtySelectFn — Windows — .mjs script wires renderLoop for the MAIN popup', () => {
+  const origPlatform = process.platform;
+
+  beforeEach(() => {
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    vi.clearAllMocks();
+    if (existsSync(SCRIPT_FILE)) unlinkSync(SCRIPT_FILE);
+  });
+
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', { value: origPlatform });
+  });
+
+  async function captureScript(): Promise<string> {
+    let captured = '';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      if (existsSync(SCRIPT_FILE)) captured = readFileSync(SCRIPT_FILE, 'utf8');
+    });
+    await createTtySelectFn()!(makeOpts());
+    return captured;
+  }
+
+  it('imports renderLoop + eventsFromReadline from the sibling render-loop module', async () => {
+    const script = await captureScript();
+    expect(script).toContain("import { renderLoop, eventsFromReadline } from '");
+    expect(script).toContain("render-loop.js'");  // resolved sibling URL ends with this
+  });
+
+  it('calls renderLoop with a layout built from the structured optFile fields', async () => {
+    const script = await captureScript();
+    expect(script).toContain('await renderLoop({');
+    expect(script).toContain('pinchLabel:');
+    expect(script).toContain('subtitle:');
+    expect(script).toContain('question:');
+    expect(script).toContain('whyHelpBlock:');
+    expect(script).toContain('descBase:');
+    expect(script).toContain('isSeparator:');
+    expect(script).toContain('isMeta:');
+  });
+
+  it('keeps clack select for the sub-menu action prompt (Send to Claude / Copy to clipboard)', async () => {
+    const script = await captureScript();
+    // Sub-menu select call still uses clack — verified by the explicit
+    // import of `select` from clackUrl staying in place and the
+    // "What would you like to do?" prompt still being a clack select.
+    expect(script).toContain("import { select, isCancel } from '");
+    expect(script).toContain("'What would you like to do?'");
+    expect(script).toContain("'Send to Claude now'");
+  });
+
+  it('translates renderLoop null (cancel) to an empty result-file write', async () => {
+    const script = await captureScript();
+    expect(script).toContain('_rlResult === null');
+    expect(script).toContain("writeFileSync('");
+    expect(script).toMatch(/_rlResult === null[\s\S]*writeFileSync\(.*,\s*''\s*,\s*'utf8'\)/);
+  });
+
+  it('preserves the Ctrl+X / Ctrl+T keypress capture path alongside renderLoop', async () => {
+    const script = await captureScript();
+    // Ctrl+X opt-out sentinel + Ctrl+T root-menu sentinel still written
+    // by the dedicated keypress listener; both coexist with renderLoop's
+    // eventsFromReadline because process.exit(0) is synchronous and
+    // pre-empts further JS execution.
+    expect(script).toContain('__NEXPATH_OPT_OUT__');
+    expect(script).toContain('__ROOT_MENU_PENDING__');
+    expect(script).toContain("'\\x18'");  // Ctrl+X check — literal backslash-x-1-8 in the script template
+    expect(script).toContain("'\\x14'");  // Ctrl+T check — literal backslash-x-1-4 in the script template
+  });
+
+  it('omits the legacy do-while-on-separator-skip loop (renderLoop skips separators in moveFocus)', async () => {
+    const script = await captureScript();
+    // Old code had: do { picked = await select(...); } while (typeof picked === 'string' && picked.startsWith(opts.separatorPrefix));
+    // renderLoop's moveFocus already skips isSeparator items, so the loop is redundant.
+    expect(script).not.toMatch(/do\s*\{\s*picked\s*=\s*await\s+select/);
+  });
+});
+
 // ── W-05: buildUnixMenuLines — pure menu-building logic ──────────────────────
 
 describe('buildUnixMenuLines — W-05 rendering', () => {
