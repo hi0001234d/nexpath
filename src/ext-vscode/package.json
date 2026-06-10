@@ -1,0 +1,55 @@
+{
+  "name": "nexpath-vscode",
+  "displayName": "Nexpath",
+  "description": "Coding-agent prompt guidance for Cursor and Windsurf",
+  "version": "0.1.3",
+  "publisher": "nexpath",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "icon": "media/icon.svg",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "nexpath",
+          "title": "Nexpath",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "nexpath": [
+        {
+          "id": "nexpath.status",
+          "name": "Nexpath"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "nexpath.status",
+        "contents": "Nexpath is active and watching for AI chat prompts.\n\nDecision sessions appear in this panel automatically when guidance is generated for a prompt — no manual action required."
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.config.mjs",
+    "watch": "node esbuild.config.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/vscode": "^1.80.0",
+    "esbuild": "^0.21",
+    "typescript": "^5",
+    "vitest": "^2"
+  }
+}
