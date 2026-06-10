@@ -314,6 +314,109 @@ describe('createTtySelectFn — Windows (win32)', () => {
   });
 });
 
+// ── Structured-fields plumbing — optFile JSON carries pre-styled header
+// values for the render-loop path consumer. Exercised on the Windows
+// callsite here; the Linux + macOS callsites use the identical optFile
+// JSON shape (verified by the cross-callsite consistency test in the
+// 'Regression: .mjs script content is platform-consistent' block below).
+
+describe('createTtySelectFn — Windows — optFile structured fields (render-loop plumbing)', () => {
+  const origPlatform = process.platform;
+
+  beforeEach(() => {
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    vi.clearAllMocks();
+    if (existsSync(OPT_FILE))    unlinkSync(OPT_FILE);
+    if (existsSync(SCRIPT_FILE)) unlinkSync(SCRIPT_FILE);
+  });
+
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', { value: origPlatform });
+  });
+
+  async function captureOptFile(over: Parameters<NonNullable<ReturnType<typeof createTtySelectFn>>>[0]): Promise<Record<string, unknown>> {
+    let captured = '';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      if (existsSync(OPT_FILE)) captured = readFileSync(OPT_FILE, 'utf8');
+    });
+    await createTtySelectFn()!(over);
+    return JSON.parse(captured) as Record<string, unknown>;
+  }
+
+  it('writes pinchLabel pre-styled (formatPinchLabel applied) when caller passes the raw string', async () => {
+    const parsed = await captureOptFile({
+      message:    'legacy message',
+      options:    [{ label: 'A', value: 'a' }],
+      pinchLabel: 'Before coding.',
+    });
+    expect(parsed['pinchLabel']).toBeDefined();
+    expect(parsed['pinchLabel']).not.toBe('Before coding.');           // formatter applied
+    expect(parsed['pinchLabel']).toMatch(/\x1b\[/);                    // ANSI escape present
+    expect(parsed['pinchLabel']).toContain('Before coding.');          // raw text preserved inside the wrap
+  });
+
+  it('writes subtitle pre-styled (formatSubtitle applied) when present', async () => {
+    const parsed = await captureOptFile({
+      message:  'legacy',
+      options:  [{ label: 'A', value: 'a' }],
+      subtitle: 'level subtitle',
+    });
+    expect(parsed['subtitle']).toBeDefined();
+    expect(parsed['subtitle']).not.toBe('level subtitle');
+    expect(parsed['subtitle']).toMatch(/\x1b\[/);
+    expect(parsed['subtitle']).toContain('level subtitle');
+  });
+
+  it('writes question pre-styled (formatQuestion applied) when present', async () => {
+    const parsed = await captureOptFile({
+      message:  'legacy',
+      options:  [{ label: 'A', value: 'a' }],
+      question: 'Is the plan written?',
+    });
+    expect(parsed['question']).toBeDefined();
+    expect(parsed['question']).not.toBe('Is the plan written?');
+    expect(parsed['question']).toMatch(/\x1b\[/);
+    expect(parsed['question']).toContain('Is the plan written?');
+  });
+
+  it('writes whyHelpBlock verbatim (already-composed; no extra formatter applied)', async () => {
+    const composed = 'You\'re seeing this because\nrecent prompts...';
+    const parsed = await captureOptFile({
+      message:      'legacy',
+      options:      [{ label: 'A', value: 'a' }],
+      whyHelpBlock: composed,
+    });
+    expect(parsed['whyHelpBlock']).toBe(composed);
+  });
+
+  it('omits structured fields when the caller does not pass them (legacy clack path unaffected)', async () => {
+    const parsed = await captureOptFile({
+      message: 'legacy only',
+      options: [{ label: 'A', value: 'a' }],
+    });
+    // JSON.stringify drops undefined fields — they are absent from the parsed object.
+    expect(parsed['pinchLabel']).toBeUndefined();
+    expect(parsed['subtitle']).toBeUndefined();
+    expect(parsed['question']).toBeUndefined();
+    expect(parsed['whyHelpBlock']).toBeUndefined();
+  });
+
+  it('keeps the legacy message + options fields intact alongside the new structured fields', async () => {
+    const parsed = await captureOptFile({
+      message:    '\x1b[1;96mHold up.\x1b[0m',
+      options:    [{ label: 'A', value: 'val-a' }],
+      pinchLabel: 'Before coding.',
+      question:   'Question?',
+    });
+    // Legacy fields preserved — required for the @clack/prompts.select fallback path.
+    expect(parsed['message']).toContain('Hold up.');
+    expect((parsed['options'] as Array<{ label: string }>)[0]?.label).toBe('A');
+    // New structured fields landed alongside.
+    expect(parsed['pinchLabel']).toContain('Before coding.');
+    expect(parsed['question']).toContain('Question?');
+  });
+});
+
 // ── W-05: buildUnixMenuLines — pure menu-building logic ──────────────────────
 
 describe('buildUnixMenuLines — W-05 rendering', () => {

@@ -6,6 +6,7 @@ import { join, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import * as rl from 'node:readline';
 import pc, { createColors } from 'picocolors';
 import type { SelectFn } from './DecisionSession.js';
@@ -15,6 +16,9 @@ import {
   OPT_OUT_SENTINEL,
   NEXPATH_HEADER,
   NEXPATH_HEADER_LINES,
+  formatPinchLabel,
+  formatSubtitle,
+  formatQuestion,
 } from './DecisionSession.js';
 import { SKIP_NOW, SHOW_SIMPLER } from './options.js';
 import type { Store } from '../store/db.js';
@@ -457,6 +461,17 @@ function buildWindowsNewWindowSelectFn(store?: Store, projectRoot?: string): Sel
           skipNow:         SKIP_NOW,
           showSimpler:     SHOW_SIMPLER,
           separatorPrefix: OPTION_SEPARATOR,
+          // Structured fields consumed by the .mjs child when the popup
+          // is driven by the local render-loop renderer. Header values
+          // are pre-styled here at the IO boundary (mirrors the legacy
+          // `message` field, which is composed pre-styled too) so the
+          // child does not need to call into DecisionSession formatters.
+          // Legacy `message` field above stays intact for the
+          // @clack/prompts.select fallback path.
+          pinchLabel:      opts.pinchLabel  !== undefined ? formatPinchLabel(opts.pinchLabel)  : undefined,
+          subtitle:        opts.subtitle    !== undefined ? formatSubtitle(opts.subtitle)      : undefined,
+          question:        opts.question    !== undefined ? formatQuestion(opts.question)      : undefined,
+          whyHelpBlock:    opts.whyHelpBlock,
         }),
         'utf8',
       );
@@ -527,6 +542,21 @@ function resolveClackEsmUrl(): string {
   const clackEsmEntry = clackPkg.exports['.'].import;
   const clackEsmPath  = join(dirname(clackPkgPath), clackEsmEntry);
   return `file:///${clackEsmPath.replace(/\\/g, '/')}`;
+}
+
+/**
+ * Resolve the sibling compiled `render-loop.js` to a `file:///` URL that
+ * the .mjs child script can import without any module-resolution context
+ * of its own. Mirrors the `resolveClackEsmUrl()` pattern.
+ *
+ * Used by the .mjs script when the main popup is driven by the local
+ * render-loop renderer instead of `@clack/prompts.select`. `render-loop.js`
+ * lives as a sibling of this compiled module under `dist/decision-session/`.
+ */
+function resolveRenderLoopEsmUrl(): string {
+  const thisDir = dirname(fileURLToPath(import.meta.url));
+  const rlPath  = join(thisDir, 'render-loop.js');
+  return `file:///${rlPath.replace(/\\/g, '/')}`;
 }
 
 /** Resolve the @clack/core ESM entry URL (for SelectPrompt) from nexpath's module context. */
@@ -649,6 +679,17 @@ function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): Selec
           skipNow:         SKIP_NOW,
           showSimpler:     SHOW_SIMPLER,
           separatorPrefix: OPTION_SEPARATOR,
+          // Structured fields consumed by the .mjs child when the popup
+          // is driven by the local render-loop renderer. Header values
+          // are pre-styled here at the IO boundary (mirrors the legacy
+          // `message` field, which is composed pre-styled too) so the
+          // child does not need to call into DecisionSession formatters.
+          // Legacy `message` field above stays intact for the
+          // @clack/prompts.select fallback path.
+          pinchLabel:      opts.pinchLabel  !== undefined ? formatPinchLabel(opts.pinchLabel)  : undefined,
+          subtitle:        opts.subtitle    !== undefined ? formatSubtitle(opts.subtitle)      : undefined,
+          question:        opts.question    !== undefined ? formatQuestion(opts.question)      : undefined,
+          whyHelpBlock:    opts.whyHelpBlock,
         }),
         'utf8',
       );
@@ -747,6 +788,17 @@ function buildMacNewWindowSelectFn(store?: Store, projectRoot?: string): SelectF
           skipNow:         SKIP_NOW,
           showSimpler:     SHOW_SIMPLER,
           separatorPrefix: OPTION_SEPARATOR,
+          // Structured fields consumed by the .mjs child when the popup
+          // is driven by the local render-loop renderer. Header values
+          // are pre-styled here at the IO boundary (mirrors the legacy
+          // `message` field, which is composed pre-styled too) so the
+          // child does not need to call into DecisionSession formatters.
+          // Legacy `message` field above stays intact for the
+          // @clack/prompts.select fallback path.
+          pinchLabel:      opts.pinchLabel  !== undefined ? formatPinchLabel(opts.pinchLabel)  : undefined,
+          subtitle:        opts.subtitle    !== undefined ? formatSubtitle(opts.subtitle)      : undefined,
+          question:        opts.question    !== undefined ? formatQuestion(opts.question)      : undefined,
+          whyHelpBlock:    opts.whyHelpBlock,
         }),
         'utf8',
       );
