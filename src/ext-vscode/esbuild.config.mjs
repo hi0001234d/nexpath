@@ -9,7 +9,10 @@ const config = {
   platform: 'node',
   target: 'node18',
   format: 'cjs',
-  external: ['vscode'],
+  // `vscode` is provided by the host. `sql.js` ships node_modules into the
+  // .vsix and is loaded via dynamic import at runtime so the wasm boot
+  // happens only on first chat-history read.
+  external: ['vscode', 'sql.js'],
   sourcemap: true,
   minify: false,
   logLevel: 'info',
