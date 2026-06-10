@@ -843,6 +843,151 @@ describe('render-loop — writeFrame cursor management', () => {
       process.stdout.isTTY = savedIsTTY;
     }
   });
+
+  // ── Visual-row counter for multi-line emissions ──────────────────────────
+  //
+  // Some upstream content (e.g. continuation-line formatting on multi-line
+  // option labels) lands in a single LineEmission whose text contains
+  // embedded '\n' characters. The terminal renders multiple visual rows
+  // from that single entry. The cursor-rewind invariant is that the
+  // next-frame rewind walks the cursor up exactly the number of VISUAL
+  // ROWS the previous frame produced, not the JS array length. The tests
+  // below pin both the per-frame invariant and the multi-frame invariant.
+
+  /**
+   * Parse the captured PassThrough stream into alternating frame-content
+   * segments and rewind-counts. Each rewind group is a run of
+   * `\x1b[A\x1b[2K` pairs optionally followed by `\r`. Returns:
+   *
+   *   segments[0]      = frame 1 content
+   *   rewindCounts[0]  = rewind group before frame 2
+   *   segments[1]      = frame 2 content
+   *   rewindCounts[1]  = rewind group before frame 3
+   *   ...
+   *   segments[N]      = last frame content (no trailing rewind)
+   */
+  function parseFrameSegments(seen: string): { segments: string[]; rewindCounts: number[] } {
+    const segments: string[] = [];
+    const rewindCounts: number[] = [];
+    const REWIND_UNIT = '\x1b[A\x1b[2K';
+    let current = '';
+    let i = 0;
+    while (i < seen.length) {
+      if (seen.startsWith(REWIND_UNIT, i)) {
+        segments.push(current);
+        current = '';
+        let count = 0;
+        while (seen.startsWith(REWIND_UNIT, i)) {
+          count++;
+          i += REWIND_UNIT.length;
+        }
+        if (seen[i] === '\r') i++;
+        rewindCounts.push(count);
+      } else {
+        current += seen[i];
+        i++;
+      }
+    }
+    segments.push(current);
+    return { segments, rewindCounts };
+  }
+
+  async function captureWithLayout(
+    layout:    RenderLoopOptions,
+    events:    KeyEvent['name'][],
+  ): Promise<string> {
+    const out    = new PassThrough();
+    const chunks: Buffer[] = [];
+    out.on('data', (c: Buffer) => chunks.push(c));
+    await renderLoop({
+      layout,
+      out,
+      keyEvents: eventsOf(...events),
+    });
+    return Buffer.concat(chunks).toString('utf8');
+  }
+
+  it('cursor-up count on the second frame equals the VISUAL row count of the first frame even when an option label is multi-line', async () => {
+    // Single option-label emission whose text contains embedded '\n' —
+    // mirrors what the continuation-line formatter emits for multi-line
+    // option text. The terminal renders 3 visual rows from this single
+    // emission while the JS array contributes only 1 entry.
+    const seen = await captureWithLayout({
+      pinchLabel: 'P',
+      question:   'Q',
+      rows: 40, cols: 80,
+      options: [
+        { value: 'multi',  label: 'A1\n│    A2\n│    A3', descBase: 'a desc' },
+        { value: 'single', label: 'B',                                descBase: 'b desc' },
+      ],
+    }, ['arrow-down', 'enter']);
+
+    const firstRewindStart = seen.indexOf('\x1b[A');
+    expect(firstRewindStart).toBeGreaterThan(0);
+
+    const firstFrameOutput     = seen.substring(0, firstRewindStart);
+    const firstFrameVisualRows = (firstFrameOutput.match(/\n/g) || []).length;
+    const cursorUpCount        = (seen.match(/\x1b\[A/g) || []).length;
+
+    // Under the JS-array-length count, cursorUpCount would be strictly
+    // less than firstFrameVisualRows because the multi-line emission's
+    // 3 visual rows would contribute only 1 to the count. Under the
+    // visual-row counter, they match.
+    expect(cursorUpCount).toBe(firstFrameVisualRows);
+  });
+
+  it('successive frame rewinds each match the VISUAL row count of their preceding frame', async () => {
+    const seen = await captureWithLayout({
+      pinchLabel: 'P',
+      question:   'Q',
+      rows: 40, cols: 80,
+      options: [
+        { value: 'multi',  label: 'A1\n│    A2\n│    A3', descBase: 'a desc' },
+        { value: 'b',      label: 'B',                                descBase: 'b desc' },
+        { value: 'c',      label: 'C',                                descBase: 'c desc' },
+      ],
+    }, ['arrow-down', 'arrow-down', 'enter']);
+
+    const { segments, rewindCounts } = parseFrameSegments(seen);
+
+    // 3 frames rendered (initial + 2 arrow-downs); 2 rewind groups in
+    // between. enter exits without an additional re-render.
+    expect(rewindCounts).toHaveLength(2);
+
+    for (let k = 0; k < rewindCounts.length; k++) {
+      const visualRows = (segments[k].match(/\n/g) || []).length;
+      expect(rewindCounts[k], `rewind ${k} should match visual rows of frame ${k}`).toBe(visualRows);
+    }
+  });
+
+  it('Space-toggle expand/collapse cycle on the focused option redraws cleanly when a sibling option has a multi-line label', async () => {
+    // The multi-line option-label sibling is the bug-trigger condition;
+    // the focused option has a desc-base long enough to differ between
+    // truncated (2-line) and expanded (8-line) states so the Space-key
+    // toggle exercises both directions of the cycle.
+    const seen = await captureWithLayout({
+      pinchLabel: 'P',
+      question:   'Q',
+      rows: 40, cols: 80,
+      options: [
+        { value: 'multi',     label: 'A1\n│    A2\n│    A3', descBase: 'a desc' },
+        { value: 'expandable', label: 'Focused option',
+          descBase: 'L1\nL2\nL3\nL4\nL5\nL6\nL7\nL8\nL9' },
+      ],
+    }, ['arrow-down', 'space', 'space', 'enter']);
+
+    const { segments, rewindCounts } = parseFrameSegments(seen);
+
+    // 4 frames (initial + arrow-down + space + space); 3 rewind groups
+    // in between. Each rewind must match its preceding frame's visual
+    // rows or the new frame would write below stale rows.
+    expect(rewindCounts).toHaveLength(3);
+
+    for (let k = 0; k < rewindCounts.length; k++) {
+      const visualRows = (segments[k].match(/\n/g) || []).length;
+      expect(rewindCounts[k], `rewind ${k} should match visual rows of frame ${k}`).toBe(visualRows);
+    }
+  });
 });
 
 describe('render-loop — normaliseKeypress (readline event → KeyEvent)', () => {

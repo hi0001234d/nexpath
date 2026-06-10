@@ -765,12 +765,22 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
     }
 
     const lines = layout.viewport.visibleChromedLines;
+    let visualRowCount = 0;
     for (const line of lines) {
       out.write(line);
       out.write('\n');
+      // Visual rows produced by this entry = 1 (the line itself) + one
+      // per embedded '\n'. Upstream callers can carry multi-line content
+      // inside a single line entry (for example a continuation-line
+      // formatter emits a string with embedded '\n' for visual
+      // continuation rows); counting array entries alone under-counts
+      // the visual rows the terminal actually renders and the next-
+      // frame cursor rewind would leave stale rows at the top of the
+      // popup.
+      visualRowCount += 1 + (line.match(/\n/g) || []).length;
     }
 
-    previousFrameHeight = lines.length;
+    previousFrameHeight = visualRowCount;
   };
 
   writeFrame();
