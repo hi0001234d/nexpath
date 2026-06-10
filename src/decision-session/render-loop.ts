@@ -695,6 +695,17 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
     scrollOffset:    0,
   };
 
+  // Track the rendered line count of the previous frame so subsequent
+  // frames can rewind the cursor and clear those lines before emitting
+  // the new frame. Without this, every keypress stacks a new frame
+  // vertically below the previous one instead of redrawing in place.
+  //
+  // Known limitation: terminal-resize during the popup is NOT handled.
+  // After a mid-popup resize, previousFrameHeight may not match the
+  // actual rendered row count and the popup can render incorrectly
+  // until the user dismisses (Esc / Enter) and re-triggers.
+  let previousFrameHeight = 0;
+
   const writeFrame = () => {
     const layout = computeLayout(opts.layout, state);
     // Persist the auto-adjusted scroll offset back into state so subsequent
@@ -703,10 +714,28 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
     if (layout.viewport.appliedScrollOffset !== state.scrollOffset) {
       state = { ...state, scrollOffset: layout.viewport.appliedScrollOffset };
     }
-    for (const line of layout.viewport.visibleStyledLines) {
+
+    // Cursor rewind: when a previous frame exists, walk the cursor up
+    // over every line we emitted last time and erase each one entirely
+    // before writing the new frame. Skipped on non-TTY output (pipe /
+    // redirect / CI) so the captured stream stays clean of ANSI control
+    // sequences. Each rewind iteration uses cursor-up + erase-line; the
+    // trailing carriage-return resets the cursor column to 0 in case
+    // the last erased line did not end at column 0.
+    if (previousFrameHeight > 0 && process.stdout.isTTY) {
+      for (let i = 0; i < previousFrameHeight; i++) {
+        out.write('\x1b[A\x1b[2K');
+      }
+      out.write('\r');
+    }
+
+    const lines = layout.viewport.visibleStyledLines;
+    for (const line of lines) {
       out.write(line);
       out.write('\n');
     }
+
+    previousFrameHeight = lines.length;
   };
 
   writeFrame();

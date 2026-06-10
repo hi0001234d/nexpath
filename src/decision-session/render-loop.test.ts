@@ -765,6 +765,86 @@ describe('render-loop — renderLoop interactive shell', () => {
   });
 });
 
+describe('render-loop — writeFrame cursor management', () => {
+  // Shared helper: collect every byte written to a PassThrough so each test
+  // can grep the captured stream for cursor sequences.
+  async function captureRenderOutput(events: KeyEvent['name'][]): Promise<string> {
+    const out    = new PassThrough();
+    const chunks: Buffer[] = [];
+    out.on('data', (c: Buffer) => chunks.push(c));
+    await renderLoop({
+      layout:    {
+        pinchLabel: 'P', question: 'Q', rows: 40, cols: 80,
+        options: [
+          { value: 'opt-a', label: 'A', descBase: 'a desc' },
+          { value: 'opt-b', label: 'B', descBase: 'b desc' },
+          { value: 'opt-c', label: 'C', descBase: 'c desc' },
+        ],
+      },
+      out,
+      keyEvents: eventsOf(...events),
+    });
+    return Buffer.concat(chunks).toString('utf8');
+  }
+
+  it('emits zero cursor-up sequences on the first frame (initial render has nothing to rewind)', async () => {
+    const seen = await captureRenderOutput(['enter']);
+    expect(seen.match(/\x1b\[A/g)).toBeNull();
+  });
+
+  it('emits cursor-up + clear-line for each previous-frame line on subsequent frames', async () => {
+    const seen = await captureRenderOutput(['arrow-down', 'enter']);
+    const cursorUpCount  = (seen.match(/\x1b\[A/g)  || []).length;
+    const clearLineCount = (seen.match(/\x1b\[2K/g) || []).length;
+    // Each rewind iteration emits exactly one cursor-up + one clear-line.
+    expect(cursorUpCount).toBeGreaterThan(0);
+    expect(cursorUpCount).toBe(clearLineCount);
+    expect(seen).toContain('\r');  // carriage return resets the cursor column after the rewind
+  });
+
+  it('cursor-up count on the second frame equals the rendered line count of the first frame', async () => {
+    const seen = await captureRenderOutput(['arrow-down', 'enter']);
+    // Locate the boundary between first frame and the rewind block — the
+    // first cursor-up byte marks the start of the rewind that precedes
+    // the second frame.
+    const rewindStart = seen.indexOf('\x1b[A');
+    expect(rewindStart).toBeGreaterThan(0);
+    const firstFrameOutput = seen.substring(0, rewindStart);
+    // Newlines inside the first-frame slice equal the number of lines
+    // we emitted (each line was followed by a '\n').
+    const firstFrameLineCount = (firstFrameOutput.match(/\n/g) || []).length;
+    const cursorUpCount       = (seen.match(/\x1b\[A/g) || []).length;
+    expect(cursorUpCount).toBe(firstFrameLineCount);
+  });
+
+  it('skips the cursor-rewind block when process.stdout.isTTY is false (clean pipe output)', async () => {
+    const savedIsTTY = process.stdout.isTTY;
+    try {
+      process.stdout.isTTY = false;
+      const seen = await captureRenderOutput(['arrow-down', 'enter']);
+      // No cursor sequences should appear when the rewind block is skipped.
+      expect(seen.match(/\x1b\[A/g)).toBeNull();
+      expect(seen.match(/\x1b\[2K/g)).toBeNull();
+    } finally {
+      process.stdout.isTTY = savedIsTTY;
+    }
+  });
+
+  it('still emits the frame content lines when cursor rewind is skipped on non-TTY', async () => {
+    const savedIsTTY = process.stdout.isTTY;
+    try {
+      process.stdout.isTTY = false;
+      const seen = await captureRenderOutput(['enter']);
+      // Frame content still reaches the output stream — only the cursor
+      // sequences are suppressed for clean log capture.
+      expect(seen).toContain('A');  // option-a label
+      expect(seen).toContain('Q');  // question
+    } finally {
+      process.stdout.isTTY = savedIsTTY;
+    }
+  });
+});
+
 describe('render-loop — normaliseKeypress (readline event → KeyEvent)', () => {
   it('maps arrow-up / arrow-down', () => {
     expect(normaliseKeypress(undefined, { name: 'up'   }).name).toBe('arrow-up');
