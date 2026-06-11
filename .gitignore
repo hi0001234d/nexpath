@@ -5,3 +5,4 @@ node_modules/
 .env
 src/ext-vscode/out/
 src/ext-vscode/node_modules/
+src/ext-vscode/*.vsix

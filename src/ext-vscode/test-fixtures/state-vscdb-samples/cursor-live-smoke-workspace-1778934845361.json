@@ -1,0 +1,32 @@
+{
+  "capturedAt": "2026-05-16T12:34:46.515Z",
+  "sourcePath": "/home/emptyops/.config/Cursor/User/workspaceStorage/1778934845361/state.vscdb",
+  "platform": "linux",
+  "redacted": true,
+  "tables": [
+    "ItemTable",
+    "cursorDiskKV"
+  ],
+  "rows": [
+    {
+      "table": "ItemTable",
+      "key": "aiService.generations",
+      "value": "[]"
+    },
+    {
+      "table": "ItemTable",
+      "key": "aiService.prompts",
+      "value": "[]"
+    },
+    {
+      "table": "ItemTable",
+      "key": "composer.composerData",
+      "value": "{\"selectedComposerIds\":[\"************************************\"],\"lastFocusedComposerIds\":[\"************************************\"],\"hasMigratedComposerData\":false,\"hasMigratedMultipleComposers\":true}"
+    },
+    {
+      "table": "ItemTable",
+      "key": "workbench.backgroundComposer.workspacePersistentData",
+      "value": "{\"isSideBarExpanded\":false}"
+    }
+  ]
+}

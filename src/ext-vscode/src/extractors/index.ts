@@ -2,6 +2,7 @@ import type {
   ChatHistoryExtractor,
   FingerprintResult,
 } from '../chat-history-types.js';
+import { cursorComposerBubble } from './cursor-composer-bubble.js';
 import { cursorV2024Q4 } from './cursor-v2024-q4.js';
 import { cursorV2025Q1 } from './cursor-v2025-q1.js';
 import { cursorV2025Q2 } from './cursor-v2025-q2.js';
@@ -10,9 +11,13 @@ import { windsurf } from './windsurf.js';
 /**
  * Registry of all known per-version chat-history extractors. Ordered
  * newest-first so that on a tie in fingerprint match count the latest
- * version wins (see `pickExtractor`).
+ * version wins (see `pickExtractor`). cursor-composer-bubble is listed
+ * first because it's Cursor's current default chat mode (Composer /
+ * Agent) and the only one that owns rows from the `cursorDiskKV` table
+ * (everything else owns rows from `ItemTable`).
  */
 export const ALL_EXTRACTORS: readonly ChatHistoryExtractor[] = [
+  cursorComposerBubble,
   cursorV2025Q2,
   cursorV2025Q1,
   cursorV2024Q4,
@@ -67,4 +72,10 @@ export function pickExtractor(
   };
 }
 
-export { cursorV2024Q4, cursorV2025Q1, cursorV2025Q2, windsurf };
+export {
+  cursorComposerBubble,
+  cursorV2024Q4,
+  cursorV2025Q1,
+  cursorV2025Q2,
+  windsurf,
+};

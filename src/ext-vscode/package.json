@@ -1,18 +1,48 @@
 {
   "name": "nexpath-vscode",
   "displayName": "Nexpath",
-  "description": "Coding-agent prompt guidance for Cursor and Windsurf",
+  "description": "Coding-agent prompt guidance for Cursor and Windsurf — between-prompt advisory that helps you stop, reconsider, and reframe before sending.",
   "version": "0.1.3",
-  "publisher": "nexpath",
+  "publisher": "emptyops",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "engines": {
-    "vscode": "^1.80.0"
+    "vscode": "^1.80.0",
+    "node": ">=18"
   },
-  "categories": ["Other"],
-  "activationEvents": ["onStartupFinished"],
-  "main": "./out/extension.js",
-  "icon": "media/icon.svg",
+  "categories": [
+    "Other",
+    "Machine Learning",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "cursor",
+    "windsurf",
+    "ai",
+    "prompt",
+    "guidance",
+    "advisory",
+    "nexpath"
+  ],
+  "homepage": "https://github.com/hi0001234d/nexpath",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hi0001234d/nexpath.git",
+    "directory": "src/ext-vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/hi0001234d/nexpath/issues"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.cjs",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#1e1e2e",
+    "theme": "dark"
+  },
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -31,7 +61,14 @@
           "type": "webview"
         }
       ]
-    }
+    },
+    "commands": [
+      {
+        "command": "nexpath.showAdvisory",
+        "title": "Show pending advisory",
+        "category": "Nexpath"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run build",
@@ -39,17 +76,30 @@
     "watch": "node esbuild.config.mjs --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "dump-cursor-state": "tsx scripts/dump-cursor-state.ts"
+    "dump-cursor-state": "tsx scripts/dump-cursor-state.ts",
+    "rebuild:electron": "electron-rebuild --version $npm_package_nexpathTargets_electron --force --only better-sqlite3 --module-dir .",
+    "rebuild:node": "npm rebuild better-sqlite3",
+    "package": "node scripts/package-with-electron-abi.mjs",
+    "package:all-platforms": "node scripts/package-per-platform.mjs",
+    "publish:ovsx": "ovsx publish",
+    "publish:vsce": "vsce publish"
+  },
+  "nexpathTargets": {
+    "comment": "Target Electron version for the native better-sqlite3 binding inside .vsix. Cursor 3.4.20 + recent VS Code use Electron 39 (NODE_MODULE_VERSION 140). Bump this when Cursor / VS Code upgrade Electron; locked by src/native-binding-abi.test.ts.",
+    "electron": "39.0.0",
+    "electronAbi": 140
   },
   "dependencies": {
-    "sql.js": "^1"
+    "better-sqlite3": "^12"
   },
   "devDependencies": {
+    "@electron/rebuild": "^3.7.2",
     "@types/better-sqlite3": "^7",
     "@types/node": "^20",
     "@types/vscode": "^1.80.0",
-    "better-sqlite3": "^11",
+    "@vscode/vsce": "^3",
     "esbuild": "^0.21",
+    "ovsx": "^0.10",
     "tsx": "^4",
     "typescript": "^5",
     "vitest": "^2"

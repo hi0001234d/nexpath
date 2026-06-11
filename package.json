@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "postbuild": "node -e \"['dist/cli/index.js','dist/server/index.js'].forEach(f => require('fs').chmodSync(f, 0o755))\"",
     "dev:cli": "tsx src/cli/index.ts",
     "dev:server": "tsx src/server/index.ts",
     "typecheck": "tsc --noEmit",

@@ -41,12 +41,46 @@ describe('cursorV2024Q4 extractor', () => {
       expect(events.every((e) => e.sourcePath === SRC)).toBe(true);
     });
 
-    it('uses prompts-index as rawSessionId', () => {
+    it("uses a stable 'ask-mode' rawSessionId for every prompt (NOT positional index)", () => {
+      // Regression for the M2 R3 FIFO-shift bug (2026-05-20): the previous
+      // positional `prompts-index:${i}` rawSessionId caused every Cursor
+      // restart with a full FIFO to re-emit the entire backlog because
+      // the dedup signature shifted when a new prompt pushed out the
+      // oldest. Content-stable rawSessionId means the signature depends
+      // only on (sourcePath, prompt text), which survives FIFO shifts.
       const events = cursorV2024Q4.decodeRow(row([{ text: 'a' }, { text: 'b' }]), SRC);
-      expect(events.map((e) => e.rawSessionId)).toEqual([
-        'prompts-index:0',
-        'prompts-index:1',
-      ]);
+      expect(events.map((e) => e.rawSessionId)).toEqual(['ask-mode', 'ask-mode']);
+    });
+
+    it('FIFO-shift regression: same prompts in shifted positions produce the SAME (sourcePath,text)-stable signature', () => {
+      // Simulates the live M2 R3 scenario: an Ask-mode FIFO of 10 prompts
+      // shifts left by 1 (oldest dropped, new appended). The text-stable
+      // rawSessionId means each individual prompt's downstream watcher
+      // signature `${sourcePath}|${rawSessionId}|${prompt}` is unchanged
+      // by the shift, so the watcher's seenSignatures dedup correctly
+      // recognises them as already-seen.
+      const before = cursorV2024Q4.decodeRow(
+        row(Array.from({ length: 10 }, (_, i) => ({ text: `prompt-${i}` }))),
+        SRC,
+      );
+      // FIFO shift: drop prompt-0, append prompt-10.
+      const after = cursorV2024Q4.decodeRow(
+        row([
+          ...Array.from({ length: 9 }, (_, i) => ({ text: `prompt-${i + 1}` })),
+          { text: 'prompt-10' },
+        ]),
+        SRC,
+      );
+      // Build the signature for each event the way chat-history-watcher does.
+      const sigOf = (e: { sourcePath: string; rawSessionId: string; prompt: string }) =>
+        `${e.sourcePath}|${e.rawSessionId}|${e.prompt}`;
+      const beforeSigs = new Set(before.map(sigOf));
+      const afterSigs = after.map(sigOf);
+      // 9 of the 10 post-shift prompts must hit the dedup set; the new
+      // tail (`prompt-10`) is the only one that's genuinely new.
+      const newOnes = afterSigs.filter((s) => !beforeSigs.has(s));
+      expect(newOnes).toHaveLength(1);
+      expect(newOnes[0]).toContain('prompt-10');
     });
 
     it('skips entries with no text field', () => {
