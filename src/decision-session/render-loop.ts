@@ -268,6 +268,65 @@ export function optionEntriesToSelectableItems(entries: readonly OptionEntry[]):
   return entries.map((e) => ({ value: e.option, label: e.option, descBase: e.descBase }));
 }
 
+// ── ANSI-aware visual-row counting (cursor-rewind invariant) ────────────────
+
+/**
+ * SGR sequences emitted by the styler + chrome layers. Matches the full
+ * SGR form `\x1b[...m` where `...` is the parameter list. Restricted to
+ * SGR (terminator `m`) because that is the only sequence type styler and
+ * chrome emit inside line content. Other CSI types (cursor control,
+ * erase) are produced by writeFrame itself via out.write but never
+ * appear inside the rendered line content.
+ */
+const ANSI_SGR_REGEX = /\x1b\[[0-9;]*m/g;
+
+/**
+ * Strip SGR sequences from a string. Returns the visible-character
+ * payload that the terminal renders. Used by visualRows so the
+ * cursor-rewind row-count is measured against visible width, not raw
+ * .length (which includes the escape bytes).
+ *
+ * Exported for unit testability.
+ */
+export function stripAnsi(s: string): string {
+  return s.replace(ANSI_SGR_REGEX, '');
+}
+
+/**
+ * Count the visual rows produced by writing `line` followed by `\n`.
+ * Accounts for two effects:
+ *
+ *   1. Embedded `\n` characters — each starts a new visual row.
+ *      formatOptionLabel packs multi-line option labels as a single
+ *      emission with embedded `\n` for continuation rows.
+ *
+ *   2. Terminal-driven wrap when a segment's visible length exceeds
+ *      cols. Visible length is measured AFTER stripping SGR escape
+ *      sequences — ANSI codes do not consume terminal columns.
+ *
+ * Strict superset of the prior accumulator
+ * (`1 + (line.match(/\n/g) || []).length`): when there is no wrap and
+ * no SGR, visualRows returns the same value. The new behavior diverges
+ * only when wrap is actually present.
+ *
+ * Edge cases:
+ *   - Empty segment between two `\n` characters → still 1 visual row
+ *   - cols <= 0 → return segments.length (defensive; terminals do not
+ *     have zero or negative cols, but avoid divide-by-zero)
+ *
+ * Exported for unit testability.
+ */
+export function visualRows(line: string, cols: number): number {
+  const segments = line.split('\n');
+  if (cols <= 0) return segments.length;
+  let rows = 0;
+  for (const seg of segments) {
+    const visible = stripAnsi(seg).length;
+    rows += Math.max(1, Math.ceil(visible / cols));
+  }
+  return rows;
+}
+
 // ── Wrapping + truncation helpers (D1 / D2 / D5) ────────────────────────────
 
 /**
@@ -769,15 +828,14 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
     for (const line of lines) {
       out.write(line);
       out.write('\n');
-      // Visual rows produced by this entry = 1 (the line itself) + one
-      // per embedded '\n'. Upstream callers can carry multi-line content
-      // inside a single line entry (for example a continuation-line
-      // formatter emits a string with embedded '\n' for visual
-      // continuation rows); counting array entries alone under-counts
-      // the visual rows the terminal actually renders and the next-
-      // frame cursor rewind would leave stale rows at the top of the
-      // popup.
-      visualRowCount += 1 + (line.match(/\n/g) || []).length;
+      // Visual rows produced by this entry account for two effects:
+      // (1) embedded '\n' continuation rows (a single emission carrying
+      // multi-line content via a continuation-line formatter), and
+      // (2) terminal-driven wrap when a segment's visible length
+      // exceeds opts.layout.cols. visualRows strips SGR sequences
+      // before measuring visible width so wrap detection does not
+      // misfire from styled-content byte inflation.
+      visualRowCount += visualRows(line, opts.layout.cols);
     }
 
     previousFrameHeight = visualRowCount;

@@ -13,6 +13,8 @@ import {
   optionEntriesToSelectableItems,
   renderDescBaseSubLines,
   renderLoop,
+  stripAnsi,
+  visualRows,
   wrapAndCap,
   wrapLine,
   type KeyEvent,
@@ -988,6 +990,55 @@ describe('render-loop — writeFrame cursor management', () => {
       expect(rewindCounts[k], `rewind ${k} should match visual rows of frame ${k}`).toBe(visualRows);
     }
   });
+
+  it('rewinds wrap-aware visual rows when a header line exceeds cols (terminal-wrap)', async () => {
+    // A pinch label wider than cols forces terminal-driven wrap. The
+    // prior accumulator (1 + embedded \n count) recorded 1 row for
+    // that emission; the wrap-aware accumulator records ceil(visible /
+    // cols). The captured stream's '\n' count for the frame equals the
+    // emission boundaries (no extra '\n' written for wrap rows), so
+    // rewindCount > segment's '\n' count is the observable signature
+    // of a wrap row being counted.
+    const widePinch = 'P'.repeat(120);  // visible 120 chars; wraps to 2 rows at cols=80
+    const seen = await captureWithLayout({
+      pinchLabel: widePinch,
+      question:   'Q',
+      rows: 40, cols: 80,
+      options: [
+        { value: 'a', label: 'A' },
+        { value: 'b', label: 'B' },
+      ],
+    }, ['arrow-down', 'enter']);
+
+    const { segments, rewindCounts } = parseFrameSegments(seen);
+    expect(rewindCounts.length).toBeGreaterThan(0);
+    const newlineCount = (segments[0].match(/\n/g) || []).length;
+    expect(rewindCounts[0]).toBeGreaterThan(newlineCount);
+  });
+
+  it('preserves cursor-fix embedded-\\n behavior when no wrap is needed (regression-clean)', async () => {
+    // Repeats the cursor-fix fixture: multi-line option label with
+    // embedded \n, all content fits within cols=80. Asserts each
+    // rewind count equals the segment's '\n' count — i.e., the
+    // wrap-aware accumulator collapses to the cursor-fix accumulator
+    // when no wrap is present.
+    const seen = await captureWithLayout({
+      pinchLabel: 'P',
+      question:   'Q',
+      rows: 40, cols: 80,
+      options: [
+        { value: 'multi', label: 'A1\n│    A2\n│    A3' },
+        { value: 'b',     label: 'B' },
+      ],
+    }, ['arrow-down', 'enter']);
+
+    const { segments, rewindCounts } = parseFrameSegments(seen);
+
+    for (let k = 0; k < rewindCounts.length; k++) {
+      const newlineCount = (segments[k].match(/\n/g) || []).length;
+      expect(rewindCounts[k], `rewind ${k} should match \\n count of frame ${k} (no wrap)`).toBe(newlineCount);
+    }
+  });
 });
 
 describe('render-loop — normaliseKeypress (readline event → KeyEvent)', () => {
@@ -1231,5 +1282,69 @@ describe('render-loop — D5 edge case (c): short-terminal refuse-to-expand', ()
     // All desc-base lines should be truncated (default state — not a refusal).
     const truncatedLines = focusedLines.filter((e) => e.kind === 'desc-base-truncated');
     expect(truncatedLines.length).toBeGreaterThan(0);
+  });
+});
+
+describe('render-loop — stripAnsi + visualRows helpers', () => {
+  describe('stripAnsi', () => {
+    it('removes SGR sequences and preserves visible content', () => {
+      expect(stripAnsi('\x1b[1;96m◆ Hi\x1b[0m')).toBe('◆ Hi');
+    });
+
+    it('handles multiple SGR sequences in one string', () => {
+      expect(stripAnsi('\x1b[2;33mPrompt\x1b[0m → \x1b[1mreply\x1b[0m')).toBe('Prompt → reply');
+    });
+
+    it('passes through plain strings unchanged', () => {
+      expect(stripAnsi('no escape here')).toBe('no escape here');
+    });
+
+    it('does not strip non-SGR CSI escapes (cursor-control sequences)', () => {
+      // Non-SGR escapes are not in line content but should pass through if
+      // they ever appear (defensive). The regex terminator 'm' ensures
+      // only SGR is matched.
+      expect(stripAnsi('\x1b[A')).toBe('\x1b[A');
+    });
+  });
+
+  describe('visualRows', () => {
+    it('returns 1 for a short single-line input', () => {
+      expect(visualRows('hello', 80)).toBe(1);
+    });
+
+    it('preserves cursor-fix embedded-\\n behavior when no wrap is needed', () => {
+      // 3 segments, each fits in cols, so 3 rows total — identical to
+      // what the cursor-fix accumulator (1 + embedded \n count) produced.
+      expect(visualRows('A1\n│    A2\n│    A3', 80)).toBe(3);
+    });
+
+    it('counts wrap as ceil(visible / cols) for unstyled lines', () => {
+      // 130 visible chars at cols=80 → ceil(130/80) = 2 rows.
+      expect(visualRows('x'.repeat(130), 80)).toBe(2);
+    });
+
+    it('ignores SGR sequences when measuring wrap', () => {
+      // 75 visible chars + 11 SGR bytes → raw .length = 86 but visible
+      // length is 75, which fits in cols=80 → 1 row.
+      const s = '\x1b[1;97m' + 'x'.repeat(75) + '\x1b[0m';
+      expect(visualRows(s, 80)).toBe(1);
+    });
+
+    it('treats a line of exactly cols width as 1 row', () => {
+      expect(visualRows('x'.repeat(80), 80)).toBe(1);
+    });
+
+    it('treats empty segments between \\n as 1 row each', () => {
+      // 'A\n\nB' → segments ['A', '', 'B']; the empty segment still
+      // occupies 1 visual row (a blank line).
+      expect(visualRows('A\n\nB', 80)).toBe(3);
+    });
+
+    it('returns segments.length when cols <= 0 (defensive)', () => {
+      // Terminals do not have zero or negative cols, but the math must
+      // not divide by zero. Fall back to segments.length.
+      expect(visualRows('A\nB', 0)).toBe(2);
+      expect(visualRows('A\nB', -1)).toBe(2);
+    });
   });
 });
