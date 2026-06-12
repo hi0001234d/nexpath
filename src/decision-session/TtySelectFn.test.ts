@@ -30,6 +30,7 @@ const {
   runRoleSubMenu,
   planWindowsPopupSpawn,
   planLinuxPopupSpawn,
+  buildTerminalAppleScript,
 } = await import('./TtySelectFn.js');
 const { OPT_OUT_SENTINEL }       = await import('./DecisionSession.js');
 const { SHOW_SIMPLER, SKIP_NOW } = await import('./options.js');
@@ -2117,5 +2118,106 @@ describe('planLinuxPopupSpawn — title and path passthrough', () => {
     };
     const plan = planLinuxPopupSpawn(spec, sampleGeom, 'Nexpath — Action Required', '/tmp/s.mjs');
     expect(plan.args).toContain('Nexpath — Action Required');
+  });
+});
+
+// ── buildTerminalAppleScript ─────────────────────────────────────────────────
+//
+// Pure-function unit tests for the macOS AppleScript builder. When no geom
+// is supplied, the generated script preserves the pre-Phase-4 hardcoded
+// `set number of rows … to 50` sizing and is byte-identical to the prior
+// shape. When geom IS supplied, the rows-set is replaced by a try-wrapped
+// `set bounds of (first window …) to {x1, y1, x2, y2}` centered rectangle.
+
+describe('buildTerminalAppleScript — null geometry (pre-change shape)', () => {
+  it('emits the legacy "set number of rows … to 50" sizing when no geom is passed', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs');
+    expect(s).toContain('set number of rows of (first window whose selected tab is theTab) to 50');
+  });
+
+  it('does NOT emit a bounds-set when no geom is passed', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs');
+    expect(s).not.toContain('set bounds of');
+  });
+
+  it('emits the legacy "set number of rows" sizing when geom is explicitly null', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs', null);
+    expect(s).toContain('set number of rows of (first window whose selected tab is theTab) to 50');
+  });
+
+  it('contains the do script command verbatim with the trailing "; exit"', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs');
+    expect(s).toContain('do script "node /tmp/script.mjs; exit"');
+  });
+
+  it('escapes embedded double quotes in the command', () => {
+    const s = buildTerminalAppleScript('echo "hello"');
+    expect(s).toContain('do script "echo \\"hello\\"; exit"');
+  });
+
+  it('escapes embedded backslashes in the command', () => {
+    const s = buildTerminalAppleScript('echo c:\\path');
+    expect(s).toContain('do script "echo c:\\\\path; exit"');
+  });
+
+  it('wraps the activate / do script / wait / close flow in `tell application "Terminal"`', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs');
+    expect(s).toContain('tell application "Terminal"');
+    expect(s).toContain('activate');
+    expect(s).toContain('set theTab to do script');
+    expect(s).toContain('repeat');
+    expect(s).toContain('close (first window whose selected tab is theTab)');
+    expect(s).toContain('end tell');
+  });
+});
+
+describe('buildTerminalAppleScript — geometry supplied (Phase 4 bounds-setter)', () => {
+  const geom = {
+    widthPx:  1344,
+    heightPx: 756,
+    xPx:      288,
+    yPx:      162,
+    cols:     134,
+    rows:     37,
+  };
+
+  it('emits a bounds-set with the centered rectangle in {x1,y1,x2,y2} order', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs', geom);
+    // x2 = xPx + widthPx = 288 + 1344 = 1632
+    // y2 = yPx + heightPx = 162 + 756 = 918
+    expect(s).toContain('set bounds of (first window whose selected tab is theTab) to {288, 162, 1632, 918}');
+  });
+
+  it('wraps the bounds-set in a try block so a future macOS rejecting the bounds shape falls back to default', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs', geom);
+    // The try block should appear immediately before the bounds-set line.
+    const boundsIdx = s.indexOf('set bounds of');
+    const tryBeforeBounds = s.lastIndexOf('try', boundsIdx);
+    expect(tryBeforeBounds).toBeGreaterThan(0);
+    expect(tryBeforeBounds).toBeLessThan(boundsIdx);
+  });
+
+  it('does NOT emit the legacy "set number of rows … to 50" sizing when geom is supplied', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs', geom);
+    expect(s).not.toContain('set number of rows of (first window whose selected tab is theTab) to 50');
+  });
+
+  it('preserves the do script + wait + close flow alongside the bounds-set', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs', geom);
+    expect(s).toContain('do script');
+    expect(s).toContain('repeat');
+    expect(s).toContain('close (first window whose selected tab is theTab)');
+  });
+
+  it('handles a portrait-screen geometry (width < height)', () => {
+    const portraitGeom = { ...geom, widthPx: 756, heightPx: 1344, xPx: 162, yPx: 288 };
+    const s = buildTerminalAppleScript('node /tmp/script.mjs', portraitGeom);
+    expect(s).toContain('set bounds of (first window whose selected tab is theTab) to {162, 288, 918, 1632}');
+  });
+
+  it('handles a square-screen geometry', () => {
+    const squareGeom = { widthPx: 756, heightPx: 756, xPx: 162, yPx: 162, cols: 75, rows: 37 };
+    const s = buildTerminalAppleScript('node /tmp/script.mjs', squareGeom);
+    expect(s).toContain('set bounds of (first window whose selected tab is theTab) to {162, 162, 918, 918}');
   });
 });

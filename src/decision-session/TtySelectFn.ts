@@ -910,14 +910,30 @@ const MAC_CLIPBOARD_CMDS: ClipboardCmd[] = [['pbcopy', []]];
  * ;exit after the command ensures the shell exits so busy becomes false.
  * If the user closes the window manually, the `on error` catches the stale
  * reference and exits the loop cleanly.
+ *
+ * Geometry: when `geom` is supplied, the popup window's bounds are set
+ * to the centered pixel rectangle so the window opens at exact 70% size
+ * on the primary monitor. The bounds-set is wrapped in a try block so a
+ * future macOS version that rejects the bounds shape simply falls back
+ * to Terminal.app's default size. When `geom` is null / omitted, the
+ * legacy hardcoded `set number of rows … to 50` sizing applies — the
+ * generated script is byte-identical to the pre-change shape for that
+ * code path.
+ *
+ * Exported for unit testability.
  */
-function buildTerminalAppleScript(command: string): string {
+export function buildTerminalAppleScript(command: string, geom: PopupGeometry | null = null): string {
   // Escape backslashes and double-quotes for AppleScript string embedding
   const escaped = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const sizeBlock = geom
+    ? `try
+        set bounds of (first window whose selected tab is theTab) to {${geom.xPx}, ${geom.yPx}, ${geom.xPx + geom.widthPx}, ${geom.yPx + geom.heightPx}}
+    end try`
+    : `set number of rows of (first window whose selected tab is theTab) to 50`;
   return `tell application "Terminal"
     activate
     set theTab to do script "${escaped}; exit"
-    set number of rows of (first window whose selected tab is theTab) to 50
+    ${sizeBlock}
     delay 1
     repeat
         delay 0.5
@@ -936,8 +952,7 @@ end tell`;
 function buildMacNewWindowSelectFn(store?: Store, projectRoot?: string): SelectFn {
   const clackUrl = resolveClackEsmUrl();
 
-  return (opts) =>
-    new Promise<string | symbol>((resolve) => {
+  return async (opts) => {
       const id         = randomUUID();
       const optFile    = join(tmpdir(), `nexpath-opt-${id}.json`);
       const resultFile = join(tmpdir(), `nexpath-res-${id}.txt`);
@@ -973,7 +988,20 @@ function buildMacNewWindowSelectFn(store?: Store, projectRoot?: string): SelectF
 
       process.stderr.write('\n[nexpath] Please select an action in the new window\n');
 
-      spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${scriptFile}`)], { stdio: 'ignore' });
+      // Compute geometry ONCE per select call. Both the MAIN popup and the
+      // sub-menu spawn callback (Ctrl+T → root chooser) share the same
+      // closure so the sub-menu inherits the same 70% sizing without an
+      // extra detection round-trip.
+      const screen = await detectScreenResolution();
+      const geom   = screen ? computePopupGeometry(screen) : null;
+
+      // Shared spawn closure. Reused below by spawnRootChooserFlow so the
+      // sub-menu spawn callback uses the same bounds + geometry.
+      const spawnConsole: SpawnWindowFn = (_title, script) => {
+        spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${script}`, geom)], { stdio: 'ignore' });
+      };
+
+      spawnConsole(WINDOW_TITLE, scriptFile);
 
       let result: string | symbol = Symbol('cancelled');
       if (existsSync(resultFile)) {
@@ -983,9 +1011,7 @@ function buildMacNewWindowSelectFn(store?: Store, projectRoot?: string): SelectF
         } else if (raw === '__NEXPATH_OPT_OUT__') {
           result = OPT_OUT_SENTINEL;
         } else if (raw === '__ROOT_MENU_PENDING__') {
-          result = spawnRootChooserFlow(clackUrl, (_title, script) => {
-            spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${script}`)], { stdio: 'ignore' });
-          }, store, projectRoot);
+          result = spawnRootChooserFlow(clackUrl, spawnConsole, store, projectRoot);
         } else if (raw.startsWith('__FREQ__:')) {
           result = raw;
         } else if (raw.startsWith('__ROLE__:')) {
@@ -999,8 +1025,8 @@ function buildMacNewWindowSelectFn(store?: Store, projectRoot?: string): SelectF
         try { unlinkSync(f); } catch { /* ignore */ }
       }
 
-      resolve(result);
-    });
+      return result;
+    };
 }
 
 // ── Unix: /dev/tty readline ───────────────────────────────────────────────────
