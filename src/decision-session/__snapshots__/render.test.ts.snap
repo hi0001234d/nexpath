@@ -3,15 +3,15 @@
 exports[`render — full-popup snapshot (dual styled / unstyled) > produces a stable styled snapshot from the fixture popup > styled 1`] = `
 "Before coding.
 Before building — is the plan written?
-[90mYou're seeing this because[39m
-[90mRecent prompts indicate a transition from one development stage to the next.[39m
-[90m— review the options below to determine the next step.[39m
-[90m[39m
+[2mYou're seeing this because[22m
+[2mRecent prompts indicate a transition from one development stage to the next.[22m
+[2m— review the options below to determine the next step.[22m
+[2m[22m
 Write a PRD
-[2m[90m↳ PRD body sentence.[39m[22m
+[90m↳ PRD body sentence.[39m
 [2m[3mpress Space to toggle details[23m[22m
 Define problem
-[2m[90m↳ Problem framing sentence.[39m[22m
+[90m↳ Problem framing sentence.[39m
 Skip for now"
 `;
 

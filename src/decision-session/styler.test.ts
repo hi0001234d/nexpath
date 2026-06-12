@@ -52,7 +52,7 @@ describe('styler — line-kind contract', () => {
 // pinch-label, question) and are returned unchanged.
 
 describe('styler — per-kind styled dispatch', () => {
-  it('wraps popup-why-help with gray styling', () => {
+  it('wraps popup-why-help with dim styling', () => {
     const sample = 'sample line content';
     const out = styler(sample, 'popup-why-help');
     expect(out).not.toBe(sample);
@@ -60,7 +60,7 @@ describe('styler — per-kind styled dispatch', () => {
     expect(out).toMatch(/\x1b\[/);
   });
 
-  it('wraps desc-base-truncated with dim+gray styling', () => {
+  it('wraps desc-base-truncated with gray styling', () => {
     const sample = 'sample line content';
     const out = styler(sample, 'desc-base-truncated');
     expect(out).not.toBe(sample);
@@ -68,7 +68,7 @@ describe('styler — per-kind styled dispatch', () => {
     expect(out).toMatch(/\x1b\[/);
   });
 
-  it('wraps desc-base-expanded with gray styling', () => {
+  it('wraps desc-base-expanded with dim styling', () => {
     const sample = 'sample line content';
     const out = styler(sample, 'desc-base-expanded');
     expect(out).not.toBe(sample);
