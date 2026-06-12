@@ -857,8 +857,21 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
     // sequences. Each rewind iteration uses cursor-up + erase-line; the
     // trailing carriage-return resets the cursor column to 0 in case
     // the last erased line did not end at column 0.
-    if (previousFrameHeight > 0 && process.stdout.isTTY) {
-      for (let i = 0; i < previousFrameHeight; i++) {
+    //
+    // Page-header safety margin: when `pageHeader` is set, the rewind
+    // walks an additional `pageHeader.split('\n').length` rows beyond
+    // `previousFrameHeight`. Excess `\x1b[A` clamps at row 0 on every
+    // terminal and `\x1b[2K` is idempotent on an already-empty row, so
+    // the extra walks are visually inert but defensively cover the
+    // page-header rows against rewind-count under-attribution that the
+    // line counter alone cannot guarantee on every terminal. No-op when
+    // `pageHeader` is unset (`pageHeaderLines === 0`).
+    const pageHeaderLines = opts.layout.pageHeader
+      ? opts.layout.pageHeader.split('\n').length
+      : 0;
+    const walkRows = previousFrameHeight + pageHeaderLines;
+    if (walkRows > 0 && process.stdout.isTTY) {
+      for (let i = 0; i < walkRows; i++) {
         out.write('\x1b[A\x1b[2K');
       }
       out.write('\r');
