@@ -1,0 +1,47 @@
+{
+  "capturedAt": "2026-05-15T06:51:16.492Z",
+  "sourcePath": "/home/emptyops/.config/Cursor/User/workspaceStorage/1778826246907/state.vscdb",
+  "platform": "linux",
+  "redacted": true,
+  "tables": [
+    "ItemTable",
+    "cursorDiskKV"
+  ],
+  "rows": [
+    {
+      "table": "ItemTable",
+      "key": "workbench.panel.composerChatViewPane.ff976495-7338-492f-86bb-ca0f33dfbcc2",
+      "value": "{\"workbench.panel.aichat.view.eeb03271-cfe2-45a4-8c80-bc4f8dd5d928\":{\"collapsed\":false,\"isHidden\":false}}"
+    },
+    {
+      "table": "ItemTable",
+      "key": "workbench.panel.composerChatViewPane.a0186af5-4d32-46bc-bad5-62ea2229abfc",
+      "value": "{\"workbench.panel.aichat.view.eeb03271-cfe2-45a4-8c80-bc4f8dd5d928\":{\"collapsed\":false,\"isHidden\":false,\"size\":708}}"
+    },
+    {
+      "table": "ItemTable",
+      "key": "workbench.panel.aichat.a0186af5-4d32-46bc-bad5-62ea2229abfc.numberOfVisibleViews",
+      "value": "1"
+    },
+    {
+      "table": "ItemTable",
+      "key": "aiService.generations",
+      "value": "[]"
+    },
+    {
+      "table": "ItemTable",
+      "key": "aiService.prompts",
+      "value": "[]"
+    },
+    {
+      "table": "ItemTable",
+      "key": "composer.composerData",
+      "value": "{\"selectedComposerIds\":[\"************************************\"],\"lastFocusedComposerIds\":[\"************************************\"],\"hasMigratedComposerData\":false,\"hasMigratedMultipleComposers\":true}"
+    },
+    {
+      "table": "ItemTable",
+      "key": "workbench.backgroundComposer.workspacePersistentData",
+      "value": "{\"isSideBarExpanded\":false}"
+    }
+  ]
+}
