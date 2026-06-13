@@ -625,33 +625,28 @@ function commandExists(cmd: string): boolean {
  * Pure: build the `cmd + args` pair to spawn a Windows popup window
  * running the given .mjs `scriptPath` under the given window `title`.
  *
- * Two-branch dispatch — both branches use `cmd /c start /WAIT` so the
- * parent `spawnSync` blocks for the entire popup lifetime and the temp
- * `.mjs` survives until the spawned `node` invocation has loaded it:
+ * Single-branch passthrough: `cmd /c start /WAIT title node scriptPath`.
+ * `start /WAIT` keeps the parent `spawnSync` blocked for the popup's
+ * full lifetime, so the temp `.mjs` survives until the spawned `node`
+ * has loaded it.
  *
- *   1. When a geometry IS available, `cmd /c start /WAIT "T" cmd /c
- *      "mode CON: COLS=X LINES=Y && node <script>"`. `mode CON` sets
- *      the console size in cells; the window opens at whatever
- *      position Windows chooses.
- *   2. When NO geometry is available (detection failed), the original
- *      `cmd /c start /WAIT "T" node <script>` shape — byte-identical
- *      to the pre-change spawn site so any host where detection
- *      cannot run keeps the previous behaviour.
+ * Windows sizing was removed after live reproduction proved that nested
+ * `cmd /c "<inner-cmd>"` chains needed to invoke `mode CON` fail fast
+ * under modern Windows Terminal + Windows shell quoting rules
+ * (the inner-cmd's `\"` is treated as literal backslash-quote rather
+ * than an escaped quote, breaking the script path). The `geom` parameter
+ * is accepted for signature parity with `planLinuxPopupSpawn` and
+ * `buildTerminalAppleScript` but is unused on Windows: the popup opens
+ * at whatever size Windows / Windows Terminal chooses. Linux + macOS
+ * spawn paths retain pixel-exact 70% sizing.
  *
  * Exported for unit testability.
  */
 export function planWindowsPopupSpawn(
-  geom:       PopupGeometry | null,
+  _geom:      PopupGeometry | null,
   title:      string,
   scriptPath: string,
 ): { cmd: string; args: string[] } {
-  if (geom) {
-    const sized = `mode CON: COLS=${geom.cols} LINES=${geom.rows} && node "${scriptPath}"`;
-    return {
-      cmd:  'cmd.exe',
-      args: ['/c', 'start', '/WAIT', title, 'cmd', '/c', sized],
-    };
-  }
   return {
     cmd:  'cmd.exe',
     args: ['/c', 'start', '/WAIT', title, 'node', scriptPath],

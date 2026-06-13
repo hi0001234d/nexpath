@@ -1814,50 +1814,14 @@ describe('runRoleSubMenu (Unix path)', () => {
 // Pure-function unit tests for the Windows spawn-plan helper. The helper
 // returns `{ cmd, args }` and is then invoked via spawnSync at the call
 // site, so verifying the shape of the returned plan is sufficient to lock
-// in the entire 2-branch dispatch contract (mode CON sized + null-geom
-// passthrough) without touching the actual terminal-window spawn surface.
-// Both branches use `cmd /c start /WAIT` so the parent spawnSync blocks
-// for the popup's full lifetime and the temp .mjs survives until node
-// has loaded it.
-
-describe('planWindowsPopupSpawn — geometry available (mode CON sized)', () => {
-  const geom = {
-    widthPx:  1344,
-    heightPx: 756,
-    xPx:      288,
-    yPx:      162,
-    cols:     134,
-    rows:     37,
-  };
-
-  it('targets cmd.exe as the spawn cmd', () => {
-    const plan = planWindowsPopupSpawn(geom, 'My Title', 'C:/tmp/script.mjs');
-    expect(plan.cmd).toBe('cmd.exe');
-  });
-
-  it('uses /c start /WAIT to open a new console window', () => {
-    const plan = planWindowsPopupSpawn(geom, 'My Title', 'C:/tmp/script.mjs');
-    expect(plan.args.slice(0, 3)).toEqual(['/c', 'start', '/WAIT']);
-  });
-
-  it('passes the title as the 4th arg (start title parameter)', () => {
-    const plan = planWindowsPopupSpawn(geom, 'My Title', 'C:/tmp/script.mjs');
-    expect(plan.args[3]).toBe('My Title');
-  });
-
-  it('embeds mode CON: COLS=… LINES=… in the inner cmd /c string', () => {
-    const plan = planWindowsPopupSpawn(geom, 'My Title', 'C:/tmp/script.mjs');
-    const innerCmd = plan.args[plan.args.length - 1];
-    expect(innerCmd).toContain('mode CON: COLS=134 LINES=37');
-    expect(innerCmd).toContain('node "C:/tmp/script.mjs"');
-  });
-
-  it('chains mode CON and node via && in the inner cmd /c string', () => {
-    const plan = planWindowsPopupSpawn(geom, 'My Title', 'C:/tmp/script.mjs');
-    const innerCmd = plan.args[plan.args.length - 1];
-    expect(innerCmd).toBe('mode CON: COLS=134 LINES=37 && node "C:/tmp/script.mjs"');
-  });
-});
+// in the single-branch passthrough contract — `cmd /c start /WAIT title
+// node scriptPath` — without touching the actual terminal-window spawn
+// surface. `start /WAIT` keeps the parent spawnSync blocked for the
+// popup's full lifetime so the temp .mjs survives until node has loaded
+// it. Sizing is unused on Windows because nested `cmd /c "<inner-cmd>"`
+// chains proved fragile under modern Windows shell quoting — the `geom`
+// parameter is accepted for signature parity but the spawn shape never
+// changes shape from the passthrough.
 
 describe('planWindowsPopupSpawn — geometry null (detection-failure passthrough)', () => {
   it('targets cmd.exe with the original /c start /WAIT title node script shape', () => {
@@ -1896,8 +1860,11 @@ describe('planWindowsPopupSpawn — title and path passthrough', () => {
 
   it('handles a script path with forward slashes (used after Windows path normalization)', () => {
     const plan = planWindowsPopupSpawn(geom, 'T', 'C:/Users/me/AppData/Local/Temp/nexpath-sel-abc.mjs');
-    const innerCmd = plan.args[plan.args.length - 1];
-    expect(innerCmd).toContain('node "C:/Users/me/AppData/Local/Temp/nexpath-sel-abc.mjs"');
+    // Passthrough shape: ['/c', 'start', '/WAIT', title, 'node', scriptPath].
+    // The script path sits as the final arg directly (no inner-cmd wrapper),
+    // preceded by the literal `node` invocation.
+    expect(plan.args[plan.args.length - 2]).toBe('node');
+    expect(plan.args[plan.args.length - 1]).toBe('C:/Users/me/AppData/Local/Temp/nexpath-sel-abc.mjs');
   });
 });
 
