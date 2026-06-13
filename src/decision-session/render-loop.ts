@@ -850,31 +850,21 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
       state = { ...state, scrollOffset: layout.viewport.appliedScrollOffset };
     }
 
-    // Cursor rewind: when a previous frame exists, walk the cursor up
-    // over every line we emitted last time and erase each one entirely
-    // before writing the new frame. Skipped on non-TTY output (pipe /
-    // redirect / CI) so the captured stream stays clean of ANSI control
-    // sequences. Each rewind iteration uses cursor-up + erase-line; the
-    // trailing carriage-return resets the cursor column to 0 in case
-    // the last erased line did not end at column 0.
+    // Cursor reset: when a previous frame exists, move the cursor to
+    // absolute row 1 column 1 so the new frame overwrites the old one
+    // from the top of the popup window. Skipped on non-TTY output
+    // (pipe / redirect / CI) so the captured stream stays clean of
+    // ANSI control sequences.
     //
-    // Page-header safety margin: when `pageHeader` is set, the rewind
-    // walks an additional `pageHeader.split('\n').length` rows beyond
-    // `previousFrameHeight`. Excess `\x1b[A` clamps at row 0 on every
-    // terminal and `\x1b[2K` is idempotent on an already-empty row, so
-    // the extra walks are visually inert but defensively cover the
-    // page-header rows against rewind-count under-attribution that the
-    // line counter alone cannot guarantee on every terminal. No-op when
-    // `pageHeader` is unset (`pageHeaderLines === 0`).
-    const pageHeaderLines = opts.layout.pageHeader
-      ? opts.layout.pageHeader.split('\n').length
-      : 0;
-    const walkRows = previousFrameHeight + pageHeaderLines;
-    if (walkRows > 0 && process.stdout.isTTY) {
-      for (let i = 0; i < walkRows; i++) {
-        out.write('\x1b[A\x1b[2K');
-      }
-      out.write('\r');
+    // Absolute positioning bypasses every row-counting failure mode
+    // that the previous per-row `\x1b[A\x1b[2K` rewind could hit
+    // (scrolled-buffer mismatch, Unicode glyph-width disagreement,
+    // wrap-boundary phantom rows, trailing-newline collapse). The
+    // popup always runs in a fresh new console window across
+    // Windows / Linux / macOS, so row 1 column 1 is always the
+    // correct starting position for a redraw.
+    if (previousFrameHeight > 0 && process.stdout.isTTY) {
+      out.write('\x1b[H');
     }
 
     const lines = layout.viewport.visibleChromedLines;
@@ -890,6 +880,15 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
       // before measuring visible width so wrap detection does not
       // misfire from styled-content byte inflation.
       visualRowCount += visualRows(line, opts.layout.cols);
+    }
+
+    // Clear from the cursor position immediately after the last new
+    // line down to the end of the visible screen. If the new frame is
+    // SHORTER than the previous one, this single sequence erases the
+    // leftover bottom rows of the old frame in one shot. `\x1b[J`
+    // touches only the visible buffer — scrollback is preserved.
+    if (process.stdout.isTTY) {
+      out.write('\x1b[J');
     }
 
     previousFrameHeight = visualRowCount;

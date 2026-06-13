@@ -795,29 +795,31 @@ describe('render-loop — writeFrame cursor management', () => {
     expect(seen.match(/\x1b\[A/g)).toBeNull();
   });
 
-  it('emits cursor-up + clear-line for each previous-frame line on subsequent frames', async () => {
+  it('emits one cursor-home (\\x1b[H) before each subsequent frame and one clear-to-end (\\x1b[J) after every frame', async () => {
     const seen = await captureRenderOutput(['arrow-down', 'enter']);
-    const cursorUpCount  = (seen.match(/\x1b\[A/g)  || []).length;
-    const clearLineCount = (seen.match(/\x1b\[2K/g) || []).length;
-    // Each rewind iteration emits exactly one cursor-up + one clear-line.
-    expect(cursorUpCount).toBeGreaterThan(0);
-    expect(cursorUpCount).toBe(clearLineCount);
-    expect(seen).toContain('\r');  // carriage return resets the cursor column after the rewind
+    // Two frames rendered (initial + arrow-down). The new absolute-reset
+    // strategy emits one `\x1b[H` for the second frame and one `\x1b[J`
+    // for each of the two frames.
+    const cursorHomeCount = (seen.match(/\x1b\[H/g) || []).length;
+    const clearToEndCount = (seen.match(/\x1b\[J/g) || []).length;
+    expect(cursorHomeCount).toBe(1);
+    expect(clearToEndCount).toBe(2);
   });
 
-  it('cursor-up count on the second frame equals the rendered line count of the first frame', async () => {
+  it('does NOT emit the legacy per-row cursor-up (\\x1b[A) or clear-line (\\x1b[2K) sequences', async () => {
     const seen = await captureRenderOutput(['arrow-down', 'enter']);
-    // Locate the boundary between first frame and the rewind block — the
-    // first cursor-up byte marks the start of the rewind that precedes
-    // the second frame.
-    const rewindStart = seen.indexOf('\x1b[A');
-    expect(rewindStart).toBeGreaterThan(0);
-    const firstFrameOutput = seen.substring(0, rewindStart);
-    // Newlines inside the first-frame slice equal the number of lines
-    // we emitted (each line was followed by a '\n').
-    const firstFrameLineCount = (firstFrameOutput.match(/\n/g) || []).length;
-    const cursorUpCount       = (seen.match(/\x1b\[A/g) || []).length;
-    expect(cursorUpCount).toBe(firstFrameLineCount);
+    // Absolute cursor reset replaces the per-row rewind entirely. No
+    // `\x1b[A` or `\x1b[2K` emissions remain in the rewind path.
+    expect(seen.match(/\x1b\[A/g)).toBeNull();
+    expect(seen.match(/\x1b\[2K/g)).toBeNull();
+  });
+
+  it('cursor-home count equals frame-count minus 1 (one reset per subsequent frame)', async () => {
+    const seen = await captureRenderOutput(['arrow-down', 'arrow-down', 'enter']);
+    // Three frames rendered (initial + two arrow-downs). Two cursor
+    // resets (one before frame 2, one before frame 3).
+    const cursorHomeCount = (seen.match(/\x1b\[H/g) || []).length;
+    expect(cursorHomeCount).toBe(2);
   });
 
   it('skips the cursor-rewind block when process.stdout.isTTY is false (clean pipe output)', async () => {
@@ -847,52 +849,45 @@ describe('render-loop — writeFrame cursor management', () => {
     }
   });
 
-  // ── Visual-row counter for multi-line emissions ──────────────────────────
+  // ── Frame-content invariants under the absolute-cursor-reset strategy ────
   //
-  // Some upstream content (e.g. continuation-line formatting on multi-line
-  // option labels) lands in a single LineEmission whose text contains
-  // embedded '\n' characters. The terminal renders multiple visual rows
-  // from that single entry. The cursor-rewind invariant is that the
-  // next-frame rewind walks the cursor up exactly the number of VISUAL
-  // ROWS the previous frame produced, not the JS array length. The tests
-  // below pin both the per-frame invariant and the multi-frame invariant.
+  // The previous row-counted rewind primitive (per-row `\x1b[A\x1b[2K`)
+  // has been replaced by an absolute cursor reset (`\x1b[H` before each
+  // non-first frame, `\x1b[J` after every frame). The tests below pin
+  // the per-frame invariants that this primitive guarantees: every
+  // frame's content is fully captured between the new boundary markers
+  // and no stale rows leak across frames.
 
   /**
-   * Parse the captured PassThrough stream into alternating frame-content
-   * segments and rewind-counts. Each rewind group is a run of
-   * `\x1b[A\x1b[2K` pairs optionally followed by `\r`. Returns:
+   * Parse the captured PassThrough stream into per-frame content segments
+   * split by the `\x1b[H` cursor-home marker. Each `\x1b[J` clear-to-end
+   * marker stays inside its owning segment. Returns:
    *
-   *   segments[0]      = frame 1 content
-   *   rewindCounts[0]  = rewind group before frame 2
-   *   segments[1]      = frame 2 content
-   *   rewindCounts[1]  = rewind group before frame 3
+   *   segments[0]    = frame 1 content (no leading `\x1b[H`)
+   *   segments[1]    = frame 2 content (preceded by `\x1b[H` in stream)
    *   ...
-   *   segments[N]      = last frame content (no trailing rewind)
+   *   segments[N-1]  = last frame content
+   *   homeCount      = number of `\x1b[H` separators observed (= N − 1)
    */
-  function parseFrameSegments(seen: string): { segments: string[]; rewindCounts: number[] } {
+  function parseFrameSegments(seen: string): { segments: string[]; homeCount: number } {
     const segments: string[] = [];
-    const rewindCounts: number[] = [];
-    const REWIND_UNIT = '\x1b[A\x1b[2K';
+    const HOME = '\x1b[H';
     let current = '';
     let i = 0;
+    let homeCount = 0;
     while (i < seen.length) {
-      if (seen.startsWith(REWIND_UNIT, i)) {
+      if (seen.startsWith(HOME, i)) {
         segments.push(current);
         current = '';
-        let count = 0;
-        while (seen.startsWith(REWIND_UNIT, i)) {
-          count++;
-          i += REWIND_UNIT.length;
-        }
-        if (seen[i] === '\r') i++;
-        rewindCounts.push(count);
+        homeCount++;
+        i += HOME.length;
       } else {
         current += seen[i];
         i++;
       }
     }
     segments.push(current);
-    return { segments, rewindCounts };
+    return { segments, homeCount };
   }
 
   async function captureWithLayout(
@@ -910,11 +905,14 @@ describe('render-loop — writeFrame cursor management', () => {
     return Buffer.concat(chunks).toString('utf8');
   }
 
-  it('cursor-up count on the second frame equals the VISUAL row count of the first frame even when an option label is multi-line', async () => {
+  it('emits one cursor-home before the second frame even when an option label is multi-line', async () => {
     // Single option-label emission whose text contains embedded '\n' —
     // mirrors what the continuation-line formatter emits for multi-line
-    // option text. The terminal renders 3 visual rows from this single
-    // emission while the JS array contributes only 1 entry.
+    // option text. Under the old row-counted rewind this case was the
+    // bug-trigger because the JS array length undercount produced too
+    // few cursor-up emissions. Under the absolute cursor reset, the
+    // multi-line layout is irrelevant — one cursor home per non-first
+    // frame regardless.
     const seen = await captureWithLayout({
       pinchLabel: 'P',
       question:   'Q',
@@ -925,21 +923,14 @@ describe('render-loop — writeFrame cursor management', () => {
       ],
     }, ['arrow-down', 'enter']);
 
-    const firstRewindStart = seen.indexOf('\x1b[A');
-    expect(firstRewindStart).toBeGreaterThan(0);
-
-    const firstFrameOutput     = seen.substring(0, firstRewindStart);
-    const firstFrameVisualRows = (firstFrameOutput.match(/\n/g) || []).length;
-    const cursorUpCount        = (seen.match(/\x1b\[A/g) || []).length;
-
-    // Under the JS-array-length count, cursorUpCount would be strictly
-    // less than firstFrameVisualRows because the multi-line emission's
-    // 3 visual rows would contribute only 1 to the count. Under the
-    // visual-row counter, they match.
-    expect(cursorUpCount).toBe(firstFrameVisualRows);
+    const cursorHomeCount = (seen.match(/\x1b\[H/g) || []).length;
+    expect(cursorHomeCount).toBe(1);
+    // No legacy per-row rewind sequences leak through.
+    expect(seen.match(/\x1b\[A/g )).toBeNull();
+    expect(seen.match(/\x1b\[2K/g)).toBeNull();
   });
 
-  it('successive frame rewinds each match the VISUAL row count of their preceding frame', async () => {
+  it('emits exactly one cursor-home per subsequent frame across multiple arrow-key redraws', async () => {
     const seen = await captureWithLayout({
       pinchLabel: 'P',
       question:   'Q',
@@ -951,23 +942,26 @@ describe('render-loop — writeFrame cursor management', () => {
       ],
     }, ['arrow-down', 'arrow-down', 'enter']);
 
-    const { segments, rewindCounts } = parseFrameSegments(seen);
+    const { segments, homeCount } = parseFrameSegments(seen);
 
-    // 3 frames rendered (initial + 2 arrow-downs); 2 rewind groups in
-    // between. enter exits without an additional re-render.
-    expect(rewindCounts).toHaveLength(2);
-
-    for (let k = 0; k < rewindCounts.length; k++) {
-      const visualRows = (segments[k].match(/\n/g) || []).length;
-      expect(rewindCounts[k], `rewind ${k} should match visual rows of frame ${k}`).toBe(visualRows);
+    // 3 frames rendered (initial + 2 arrow-downs); 2 cursor-home
+    // separators between them. Each segment should contain its own
+    // clear-to-end (\x1b[J) marker.
+    expect(homeCount).toBe(2);
+    expect(segments).toHaveLength(3);
+    for (const segment of segments) {
+      expect(segment).toContain('\x1b[J');
     }
   });
 
   it('Space-toggle expand/collapse cycle on the focused option redraws cleanly when a sibling option has a multi-line label', async () => {
-    // The multi-line option-label sibling is the bug-trigger condition;
-    // the focused option has a desc-base long enough to differ between
+    // The multi-line option-label sibling is the legacy bug-trigger; the
+    // focused option has a desc-base long enough to differ between
     // truncated (2-line) and expanded (8-line) states so the Space-key
-    // toggle exercises both directions of the cycle.
+    // toggle exercises both directions of the cycle. The absolute cursor
+    // reset is independent of the frame-to-frame size delta, so the new
+    // emission shape is one cursor-home per non-first frame regardless
+    // of toggle direction.
     const seen = await captureWithLayout({
       pinchLabel: 'P',
       question:   'Q',
@@ -979,27 +973,20 @@ describe('render-loop — writeFrame cursor management', () => {
       ],
     }, ['arrow-down', 'space', 'space', 'enter']);
 
-    const { segments, rewindCounts } = parseFrameSegments(seen);
+    const { segments, homeCount } = parseFrameSegments(seen);
 
-    // 4 frames (initial + arrow-down + space + space); 3 rewind groups
-    // in between. Each rewind must match its preceding frame's visual
-    // rows or the new frame would write below stale rows.
-    expect(rewindCounts).toHaveLength(3);
-
-    for (let k = 0; k < rewindCounts.length; k++) {
-      const visualRows = (segments[k].match(/\n/g) || []).length;
-      expect(rewindCounts[k], `rewind ${k} should match visual rows of frame ${k}`).toBe(visualRows);
-    }
+    // 4 frames (initial + arrow-down + space + space); 3 cursor-home
+    // separators between them.
+    expect(homeCount).toBe(3);
+    expect(segments).toHaveLength(4);
   });
 
-  it('rewinds wrap-aware visual rows when a header line exceeds cols (terminal-wrap)', async () => {
-    // A pinch label wider than cols forces terminal-driven wrap. The
-    // prior accumulator (1 + embedded \n count) recorded 1 row for
-    // that emission; the wrap-aware accumulator records ceil(visible /
-    // cols). The captured stream's '\n' count for the frame equals the
-    // emission boundaries (no extra '\n' written for wrap rows), so
-    // rewindCount > segment's '\n' count is the observable signature
-    // of a wrap row being counted.
+  it('handles a pinch label wider than cols (terminal-wrap) with a single absolute cursor reset', async () => {
+    // A pinch label wider than cols forces terminal-driven wrap.
+    // Under the legacy row-counted rewind this was a bug-trigger because
+    // the rewind had to count phantom wrap rows. Under the absolute
+    // cursor reset, the wrap shape is irrelevant — one cursor home
+    // per non-first frame regardless of how the terminal wraps content.
     const widePinch = 'P'.repeat(120);  // visible 120 chars; wraps to 2 rows at cols=80
     const seen = await captureWithLayout({
       pinchLabel: widePinch,
@@ -1011,18 +998,18 @@ describe('render-loop — writeFrame cursor management', () => {
       ],
     }, ['arrow-down', 'enter']);
 
-    const { segments, rewindCounts } = parseFrameSegments(seen);
-    expect(rewindCounts.length).toBeGreaterThan(0);
-    const newlineCount = (segments[0].match(/\n/g) || []).length;
-    expect(rewindCounts[0]).toBeGreaterThan(newlineCount);
+    const { homeCount } = parseFrameSegments(seen);
+    expect(homeCount).toBe(1);
+    // No row-counting sequences leak through even with wrap content.
+    expect(seen.match(/\x1b\[A/g )).toBeNull();
+    expect(seen.match(/\x1b\[2K/g)).toBeNull();
   });
 
-  it('preserves cursor-fix embedded-\\n behavior when no wrap is needed (regression-clean)', async () => {
+  it('handles multi-line option labels (embedded \\n) with a single absolute cursor reset', async () => {
     // Repeats the cursor-fix fixture: multi-line option label with
-    // embedded \n, all content fits within cols=80. Asserts each
-    // rewind count equals the segment's '\n' count — i.e., the
-    // wrap-aware accumulator collapses to the cursor-fix accumulator
-    // when no wrap is present.
+    // embedded \n. Under the absolute cursor reset, the layout's
+    // embedded-newline content is irrelevant — one cursor home per
+    // non-first frame regardless.
     const seen = await captureWithLayout({
       pinchLabel: 'P',
       question:   'Q',
@@ -1033,12 +1020,8 @@ describe('render-loop — writeFrame cursor management', () => {
       ],
     }, ['arrow-down', 'enter']);
 
-    const { segments, rewindCounts } = parseFrameSegments(seen);
-
-    for (let k = 0; k < rewindCounts.length; k++) {
-      const newlineCount = (segments[k].match(/\n/g) || []).length;
-      expect(rewindCounts[k], `rewind ${k} should match \\n count of frame ${k} (no wrap)`).toBe(newlineCount);
-    }
+    const { homeCount } = parseFrameSegments(seen);
+    expect(homeCount).toBe(1);
   });
 });
 
