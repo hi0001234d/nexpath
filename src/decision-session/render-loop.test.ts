@@ -842,41 +842,47 @@ describe('render-loop — writeFrame cursor management', () => {
   // The save/restore + per-line erase primitives replace the row-counted
   // \x1b[A + \x1b[2K rewind:
   //
-  //   - \x1b[s saves the cursor position ONCE before the first frame
-  //   - \x1b[u + \x1b[J restore to that saved position and clear from
+  //   - \x1b7  (DEC DECSC) saves the cursor position ONCE before the first frame
+  //   - \x1b8  (DEC DECRC) + \x1b[J restore to that saved position and clear from
   //     there to end of screen on every subsequent frame
   //   - \x1b[K clears each line before writing its content so a shorter
   //     new-frame line never leaves trailing characters from a longer
   //     prior-frame line on the same row (per-line overlap fix)
   //
-  // These four tests pin the new contract. They FAIL against the current
-  // row-counted rewind implementation; they pass once writeFrame is
-  // switched to save/restore + per-line erase.
+  // The DEC variant (\x1b7 / \x1b8) is the original VT100 cursor save/restore
+  // pair, standardized since 1978. Universally supported across xterm-derived
+  // terminals, macOS Terminal.app, and Windows Terminal. The ANSI variant
+  // (\x1b[s / \x1b[u) is silently dropped by macOS Terminal.app and Windows
+  // Terminal in the popup spawn context, so we standardize on DEC.
   describe('writeFrame save/restore + per-line erase primitives', () => {
-    it('emits \\x1b[s exactly once before the first frame content (cursor position save)', async () => {
+    it('emits \\x1b7 exactly once before the first frame content (DEC cursor position save)', async () => {
       const seen = await captureRenderOutput(['enter']);
-      const saveMatches = seen.match(/\x1b\[s/g) || [];
+      const saveMatches = seen.match(/\x1b7/g) || [];
       expect(saveMatches).toHaveLength(1);
       // The save must precede the first frame's content so the saved
       // position captures the popup's true starting row, not a row
       // after content already pushed the cursor down.
-      const saveIdx         = seen.indexOf('\x1b[s');
+      const saveIdx         = seen.indexOf('\x1b7');
       // Pinch label 'P' / question 'Q' / option label 'A' — all uppercase.
-      // \x1b[?25l, \x1b[s, \x1b[K, \x1b[u use only lowercase parameters
-      // and lowercase terminators, so the first uppercase char is content.
+      // \x1b[?25l, \x1b7, \x1b[K, \x1b8 use only digits and lowercase
+      // parameters, so the first uppercase char is content.
       const firstContentIdx = seen.search(/[A-Z]/);
       expect(saveIdx).toBeGreaterThanOrEqual(0);
       expect(firstContentIdx).toBeGreaterThan(saveIdx);
     });
 
-    it('emits \\x1b[u + \\x1b[J on the second frame instead of row-counted cursor-up walks', async () => {
+    it('emits \\x1b8 + \\x1b[J on the second frame instead of row-counted cursor-up walks', async () => {
       const seen = await captureRenderOutput(['arrow-down', 'enter']);
-      expect(seen).toContain('\x1b[u');
+      expect(seen).toContain('\x1b8');
       expect(seen).toContain('\x1b[J');
       // The row-counted rewind primitives are replaced; should NOT
       // appear when save/restore is wired.
       expect(seen.match(/\x1b\[A/g)).toBeNull();
       expect(seen.match(/\x1b\[2K/g)).toBeNull();
+      // The ANSI-variant save/restore pair must also not appear — only
+      // DEC variant is shipped to ensure cross-OS compatibility.
+      expect(seen.match(/\x1b\[s/g)).toBeNull();
+      expect(seen.match(/\x1b\[u/g)).toBeNull();
     });
 
     it('emits \\x1b[K before each frame-content line (per-line erase)', async () => {
@@ -905,9 +911,9 @@ describe('render-loop — writeFrame cursor management', () => {
         ],
       }, ['arrow-down', 'enter']);
 
-      // Locate the frame-2 boundary: \x1b[u is the restore that precedes
-      // frame 2's content writes.
-      const restoreIdx = seen.indexOf('\x1b[u');
+      // Locate the frame-2 boundary: \x1b8 is the DEC restore that
+      // precedes frame 2's content writes.
+      const restoreIdx = seen.indexOf('\x1b8');
       expect(restoreIdx).toBeGreaterThan(0);
       const frame2 = seen.substring(restoreIdx);
 

@@ -821,9 +821,9 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
 
   // Track whether the next writeFrame call is the first frame. The first
   // frame writes content from the saved cursor position downward; every
-  // subsequent frame issues `\x1b[u` (restore to the saved position) +
-  // `\x1b[J` (clear from there to end of screen) before re-writing the
-  // content, so no row-counted cursor walk is needed.
+  // subsequent frame issues `\x1b8` (DEC DECRC — restore to the saved
+  // position) + `\x1b[J` (clear from there to end of screen) before
+  // re-writing the content, so no row-counted cursor walk is needed.
   let isFirstFrame = true;
 
   // Hide the terminal cursor for the duration of the popup. The popup is a
@@ -835,16 +835,24 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
   // restore the cursor. Skipped on non-TTY output so captured streams
   // stay clean of control sequences.
   //
-  // The cursor-save (`\x1b[s`) runs in the SAME conditional block,
-  // immediately AFTER the hide. The save captures the popup's true
+  // The cursor-save (`\x1b7` — DEC DECSC) runs in the SAME conditional
+  // block, immediately AFTER the hide. The save captures the popup's true
   // starting row — the row where the first content line is about to be
   // written — independent of any console banner that may have pushed the
   // popup down before node started. Subsequent frames restore to this
-  // exact row via `\x1b[u`.
+  // exact row via `\x1b8` (DEC DECRC).
+  //
+  // We use the DEC variant (`\x1b7` / `\x1b8`) rather than the ANSI variant
+  // (`\x1b[s` / `\x1b[u`) because the DEC variant is the original VT100
+  // standard (1978) and is universally honored across xterm-derived
+  // terminals, macOS Terminal.app, and Windows Terminal. The ANSI variant
+  // is silently dropped on macOS Terminal.app and on Windows Terminal in
+  // the popup spawn context, which causes the redraw to write below the
+  // previous frame instead of overwriting it.
   const cursorWasHidden = process.stdout.isTTY === true;
   if (cursorWasHidden) {
     out.write('\x1b[?25l');
-    out.write('\x1b[s');
+    out.write('\x1b7');
   }
 
   const writeFrame = () => {
@@ -857,14 +865,14 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
     }
 
     // Cursor rewind: on every frame after the first, restore the cursor
-    // to the saved popup-start position (`\x1b[u`) and clear from there
-    // to the end of the visible screen (`\x1b[J`). This pair replaces
-    // the row-counted `\x1b[A` + `\x1b[2K` walk — no row count needed,
-    // no per-OS undercount risk, no banner-offset miscount. Skipped on
-    // non-TTY output (pipe / redirect / CI) so the captured stream stays
-    // clean of ANSI control sequences.
+    // to the saved popup-start position (`\x1b8` — DEC DECRC) and clear
+    // from there to the end of the visible screen (`\x1b[J`). This pair
+    // replaces the row-counted `\x1b[A` + `\x1b[2K` walk — no row count
+    // needed, no per-OS undercount risk, no banner-offset miscount.
+    // Skipped on non-TTY output (pipe / redirect / CI) so the captured
+    // stream stays clean of ANSI control sequences.
     if (!isFirstFrame && process.stdout.isTTY) {
-      out.write('\x1b[u');
+      out.write('\x1b8');
       out.write('\x1b[J');
     }
 
