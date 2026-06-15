@@ -262,9 +262,19 @@ bash run-s01-windsurf.sh
    installed/active → delivery can't happen (Setup steps 3–4).
 2. `grep -E 'stage2_error|401' ~/.nexpath/nexpath.log` → a `401` means a bad key
    (Pre-flight #2).
-3. `sqlite3 ~/.nexpath/prompt-store.db "SELECT prompt_text FROM prompts ORDER BY id DESC LIMIT 5;"`
-   → empty after prompt #1 = the **hook** isn't firing (Pre-flight #3: restart
-   Windsurf, confirm `node` on PATH, confirm `hooks.json`).
+3. **`nexpath status`** — the authoritative, cross-OS capture check. It reads the
+   real store through nexpath's own engine, so it works the same in Git Bash /
+   Terminal / any shell on every OS. Look at **Prompt store → Total prompts** and
+   **Hook activity**:
+   - prompts > 0 / invocations climbing → capture **works**. If the harness still
+     printed `Captured: 0`, that was a *reader* issue, not a capture failure — pull
+     the latest bundle (the harness now reads via nexpath's own sql.js engine).
+   - 0 after prompt #1 = the **hook** isn't firing (Pre-flight #3: restart the IDE,
+     confirm `node` on PATH, confirm `hooks.json`).
+
+   (`sqlite3 ~/.nexpath/prompt-store.db "SELECT prompt_text FROM prompts ORDER BY id DESC LIMIT 5;"`
+   also works on macOS/Linux, but `sqlite3` usually isn't on PATH in Git Bash on
+   Windows — use `nexpath status` there.)
 
 ### Advisory fires but NO popup window (`stop_skipped` / DBus, Linux)
 
@@ -311,6 +321,14 @@ and send the list back — it gets wired so inject lands automatically.
 
 - **Windows:** run the scripts inside **Git Bash**. `~/.codeium/windsurf/hooks.json`
   and the `node "<cli>"` hook command are the same everywhere.
+- **Capture verification is engine-native, not `sqlite3`.** The harness reads the
+  prompt store through nexpath's own **sql.js** (pure JS/WASM) with `os.homedir()`,
+  so it needs no `sqlite3`/`better-sqlite3` binary and is immune to two things that
+  previously made Windows falsely report 0 captures: native-addon ABI mismatches, and
+  the Git Bash `/c/...` vs native `C:\...` path difference (Node reads `/c/...` as
+  `C:\c\...`). It is also the exact engine `nexpath auto` writes with, so a read can
+  never disagree with a write. `nexpath status` is the authoritative manual check on
+  every OS.
 - **macOS:** the popup is `osascript` → Terminal.app, so the first fire triggers the
   **"Windsurf wants to control Terminal"** Automation prompt — click OK (System
   Settings → Privacy & Security → Automation). If you deny it, the status-bar fallback

@@ -128,20 +128,38 @@ open_windsurf() {
 }
 
 # ─── DB + telemetry access ───────────────────────────────────────────────────
+# Read a single scalar from nexpath's prompt store using nexpath's OWN engine —
+# sql.js (pure JS/WASM) + os.homedir(). Identical on Linux / macOS / Windows:
+#   • No native better-sqlite3 / sqlite3.exe → no ABI rebuild, no "module built
+#     against a different Node version" failures.
+#   • os.homedir() resolves the real store path natively on every OS, so there is
+#     no MINGW '/c/...' vs native 'C:\...' mismatch (which silently returned 0 and
+#     made Windows look like capture had failed when it was just unreadable).
+# Only NEXPATH_REPO (where sql.js lives) must be in native form for Node on Windows
+# → cygpath. This is the same engine `nexpath auto` writes with, so reads can never
+# disagree with writes. A partial read mid-write throws → caught → "0"; the
+# wait_for_captures poll absorbs that transient.
 db_scalar() {
-  local sql="$1"
-  if command -v sqlite3 >/dev/null 2>&1; then
-    sqlite3 "$PROMPT_STORE_DB" "$sql" 2>/dev/null || echo "0"; return 0
+  local sql="$1" repo="$NEXPATH_REPO"
+  if [[ "$OS" == "windows" ]] && command -v cygpath >/dev/null 2>&1; then
+    repo="$(cygpath -w "$NEXPATH_REPO")"
   fi
-  local bs="${NEXPATH_REPO}/src/ext-vscode/node_modules/better-sqlite3"
-  if [[ -d "$bs" ]]; then
-    "$NODE_BIN" -e '
-      try { const D=require(process.argv[1]); const db=new D(process.argv[2],{readonly:true});
-            process.stdout.write(String(db.prepare(process.argv[3]).pluck().get() ?? 0)); db.close(); }
-      catch(e){ process.stdout.write("0"); }' "$bs" "$PROMPT_STORE_DB" "$sql" 2>/dev/null || echo "0"
-    return 0
-  fi
-  echo "0"
+  "$NODE_BIN" --input-type=module -e '
+    import { readFileSync, existsSync } from "node:fs";
+    import { homedir } from "node:os";
+    import { join } from "node:path";
+    import { pathToFileURL } from "node:url";
+    const [repo, sql] = process.argv.slice(1);
+    const dbPath = join(homedir(), ".nexpath", "prompt-store.db");
+    if (!existsSync(dbPath)) { process.stdout.write("0"); process.exit(0); }
+    const sqlDir = join(repo, "node_modules", "sql.js", "dist");
+    const initSqlJs = (await import(pathToFileURL(join(sqlDir, "sql-wasm.js")).href)).default;
+    const SQL = await initSqlJs({ locateFile: (f) => join(sqlDir, f) });
+    const db = new SQL.Database(readFileSync(dbPath));
+    let out = "0";
+    try { const r = db.exec(sql); out = String(r[0]?.values?.[0]?.[0] ?? 0); } catch {}
+    db.close(); process.stdout.write(out);
+  ' "$repo" "$sql" 2>/dev/null || echo "0"
 }
 
 # Accurate advisory-fire count for THIS project — append-only telemetry events.
