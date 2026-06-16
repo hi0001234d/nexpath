@@ -228,9 +228,7 @@ describe('render-loop — styler dispatch', () => {
 
   it('styled kinds wrap the emission text with ANSI; inherit kinds pass through verbatim', () => {
     const r = computeLayout(makeOpts({ subtitle: 's', whyHelpBlock: 'a\nb\nc' }), FRESH_STATE);
-    // desc-base-expanded is INHERIT (focused desc-base — full visibility);
-    // visual separation comes from the gap row + indent + chrome rail.
-    const styledKinds = new Set(['popup-why-help', 'desc-base-truncated', 'shortcut-hint', 'option-label-unfocused']);
+    const styledKinds = new Set(['popup-why-help', 'desc-base-truncated', 'desc-base-expanded', 'shortcut-hint', 'option-label-unfocused']);
     let sawAtLeastOneStyledWrap = false;
     for (let i = 0; i < r.emissions.length; i++) {
       const { text, kind } = r.emissions[i];

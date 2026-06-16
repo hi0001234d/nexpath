@@ -34,6 +34,17 @@ import { writeRenderDebug } from './render-telemetry.js';
 // each call independently.
 const pc = createColors(true);
 
+// 256-color light gray (xterm color index 252) for the focused desc-base.
+// picocolors only exposes the standard 16-color set, so the SGR sequence
+// for `38;5;N` (set foreground to 256-color N) is composed inline. The
+// closing `\x1b[39m` resets the foreground to the terminal default and
+// matches the reset picocolors uses for its named colors.
+const SGR_LIGHT_GRAY_252 = '\x1b[38;5;252m';
+const SGR_RESET_FG       = '\x1b[39m';
+function lightGray252(text: string): string {
+  return SGR_LIGHT_GRAY_252 + text + SGR_RESET_FG;
+}
+
 export type LineKind =
   | 'popup-why-help'
   | 'desc-base-truncated'
@@ -78,19 +89,21 @@ export function isStylePassthroughActive(): boolean {
  * re-truncate or re-wrap. ANSI escape codes are the styler's
  * responsibility; layout never emits them.
  *
- * Style mapping (hierarchical — option labels remain the visual anchor,
- * supporting content fades in subordinate tiers). Visual separation
- * between the focused option-label and its desc-base comes from a blank
- * gap row + the `↳` indent + the chrome rail, NOT from a color tier
- * difference; the focused desc-base inherits the default foreground so
- * it stays fully visible while the option is active. Only the
- * *unfocused* desc-base previews fade (gray) so the user's eye still
- * lands on the focused content first:
+ * Style mapping (hierarchical 4-tier — option labels remain the visual
+ * anchor, supporting content fades in successively lighter tiers so the
+ * user's eye walks naturally from label → focused desc → unfocused
+ * label → unfocused desc):
  *   - popup-why-help     → dim (readable; matches SHOW_SIMPLER tier)
- *   - desc-base-expanded → inherit (focused desc — full visibility;
- *                          separation handled by gap row + indent)
- *   - desc-base-truncated→ gray (unfocused previews fade so the user
- *                          scans the focused option's content first)
+ *   - desc-base-expanded → 256-color light gray (xterm 252) — focused
+ *                          desc tier: visibly lighter than the focused
+ *                          option-label (which stays full-weight) so
+ *                          they no longer collapse to one block, but
+ *                          still clearly brighter than the unfocused
+ *                          desc gray below
+ *   - desc-base-truncated→ gray (SGR 90 / bright-black — darker than
+ *                          the focused desc tier so the user's eye
+ *                          still lands on the focused option's content
+ *                          first)
  *   - shortcut-hint      → dim + italic (matches the existing
  *                          dim+italic precedent for hint text)
  *   - option-label       → inherit (focused option label — full-weight
@@ -194,11 +207,12 @@ function stylerInner(line: string, kind: LineKind): string {
 
   switch (kind) {
     case 'popup-why-help':         return pc.dim(line);
-    // Focused desc-base inherits the default foreground — full visibility
-    // while the option is active. Visual separation from the focused
-    // option-label comes from the blank gap row + `↳` indent + chrome
-    // rail, NOT from a color tier difference.
-    case 'desc-base-expanded':     return line;
+    // Focused desc-base — 256-color light gray (xterm 252). Distinct
+    // tier between the full-weight focused option-label above and the
+    // gray unfocused desc previews below; the blank gap row + `↳`
+    // indent + chrome rail provide the structural separation, the
+    // light-gray tier provides the color-hierarchy cue.
+    case 'desc-base-expanded':     return lightGray252(line);
     case 'desc-base-truncated':    return pc.gray(line);
     case 'shortcut-hint':          return pc.dim(pc.italic(line));
     // option-label-unfocused handled above (ANSI-tolerant special case).
