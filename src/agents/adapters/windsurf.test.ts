@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { windsurfAdapter, windsurfConfigDir } from './windsurf.js';
+import { getWindsurfHooksPath } from '../../windsurf-hook/install.js';
 import type { InstallContext } from '../types.js';
 
 const makeCtx = (home: string): InstallContext => ({
@@ -108,14 +109,21 @@ describe('windsurfAdapter.install', () => {
     expect(allLogs).toContain('not detected');
   });
 
-  it('prints deep-link instructions when Windsurf IS detected', async () => {
+  it('writes the Cascade capture hook AND prints deep-link instructions when detected', async () => {
     mkdirSync(join(tmp, '.config', 'Windsurf'), { recursive: true });
     const r = await windsurfAdapter.install(makeCtx(tmp));
     expect(r.status).toBe('installed');
+    // capture: hooks.json written under ~/.codeium/windsurf with pre_user_prompt only
+    const hooksPath = getWindsurfHooksPath(tmp);
+    expect(existsSync(hooksPath)).toBe(true);
+    const hooks = JSON.parse(readFileSync(hooksPath, 'utf8')).hooks;
+    expect(hooks.pre_user_prompt[0].command).toContain('windsurf-hook pre_user_prompt');
+    expect(hooks.post_cascade_response[0].command).toContain('windsurf-hook post_cascade_response');
+    // delivery: extension deep-link still printed
     const allLogs = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    expect(allLogs).toContain('Cascade capture hook written');
     expect(allLogs).toContain('Open VSX');
     expect(allLogs).toContain('windsurf --install-extension');
-    expect(allLogs).toContain('emptyops.nexpath-vscode');
   });
 });
 
@@ -136,12 +144,29 @@ describe('windsurfAdapter.uninstall', () => {
     expect(logSpy.mock.calls.map((c) => c.join(' ')).join('\n')).toContain('not detected');
   });
 
-  it('logs the uninstall instructions when Windsurf IS detected', async () => {
+  it('removes the Cascade capture hook AND logs uninstall instructions when detected', async () => {
     mkdirSync(join(tmp, '.config', 'Windsurf'), { recursive: true });
+    // seed a hooks.json with our capture hook
+    await windsurfAdapter.install(makeCtx(tmp));
+    const hooksPath = getWindsurfHooksPath(tmp);
+    expect(existsSync(hooksPath)).toBe(true);
+    logSpy.mockClear();
+
     await windsurfAdapter.uninstall(makeCtx(tmp));
+    const hooks = JSON.parse(readFileSync(hooksPath, 'utf8')).hooks ?? {};
+    expect(hooks.pre_user_prompt).toBeUndefined(); // our capture hook removed
     const allLogs = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
-    expect(allLogs).toContain('uninstall');
+    expect(allLogs).toContain('Cascade capture hook removed');
     expect(allLogs).toContain('windsurf --uninstall-extension');
+  });
+
+  it("preserves another tool's hooks.json entries on uninstall", async () => {
+    mkdirSync(join(tmp, '.codeium', 'windsurf'), { recursive: true });
+    const hooksPath = getWindsurfHooksPath(tmp);
+    writeFileSync(hooksPath, JSON.stringify({ hooks: { pre_write_code: [{ command: 'node guard.js' }] } }));
+    await windsurfAdapter.uninstall(makeCtx(tmp));
+    const hooks = JSON.parse(readFileSync(hooksPath, 'utf8')).hooks;
+    expect(hooks.pre_write_code[0].command).toBe('node guard.js');
   });
 });
 

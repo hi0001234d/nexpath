@@ -67,6 +67,11 @@
         "command": "nexpath.showAdvisory",
         "title": "Show pending advisory",
         "category": "Nexpath"
+      },
+      {
+        "command": "nexpath.testCascadeInject",
+        "title": "Test Cascade Inject",
+        "category": "Nexpath"
       }
     ]
   },

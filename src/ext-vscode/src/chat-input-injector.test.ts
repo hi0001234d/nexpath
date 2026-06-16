@@ -118,7 +118,9 @@ describe('chatInputInject', () => {
       getCommands: list,
     });
     expect(result).toBe(true);
-    expect(exec).toHaveBeenCalledWith(CANDIDATE_COMMANDS.windsurf[0], 'hi');
+    // windsurf.sendTextToChat takes (text, sourceLabel) — verified arg shape.
+    expect(CANDIDATE_COMMANDS.windsurf[0]).toBe('windsurf.sendTextToChat');
+    expect(exec).toHaveBeenCalledWith('windsurf.sendTextToChat', 'hi', 'nexpath:advisory');
   });
 });
 

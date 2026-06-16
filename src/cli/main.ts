@@ -16,6 +16,7 @@ import { installAction, uninstallAction } from './commands/install.js';
 import { initAction } from './commands/init.js';
 import { registerAutoCommand } from './commands/auto.js';
 import { registerStopCommand } from './commands/stop.js';
+import { registerWindsurfHookCommand } from './commands/windsurf-hook.js';
 import { registerOptimizeCommand } from './commands/optimize.js';
 import { registerStatusCommand } from './commands/status.js';
 import {
@@ -69,6 +70,7 @@ export function createProgram(): Command {
 
   registerAutoCommand(program);
   registerStopCommand(program);
+  registerWindsurfHookCommand(program);
 
   registerOptimizeCommand(program);
 

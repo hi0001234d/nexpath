@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('vscode', () => ({
-  env: { appName: 'Visual Studio Code' },
+  env: { appName: 'Visual Studio Code', uriScheme: 'vscode' },
 }));
 
 import {
@@ -23,6 +23,14 @@ describe('classifyHost', () => {
     expect(classifyHost('Windsurf 1.0')).toBe('windsurf');
   });
 
+  it('maps "Devin" (rebranded Windsurf) → windsurf, by appName or uriScheme', () => {
+    expect(classifyHost('Devin')).toBe('windsurf');
+    expect(classifyHost('Devin Desktop')).toBe('windsurf');
+    // appName unrecognised but uriScheme="devin" still resolves it.
+    expect(classifyHost('Some Editor', 'devin')).toBe('windsurf');
+    expect(classifyHost('', 'windsurf')).toBe('windsurf');
+  });
+
   it('maps Visual Studio Code / Code / unknown → vscode-generic', () => {
     expect(classifyHost('Visual Studio Code')).toBe('vscode-generic');
     expect(classifyHost('Code')).toBe('vscode-generic');
@@ -39,9 +47,11 @@ describe('classifyHost', () => {
 });
 
 describe('detectHost', () => {
-  it('reads from injected appName when provided', () => {
+  it('reads from injected appName / uriScheme when provided', () => {
     expect(detectHost({ appName: 'Cursor' })).toBe('cursor');
     expect(detectHost({ appName: 'Windsurf' })).toBe('windsurf');
+    expect(detectHost({ appName: 'Devin' })).toBe('windsurf');
+    expect(detectHost({ appName: 'Devin', uriScheme: 'devin' })).toBe('windsurf');
     expect(detectHost({ appName: 'Visual Studio Code' })).toBe('vscode-generic');
   });
 

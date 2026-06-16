@@ -16,27 +16,45 @@ import { join } from 'node:path';
  *   - Plain VS Code:  "Visual Studio Code" / "Code"
  *   - Cursor:         "Cursor"
  *   - Windsurf:       "Windsurf"
+ *   - Devin Desktop:  "Devin"        (Cognition rebranded Windsurf → "Devin")
  *
- * We treat anything we don't recognise as a generic VS Code host (no
- * special chat-history handling).
+ * `appName` alone is fragile across rebrands (the Windsurf → Devin rename
+ * broke it: appName flipped to "Devin", so detection fell through to
+ * vscode-generic). So we ALSO consider `vscode.env.uriScheme` (the app's url
+ * protocol — "cursor" / "windsurf" / "devin"), the more stable identity
+ * signal. Anything we don't recognise is a generic VS Code host (no special
+ * chat-history handling).
  */
 
 export type Host = 'cursor' | 'windsurf' | 'vscode-generic';
 
-/** Pure mapping from `appName` to a recognised host id. */
-export function classifyHost(appName: string): Host {
-  const normalised = appName.toLowerCase();
-  if (normalised.includes('cursor')) return 'cursor';
-  if (normalised.includes('windsurf')) return 'windsurf';
+/**
+ * Pure mapping from identity strings to a recognised host id. Pass `appName`
+ * and (optionally) the `uriScheme`; either matching is enough.
+ *
+ * Devin Desktop is the rebranded Windsurf — same IDE, same Cascade chat +
+ * hooks — so it maps to the `windsurf` host (the delivery poller + Cascade
+ * inject path are identical). `codeium` is matched too for the shared
+ * Codeium heritage / any future re-rename.
+ */
+export function classifyHost(appName: string, uriScheme = ''): Host {
+  const hay = `${appName} ${uriScheme}`.toLowerCase();
+  if (hay.includes('cursor')) return 'cursor';
+  if (hay.includes('windsurf') || hay.includes('devin') || hay.includes('codeium')) {
+    return 'windsurf';
+  }
   return 'vscode-generic';
 }
 
 /**
- * Read the current host from the live `vscode.env.appName`. Injectable for
- * tests via `deps.appName`.
+ * Read the current host from the live `vscode.env.appName` + `vscode.env.uriScheme`.
+ * Injectable for tests via `deps.appName` / `deps.uriScheme`.
  */
-export function detectHost(deps: { appName?: string } = {}): Host {
-  return classifyHost(deps.appName ?? vscode.env.appName);
+export function detectHost(deps: { appName?: string; uriScheme?: string } = {}): Host {
+  return classifyHost(
+    deps.appName ?? vscode.env.appName,
+    deps.uriScheme ?? vscode.env.uriScheme,
+  );
 }
 
 /**

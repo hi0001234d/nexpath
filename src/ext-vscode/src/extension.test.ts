@@ -111,6 +111,13 @@ vi.mock('./advisory-fallback.js', () => ({
     showAdvisory: vi.fn(),
   })),
 }));
+vi.mock('./advisory-poller.js', () => ({
+  createAdvisoryPoller: vi.fn(() => ({
+    start: vi.fn(),
+    stop: vi.fn(),
+    pollOnce: vi.fn(),
+  })),
+}));
 
 import { activate, deactivate, getViewProvider } from './extension.js';
 

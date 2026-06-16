@@ -34,6 +34,7 @@ import {
   writeHookEntry,
   removeHookEntry,
   ensureLinuxClipboard,
+  ensureLinuxInjectTools,
 } from './install.js';
 import { buildRoleMenuLines } from '../shared/role-description.js';
 
@@ -2153,5 +2154,72 @@ describe('installAction — frequency and role prompts', () => {
     const text = buildRoleMenuLines('vibe_coder').join('\n');
     const vibeLine = text.split('\n').find((l) => l.includes('vibe coder'));
     expect(vibeLine).toContain('(current)');
+  });
+});
+
+// ── ensureLinuxInjectTools (Windsurf auto-inject keystroke tool) ──────────────
+
+describe('ensureLinuxInjectTools', () => {
+  const mockSpawn = vi.fn();
+  const mockExec  = vi.fn();
+  // vitest 4's restoreAllMocks() only restores spies (vi.spyOn), not vi.fn() call
+  // history — so reset these describe-level fakes between tests to keep the
+  // per-test assertions (e.g. "not.toHaveBeenCalled") isolated.
+  afterEach(() => { mockSpawn.mockReset(); mockExec.mockReset(); vi.restoreAllMocks(); });
+
+  it('skips on macOS / Windows (built-in osascript / SendKeys)', async () => {
+    await ensureLinuxInjectTools({ platform: 'darwin', spawnFn: mockSpawn as any });
+    await ensureLinuxInjectTools({ platform: 'win32', spawnFn: mockSpawn as any });
+    expect(mockSpawn).not.toHaveBeenCalled();
+  });
+
+  it('skips on Linux/X11 when xdotool is already installed', async () => {
+    mockSpawn.mockImplementation((cmd: string, args: string[]) =>
+      cmd === 'which' && args[0] === 'xdotool' ? { status: 0 } : { status: 1 });
+    const logSpy = vi.spyOn(console, 'log');
+    await ensureLinuxInjectTools({ platform: 'linux', spawnFn: mockSpawn as any });
+    expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('xdotool'));
+  });
+
+  it('installs xdotool via apt on X11 when missing (auto-confirm)', async () => {
+    let installed = false;
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'which' && args[0] === 'apt') return { status: 0 };
+      if (cmd === 'which' && args[0] === 'xdotool') return { status: installed ? 0 : 1 };
+      return { status: 1 };
+    });
+    mockExec.mockImplementation(() => { installed = true; });
+    const logSpy = vi.spyOn(console, 'log');
+    await ensureLinuxInjectTools({
+      platform: 'linux', spawnFn: mockSpawn as any, execFn: mockExec as any, autoConfirm: true,
+    });
+    expect(mockExec).toHaveBeenCalledWith('sudo apt install -y xdotool', { stdio: 'inherit' });
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('installed successfully'));
+  });
+
+  it('installs wtype on Wayland', async () => {
+    let installed = false;
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'which' && args[0] === 'apt') return { status: 0 };
+      if (cmd === 'which' && args[0] === 'wtype') return { status: installed ? 0 : 1 };
+      return { status: 1 };
+    });
+    mockExec.mockImplementation(() => { installed = true; });
+    await ensureLinuxInjectTools({
+      platform: 'linux', spawnFn: mockSpawn as any, execFn: mockExec as any,
+      autoConfirm: true, waylandDisplay: 'wayland-0',
+    });
+    expect(mockExec).toHaveBeenCalledWith('sudo apt install -y wtype', { stdio: 'inherit' });
+  });
+
+  it('declining the prompt degrades to clipboard (no exec)', async () => {
+    mockSpawn.mockImplementation((cmd: string, args: string[]) =>
+      cmd === 'which' && args[0] === 'apt' ? { status: 0 } : { status: 1 });
+    const logSpy = vi.spyOn(console, 'log');
+    await ensureLinuxInjectTools({
+      platform: 'linux', spawnFn: mockSpawn as any, execFn: mockExec as any, confirmFn: async () => false,
+    });
+    expect(mockExec).not.toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('copy to clipboard'));
   });
 });

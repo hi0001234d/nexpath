@@ -24,6 +24,15 @@ import { createChatEventHandler } from './chat-pipeline.js';
 import { spawnAuto, spawnStop } from './ipc.js';
 import { resolveWorkspaceFromDbPath, canonicalizeCwd } from './resolve-db-workspace.js';
 import { createAdvisoryFallback, type AdvisoryFallback } from './advisory-fallback.js';
+import { createAdvisoryPoller, type AdvisoryPoller } from './advisory-poller.js';
+import { readLatestAdvisory, readInjectedPrompt } from './advisory-store-reader.js';
+import { raiseWindsurfWindow, pasteKeystroke } from './windsurf-autopaste.js';
+import {
+  injectViaCascadeAction,
+  SEND_CHAT_ACTION_COMMAND,
+  SEND_CHAT_ACTION_COMMAND_CANDIDATES,
+  OPEN_CHAT_PANEL_JSON,
+} from './windsurf-cascade-action.js';
 import type { ChatHistoryEvent, WatchTarget } from './chat-history-types.js';
 
 /** globalState key gating the one-time "use the status bar fallback" hint. */
@@ -37,6 +46,7 @@ const FALLBACK_HINT_KEY = 'nexpath.fallbackHintShown';
  */
 let viewProvider: NexpathDecisionSessionViewProvider | undefined;
 let watcher: ChatHistoryWatcher | undefined;
+let advisoryPoller: AdvisoryPoller | undefined;
 let logChannel: vscode.OutputChannel | undefined;
 
 /**
@@ -59,18 +69,72 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   log('[nexpath] extension activated');
 
   // 1. Detect host (Cursor / Windsurf / vscode-generic). Stable for the
-  //    lifetime of this extension instance.
+  //    lifetime of this extension instance. Log the raw identity too — the
+  //    Windsurf→Devin rebrand changed appName/uriScheme, so this line is the
+  //    first thing to check when a host shows up as vscode-generic unexpectedly.
   const host = detectHost();
+  log(`[nexpath] host=${host} (appName=${JSON.stringify(vscode.env.appName)}, uriScheme=${JSON.stringify(vscode.env.uriScheme)})`);
 
   // 2. Construct + register the view provider with the B4 injectFn-aware
   //    onSelect. injectFn falls through to clipboard when the host has no
   //    matching command (the safe default; see chat-input-injector.ts).
   //    The same path injects a terminal-popup selection and a webview-fallback
   //    selection, so define it once and reuse.
+  // Windsurf has NO extension-callable command to insert text into Cascade's
+  // input (`windsurf.sendTextToChat` is an unregistered ID; the real path is an
+  // internal `addCascadeInput` webview protobuf). So on Windsurf we do what a user
+  // would: copy → focus Cascade → simulate the paste shortcut. Returns true when
+  // the keystroke was dispatched (suppresses the clipboard toast); false leaves the
+  // clipboard + toast fallback in place.
+  const windsurfInject = async (text: string): Promise<boolean> => {
+    // PRIMARY — direct insert via Windsurf's real `sendChatActionMessage` command:
+    // focus the Cascade panel (`openChatPanel`) then add the text to its input
+    // (`addCascadeInput`). No clipboard, no keystroke, no window/focus race, and it
+    // targets the EXISTING conversation (not a new chat). Command + protobuf shape
+    // are verified against the Windsurf 2.3.x workbench bundle. See
+    // windsurf-cascade-action.ts.
+    const direct = await injectViaCascadeAction(text, {
+      executeCommand: (id, ...args) => vscode.commands.executeCommand(id, ...args),
+      getCommands: (filter) => vscode.commands.getCommands(filter),
+    });
+    if (direct) {
+      log('[nexpath] windsurf inject → inserted into Cascade via sendChatActionMessage(addCascadeInput)');
+      return true;
+    }
+
+    // FALLBACK — older builds without `sendChatActionMessage`: clipboard + focus
+    // the panel (same `openChatPanel` action when present) + simulate paste.
+    await vscode.env.clipboard.writeText(text); // for the paste AND as the last-ditch fallback
+    raiseWindsurfWindow();
+    await new Promise((r) => setTimeout(r, 150));
+    let focused = false;
+    try {
+      await vscode.commands.executeCommand(SEND_CHAT_ACTION_COMMAND, OPEN_CHAT_PANEL_JSON);
+      focused = true;
+    } catch { /* command absent on this build — paste into whatever has focus */ }
+    await new Promise((r) => setTimeout(r, focused ? 400 : 250));
+    const ok = pasteKeystroke();
+    log(`[nexpath] windsurf inject (fallback) → ${ok ? `auto-pasted into Cascade (${focused ? 'openChatPanel → ' : ''}Ctrl+V)` : 'no keystroke tool; left on clipboard'}`);
+    return ok;
+  };
   const injectIntoChat = (text: string): Promise<void> =>
     handleOptionSelection(text, {
-      injectFn: (t) => chatInputInject(t, { host }),
+      injectFn: host === 'windsurf' ? windsurfInject : (t) => chatInputInject(t, { host }),
     });
+
+  // One-click self-test (Command Palette → "Nexpath: Test Cascade Inject"): runs
+  // the exact inject path with a probe so the inject can be verified in isolation
+  // from the popup/poller chain. Watch Cascade's input + Output → Nexpath.
+  context.subscriptions.push(
+    vscode.commands.registerCommand('nexpath.testCascadeInject', async () => {
+      const probe = 'NEXPATH SELF-TEST — if you see this in Cascade, inject works.';
+      log('[nexpath] testCascadeInject: running inject self-test…');
+      await injectIntoChat(probe);
+      void vscode.window.showInformationMessage(
+        'Nexpath: ran the Cascade inject self-test. Did the probe text appear in Cascade? See Output → Nexpath.',
+      );
+    }),
+  );
   viewProvider = new NexpathDecisionSessionViewProvider(
     context.extensionUri,
     injectIntoChat,
@@ -152,6 +216,45 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   if (host === 'vscode-generic') {
     log('[nexpath] host is plain VS Code — no chat to watch');
     return;
+  }
+
+  // 5b. Windsurf delivery bridge. Windsurf encrypts Cascade at rest, so the
+  //     extension can't capture prompts here — capture comes from the native
+  //     Cascade hooks (`nexpath auto`, a separate process) which park advisories
+  //     in the store. Poll the store and hand fresh advisories to the same
+  //     in-editor fallback the watcher uses on Cursor (status bar → webview →
+  //     chat-input inject). This is what gives Windsurf the Cursor-style
+  //     auto-inject the read-only hooks can't. Started before the watcher setup
+  //     so it runs even when no state.vscdb exists to watch.
+  if (host === 'windsurf') {
+    const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
+    const roots = Array.from(new Set([canonicalizeCwd(ws), ws]));
+    advisoryPoller = createAdvisoryPoller({
+      projectRoots: roots,
+      readAdvisory: (root) => readLatestAdvisory(root),
+      readInjected: (root) => readInjectedPrompt(root),
+      // Popup selection → inject into Cascade + clear the fallback.
+      onSelection: async (prompt) => {
+        advisoryFallback.clear();
+        log('[nexpath] windsurf: bridging popup selection → Cascade via sendChatActionMessage(addCascadeInput)');
+        await injectIntoChat(prompt);
+      },
+      // Popup ran but no selection → surface the in-editor fallback.
+      onArm: (root) => advisoryFallback.armIfPending(root),
+    });
+    advisoryPoller.start();
+    log('[nexpath] windsurf inject = direct sendChatActionMessage(openChatPanel→addCascadeInput); clipboard+keystroke is the fallback. Run "Nexpath: Test Cascade Inject" to verify.');
+    context.subscriptions.push({ dispose: () => advisoryPoller?.stop() });
+    log(`[nexpath] windsurf advisory poller started for roots: ${roots.join(' | ')}`);
+    // Diagnostic: which inject command does THIS host expose? The Devin rebrand
+    // can re-namespace `windsurf.* → devin.*`; log what's present so direct
+    // insert (vs the clipboard fallback) can be confirmed without console eval.
+    void vscode.commands.getCommands(true).then((cmds) => {
+      const present = SEND_CHAT_ACTION_COMMAND_CANDIDATES.filter((c) => cmds.includes(c));
+      const chatish = cmds.filter((c) => /sendchataction|cascade|chat|devin|windsurf|codeium/i.test(c));
+      log(`[nexpath] windsurf inject-command present: ${present.join(', ') || 'NONE (will use clipboard fallback)'}`);
+      log(`[nexpath] windsurf chat-related commands (${chatish.length}): ${chatish.slice(0, 50).join(', ')}`);
+    }, () => { /* getCommands unavailable — ignore */ });
   }
 
   const wsStorage = workspaceStorageDir({ host });
@@ -332,6 +435,8 @@ export function deactivate(): void {
   log('[nexpath] extension deactivated');
   watcher?.stop();
   watcher = undefined;
+  advisoryPoller?.stop();
+  advisoryPoller = undefined;
   viewProvider = undefined;
   logChannel = undefined;
 }
