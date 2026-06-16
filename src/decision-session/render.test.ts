@@ -1,20 +1,29 @@
 // Full-popup snapshot test — produces dual snapshots (styled + unstyled)
-// against a fixture popup, per dev-plan §11.13 + §11.16 + §14.2 Phase 7
-// integration item.
-//
-// Today (Phase 5 baseline) the styler body is pass-through, so styled
-// and unstyled snapshots are identical. Bhavnesh's Phase 6 R10 styling
-// body will diverge them — the snapshot author re-baselines via
-// `vitest -u` once his styler body lands. The test STRUCTURE doesn't
-// change across the transition; only the snapshot baselines do.
+// against a fixture popup. The styled snapshot wraps the styled
+// line-kinds (popup-why-help, desc-base-truncated, desc-base-expanded,
+// shortcut-hint) with ANSI; the unstyled snapshot is captured with the
+// NEXPATH_STYLE_PASSTHROUGH=1 diagnostic bypass and matches the raw
+// layout output verbatim. The two snapshots intentionally differ.
 //
 // Fixture inputs are intentionally deterministic (no LLM calls, no
 // network, no time-of-day dependence) so the snapshots are stable
 // across runs.
 
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { computeLayout, type RenderLoopOptions } from './render-loop.js';
 import { captureStyledAndUnstyled } from './styler-snapshot.js';
+
+// Force isTTY=true so the styler emits ANSI on its styled kinds — without
+// this the non-TTY safeguard short-circuits the OFF path to pass-through
+// and the dual snapshots collapse to identical output.
+let origIsTTY: boolean | undefined;
+beforeAll(() => {
+  origIsTTY = process.stdout.isTTY;
+  process.stdout.isTTY = true;
+});
+afterAll(() => {
+  process.stdout.isTTY = origIsTTY;
+});
 
 // ── Fixture popup ──────────────────────────────────────────────────────────
 //
@@ -53,7 +62,7 @@ const FIXTURE_STATE = {
   scrollOffset:    0,
 };
 
-describe('render — full-popup snapshot (dual styled / unstyled — §11.16 + §14.2)', () => {
+describe('render — full-popup snapshot (dual styled / unstyled)', () => {
   it('produces a stable styled snapshot from the fixture popup', () => {
     const { styled } = captureStyledAndUnstyled(
       () => computeLayout(FIXTURE_OPTIONS, FIXTURE_STATE).styledLines.join('\n'),
@@ -61,21 +70,23 @@ describe('render — full-popup snapshot (dual styled / unstyled — §11.16 + �
     expect(styled).toMatchSnapshot('styled');
   });
 
-  it('produces a stable unstyled snapshot from the fixture popup (NEXPATH_STYLER_PASSTHROUGH=1)', () => {
+  it('produces a stable unstyled snapshot from the fixture popup (NEXPATH_STYLE_PASSTHROUGH=1)', () => {
     const { unstyled } = captureStyledAndUnstyled(
       () => computeLayout(FIXTURE_OPTIONS, FIXTURE_STATE).styledLines.join('\n'),
     );
     expect(unstyled).toMatchSnapshot('unstyled');
   });
 
-  it('phase-5 baseline — styled and unstyled snapshots are IDENTICAL (pass-through styler body)', () => {
-    // This invariant FLIPS once Bhavnesh's Phase 6 R10 mapping lands —
-    // at that point the test asserts that they DIFFER (codes were applied).
-    // The phase-5 baseline locks the current state: identical = pass-through.
+  it('styled and unstyled snapshots DIFFER (styler body wraps content with ANSI)', () => {
+    // With the per-kind dispatch applying ANSI on the styled kinds, the
+    // styled capture diverges from the bypass-captured unstyled output —
+    // styled contains ESC bytes, unstyled is the raw layout text.
     const { styled, unstyled } = captureStyledAndUnstyled(
       () => computeLayout(FIXTURE_OPTIONS, FIXTURE_STATE).styledLines.join('\n'),
     );
-    expect(styled).toBe(unstyled);
+    expect(styled).not.toBe(unstyled);
+    expect(styled).toMatch(/\x1b\[/);
+    expect(unstyled).not.toMatch(/\x1b\[/);
   });
 
   it('both snapshots contain the fixture popup\'s header content (pinch + question)', () => {

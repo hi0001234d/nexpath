@@ -2263,8 +2263,8 @@ describe('NEXPATH_HEADER', () => {
     expect(NEXPATH_HEADER).toContain('▲');
   });
 
-  it('contains the tracked wordmark "N E X P A T H  C L I"', () => {
-    expect(NEXPATH_HEADER).toContain('N E X P A T H  C L I');
+  it('contains the compact wordmark "NEXPATH CLI"', () => {
+    expect(NEXPATH_HEADER).toContain('NEXPATH CLI');
   });
 
   it('contains a dim-gray horizontal rule line', () => {
@@ -2286,7 +2286,7 @@ describe('NEXPATH_HEADER', () => {
   it('is a 3-row visual block (wordmark + rule + blank)', () => {
     expect(NEXPATH_HEADER_LINES).toBe(3);
     // The header string also produces 3 visible lines once ANSI is stripped:
-    // line 1: ▲  N E X P A T H, line 2: rule, line 3: empty (trailing blank).
+    // line 1: ▲  NEXPATH CLI, line 2: rule, line 3: empty (trailing blank).
     const stripped = NEXPATH_HEADER.replace(/\x1b\[[0-9;]*m/g, '');
     const lineCount = stripped.split('\n').length - 1; // trailing '\n' creates empty tail
     expect(lineCount).toBe(NEXPATH_HEADER_LINES);
@@ -2294,12 +2294,12 @@ describe('NEXPATH_HEADER', () => {
 
   it('triangle appears before the wordmark', () => {
     const stripped = NEXPATH_HEADER.replace(/\x1b\[[0-9;]*m/g, '');
-    expect(stripped.indexOf('▲')).toBeLessThan(stripped.indexOf('N E X P A T H'));
+    expect(stripped.indexOf('▲')).toBeLessThan(stripped.indexOf('NEXPATH'));
   });
 
   it('wordmark appears before the rule', () => {
     const stripped = NEXPATH_HEADER.replace(/\x1b\[[0-9;]*m/g, '');
-    expect(stripped.indexOf('N E X P A T H')).toBeLessThan(stripped.indexOf('─'));
+    expect(stripped.indexOf('NEXPATH')).toBeLessThan(stripped.indexOf('─'));
   });
 });
 

@@ -2,18 +2,48 @@
 // decision-session popup. The layout MUST emit each LineKind as a SEPARATE
 // element even when styling renders all kinds as plain text — keeping kinds
 // separable is what lets the styling layer attach kind-specific formatting
-// later without re-parsing rendered output.
+// without re-parsing rendered output.
 //
 // Extensibility rule: if a new LineKind is added in a future change, both
 // the layout and the styler must update together. The default styler
-// behavior for an unknown kind is to return the line unchanged (graceful
+// behaviour for an unknown kind is to return the line unchanged (graceful
 // fallback).
 //
-// Debug bypass: setting NEXPATH_STYLER_PASSTHROUGH=1 makes the styler
-// return the input line unchanged regardless of LineKind, even after the
-// styling implementation pass fills in the per-kind ANSI mapping. Useful
-// for diagnosing whether a rendering bug is in layout (which shows even
+// Debug bypass: setting NEXPATH_STYLE_PASSTHROUGH=1 makes the styler
+// return the input line unchanged regardless of LineKind. Useful for
+// diagnosing whether a rendering bug is in layout (which shows even
 // with bypass) or in styling (which disappears with bypass).
+//
+// Cross-terminal safeguards: the styler additionally honours the
+// industry-standard NO_COLOR env-var (https://no-color.org) and skips
+// ANSI emission when stdout is not a TTY (piped/redirected output).
+// Either signal returns the input line unchanged. Combined with the
+// debug bypass and the unknown-kind fallback, these three signals form
+// an environment-adaptive no-styling fallback path.
+
+import { createColors } from 'picocolors';
+import { writeRenderDebug } from './render-telemetry.js';
+
+// Force-enabled picocolors instance — the styler's own safeguards
+// (NEXPATH_STYLE_PASSTHROUGH bypass, NO_COLOR env-var, !isTTY) are the
+// single source of truth for whether ANSI is emitted. The default
+// picocolors instance auto-detects at module-load time and caches the
+// decision, which collapses to identity functions in non-TTY workers
+// even when the runtime environment is later mutated. createColors(true)
+// keeps the formatter functions live so the safeguards above can decide
+// each call independently.
+const pc = createColors(true);
+
+// 256-color light gray (xterm color index 252) for the focused desc-base.
+// picocolors only exposes the standard 16-color set, so the SGR sequence
+// for `38;5;N` (set foreground to 256-color N) is composed inline. The
+// closing `\x1b[39m` resets the foreground to the terminal default and
+// matches the reset picocolors uses for its named colors.
+const SGR_LIGHT_GRAY_252 = '\x1b[38;5;252m';
+const SGR_RESET_FG       = '\x1b[39m';
+function lightGray252(text: string): string {
+  return SGR_LIGHT_GRAY_252 + text + SGR_RESET_FG;
+}
 
 export type LineKind =
   | 'popup-why-help'
@@ -21,8 +51,10 @@ export type LineKind =
   | 'desc-base-expanded'
   | 'shortcut-hint'
   | 'option-label'
+  | 'option-label-unfocused'
   | 'pinch-label'
-  | 'question';
+  | 'question'
+  | 'page-header';
 
 /** All LineKind values as a const array — useful for exhaustive iteration in tests / dispatch tables. */
 export const ALL_LINE_KINDS: readonly LineKind[] = [
@@ -31,8 +63,10 @@ export const ALL_LINE_KINDS: readonly LineKind[] = [
   'desc-base-expanded',
   'shortcut-hint',
   'option-label',
+  'option-label-unfocused',
   'pinch-label',
   'question',
+  'page-header',
 ] as const;
 
 /**
@@ -40,11 +74,11 @@ export const ALL_LINE_KINDS: readonly LineKind[] = [
  * value `'1'` to make the styler return its input unchanged regardless
  * of LineKind.
  */
-export const STYLER_PASSTHROUGH_ENV = 'NEXPATH_STYLER_PASSTHROUGH';
+export const STYLE_PASSTHROUGH_ENV = 'NEXPATH_STYLE_PASSTHROUGH';
 
 /** Returns true when the styler-bypass env-var is currently set to `'1'`. */
-export function isStylerPassthroughActive(): boolean {
-  return process.env[STYLER_PASSTHROUGH_ENV] === '1';
+export function isStylePassthroughActive(): boolean {
+  return process.env[STYLE_PASSTHROUGH_ENV] === '1';
 }
 
 /**
@@ -55,40 +89,133 @@ export function isStylerPassthroughActive(): boolean {
  * re-truncate or re-wrap. ANSI escape codes are the styler's
  * responsibility; layout never emits them.
  *
- * Initial implementation is pass-through (returns input unchanged for
- * every kind). The per-kind ANSI / picocolors mapping is added by the
- * styling implementation pass — each case below grows its kind-specific
- * body without restructuring the switch.
+ * Style mapping (hierarchical 4-tier — option labels remain the visual
+ * anchor, supporting content fades in successively lighter tiers so the
+ * user's eye walks naturally from label → focused desc → unfocused
+ * label → unfocused desc):
+ *   - popup-why-help     → dim (readable; matches SHOW_SIMPLER tier)
+ *   - desc-base-expanded → 256-color light gray (xterm 252) — focused
+ *                          desc tier: visibly lighter than the focused
+ *                          option-label (which stays full-weight) so
+ *                          they no longer collapse to one block, but
+ *                          still clearly brighter than the unfocused
+ *                          desc gray below
+ *   - desc-base-truncated→ gray (SGR 90 / bright-black — darker than
+ *                          the focused desc tier so the user's eye
+ *                          still lands on the focused option's content
+ *                          first)
+ *   - shortcut-hint      → dim + italic (matches the existing
+ *                          dim+italic precedent for hint text)
+ *   - option-label       → inherit (focused option label — full-weight
+ *                          visual anchor; computeLayout emits this kind
+ *                          ONLY for the currently focused option)
+ *   - option-label-unfocused → dim (non-focused option labels fade so
+ *                          the user's eye lands on the focused option
+ *                          first — restores the clack/prompts.select()
+ *                          default that the local render-loop replaced)
+ *   - pinch-label        → inherit (existing pinch-label styling)
+ *   - question           → inherit (plain reads naturally)
  *
- * Default behavior for an unknown kind: return the line unchanged
- * (graceful fallback per the LineKind extensibility rule above).
+ * Fallback signals (any one returns the input line unchanged):
+ *   1. NEXPATH_STYLE_PASSTHROUGH=1 — diagnostic bypass.
+ *   2. NO_COLOR env-var set — industry-standard accessibility / CI hook.
+ *   3. process.stdout.isTTY falsy — piped or redirected output.
+ *   4. Unknown LineKind — graceful fallback per extensibility rule.
  *
- * Debug bypass: when `NEXPATH_STYLER_PASSTHROUGH=1` is set, the function
- * short-circuits to a pass-through return regardless of the dispatch
- * body. No-op today (the body is already pass-through); becomes the
- * diagnostic toggle once per-kind ANSI mapping lands.
+ * Double-styling guard (dev builds only): if the input line already
+ * contains an ESC byte (\x1b), throw — surfaces a layout-leak where
+ * ANSI escape codes were emitted before reaching the styler.
+ *
+ * Fallback ladder for the per-kind dispatch pattern (carried as
+ * documentation only — code change deferred unless the primary
+ * dispatch shape proves insufficient):
+ *   - Fallback 1: descriptor objects {kind, text, focused?, position?}.
+ *   - Fallback 2: style-tag markup `{style:dim}text{/style}`.
+ *   - Fallback 3: inline ANSI directly in layout (degraded — accepts
+ *     mixing layout + styling concerns).
+ *   - Cross-cutting: route specific line-kinds through picocolors
+ *     directly within this function as an internal implementation
+ *     choice without changing the interface.
  *
  * @param line  The raw text content from the layout.
  * @param kind  The line-kind tag.
  * @returns     The styled string ready to write to stdout.
  */
 export function styler(line: string, kind: LineKind): string {
-  // Debug bypass — return raw layout output for diagnosis. Runs FIRST so
-  // the bypass is honored even after the cases below grow ANSI bodies.
-  if (isStylerPassthroughActive()) return line;
+  const out = stylerInner(line, kind);
+  // Per-line render-debug trace — no-op unless NEXPATH_RENDER_DEBUG=1 is set.
+  writeRenderDebug({
+    event:     'line_styled',
+    kind,
+    inputLen:  line.length,
+    outputLen: out.length,
+    hadAnsi:   out.length !== line.length,
+  });
+  return out;
+}
 
-  // Phase 5 USER pass-through shell — one case per LineKind. The styling
-  // implementation pass replaces each case body with its per-kind ANSI /
-  // picocolors mapping; the case skeleton stays in place.
+function stylerInner(line: string, kind: LineKind): string {
+  // Debug bypass — return raw layout output for diagnosis. Runs FIRST so
+  // the bypass is honoured even when the dispatch body grows.
+  if (isStylePassthroughActive()) return line;
+
+  // Industry-standard NO_COLOR honoured (https://no-color.org).
+  if (process.env['NO_COLOR']) return line;
+
+  // Non-TTY output (pipe / redirect / CI) — skip ANSI emission.
+  if (!process.stdout.isTTY) return line;
+
+  // Inherit kinds return the input verbatim — they do NOT add any ANSI
+  // themselves, so even when the input is intentionally pre-styled by an
+  // upstream formatter (e.g., the pinch-label / question header values
+  // arrive pre-wrapped with bold-cyan / bold-white SGR codes), there is
+  // no risk of compounding. Resolve them BEFORE the dev-only guard so
+  // pre-styled input flows through cleanly.
   switch (kind) {
-    case 'popup-why-help':
-    case 'desc-base-truncated':
-    case 'desc-base-expanded':
-    case 'shortcut-hint':
     case 'option-label':
     case 'pinch-label':
     case 'question':
+    case 'page-header':
       return line;
+  }
+
+  // option-label-unfocused — ANSI-tolerant dim wrap. Some option labels
+  // are intentionally pre-styled by upstream callers — specifically the
+  // SHOW_SIMPLER_LABEL and HELP_LABEL meta-rows in DecisionSession.ts
+  // wrap their text with dim-gray / italic-dim SGR codes. When those
+  // meta rows are non-focused they emit with this kind, and the
+  // dev-only guard below would throw on the first such emission,
+  // crashing the renderLoop and producing the "blink and disappear"
+  // popup symptom (the exact pattern commit c4678d9 fixed for the
+  // inherit kinds).
+  //
+  // For pre-styled inputs we pass through unchanged — visually a no-op
+  // because the upstream styling already conveys the meta-row's intent.
+  // For plain inputs (the common case: ordinary option labels) we
+  // apply pc.dim so the non-focused option labels visibly fade.
+  if (kind === 'option-label-unfocused') {
+    return line.includes('\x1b') ? line : pc.dim(line);
+  }
+
+  // Dev-only double-styling guard — only meaningful for kinds where the
+  // styler would compound ANSI on already-styled input. If an ESC byte
+  // is already present in a styled-kind input the dispatch body below
+  // would wrap it in additional SGR codes and mask the layout leak.
+  if (process.env['NODE_ENV'] !== 'production' && line.includes('\x1b')) {
+    throw new Error(`styler received pre-styled input (kind=${kind}); layout must emit raw text only`);
+  }
+
+  switch (kind) {
+    case 'popup-why-help':         return pc.dim(line);
+    // Focused desc-base — 256-color light gray (xterm 252). Distinct
+    // tier between the full-weight focused option-label above and the
+    // gray unfocused desc previews below; the blank gap row + `↳`
+    // indent + chrome rail provide the structural separation, the
+    // light-gray tier provides the color-hierarchy cue.
+    case 'desc-base-expanded':     return lightGray252(line);
+    case 'desc-base-truncated':    return pc.gray(line);
+    case 'shortcut-hint':          return pc.dim(pc.italic(line));
+    // option-label-unfocused handled above (ANSI-tolerant special case).
     default:
       // Unknown kind — graceful fallback per the LineKind extensibility rule.
       return line;

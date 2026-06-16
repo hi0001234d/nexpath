@@ -47,6 +47,8 @@ import { emitKeypressEvents } from 'node:readline';
 import type { LineKind } from './styler.js';
 import { styler } from './styler.js';
 import type { OptionEntry } from './options.js';
+import { writeRenderDebug } from './render-telemetry.js';
+import { CHROME_MAX_PREFIX_WIDTH, applyChrome } from './render-loop-chrome.js';
 
 // ── Public types ────────────────────────────────────────────────────────────
 
@@ -99,6 +101,19 @@ export interface RenderLoopOptions {
    * padding row still separates the question from the first option.
    */
   whyHelpBlock?:  string;
+  /**
+   * Optional top-of-popup page-header block (e.g. the `▲ NEXPATH CLI`
+   * wordmark + dim rule). When set, each `\n`-split line emits as a separate
+   * `page-header` LineKind element at the very start of the layout. Including
+   * the header in the layout brings its rows inside the writeFrame cursor-
+   * rewind block, so the header stays pinned at the top of the popup across
+   * redraws even when the popup approaches or exceeds terminal rows. The
+   * budget math counts each header line under `preFixedLines` so the option-
+   * region budget reserves space for the header naturally and the popup is
+   * less likely to overflow terminal rows in the first place. Undefined or
+   * empty: emissions list is identical to the no-header behaviour.
+   */
+  pageHeader?:    string;
   /** Option list (already includes any bottom OPTION_SEPARATOR rows + meta entries). */
   options:        readonly SelectableItem[];
   /** Terminal rows. */
@@ -135,6 +150,13 @@ export interface RenderedLayout {
   emissions:        readonly LineEmission[];
   /** Per-line styled output (parallel to emissions). What goes to stdout WHEN no viewport clipping is applied. */
   styledLines:      readonly string[];
+  /**
+   * Per-line chrome-decorated output (parallel to emissions). Each entry
+   * is the corresponding `styledLines` entry with the per-LineKind chrome
+   * prefix (corner glyph, left rail, option bullet, focus highlight)
+   * prepended. This is what the interactive renderLoop writes to stdout.
+   */
+  chromedLines:     readonly string[];
   /** Per-option visible-range map — startIdx/endIdx into emissions for each option's lines. */
   optionLineRanges: readonly { startIdx: number; endIdx: number; itemIndex: number }[];
   /**
@@ -167,14 +189,18 @@ export interface RenderedLayout {
    *   totalOptionRows     : total emission row count across all options
    *                         (informational; lets the shell decide if
    *                         scrolling is needed at all)
-   *   visibleStyledLines  : styled lines to write to stdout — header
-   *                         rows always included; option rows clipped
-   *                         to the viewport window
+   *   visibleStyledLines  : styled lines (no chrome) to write to stdout
+   *                         — header rows always included; option rows
+   *                         clipped to the viewport window
+   *   visibleChromedLines : chrome-decorated lines parallel to
+   *                         visibleStyledLines — the interactive
+   *                         writeFrame writes these
    */
   viewport: {
     appliedScrollOffset: number;
     totalOptionRows:     number;
     visibleStyledLines:  readonly string[];
+    visibleChromedLines: readonly string[];
   };
 }
 
@@ -200,6 +226,27 @@ export const SUB_LINE_CONTINUATION_INDENT = '  ';
 
 /** Default minimum maxItems floor — matches TtySelectFn precedent. */
 export const DEFAULT_MAX_ITEMS_FLOOR = 5;
+
+/**
+ * Minimum effective expanded cap. If the secondary cap drops below this
+ * (terminal too short to fit a meaningful expansion plus the surrounding
+ * option-list context), the layout refuses to expand and silently falls
+ * back to the truncated D1 cap. Surfaced via the
+ * `whyhelp_expand_skipped_too_short` telemetry event.
+ */
+export const D5_MIN_EFFECTIVE_CAP = 2;
+
+/**
+ * Compute the effective expanded cap for the desc-base. Applies the
+ * secondary cap `min(D5_EXPANDED_LINE_CAP, max(0, avail - 5))` so at
+ * least 5 other rows remain visible in the option region. Returns 0
+ * when the terminal is too short for any expansion — callers compare
+ * against `D5_MIN_EFFECTIVE_CAP` to decide whether to refuse the
+ * expansion and stay in the truncated state.
+ */
+export function effectiveExpandedCap(avail: number): number {
+  return Math.min(D5_EXPANDED_LINE_CAP, Math.max(0, avail - 5));
+}
 
 /**
  * Locked shortcut-hint wording per dev-plan §13.5 + §13.10 + §14.2
@@ -232,6 +279,65 @@ export const SHORTCUT_HINT_TEXT = 'press Space to toggle details' as const;
  */
 export function optionEntriesToSelectableItems(entries: readonly OptionEntry[]): SelectableItem[] {
   return entries.map((e) => ({ value: e.option, label: e.option, descBase: e.descBase }));
+}
+
+// ── ANSI-aware visual-row counting (cursor-rewind invariant) ────────────────
+
+/**
+ * SGR sequences emitted by the styler + chrome layers. Matches the full
+ * SGR form `\x1b[...m` where `...` is the parameter list. Restricted to
+ * SGR (terminator `m`) because that is the only sequence type styler and
+ * chrome emit inside line content. Other CSI types (cursor control,
+ * erase) are produced by writeFrame itself via out.write but never
+ * appear inside the rendered line content.
+ */
+const ANSI_SGR_REGEX = /\x1b\[[0-9;]*m/g;
+
+/**
+ * Strip SGR sequences from a string. Returns the visible-character
+ * payload that the terminal renders. Used by visualRows so the
+ * cursor-rewind row-count is measured against visible width, not raw
+ * .length (which includes the escape bytes).
+ *
+ * Exported for unit testability.
+ */
+export function stripAnsi(s: string): string {
+  return s.replace(ANSI_SGR_REGEX, '');
+}
+
+/**
+ * Count the visual rows produced by writing `line` followed by `\n`.
+ * Accounts for two effects:
+ *
+ *   1. Embedded `\n` characters — each starts a new visual row.
+ *      formatOptionLabel packs multi-line option labels as a single
+ *      emission with embedded `\n` for continuation rows.
+ *
+ *   2. Terminal-driven wrap when a segment's visible length exceeds
+ *      cols. Visible length is measured AFTER stripping SGR escape
+ *      sequences — ANSI codes do not consume terminal columns.
+ *
+ * Strict superset of the prior accumulator
+ * (`1 + (line.match(/\n/g) || []).length`): when there is no wrap and
+ * no SGR, visualRows returns the same value. The new behavior diverges
+ * only when wrap is actually present.
+ *
+ * Edge cases:
+ *   - Empty segment between two `\n` characters → still 1 visual row
+ *   - cols <= 0 → return segments.length (defensive; terminals do not
+ *     have zero or negative cols, but avoid divide-by-zero)
+ *
+ * Exported for unit testability.
+ */
+export function visualRows(line: string, cols: number): number {
+  const segments = line.split('\n');
+  if (cols <= 0) return segments.length;
+  let rows = 0;
+  for (const seg of segments) {
+    const visible = stripAnsi(seg).length;
+    rows += Math.max(1, Math.ceil(visible / cols));
+  }
+  return rows;
 }
 
 // ── Wrapping + truncation helpers (D1 / D2 / D5) ────────────────────────────
@@ -367,6 +473,38 @@ export function renderDescBaseSubLines(
 export function computeLayout(opts: RenderLoopOptions, state: LayoutState): RenderedLayout {
   const emissions: LineEmission[] = [];
 
+  // ── Pre-compute fixedLines + avail (needed before the option loop so
+  //    the per-option desc-base cap can apply the secondary terminal-
+  //    size cap deterministically — D5 edge case (c)). The earlier
+  //    inline emission-filter recount is preserved below as a defensive
+  //    cross-check.
+  let preFixedLines = 2;  // pinch-label + question (always emitted)
+  if (opts.subtitle && opts.subtitle.length > 0) preFixedLines += 1;
+  if (opts.whyHelpBlock && opts.whyHelpBlock.length > 0) {
+    preFixedLines += opts.whyHelpBlock.split('\n').length;
+  }
+  // Page-header (optional, top-of-popup) — each `\n`-split line counts as a
+  // fixed row so the option-region budget reserves space for the header.
+  if (opts.pageHeader && opts.pageHeader.length > 0) {
+    preFixedLines += opts.pageHeader.split('\n').length;
+  }
+  preFixedLines += D4_PADDING_ROW_COUNT;
+  const preAvail        = Math.max(0, opts.rows - preFixedLines - 2);
+  const preExpandedCap  = effectiveExpandedCap(preAvail);
+  const expansionAllowed = preExpandedCap >= D5_MIN_EFFECTIVE_CAP;
+
+  // ── Page-header (optional, top-of-popup) ───────────────────────────────────
+  // Emitted BEFORE the pinch-label / question header pair so the wordmark +
+  // rule sits at the very top of the popup. Each `\n`-split line is its own
+  // emission so the cursor-rewind block (visualRows-aware) handles them
+  // exactly like every other multi-line content source.
+  if (opts.pageHeader && opts.pageHeader.length > 0) {
+    const headerLines = opts.pageHeader.split('\n');
+    for (const ln of headerLines) {
+      emissions.push({ kind: 'page-header', text: ln, optionIndex: null, isPadding: false });
+    }
+  }
+
   // ── Header pair ────────────────────────────────────────────────────────────
   emissions.push({ kind: 'pinch-label', text: opts.pinchLabel, optionIndex: null, isPadding: false });
 
@@ -418,25 +556,77 @@ export function computeLayout(opts: RenderLoopOptions, state: LayoutState): Rend
     const item     = opts.options[i];
     const startIdx = emissions.length;
 
+    const isFocused = i === state.focusedIndex;
     if (item.isSeparator) {
       // Blank padding row, no LineKind-specific styling.
       emissions.push({ kind: 'option-label', text: '', optionIndex: i, isPadding: true });
     } else {
-      // option-label line.
-      emissions.push({ kind: 'option-label', text: item.label, optionIndex: i, isPadding: false });
+      // option-label line. Focused option's label is the full-weight
+      // visual anchor (option-label kind, inherit / no extra ANSI);
+      // non-focused options' labels fade to dim (option-label-unfocused
+      // kind, styler routes to pc.dim) so the user's eye lands on the
+      // focused option first. This restores the clack/prompts.select()
+      // default behaviour the local render-loop replaced.
+      emissions.push({
+        kind:        isFocused ? 'option-label' : 'option-label-unfocused',
+        text:        item.label,
+        optionIndex: i,
+        isPadding:   false,
+      });
 
       // desc-base sub-line — only for non-meta items with descBase content.
       // Wrap at terminal width, apply D1 cap (truncated) or D5 cap
       // (expanded), append D2 `...` marker on overflow. Each wrapped line
       // emits as a SEPARATE element with the same LineKind so §11.11
       // separate-element invariant holds at the per-line granularity.
-      const isExpanded = state.expandedOptions.has(i);
+      const requestedExpanded = state.expandedOptions.has(i);
+      // D5 edge case (c): when the terminal is too short for the secondary
+      // cap to leave at least D5_MIN_EFFECTIVE_CAP rows of body, refuse the
+      // expansion and silently fall back to the truncated state. The
+      // refusal is surfaced via the whyhelp_expand_skipped_too_short
+      // telemetry event below.
+      const isExpanded = requestedExpanded && expansionAllowed;
       if (!item.isMeta && item.descBase && item.descBase.length > 0) {
-        const cap      = isExpanded ? D5_EXPANDED_LINE_CAP : D1_TRUNCATED_LINE_CAP;
-        const kind     = isExpanded ? 'desc-base-expanded' : 'desc-base-truncated';
-        const subLines = renderDescBaseSubLines(item.descBase, opts.cols, cap);
+        // Blank gap row between option-label and its desc-base — visually
+        // separates the two so they no longer read as one merged block.
+        // optionIndex: i so the row scrolls with the option (not counted
+        // as a fixed header row by the budget math). popup-why-help kind
+        // reuses the existing rail-only chrome prefix; isPadding=true
+        // marks it as a content-free spacer.
+        emissions.push({ kind: 'popup-why-help', text: '', optionIndex: i, isPadding: true });
+
+        const cap      = isExpanded ? preExpandedCap : D1_TRUNCATED_LINE_CAP;
+        // Kind follows FOCUS only — focused desc-base inherits the default
+        // foreground (full visibility while the option is active); every
+        // non-focused desc-base routes to the gray truncated tier so the
+        // user's eye still lands on the focused content first. An option
+        // the user previously expanded (Space) that has since lost focus
+        // keeps its expanded LINE CAP but fades to gray with the rest of
+        // the non-focused content — the cap is gated on isExpanded
+        // independently of the kind.
+        const kind     = isFocused ? 'desc-base-expanded' : 'desc-base-truncated';
+        // Reserve CHROME_MAX_PREFIX_WIDTH columns from the wrap budget so
+        // post-chrome lines stay within opts.cols. Without this reservation
+        // the chrome prefix would push wrapped lines over the terminal
+        // width and the cursor-rewind row count in writeFrame would
+        // under-count visual rows.
+        const chromeReservedCols = Math.max(1, opts.cols - CHROME_MAX_PREFIX_WIDTH);
+        const subLines = renderDescBaseSubLines(item.descBase, chromeReservedCols, cap);
         for (const ln of subLines) {
           emissions.push({ kind, text: ln, optionIndex: i, isPadding: false });
+        }
+        // Refusal surface — emit once per refused-expansion so external
+        // observability can count occurrences. Only fires when the user
+        // requested expansion (state.expandedOptions had the index) but
+        // the terminal was too short to honour it.
+        if (requestedExpanded && !isExpanded) {
+          writeRenderDebug({
+            event:       'whyhelp_expand_skipped_too_short',
+            optionIndex: i,
+            availBudget: preAvail,
+            secondaryCap: preExpandedCap,
+            minRequired: D5_MIN_EFFECTIVE_CAP,
+          });
         }
       }
 
@@ -446,7 +636,6 @@ export function computeLayout(opts: RenderLoopOptions, state: LayoutState): Rend
       // wording per §13.5 W5 lock — the Space key toggles regardless of
       // current direction so the hint text is state-agnostic.
       // Placement: inline-below-focused-option per §11.2 Gap 4 fix.
-      void isExpanded;
       if (i === state.focusedIndex && !item.isMeta && item.descBase && item.descBase.length > 0) {
         emissions.push({
           kind:        'shortcut-hint',
@@ -461,10 +650,19 @@ export function computeLayout(opts: RenderLoopOptions, state: LayoutState): Rend
   }
 
   // ── Styler dispatch (D6) ───────────────────────────────────────────────────
-  // Every emitted line passes through styler(text, kind). Pass-through today
-  // (Phase 1 styler returns input unchanged); Bhavnesh R10 work replaces the
-  // body with per-kind ANSI mapping. The dispatch site stays the same.
+  // Every emitted line passes through styler(text, kind). Per-kind ANSI
+  // mapping is applied here; chrome decoration runs below as a separate
+  // layer so the styler dispatch table stays focused on per-LineKind
+  // content styling only.
   const styledLines = emissions.map((e) => styler(e.text, e.kind));
+
+  // ── Chrome decoration ──────────────────────────────────────────────────────
+  // Apply the per-LineKind chrome prefix (corner glyph, left rail, option
+  // bullet, focus highlight) to the styled lines. Runs AFTER the styler
+  // so the styler's dev-only ESC-byte guard does not trip on the chrome
+  // prefix's ANSI codes. Parallel array shape — chromedLines[i] is
+  // styledLines[i] with the chrome prefix prepended.
+  const chromedLines = applyChrome(styledLines, emissions, { focusedOptionIndex: state.focusedIndex });
 
   // ── Budget computation (§11.4 / §11.8 / §11.12) ────────────────────────────
   // Adapt the TtySelectFn.ts:72-92 precedent — header rows count as
@@ -520,12 +718,20 @@ export function computeLayout(opts: RenderLoopOptions, state: LayoutState): Rend
   const windowed     = optionStyled.slice(appliedScrollOffset, appliedScrollOffset + avail);
   const visibleStyledLines: readonly string[] = [...headerStyled, ...windowed];
 
+  // Same windowing applied to chromedLines so writeFrame can pick either
+  // level (with or without chrome) without re-windowing.
+  const headerChromed  = chromedLines.slice(0, headerEnd);
+  const optionChromed  = chromedLines.slice(headerEnd);
+  const windowedChromed = optionChromed.slice(appliedScrollOffset, appliedScrollOffset + avail);
+  const visibleChromedLines: readonly string[] = [...headerChromed, ...windowedChromed];
+
   return {
     emissions,
     styledLines,
+    chromedLines,
     optionLineRanges,
     budget:   { fixedLines, avail, maxItems, fittedItems },
-    viewport: { appliedScrollOffset, totalOptionRows, visibleStyledLines },
+    viewport: { appliedScrollOffset, totalOptionRows, visibleStyledLines, visibleChromedLines },
   };
 }
 
@@ -558,17 +764,43 @@ export interface RenderLoopRunOptions {
   /** Async iterable of keypress events. Caller wires readline (or a mock in tests). */
   keyEvents:   AsyncIterable<KeyEvent>;
   /**
-   * D3 Space-key handler hook — Bhavnesh Phase 6 task wires the actual
-   * truncated ↔ expanded toggle here. Default = identity (Space is a no-op).
-   * The hook receives the current state + the focused item; returns the
-   * new state (typically toggling membership in `expandedOptions`).
+   * D3 Space-key handler. Default flips the focused option's index in
+   * `state.expandedOptions` — adds when not present, removes when present.
+   * Returns the original state unchanged when the focused item is a
+   * separator, a meta item, or carries no desc-base content (nothing to
+   * expand). Callers can override to add custom toggle behaviour.
    */
   onSpace?:    (state: LayoutState, focusedItem: SelectableItem | undefined) => LayoutState;
+  /**
+   * Optional structured-telemetry sink. Called by the render loop after
+   * each state-changing key event with a stable event name + payload.
+   * Render-loop has no projectRoot context, so callers wire this to
+   * writeTelemetry (or similar) with their own context. No-op when
+   * omitted.
+   */
+  telemetryHook?: (event: string, payload: Record<string, unknown>) => void;
 }
 
-/** Default D3 Space hook — no-op. Bhavnesh Phase 6 replaces this. */
-function defaultOnSpace(state: LayoutState): LayoutState {
-  return state;
+/**
+ * Default D3 Space hook — toggles the focused option's index in
+ * `state.expandedOptions`. Returns the original state unchanged when
+ * the focused item has nothing to expand (separator, meta, or missing
+ * desc-base content).
+ *
+ * The terminal-size precondition (D5 edge case (c) — refuse to expand
+ * when avail-5 is below D5_MIN_EFFECTIVE_CAP) is enforced inside
+ * computeLayout, NOT here. This keeps the hook decoupled from layout
+ * dimensions so it can be invoked without the full RenderLoopOptions
+ * context.
+ */
+function defaultOnSpace(state: LayoutState, focusedItem: SelectableItem | undefined): LayoutState {
+  if (!focusedItem || focusedItem.isSeparator || focusedItem.isMeta) return state;
+  if (!focusedItem.descBase || focusedItem.descBase.length === 0)    return state;
+
+  const next = new Set(state.expandedOptions);
+  if (next.has(state.focusedIndex)) next.delete(state.focusedIndex);
+  else                              next.add(state.focusedIndex);
+  return { ...state, expandedOptions: next };
 }
 
 /** Advance focus while skipping isSeparator items (R2 C1 + existing pattern). */
@@ -614,6 +846,41 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
     scrollOffset:    0,
   };
 
+  // Enter the alternate screen buffer and hide the terminal cursor for
+  // the duration of the popup. The popup is a non-text-input UI (arrow
+  // keys + Space + Enter); a blinking cursor row below the last emission
+  // has no semantic role and is perceived as a stray glitch. Both
+  // primitives are universally supported across xterm-derived terminals,
+  // macOS Terminal.app, and Windows Terminal. Skipped on non-TTY output
+  // so captured streams stay clean of control sequences.
+  //
+  // The alternate screen buffer (`\x1b[?1049h` enter / `\x1b[?1049l`
+  // exit) gives the popup a dedicated, fresh, scrollback-free screen
+  // state. Inside the alt buffer, `\x1b[H` (cursor home — row 1, col 1)
+  // and `\x1b[J` (clear from cursor to end of screen) work deterministically
+  // because there is nothing in the buffer's state to confuse them. This
+  // replaces the cursor save/restore pair — neither the ANSI variant
+  // (`\x1b[s` / `\x1b[u`) nor the DEC variant (`\x1b7` / `\x1b8`) is
+  // reliably honored across the popup spawn context (the spawned terminal
+  // window opened by TtySelectFn). Both variants were silently dropped
+  // on Ubuntu gnome-terminal, macOS Terminal.app, and Windows Terminal,
+  // causing each redraw to write BELOW the previous frame instead of
+  // overwriting it. Alt buffer + absolute positioning sidesteps that
+  // entirely — it's the same mechanism vim, less, htop, and dialog use.
+  //
+  // Cursor visibility (DECTCEM `?25l` / `?25h`) is set INSIDE the alt
+  // buffer state, immediately after the alt-buffer enter. The exit
+  // sequence in the `finally` block runs in reverse order: show the
+  // cursor first, then exit the alt buffer — so the user's prior
+  // terminal state (cursor visibility, content) is restored cleanly
+  // regardless of whether the popup ends via Enter, Esc, Ctrl+C, an
+  // iterator-exhaust cancel, or an uncaught exception.
+  const cursorWasHidden = process.stdout.isTTY === true;
+  if (cursorWasHidden) {
+    out.write('\x1b[?1049h');
+    out.write('\x1b[?25l');
+  }
+
   const writeFrame = () => {
     const layout = computeLayout(opts.layout, state);
     // Persist the auto-adjusted scroll offset back into state so subsequent
@@ -622,15 +889,40 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
     if (layout.viewport.appliedScrollOffset !== state.scrollOffset) {
       state = { ...state, scrollOffset: layout.viewport.appliedScrollOffset };
     }
-    for (const line of layout.viewport.visibleStyledLines) {
-      out.write(line);
-      out.write('\n');
+
+    // Cursor rewind + content write — BATCHED into a single out.write()
+    // call per frame so the terminal renders the whole frame atomically.
+    // Previously this issued 2 + 3N separate write() calls (where N is
+    // the visible line count) — the terminal could render partial frames
+    // between writes, producing visible "tearing" / jerkiness during
+    // arrow-key navigation. Concatenating into one buffer eliminates
+    // the in-between render windows; the underlying bytes are identical.
+    //
+    // Per-frame contents:
+    //   - `\x1b[H` cursor home (row 1, col 1) — ABSOLUTE positioning
+    //   - `\x1b[J` clear from cursor to end of visible screen
+    //   - For each visible line: `\x1b[K` (per-line erase) + line + `\n`
+    //
+    // Skipped on non-TTY output (pipe / redirect / CI) so the captured
+    // stream stays clean of ANSI control sequences. Non-TTY path still
+    // batches into a single write, just with no ANSI bytes included.
+    const lines = layout.viewport.visibleChromedLines;
+    const parts: string[] = [];
+    const isTTY = process.stdout.isTTY;
+    if (isTTY) {
+      parts.push('\x1b[H', '\x1b[J');
     }
+    for (const line of lines) {
+      if (isTTY) parts.push('\x1b[K');
+      parts.push(line, '\n');
+    }
+    out.write(parts.join(''));
   };
 
-  writeFrame();
+  try {
+    writeFrame();
 
-  for await (const ev of opts.keyEvents) {
+    for await (const ev of opts.keyEvents) {
     switch (ev.name) {
       case 'arrow-up':
         state = { ...state, focusedIndex: moveFocus(opts.layout.options, state.focusedIndex, -1) };
@@ -639,8 +931,36 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
         state = { ...state, focusedIndex: moveFocus(opts.layout.options, state.focusedIndex,  1) };
         break;
       case 'space': {
-        const focusedItem = opts.layout.options[state.focusedIndex];
+        const focusedItem  = opts.layout.options[state.focusedIndex];
+        const prevExpanded = state.expandedOptions.has(state.focusedIndex);
+        const prevFocus    = state.focusedIndex;
         state = onSpace(state, focusedItem);
+
+        // Recompute layout to populate the telemetry payload with the
+        // post-toggle budget + focused-option range. Cheap (pure function;
+        // the same recompute happens inside writeFrame() below).
+        const layout         = computeLayout(opts.layout, state);
+        const nowExpanded    = state.expandedOptions.has(state.focusedIndex);
+        const focusedRange   = layout.optionLineRanges.find((r) => r.itemIndex === state.focusedIndex);
+        const expandedHeight = focusedRange ? focusedRange.endIdx - focusedRange.startIdx : 0;
+        const finalCap       = nowExpanded
+          ? effectiveExpandedCap(layout.budget.avail)
+          : D1_TRUNCATED_LINE_CAP;
+        const descLineCount  = focusedItem?.descBase ? focusedItem.descBase.split('\n').length : 0;
+
+        const payload = {
+          optionIndex:    state.focusedIndex,
+          descLineCount,
+          expandedHeight,
+          availBudget:    layout.budget.avail,
+          finalCap,
+          didTruncate:    expandedHeight > finalCap + 1,
+          focusRetained:  state.focusedIndex === prevFocus,
+          prevExpanded,
+          nowExpanded,
+        };
+        writeRenderDebug({ event: 'whyhelp_expand_toggled', ...payload });
+        opts.telemetryHook?.('whyhelp_expand_toggled', payload);
         break;
       }
       case 'enter': {
@@ -656,8 +976,24 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
     writeFrame();
   }
 
-  // Iterator exhausted without a terminal event — treat as cancel.
-  return null;
+    // Iterator exhausted without a terminal event — treat as cancel.
+    return null;
+  } finally {
+    // Restore the terminal cursor visibility AND exit the alternate
+    // screen buffer regardless of how we exit: Enter resolved with
+    // `return picked`, Esc/Ctrl+C with `return null`, iterator
+    // exhaustion with `return null`, or any thrown exception.
+    //
+    // Order matters: show the cursor first (inside the alt buffer
+    // state), then exit the alt buffer. This way the user's prior
+    // terminal state (cursor visibility, content, scrollback) is
+    // restored cleanly when the alt buffer flips back to the normal
+    // screen buffer.
+    if (cursorWasHidden) {
+      out.write('\x1b[?25h');
+      out.write('\x1b[?1049l');
+    }
+  }
 }
 
 /**

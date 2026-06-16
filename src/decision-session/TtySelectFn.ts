@@ -6,6 +6,7 @@ import { join, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import * as rl from 'node:readline';
 import pc, { createColors } from 'picocolors';
 import type { SelectFn } from './DecisionSession.js';
@@ -15,11 +16,15 @@ import {
   OPT_OUT_SENTINEL,
   NEXPATH_HEADER,
   NEXPATH_HEADER_LINES,
+  formatPinchLabel,
+  formatSubtitle,
+  formatQuestion,
 } from './DecisionSession.js';
 import { SKIP_NOW, SHOW_SIMPLER } from './options.js';
 import type { Store } from '../store/db.js';
 import { getConfig, setConfig } from '../store/config.js';
 import { ROLE_OPTIONS, buildRoleDescriptionLines, buildRoleMenuLines } from '../cli/shared/role-description.js';
+import { detectScreenResolution, computePopupGeometry, type PopupGeometry } from './screen-geometry.js';
 
 // ── New-window helpers: .mjs script builders ─────────────────────────────────
 
@@ -45,14 +50,21 @@ function buildMjsScript(
   optFileFwd: string,
   resultFileFwd: string,
   clipboardCmds: ClipboardCmd[],
+  renderLoopUrl: string,
 ): string {
   return `import { select, isCancel } from '${clackUrl}';
+import { renderLoop, eventsFromReadline } from '${renderLoopUrl}';
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { emitKeypressEvents } from 'node:readline';
 import { tmpdir } from 'node:os';
 
-process.stdout.write(${JSON.stringify(NEXPATH_HEADER)});
+// NOTE: NEXPATH_HEADER is no longer written here. It is now passed into
+// the renderLoop layout as the pageHeader field below, so the header
+// rows live INSIDE the writeFrame cursor-rewind block. This keeps the
+// header pinned at the top of the popup across redraws — including the
+// case where the popup approaches or exceeds terminal rows and would
+// otherwise scroll the header off the top of the visible buffer.
 
 const opts    = JSON.parse(readFileSync('${optFileFwd}', 'utf8'));
 const _dbg = tmpdir() + '/nexpath-render-debug.txt';
@@ -143,15 +155,50 @@ process.stdin.on('keypress', (ch, key) => {
   }
 });
 
-let picked;
-do {
-  picked = await select({ message: opts.message, options: _selOptions, maxItems: _maxItems });
-} while (typeof picked === 'string' && picked.startsWith(opts.separatorPrefix));
+// MAIN popup — driven by the local render-loop renderer. Sub-menu action
+// prompt below still uses clack select. The structured fields plumbed into
+// the optFile by the parent process (pinchLabel / subtitle / question /
+// whyHelpBlock / per-option descBase / isSeparator / isMeta) feed the
+// renderLoop layout directly.
+const _layout = {
+  pageHeader:   ${JSON.stringify(NEXPATH_HEADER)},
+  pinchLabel:   opts.pinchLabel,
+  subtitle:     opts.subtitle,
+  question:     opts.question,
+  whyHelpBlock: opts.whyHelpBlock,
+  options:      opts.options.map((o) => ({
+    value:       o.value,
+    label:       o.label,
+    descBase:    o.descBase,
+    isSeparator: Boolean(o.isSeparator),
+    isMeta:      Boolean(o.isMeta),
+  })),
+  rows: process.stdout.rows    ?? 24,
+  cols: process.stdout.columns ?? 80,
+};
+const _events = eventsFromReadline(process.stdin);
+const _rlResult = await renderLoop({
+  layout:    _layout,
+  out:       process.stdout,
+  keyEvents: _events.events,
+});
+_events.cancel();
 
 process.stdout.write = _ow;
 _log('done: writes=' + _wc + ' nlTotal=' + _nlTotal);
 
-if (!isCancel(picked) && typeof picked === 'string'
+if (_rlResult === null) {
+  // Esc / Ctrl+C cancel — write empty result-file string. The parent
+  // process treats an empty result-file as a soft dismissal; explicit
+  // opt-out (Ctrl+X) is captured by the dedicated keypress listener
+  // above which terminates the process before reaching this branch.
+  writeFileSync('${resultFileFwd}', '', 'utf8');
+  process.exit(0);
+}
+
+let picked = _rlResult.value;
+
+if (typeof picked === 'string'
     && picked !== opts.skipNow && picked !== opts.showSimpler) {
 
   process.stdout.write('\\n\\x1b[2;3m  \\u21b5 hit enter to send directly to Claude\\x1b[0m\\n\\n');
@@ -176,7 +223,7 @@ if (!isCancel(picked) && typeof picked === 'string'
       writeFileSync('${resultFileFwd}', '__CLIP__', 'utf8');
     }
   }
-} else if (!isCancel(picked) && typeof picked === 'string') {
+} else if (typeof picked === 'string') {
   writeFileSync('${resultFileFwd}', picked, 'utf8');
 }
 
@@ -436,8 +483,7 @@ function readCurrentRole(store: Store | undefined, projectRoot: string | undefin
 function buildWindowsNewWindowSelectFn(store?: Store, projectRoot?: string): SelectFn {
   const clackUrl = resolveClackEsmUrl();
 
-  return (opts) =>
-    new Promise<string | symbol>((resolve) => {
+  return async (opts) => {
       const id         = randomUUID();
       const optFile    = join(tmpdir(), `nexpath-opt-${id}.json`);
       const resultFile = join(tmpdir(), `nexpath-res-${id}.txt`);
@@ -457,23 +503,44 @@ function buildWindowsNewWindowSelectFn(store?: Store, projectRoot?: string): Sel
           skipNow:         SKIP_NOW,
           showSimpler:     SHOW_SIMPLER,
           separatorPrefix: OPTION_SEPARATOR,
+          // Structured fields consumed by the .mjs child when the popup
+          // is driven by the local render-loop renderer. Header values
+          // are pre-styled here at the IO boundary (mirrors the legacy
+          // `message` field, which is composed pre-styled too) so the
+          // child does not need to call into DecisionSession formatters.
+          // Legacy `message` field above stays intact for the
+          // @clack/prompts.select fallback path.
+          pinchLabel:      opts.pinchLabel  !== undefined ? formatPinchLabel(opts.pinchLabel)  : undefined,
+          subtitle:        opts.subtitle    !== undefined ? formatSubtitle(opts.subtitle)      : undefined,
+          question:        opts.question    !== undefined ? formatQuestion(opts.question)      : undefined,
+          whyHelpBlock:    opts.whyHelpBlock,
         }),
         'utf8',
       );
 
-      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, [['clip', []]]), 'utf8');
+      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, [['clip', []]], resolveRenderLoopEsmUrl()), 'utf8');
 
       // Textual cue in Claude terminal regardless of whether window is visible
       process.stderr.write('\n[nexpath] Please select an action in the new window\n');
 
       // cmd /c start → ShellExecuteEx → reliable foreground activation
       // Title arg appears in taskbar and Alt+Tab for discoverability
-      spawnSync(
-        'cmd.exe',
-        ['/c', 'start', '/WAIT', 'Nexpath \u2014 Action Required',
-          'node', scriptFile],
-        { stdio: 'ignore' },
-      );
+      // Compute geometry ONCE per select call. Both the MAIN popup and any
+      // sub-menu spawn (root chooser triggered by Ctrl+T) share the same
+      // closure so the sub-menu inherits the same 70% sizing without an
+      // extra detection round-trip.
+      const screen = await detectScreenResolution();
+      const geom   = screen ? computePopupGeometry(screen) : null;
+
+      // Shared spawn closure. Reused below by spawnRootChooserFlow so the
+      // sub-menu spawn callback uses the same dispatch + geometry.
+      const spawnConsole: SpawnWindowFn = (title, script) => {
+        const plan = planWindowsPopupSpawn(geom, title, script);
+        spawnSync(plan.cmd, plan.args, { stdio: 'ignore' });
+      };
+
+      // Title arg appears in taskbar and Alt+Tab for discoverability
+      spawnConsole(WINDOW_TITLE, scriptFile);
 
       // Result file format:
       //   '__CLIP__'               → user chose "Copy to clipboard" (clip.exe already called)
@@ -491,13 +558,7 @@ function buildWindowsNewWindowSelectFn(store?: Store, projectRoot?: string): Sel
         } else if (raw === '__NEXPATH_OPT_OUT__') {
           result = OPT_OUT_SENTINEL;
         } else if (raw === '__ROOT_MENU_PENDING__') {
-          result = spawnRootChooserFlow(clackUrl, (title, script) => {
-            spawnSync(
-              'cmd.exe',
-              ['/c', 'start', '/WAIT', title, 'node', script],
-              { stdio: 'ignore' },
-            );
-          }, store, projectRoot);
+          result = spawnRootChooserFlow(clackUrl, spawnConsole, store, projectRoot);
         } else if (raw.startsWith('__FREQ__:')) {
           result = raw;
         } else if (raw.startsWith('__ROLE__:')) {
@@ -511,8 +572,8 @@ function buildWindowsNewWindowSelectFn(store?: Store, projectRoot?: string): Sel
         try { unlinkSync(f); } catch { /* ignore */ }
       }
 
-      resolve(result);
-    });
+      return result;
+    };
 }
 
 // ── Linux: new terminal window via detected emulator ─────────────────────────
@@ -527,6 +588,21 @@ function resolveClackEsmUrl(): string {
   const clackEsmEntry = clackPkg.exports['.'].import;
   const clackEsmPath  = join(dirname(clackPkgPath), clackEsmEntry);
   return `file:///${clackEsmPath.replace(/\\/g, '/')}`;
+}
+
+/**
+ * Resolve the sibling compiled `render-loop.js` to a `file:///` URL that
+ * the .mjs child script can import without any module-resolution context
+ * of its own. Mirrors the `resolveClackEsmUrl()` pattern.
+ *
+ * Used by the .mjs script when the main popup is driven by the local
+ * render-loop renderer instead of `@clack/prompts.select`. `render-loop.js`
+ * lives as a sibling of this compiled module under `dist/decision-session/`.
+ */
+function resolveRenderLoopEsmUrl(): string {
+  const thisDir = dirname(fileURLToPath(import.meta.url));
+  const rlPath  = join(thisDir, 'render-loop.js');
+  return `file:///${rlPath.replace(/\\/g, '/')}`;
 }
 
 /** Resolve the @clack/core ESM entry URL (for SelectPrompt) from nexpath's module context. */
@@ -545,17 +621,60 @@ function commandExists(cmd: string): boolean {
   return r.status === 0;
 }
 
+/**
+ * Pure: build the `cmd + args` pair to spawn a Windows popup window
+ * running the given .mjs `scriptPath` under the given window `title`.
+ *
+ * Single-branch passthrough: `cmd /c start /WAIT title node scriptPath`.
+ * `start /WAIT` keeps the parent `spawnSync` blocked for the popup's
+ * full lifetime, so the temp `.mjs` survives until the spawned `node`
+ * has loaded it.
+ *
+ * Windows sizing was removed after live reproduction proved that nested
+ * `cmd /c "<inner-cmd>"` chains needed to invoke `mode CON` fail fast
+ * under modern Windows Terminal + Windows shell quoting rules
+ * (the inner-cmd's `\"` is treated as literal backslash-quote rather
+ * than an escaped quote, breaking the script path). The `geom` parameter
+ * is accepted for signature parity with `planLinuxPopupSpawn` and
+ * `buildTerminalAppleScript` but is unused on Windows: the popup opens
+ * at whatever size Windows / Windows Terminal chooses. Linux + macOS
+ * spawn paths retain pixel-exact 70% sizing.
+ *
+ * Exported for unit testability.
+ */
+export function planWindowsPopupSpawn(
+  _geom:      PopupGeometry | null,
+  title:      string,
+  scriptPath: string,
+): { cmd: string; args: string[] } {
+  return {
+    cmd:  'cmd.exe',
+    args: ['/c', 'start', '/WAIT', title, 'node', scriptPath],
+  };
+}
+
 interface TerminalSpec {
   cmd:  string;
   args: (title: string, scriptFile: string) => string[];
   /** Optional extra validation after commandExists passes (e.g. version check). */
   validate?: () => boolean;
+  /**
+   * Optional geometry args inserted BEFORE the regular `args` output.
+   * Returns [] when the emulator has no geometry flag (konsole, wezterm,
+   * xdg-terminal-exec, x-terminal-emulator) — the spawn then runs at the
+   * emulator's default size. Cells-based emulators consume the `cols` +
+   * `rows` fields of the geometry; pixel-based emulators consume
+   * `widthPx` + `heightPx`; X11 emulators that accept a geometry offset
+   * append `+xPx+yPx` for centering. Wayland emulators ignore position.
+   */
+  geometryArgs?: (geom: PopupGeometry) => string[];
 }
 
 const LINUX_TERMINALS: TerminalSpec[] = [
   {
     cmd: 'xdg-terminal-exec',
     args: (_t, s) => ['node', s],
+    // No direct geometry flag — runs at backend-emulator default.
   },
   {
     cmd: 'gnome-terminal',
@@ -567,40 +686,77 @@ const LINUX_TERMINALS: TerminalSpec[] = [
       if (!m) return true; // can't determine version — assume OK
       return parseInt(m[1]) > 3 || (parseInt(m[1]) === 3 && parseInt(m[2]) >= 36);
     },
+    geometryArgs: (g) => [`--geometry=${g.cols}x${g.rows}+${g.xPx}+${g.yPx}`],
   },
   {
     cmd: 'konsole',
     args: (t, s) => ['-p', `tabtitle=${t}`, '-e', 'node', s],
+    // No direct geometry flag — runs at konsolerc default.
   },
   {
     cmd: 'xfce4-terminal',
     args: (t, s) => ['--disable-server', `--title=${t}`, '-e', `node ${s}`],
+    geometryArgs: (g) => [`--geometry=${g.cols}x${g.rows}+${g.xPx}+${g.yPx}`],
   },
   {
     cmd: 'kitty',
     args: (t, s) => ['--title', t, 'node', s],
+    geometryArgs: (g) => [
+      '-o', `initial_window_width=${g.widthPx}px`,
+      '-o', `initial_window_height=${g.heightPx}px`,
+      '-o', 'remember_window_size=no',
+    ],
   },
   {
     cmd: 'alacritty',
     args: (t, s) => ['--title', t, '-e', 'node', s],
+    geometryArgs: (g) => ['--dimensions', `${g.cols}`, `${g.rows}`],
   },
   {
     cmd: 'wezterm',
     args: (_t, s) => ['start', '--', 'node', s],
+    // No direct geometry flag — runs at wezterm config default.
   },
   {
     cmd: 'foot',
     args: (t, s) => [`--title=${t}`, 'node', s],
+    geometryArgs: (g) => [`--window-size-pixels=${g.widthPx}x${g.heightPx}`],
   },
   {
     cmd: 'x-terminal-emulator',
     args: (_t, s) => ['-e', 'node', s],
+    // Symlink — depends on backend emulator. Skip geometry.
   },
   {
     cmd: 'xterm',
     args: (t, s) => ['-T', t, '-fa', 'Monospace', '-fs', '12', '-e', 'node', s],
+    geometryArgs: (g) => ['-geometry', `${g.cols}x${g.rows}+${g.xPx}+${g.yPx}`],
   },
 ];
+
+/**
+ * Pure: build the `cmd + args` pair for spawning a Linux terminal-emulator
+ * popup window with the given title + script under the given geometry.
+ *
+ * When the spec has no `geometryArgs` field OR `geom` is null, the spawn
+ * args are byte-identical to the pre-Phase-3 shape — the popup opens at
+ * the emulator's default size. When both are present, the per-emulator
+ * geometry args are prepended to the existing args tail.
+ *
+ * Exported for unit testability.
+ */
+export function planLinuxPopupSpawn(
+  spec:       TerminalSpec,
+  geom:       PopupGeometry | null,
+  title:      string,
+  scriptPath: string,
+): { cmd: string; args: string[] } {
+  const baseArgs = spec.args(title, scriptPath);
+  if (!geom || !spec.geometryArgs) {
+    return { cmd: spec.cmd, args: baseArgs };
+  }
+  return { cmd: spec.cmd, args: [...spec.geometryArgs(geom), ...baseArgs] };
+}
 
 /**
  * Detect an installed terminal emulator that supports blocking execution.
@@ -631,8 +787,7 @@ function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): Selec
 
   const clackUrl = resolveClackEsmUrl();
 
-  return (opts) =>
-    new Promise<string | symbol>((resolve) => {
+  return async (opts) => {
       const id         = randomUUID();
       const optFile    = join(tmpdir(), `nexpath-opt-${id}.json`);
       const resultFile = join(tmpdir(), `nexpath-res-${id}.txt`);
@@ -649,15 +804,39 @@ function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): Selec
           skipNow:         SKIP_NOW,
           showSimpler:     SHOW_SIMPLER,
           separatorPrefix: OPTION_SEPARATOR,
+          // Structured fields consumed by the .mjs child when the popup
+          // is driven by the local render-loop renderer. Header values
+          // are pre-styled here at the IO boundary (mirrors the legacy
+          // `message` field, which is composed pre-styled too) so the
+          // child does not need to call into DecisionSession formatters.
+          // Legacy `message` field above stays intact for the
+          // @clack/prompts.select fallback path.
+          pinchLabel:      opts.pinchLabel  !== undefined ? formatPinchLabel(opts.pinchLabel)  : undefined,
+          subtitle:        opts.subtitle    !== undefined ? formatSubtitle(opts.subtitle)      : undefined,
+          question:        opts.question    !== undefined ? formatQuestion(opts.question)      : undefined,
+          whyHelpBlock:    opts.whyHelpBlock,
         }),
         'utf8',
       );
 
-      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, LINUX_CLIPBOARD_CMDS), 'utf8');
+      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, LINUX_CLIPBOARD_CMDS, resolveRenderLoopEsmUrl()), 'utf8');
 
       process.stderr.write('\n[nexpath] Please select an action in the new window\n');
 
-      spawnSync(terminal.cmd, terminal.args(WINDOW_TITLE, scriptFile), { stdio: 'ignore' });
+      // Compute geometry ONCE per select call and share with the sub-menu
+      // spawn callback so the Ctrl+T-triggered root chooser inherits the
+      // same 70% sizing without an extra detection round-trip.
+      const screen = await detectScreenResolution();
+      const geom   = screen ? computePopupGeometry(screen) : null;
+
+      // Shared spawn closure — captures spec + geom. Used by the MAIN popup
+      // below AND by the sub-menu spawn callback inside spawnRootChooserFlow.
+      const spawnConsole: SpawnWindowFn = (title, script) => {
+        const plan = planLinuxPopupSpawn(terminal, geom, title, script);
+        spawnSync(plan.cmd, plan.args, { stdio: 'ignore' });
+      };
+
+      spawnConsole(WINDOW_TITLE, scriptFile);
 
       let result: string | symbol = Symbol('cancelled');
       if (existsSync(resultFile)) {
@@ -667,9 +846,7 @@ function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): Selec
         } else if (raw === '__NEXPATH_OPT_OUT__') {
           result = OPT_OUT_SENTINEL;
         } else if (raw === '__ROOT_MENU_PENDING__') {
-          result = spawnRootChooserFlow(clackUrl, (title, script) => {
-            spawnSync(terminal.cmd, terminal.args(title, script), { stdio: 'ignore' });
-          }, store, projectRoot);
+          result = spawnRootChooserFlow(clackUrl, spawnConsole, store, projectRoot);
         } else if (raw.startsWith('__FREQ__:')) {
           result = raw;
         } else if (raw.startsWith('__ROLE__:')) {
@@ -683,8 +860,8 @@ function buildLinuxNewWindowSelectFn(store?: Store, projectRoot?: string): Selec
         try { unlinkSync(f); } catch { /* ignore */ }
       }
 
-      resolve(result);
-    });
+      return result;
+    };
 }
 
 // ── macOS: new Terminal.app window via osascript ─────────────────────────────
@@ -703,14 +880,30 @@ const MAC_CLIPBOARD_CMDS: ClipboardCmd[] = [['pbcopy', []]];
  * ;exit after the command ensures the shell exits so busy becomes false.
  * If the user closes the window manually, the `on error` catches the stale
  * reference and exits the loop cleanly.
+ *
+ * Geometry: when `geom` is supplied, the popup window's bounds are set
+ * to the centered pixel rectangle so the window opens at exact 70% size
+ * on the primary monitor. The bounds-set is wrapped in a try block so a
+ * future macOS version that rejects the bounds shape simply falls back
+ * to Terminal.app's default size. When `geom` is null / omitted, the
+ * legacy hardcoded `set number of rows … to 50` sizing applies — the
+ * generated script is byte-identical to the pre-change shape for that
+ * code path.
+ *
+ * Exported for unit testability.
  */
-function buildTerminalAppleScript(command: string): string {
+export function buildTerminalAppleScript(command: string, geom: PopupGeometry | null = null): string {
   // Escape backslashes and double-quotes for AppleScript string embedding
   const escaped = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const sizeBlock = geom
+    ? `try
+        set bounds of (first window whose selected tab is theTab) to {${geom.xPx}, ${geom.yPx}, ${geom.xPx + geom.widthPx}, ${geom.yPx + geom.heightPx}}
+    end try`
+    : `set number of rows of (first window whose selected tab is theTab) to 50`;
   return `tell application "Terminal"
     activate
     set theTab to do script "${escaped}; exit"
-    set number of rows of (first window whose selected tab is theTab) to 50
+    ${sizeBlock}
     delay 1
     repeat
         delay 0.5
@@ -729,8 +922,7 @@ end tell`;
 function buildMacNewWindowSelectFn(store?: Store, projectRoot?: string): SelectFn {
   const clackUrl = resolveClackEsmUrl();
 
-  return (opts) =>
-    new Promise<string | symbol>((resolve) => {
+  return async (opts) => {
       const id         = randomUUID();
       const optFile    = join(tmpdir(), `nexpath-opt-${id}.json`);
       const resultFile = join(tmpdir(), `nexpath-res-${id}.txt`);
@@ -747,15 +939,39 @@ function buildMacNewWindowSelectFn(store?: Store, projectRoot?: string): SelectF
           skipNow:         SKIP_NOW,
           showSimpler:     SHOW_SIMPLER,
           separatorPrefix: OPTION_SEPARATOR,
+          // Structured fields consumed by the .mjs child when the popup
+          // is driven by the local render-loop renderer. Header values
+          // are pre-styled here at the IO boundary (mirrors the legacy
+          // `message` field, which is composed pre-styled too) so the
+          // child does not need to call into DecisionSession formatters.
+          // Legacy `message` field above stays intact for the
+          // @clack/prompts.select fallback path.
+          pinchLabel:      opts.pinchLabel  !== undefined ? formatPinchLabel(opts.pinchLabel)  : undefined,
+          subtitle:        opts.subtitle    !== undefined ? formatSubtitle(opts.subtitle)      : undefined,
+          question:        opts.question    !== undefined ? formatQuestion(opts.question)      : undefined,
+          whyHelpBlock:    opts.whyHelpBlock,
         }),
         'utf8',
       );
 
-      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, MAC_CLIPBOARD_CMDS), 'utf8');
+      writeFileSync(scriptFile, buildMjsScript(clackUrl, optFileFwd, resultFileFwd, MAC_CLIPBOARD_CMDS, resolveRenderLoopEsmUrl()), 'utf8');
 
       process.stderr.write('\n[nexpath] Please select an action in the new window\n');
 
-      spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${scriptFile}`)], { stdio: 'ignore' });
+      // Compute geometry ONCE per select call. Both the MAIN popup and the
+      // sub-menu spawn callback (Ctrl+T → root chooser) share the same
+      // closure so the sub-menu inherits the same 70% sizing without an
+      // extra detection round-trip.
+      const screen = await detectScreenResolution();
+      const geom   = screen ? computePopupGeometry(screen) : null;
+
+      // Shared spawn closure. Reused below by spawnRootChooserFlow so the
+      // sub-menu spawn callback uses the same bounds + geometry.
+      const spawnConsole: SpawnWindowFn = (_title, script) => {
+        spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${script}`, geom)], { stdio: 'ignore' });
+      };
+
+      spawnConsole(WINDOW_TITLE, scriptFile);
 
       let result: string | symbol = Symbol('cancelled');
       if (existsSync(resultFile)) {
@@ -765,9 +981,7 @@ function buildMacNewWindowSelectFn(store?: Store, projectRoot?: string): SelectF
         } else if (raw === '__NEXPATH_OPT_OUT__') {
           result = OPT_OUT_SENTINEL;
         } else if (raw === '__ROOT_MENU_PENDING__') {
-          result = spawnRootChooserFlow(clackUrl, (_title, script) => {
-            spawnSync('osascript', ['-e', buildTerminalAppleScript(`node ${script}`)], { stdio: 'ignore' });
-          }, store, projectRoot);
+          result = spawnRootChooserFlow(clackUrl, spawnConsole, store, projectRoot);
         } else if (raw.startsWith('__FREQ__:')) {
           result = raw;
         } else if (raw.startsWith('__ROLE__:')) {
@@ -781,8 +995,8 @@ function buildMacNewWindowSelectFn(store?: Store, projectRoot?: string): SelectF
         try { unlinkSync(f); } catch { /* ignore */ }
       }
 
-      resolve(result);
-    });
+      return result;
+    };
 }
 
 // ── Unix: /dev/tty readline ───────────────────────────────────────────────────

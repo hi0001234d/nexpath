@@ -55,15 +55,16 @@ const BOLD         = '\x1b[1m';
 /**
  * Branded Nexpath wordmark, shown at the top of every popup window.
  *
- *   ▲  N E X P A T H  C L I
+ *   ▲  NEXPATH CLI
  *   ────────────────────────
  *
- * Triangle bold bright cyan, wordmark bold bright white with 2-space
- * tracking, rule dim gray. Trailing blank line gives breathing room
- * before the clack prompt area starts rendering.
+ * Triangle bold bright cyan, wordmark bold bright white (compact —
+ * no inter-letter tracking — for at-a-glance readability), rule dim
+ * gray. Trailing blank line gives breathing room before the clack
+ * prompt area starts rendering.
  */
 export const NEXPATH_HEADER =
-  `${BOLD_CYAN}▲${RESET}  ${BOLD_WHITE}N E X P A T H  C L I${RESET}\n` +
+  `${BOLD_CYAN}▲${RESET}  ${BOLD_WHITE}NEXPATH CLI${RESET}\n` +
   `${DIM_GRAY}────────────────────────${RESET}\n\n`;
 
 /** Visible row count the header consumes — wordmark (1) + rule (1) + blank (1). */

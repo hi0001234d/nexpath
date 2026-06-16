@@ -11,6 +11,15 @@ vi.mock('node:child_process', () => ({
   spawnSync: vi.fn(),
 }));
 
+// Mock screen-geometry so Phase 2's per-popup detection round-trip does NOT
+// add extra spawnSync calls into the per-test mock-call timeline. Returning
+// null forces the planWindowsPopupSpawn passthrough branch (legacy spawn
+// shape) so the pre-Phase-2 test assertions keep working unchanged.
+vi.mock('./screen-geometry.js', () => ({
+  detectScreenResolution: vi.fn(() => Promise.resolve(null)),
+  computePopupGeometry:   vi.fn(() => null),
+}));
+
 // Deferred import so mocks are in place before module is evaluated
 const {
   createTtySelectFn,
@@ -19,6 +28,9 @@ const {
   runCtrlTRootChooser,
   runFrequencySubMenu,
   runRoleSubMenu,
+  planWindowsPopupSpawn,
+  planLinuxPopupSpawn,
+  buildTerminalAppleScript,
 } = await import('./TtySelectFn.js');
 const { OPT_OUT_SENTINEL }       = await import('./DecisionSession.js');
 const { SHOW_SIMPLER, SKIP_NOW } = await import('./options.js');
@@ -132,11 +144,22 @@ describe('createTtySelectFn — Windows (win32)', () => {
     expect(typeof result).toBe('symbol');
   });
 
+  // Helper: skip the `where wt.exe` probe call added in Phase 2 and locate
+  // the actual popup-window spawn call. With the screen-geometry mock
+  // returning null, planWindowsPopupSpawn always returns the legacy
+  // cmd.exe / start / WAIT shape, so the popup call always targets cmd.exe.
+  function popupSpawnCall(): [string, string[]] {
+    const calls = (spawnSync as ReturnType<typeof vi.fn>).mock.calls;
+    const popup = calls.find((c) => c[0] === 'cmd.exe' || c[0] === 'wt.exe');
+    if (!popup) throw new Error('no popup spawn call captured');
+    return popup as [string, string[]];
+  }
+
   it('uses cmd.exe /c start /WAIT for reliable foreground activation', async () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({ status: 0 });
     await createTtySelectFn()!(makeOpts());
 
-    const [cmd, args] = (spawnSync as ReturnType<typeof vi.fn>).mock.calls[0] as [string, string[]];
+    const [cmd, args] = popupSpawnCall();
     expect(cmd).toBe('cmd.exe');
     expect(args[0]).toBe('/c');
     expect(args[1]).toBe('start');
@@ -149,7 +172,7 @@ describe('createTtySelectFn — Windows (win32)', () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({ status: 0 });
     await createTtySelectFn()!(makeOpts());
 
-    const args = (spawnSync as ReturnType<typeof vi.fn>).mock.calls[0][1] as string[];
+    const [, args] = popupSpawnCall();
     const title = args[3];
     expect(title).toContain('Nexpath');
   });
@@ -158,7 +181,7 @@ describe('createTtySelectFn — Windows (win32)', () => {
     (spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({ status: 0 });
     await createTtySelectFn()!(makeOpts());
 
-    const args = (spawnSync as ReturnType<typeof vi.fn>).mock.calls[0][1] as string[];
+    const [, args] = popupSpawnCall();
     const scriptArg = args[args.length - 1];
     expect(scriptArg).toContain('nexpath-sel-');
     expect(scriptArg).toContain('.mjs');
@@ -311,6 +334,190 @@ describe('createTtySelectFn — Windows (win32)', () => {
     expect(capturedFreqScript).toContain('once_per_session');
     expect(capturedFreqScript).toContain('every_event');
     try { unlinkSync(FREQ_SCRIPT_FILE); } catch { /* ignore */ }
+  });
+});
+
+// ── Structured-fields plumbing — optFile JSON carries pre-styled header
+// values for the render-loop path consumer. Exercised on the Windows
+// callsite here; the Linux + macOS callsites use the identical optFile
+// JSON shape (verified by the cross-callsite consistency test in the
+// 'Regression: .mjs script content is platform-consistent' block below).
+
+describe('createTtySelectFn — Windows — optFile structured fields (render-loop plumbing)', () => {
+  const origPlatform = process.platform;
+
+  beforeEach(() => {
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    vi.clearAllMocks();
+    if (existsSync(OPT_FILE))    unlinkSync(OPT_FILE);
+    if (existsSync(SCRIPT_FILE)) unlinkSync(SCRIPT_FILE);
+  });
+
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', { value: origPlatform });
+  });
+
+  async function captureOptFile(over: Parameters<NonNullable<ReturnType<typeof createTtySelectFn>>>[0]): Promise<Record<string, unknown>> {
+    let captured = '';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      if (existsSync(OPT_FILE)) captured = readFileSync(OPT_FILE, 'utf8');
+    });
+    await createTtySelectFn()!(over);
+    return JSON.parse(captured) as Record<string, unknown>;
+  }
+
+  it('writes pinchLabel pre-styled (formatPinchLabel applied) when caller passes the raw string', async () => {
+    const parsed = await captureOptFile({
+      message:    'legacy message',
+      options:    [{ label: 'A', value: 'a' }],
+      pinchLabel: 'Before coding.',
+    });
+    expect(parsed['pinchLabel']).toBeDefined();
+    expect(parsed['pinchLabel']).not.toBe('Before coding.');           // formatter applied
+    expect(parsed['pinchLabel']).toMatch(/\x1b\[/);                    // ANSI escape present
+    expect(parsed['pinchLabel']).toContain('Before coding.');          // raw text preserved inside the wrap
+  });
+
+  it('writes subtitle pre-styled (formatSubtitle applied) when present', async () => {
+    const parsed = await captureOptFile({
+      message:  'legacy',
+      options:  [{ label: 'A', value: 'a' }],
+      subtitle: 'level subtitle',
+    });
+    expect(parsed['subtitle']).toBeDefined();
+    expect(parsed['subtitle']).not.toBe('level subtitle');
+    expect(parsed['subtitle']).toMatch(/\x1b\[/);
+    expect(parsed['subtitle']).toContain('level subtitle');
+  });
+
+  it('writes question pre-styled (formatQuestion applied) when present', async () => {
+    const parsed = await captureOptFile({
+      message:  'legacy',
+      options:  [{ label: 'A', value: 'a' }],
+      question: 'Is the plan written?',
+    });
+    expect(parsed['question']).toBeDefined();
+    expect(parsed['question']).not.toBe('Is the plan written?');
+    expect(parsed['question']).toMatch(/\x1b\[/);
+    expect(parsed['question']).toContain('Is the plan written?');
+  });
+
+  it('writes whyHelpBlock verbatim (already-composed; no extra formatter applied)', async () => {
+    const composed = 'You\'re seeing this because\nrecent prompts...';
+    const parsed = await captureOptFile({
+      message:      'legacy',
+      options:      [{ label: 'A', value: 'a' }],
+      whyHelpBlock: composed,
+    });
+    expect(parsed['whyHelpBlock']).toBe(composed);
+  });
+
+  it('omits structured fields when the caller does not pass them (legacy clack path unaffected)', async () => {
+    const parsed = await captureOptFile({
+      message: 'legacy only',
+      options: [{ label: 'A', value: 'a' }],
+    });
+    // JSON.stringify drops undefined fields — they are absent from the parsed object.
+    expect(parsed['pinchLabel']).toBeUndefined();
+    expect(parsed['subtitle']).toBeUndefined();
+    expect(parsed['question']).toBeUndefined();
+    expect(parsed['whyHelpBlock']).toBeUndefined();
+  });
+
+  it('keeps the legacy message + options fields intact alongside the new structured fields', async () => {
+    const parsed = await captureOptFile({
+      message:    '\x1b[1;96mHold up.\x1b[0m',
+      options:    [{ label: 'A', value: 'val-a' }],
+      pinchLabel: 'Before coding.',
+      question:   'Question?',
+    });
+    // Legacy fields preserved — required for the @clack/prompts.select fallback path.
+    expect(parsed['message']).toContain('Hold up.');
+    expect((parsed['options'] as Array<{ label: string }>)[0]?.label).toBe('A');
+    // New structured fields landed alongside.
+    expect(parsed['pinchLabel']).toContain('Before coding.');
+    expect(parsed['question']).toContain('Question?');
+  });
+});
+
+// ── MAIN popup renderer — the .mjs child uses renderLoop (not clack
+// select) for the main popup, per the structured-fields path. Sub-menu
+// action prompt + freq + role + root menus continue on clack select.
+
+describe('createTtySelectFn — Windows — .mjs script wires renderLoop for the MAIN popup', () => {
+  const origPlatform = process.platform;
+
+  beforeEach(() => {
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    vi.clearAllMocks();
+    if (existsSync(SCRIPT_FILE)) unlinkSync(SCRIPT_FILE);
+  });
+
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', { value: origPlatform });
+  });
+
+  async function captureScript(): Promise<string> {
+    let captured = '';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      if (existsSync(SCRIPT_FILE)) captured = readFileSync(SCRIPT_FILE, 'utf8');
+    });
+    await createTtySelectFn()!(makeOpts());
+    return captured;
+  }
+
+  it('imports renderLoop + eventsFromReadline from the sibling render-loop module', async () => {
+    const script = await captureScript();
+    expect(script).toContain("import { renderLoop, eventsFromReadline } from '");
+    expect(script).toContain("render-loop.js'");  // resolved sibling URL ends with this
+  });
+
+  it('calls renderLoop with a layout built from the structured optFile fields', async () => {
+    const script = await captureScript();
+    expect(script).toContain('await renderLoop({');
+    expect(script).toContain('pinchLabel:');
+    expect(script).toContain('subtitle:');
+    expect(script).toContain('question:');
+    expect(script).toContain('whyHelpBlock:');
+    expect(script).toContain('descBase:');
+    expect(script).toContain('isSeparator:');
+    expect(script).toContain('isMeta:');
+  });
+
+  it('keeps clack select for the sub-menu action prompt (Send to Claude / Copy to clipboard)', async () => {
+    const script = await captureScript();
+    // Sub-menu select call still uses clack — verified by the explicit
+    // import of `select` from clackUrl staying in place and the
+    // "What would you like to do?" prompt still being a clack select.
+    expect(script).toContain("import { select, isCancel } from '");
+    expect(script).toContain("'What would you like to do?'");
+    expect(script).toContain("'Send to Claude now'");
+  });
+
+  it('translates renderLoop null (cancel) to an empty result-file write', async () => {
+    const script = await captureScript();
+    expect(script).toContain('_rlResult === null');
+    expect(script).toContain("writeFileSync('");
+    expect(script).toMatch(/_rlResult === null[\s\S]*writeFileSync\(.*,\s*''\s*,\s*'utf8'\)/);
+  });
+
+  it('preserves the Ctrl+X / Ctrl+T keypress capture path alongside renderLoop', async () => {
+    const script = await captureScript();
+    // Ctrl+X opt-out sentinel + Ctrl+T root-menu sentinel still written
+    // by the dedicated keypress listener; both coexist with renderLoop's
+    // eventsFromReadline because process.exit(0) is synchronous and
+    // pre-empts further JS execution.
+    expect(script).toContain('__NEXPATH_OPT_OUT__');
+    expect(script).toContain('__ROOT_MENU_PENDING__');
+    expect(script).toContain("'\\x18'");  // Ctrl+X check — literal backslash-x-1-8 in the script template
+    expect(script).toContain("'\\x14'");  // Ctrl+T check — literal backslash-x-1-4 in the script template
+  });
+
+  it('omits the legacy do-while-on-separator-skip loop (renderLoop skips separators in moveFocus)', async () => {
+    const script = await captureScript();
+    // Old code had: do { picked = await select(...); } while (typeof picked === 'string' && picked.startsWith(opts.separatorPrefix));
+    // renderLoop's moveFocus already skips isSeparator items, so the loop is redundant.
+    expect(script).not.toMatch(/do\s*\{\s*picked\s*=\s*await\s+select/);
   });
 });
 
@@ -1168,7 +1375,7 @@ describe('Regression: .mjs script content is platform-consistent', () => {
       expect(script).toContain('emitKeypressEvents');
       // Branded Nexpath wordmark header must be written to stdout before the prompt renders.
       expect(script).toContain('process.stdout.write(');
-      expect(script).toContain('N E X P A T H  C L I');
+      expect(script).toContain('NEXPATH CLI');
     }
 
     // Clipboard differs: Linux has xclip chain, macOS has pbcopy
@@ -1599,5 +1806,342 @@ describe('runRoleSubMenu (Unix path)', () => {
     } finally {
       store.db.close();
     }
+  });
+});
+
+// ── planWindowsPopupSpawn ────────────────────────────────────────────────────
+//
+// Pure-function unit tests for the Windows spawn-plan helper. The helper
+// returns `{ cmd, args }` and is then invoked via spawnSync at the call
+// site, so verifying the shape of the returned plan is sufficient to lock
+// in the single-branch passthrough contract — `cmd /c start /WAIT title
+// node scriptPath` — without touching the actual terminal-window spawn
+// surface. `start /WAIT` keeps the parent spawnSync blocked for the
+// popup's full lifetime so the temp .mjs survives until node has loaded
+// it. Sizing is unused on Windows because nested `cmd /c "<inner-cmd>"`
+// chains proved fragile under modern Windows shell quoting — the `geom`
+// parameter is accepted for signature parity but the spawn shape never
+// changes shape from the passthrough.
+
+describe('planWindowsPopupSpawn — geometry null (detection-failure passthrough)', () => {
+  it('targets cmd.exe with the original /c start /WAIT title node script shape', () => {
+    const plan = planWindowsPopupSpawn(null, 'My Title', 'C:/tmp/script.mjs');
+    expect(plan.cmd).toBe('cmd.exe');
+    expect(plan.args).toEqual([
+      '/c', 'start', '/WAIT',
+      'My Title',
+      'node', 'C:/tmp/script.mjs',
+    ]);
+  });
+
+  it('uses the legacy passthrough shape regardless of host capabilities (no detection → no sizing)', () => {
+    const plan = planWindowsPopupSpawn(null, 'T', 'S');
+    expect(plan.cmd).toBe('cmd.exe');
+    expect(plan.args).toEqual(['/c', 'start', '/WAIT', 'T', 'node', 'S']);
+  });
+
+  it('does NOT include mode CON when geom is null (legacy default size applies)', () => {
+    const plan = planWindowsPopupSpawn(null, 'T', 'S');
+    const joinedArgs = plan.args.join(' ');
+    expect(joinedArgs).not.toContain('mode CON');
+  });
+});
+
+describe('planWindowsPopupSpawn — title and path passthrough', () => {
+  const geom = {
+    widthPx: 1344, heightPx: 756, xPx: 288, yPx: 162, cols: 134, rows: 37,
+  };
+
+  it('handles a title with spaces and an em-dash (real WINDOW_TITLE shape)', () => {
+    const plan = planWindowsPopupSpawn(geom, 'Nexpath — Action Required', 'C:/tmp/s.mjs');
+    // Title sits as the 4th arg in the cmd /c start /WAIT shape.
+    expect(plan.args[3]).toBe('Nexpath — Action Required');
+  });
+
+  it('handles a script path with forward slashes (used after Windows path normalization)', () => {
+    const plan = planWindowsPopupSpawn(geom, 'T', 'C:/Users/me/AppData/Local/Temp/nexpath-sel-abc.mjs');
+    // Passthrough shape: ['/c', 'start', '/WAIT', title, 'node', scriptPath].
+    // The script path sits as the final arg directly (no inner-cmd wrapper),
+    // preceded by the literal `node` invocation.
+    expect(plan.args[plan.args.length - 2]).toBe('node');
+    expect(plan.args[plan.args.length - 1]).toBe('C:/Users/me/AppData/Local/Temp/nexpath-sel-abc.mjs');
+  });
+});
+
+// ── planLinuxPopupSpawn ──────────────────────────────────────────────────────
+//
+// Pure-function unit tests for the Linux spawn-plan helper. Each TerminalSpec
+// either supplies geometry args (gnome-terminal / xterm / xfce4-terminal /
+// alacritty / kitty / foot) or omits them (konsole / wezterm / xdg-terminal-
+// exec / x-terminal-emulator). The helper prepends the geometry args (when
+// both spec and geom are present) to the existing args tail; otherwise it
+// returns the base args byte-identical to the pre-Phase-3 shape.
+
+const sampleGeom = {
+  widthPx:  1344,
+  heightPx: 756,
+  xPx:      288,
+  yPx:      162,
+  cols:     134,
+  rows:     37,
+};
+
+describe('planLinuxPopupSpawn — geometry args per emulator (cells-based)', () => {
+  it('gnome-terminal prepends --geometry=COLSxROWS+X+Y', () => {
+    const spec = {
+      cmd:  'gnome-terminal',
+      args: (t: string, s: string) => ['--wait', `--title=${t}`, '--', 'node', s],
+      geometryArgs: (g: typeof sampleGeom) => [`--geometry=${g.cols}x${g.rows}+${g.xPx}+${g.yPx}`],
+    };
+    const plan = planLinuxPopupSpawn(spec, sampleGeom, 'T', '/tmp/s.mjs');
+    expect(plan.cmd).toBe('gnome-terminal');
+    expect(plan.args[0]).toBe('--geometry=134x37+288+162');
+    expect(plan.args.slice(1)).toEqual(['--wait', '--title=T', '--', 'node', '/tmp/s.mjs']);
+  });
+
+  it('xterm prepends -geometry COLSxROWS+X+Y (separate flag + value)', () => {
+    const spec = {
+      cmd:  'xterm',
+      args: (t: string, s: string) => ['-T', t, '-e', 'node', s],
+      geometryArgs: (g: typeof sampleGeom) => ['-geometry', `${g.cols}x${g.rows}+${g.xPx}+${g.yPx}`],
+    };
+    const plan = planLinuxPopupSpawn(spec, sampleGeom, 'T', '/tmp/s.mjs');
+    expect(plan.cmd).toBe('xterm');
+    expect(plan.args[0]).toBe('-geometry');
+    expect(plan.args[1]).toBe('134x37+288+162');
+    expect(plan.args.slice(2)).toEqual(['-T', 'T', '-e', 'node', '/tmp/s.mjs']);
+  });
+
+  it('xfce4-terminal prepends --geometry=COLSxROWS+X+Y', () => {
+    const spec = {
+      cmd:  'xfce4-terminal',
+      args: (t: string, s: string) => ['--disable-server', `--title=${t}`, '-e', `node ${s}`],
+      geometryArgs: (g: typeof sampleGeom) => [`--geometry=${g.cols}x${g.rows}+${g.xPx}+${g.yPx}`],
+    };
+    const plan = planLinuxPopupSpawn(spec, sampleGeom, 'T', '/tmp/s.mjs');
+    expect(plan.args[0]).toBe('--geometry=134x37+288+162');
+  });
+
+  it('alacritty prepends --dimensions COLS ROWS (no centering offset)', () => {
+    const spec = {
+      cmd:  'alacritty',
+      args: (t: string, s: string) => ['--title', t, '-e', 'node', s],
+      geometryArgs: (g: typeof sampleGeom) => ['--dimensions', `${g.cols}`, `${g.rows}`],
+    };
+    const plan = planLinuxPopupSpawn(spec, sampleGeom, 'T', '/tmp/s.mjs');
+    expect(plan.args.slice(0, 3)).toEqual(['--dimensions', '134', '37']);
+    expect(plan.args.slice(3)).toEqual(['--title', 'T', '-e', 'node', '/tmp/s.mjs']);
+  });
+});
+
+describe('planLinuxPopupSpawn — geometry args per emulator (pixel-based)', () => {
+  it('kitty prepends -o initial_window_width / height with explicit px suffix + remember_window_size=no', () => {
+    const spec = {
+      cmd:  'kitty',
+      args: (t: string, s: string) => ['--title', t, 'node', s],
+      geometryArgs: (g: typeof sampleGeom) => [
+        '-o', `initial_window_width=${g.widthPx}px`,
+        '-o', `initial_window_height=${g.heightPx}px`,
+        '-o', 'remember_window_size=no',
+      ],
+    };
+    const plan = planLinuxPopupSpawn(spec, sampleGeom, 'T', '/tmp/s.mjs');
+    expect(plan.args.slice(0, 6)).toEqual([
+      '-o', 'initial_window_width=1344px',
+      '-o', 'initial_window_height=756px',
+      '-o', 'remember_window_size=no',
+    ]);
+    expect(plan.args.slice(6)).toEqual(['--title', 'T', 'node', '/tmp/s.mjs']);
+  });
+
+  it('foot prepends --window-size-pixels=WxH', () => {
+    const spec = {
+      cmd:  'foot',
+      args: (t: string, s: string) => [`--title=${t}`, 'node', s],
+      geometryArgs: (g: typeof sampleGeom) => [`--window-size-pixels=${g.widthPx}x${g.heightPx}`],
+    };
+    const plan = planLinuxPopupSpawn(spec, sampleGeom, 'T', '/tmp/s.mjs');
+    expect(plan.args[0]).toBe('--window-size-pixels=1344x756');
+  });
+});
+
+describe('planLinuxPopupSpawn — emulators WITHOUT a geometryArgs field (default size)', () => {
+  it('konsole returns base args unchanged (no geometry flag exists)', () => {
+    const spec = {
+      cmd:  'konsole',
+      args: (t: string, s: string) => ['-p', `tabtitle=${t}`, '-e', 'node', s],
+    };
+    const plan = planLinuxPopupSpawn(spec, sampleGeom, 'T', '/tmp/s.mjs');
+    expect(plan).toEqual({
+      cmd:  'konsole',
+      args: ['-p', 'tabtitle=T', '-e', 'node', '/tmp/s.mjs'],
+    });
+  });
+
+  it('wezterm returns base args unchanged', () => {
+    const spec = {
+      cmd:  'wezterm',
+      args: (_t: string, s: string) => ['start', '--', 'node', s],
+    };
+    const plan = planLinuxPopupSpawn(spec, sampleGeom, 'T', '/tmp/s.mjs');
+    expect(plan).toEqual({ cmd: 'wezterm', args: ['start', '--', 'node', '/tmp/s.mjs'] });
+  });
+
+  it('xdg-terminal-exec returns base args unchanged (backend-emulator decides)', () => {
+    const spec = {
+      cmd:  'xdg-terminal-exec',
+      args: (_t: string, s: string) => ['node', s],
+    };
+    const plan = planLinuxPopupSpawn(spec, sampleGeom, 'T', '/tmp/s.mjs');
+    expect(plan).toEqual({ cmd: 'xdg-terminal-exec', args: ['node', '/tmp/s.mjs'] });
+  });
+
+  it('x-terminal-emulator returns base args unchanged (symlink — depends on backend)', () => {
+    const spec = {
+      cmd:  'x-terminal-emulator',
+      args: (_t: string, s: string) => ['-e', 'node', s],
+    };
+    const plan = planLinuxPopupSpawn(spec, sampleGeom, 'T', '/tmp/s.mjs');
+    expect(plan).toEqual({ cmd: 'x-terminal-emulator', args: ['-e', 'node', '/tmp/s.mjs'] });
+  });
+});
+
+describe('planLinuxPopupSpawn — geometry null (detection-failure passthrough)', () => {
+  it('returns base args byte-identical to pre-Phase-3 shape when geom is null (even if spec has geometryArgs)', () => {
+    const spec = {
+      cmd:  'gnome-terminal',
+      args: (t: string, s: string) => ['--wait', `--title=${t}`, '--', 'node', s],
+      geometryArgs: (g: typeof sampleGeom) => [`--geometry=${g.cols}x${g.rows}+${g.xPx}+${g.yPx}`],
+    };
+    const plan = planLinuxPopupSpawn(spec, null, 'T', '/tmp/s.mjs');
+    expect(plan).toEqual({
+      cmd:  'gnome-terminal',
+      args: ['--wait', '--title=T', '--', 'node', '/tmp/s.mjs'],
+    });
+  });
+
+  it('returns base args unchanged when geom is null AND spec has no geometryArgs', () => {
+    const spec = {
+      cmd:  'konsole',
+      args: (t: string, s: string) => ['-p', `tabtitle=${t}`, '-e', 'node', s],
+    };
+    const plan = planLinuxPopupSpawn(spec, null, 'T', '/tmp/s.mjs');
+    expect(plan).toEqual({
+      cmd:  'konsole',
+      args: ['-p', 'tabtitle=T', '-e', 'node', '/tmp/s.mjs'],
+    });
+  });
+});
+
+describe('planLinuxPopupSpawn — title and path passthrough', () => {
+  it('passes the title through both base-args and geometry path', () => {
+    const spec = {
+      cmd:  'xterm',
+      args: (t: string, s: string) => ['-T', t, '-e', 'node', s],
+      geometryArgs: (g: typeof sampleGeom) => ['-geometry', `${g.cols}x${g.rows}+${g.xPx}+${g.yPx}`],
+    };
+    const plan = planLinuxPopupSpawn(spec, sampleGeom, 'Nexpath — Action Required', '/tmp/s.mjs');
+    expect(plan.args).toContain('Nexpath — Action Required');
+  });
+});
+
+// ── buildTerminalAppleScript ─────────────────────────────────────────────────
+//
+// Pure-function unit tests for the macOS AppleScript builder. When no geom
+// is supplied, the generated script preserves the pre-Phase-4 hardcoded
+// `set number of rows … to 50` sizing and is byte-identical to the prior
+// shape. When geom IS supplied, the rows-set is replaced by a try-wrapped
+// `set bounds of (first window …) to {x1, y1, x2, y2}` centered rectangle.
+
+describe('buildTerminalAppleScript — null geometry (pre-change shape)', () => {
+  it('emits the legacy "set number of rows … to 50" sizing when no geom is passed', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs');
+    expect(s).toContain('set number of rows of (first window whose selected tab is theTab) to 50');
+  });
+
+  it('does NOT emit a bounds-set when no geom is passed', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs');
+    expect(s).not.toContain('set bounds of');
+  });
+
+  it('emits the legacy "set number of rows" sizing when geom is explicitly null', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs', null);
+    expect(s).toContain('set number of rows of (first window whose selected tab is theTab) to 50');
+  });
+
+  it('contains the do script command verbatim with the trailing "; exit"', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs');
+    expect(s).toContain('do script "node /tmp/script.mjs; exit"');
+  });
+
+  it('escapes embedded double quotes in the command', () => {
+    const s = buildTerminalAppleScript('echo "hello"');
+    expect(s).toContain('do script "echo \\"hello\\"; exit"');
+  });
+
+  it('escapes embedded backslashes in the command', () => {
+    const s = buildTerminalAppleScript('echo c:\\path');
+    expect(s).toContain('do script "echo c:\\\\path; exit"');
+  });
+
+  it('wraps the activate / do script / wait / close flow in `tell application "Terminal"`', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs');
+    expect(s).toContain('tell application "Terminal"');
+    expect(s).toContain('activate');
+    expect(s).toContain('set theTab to do script');
+    expect(s).toContain('repeat');
+    expect(s).toContain('close (first window whose selected tab is theTab)');
+    expect(s).toContain('end tell');
+  });
+});
+
+describe('buildTerminalAppleScript — geometry supplied (Phase 4 bounds-setter)', () => {
+  const geom = {
+    widthPx:  1344,
+    heightPx: 756,
+    xPx:      288,
+    yPx:      162,
+    cols:     134,
+    rows:     37,
+  };
+
+  it('emits a bounds-set with the centered rectangle in {x1,y1,x2,y2} order', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs', geom);
+    // x2 = xPx + widthPx = 288 + 1344 = 1632
+    // y2 = yPx + heightPx = 162 + 756 = 918
+    expect(s).toContain('set bounds of (first window whose selected tab is theTab) to {288, 162, 1632, 918}');
+  });
+
+  it('wraps the bounds-set in a try block so a future macOS rejecting the bounds shape falls back to default', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs', geom);
+    // The try block should appear immediately before the bounds-set line.
+    const boundsIdx = s.indexOf('set bounds of');
+    const tryBeforeBounds = s.lastIndexOf('try', boundsIdx);
+    expect(tryBeforeBounds).toBeGreaterThan(0);
+    expect(tryBeforeBounds).toBeLessThan(boundsIdx);
+  });
+
+  it('does NOT emit the legacy "set number of rows … to 50" sizing when geom is supplied', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs', geom);
+    expect(s).not.toContain('set number of rows of (first window whose selected tab is theTab) to 50');
+  });
+
+  it('preserves the do script + wait + close flow alongside the bounds-set', () => {
+    const s = buildTerminalAppleScript('node /tmp/script.mjs', geom);
+    expect(s).toContain('do script');
+    expect(s).toContain('repeat');
+    expect(s).toContain('close (first window whose selected tab is theTab)');
+  });
+
+  it('handles a portrait-screen geometry (width < height)', () => {
+    const portraitGeom = { ...geom, widthPx: 756, heightPx: 1344, xPx: 162, yPx: 288 };
+    const s = buildTerminalAppleScript('node /tmp/script.mjs', portraitGeom);
+    expect(s).toContain('set bounds of (first window whose selected tab is theTab) to {162, 288, 918, 1632}');
+  });
+
+  it('handles a square-screen geometry', () => {
+    const squareGeom = { widthPx: 756, heightPx: 756, xPx: 162, yPx: 162, cols: 75, rows: 37 };
+    const s = buildTerminalAppleScript('node /tmp/script.mjs', squareGeom);
+    expect(s).toContain('set bounds of (first window whose selected tab is theTab) to {162, 162, 918, 918}');
   });
 });

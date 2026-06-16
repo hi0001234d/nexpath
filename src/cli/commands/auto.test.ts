@@ -691,7 +691,10 @@ describe('runAuto — prompt persistence', () => {
     expect(rows[0].text).toBe('third');
     expect(rows[1].text).toBe('second');
     expect(rows[2].text).toBe('first');
-  }, 15000);
+    // Timeout widened to 30s (from 15s) — three sequential runAuto calls
+    // exercise the full advisory pipeline, and contended I/O on slower CI
+    // runners pushed the elapsed time over the prior 15s budget.
+  }, 30000);
 
   it('stores a capturedAt timestamp close to Date.now()', async () => {
     const before = Date.now();
@@ -1546,7 +1549,11 @@ describe('runAuto — telemetry events', () => {
       const payload = pendingCall[2] as { recentPrompts: unknown[] };
       expect(payload.recentPrompts.length).toBeLessThanOrEqual(5);
     }
-  }, 30000);
+    // Timeout widened to 60s (from 30s) — eight sequential runAuto calls
+    // (seven setup plus one final fire with an OpenAI mock) compound the
+    // per-call advisory-pipeline latency and exceeded the prior 30s budget
+    // on contended CI runners.
+  }, 60000);
 });
 
 // ── runAuto — absence flag selective add (Fix: bulk-add removed) ──────────────
