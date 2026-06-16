@@ -8,9 +8,11 @@ Before building — is the plan written?
 [2m— review the options below to determine the next step.[22m
 [2m[22m
 Write a PRD
-[2m↳ PRD body sentence.[22m
+[2m[22m
+↳ PRD body sentence.
 [2m[3mpress Space to toggle details[23m[22m
 [2mDefine problem[22m
+[2m[22m
 [90m↳ Problem framing sentence.[39m
 [2mSkip for now[22m"
 `;
@@ -23,9 +25,11 @@ Recent prompts indicate a transition from one development stage to the next.
 — review the options below to determine the next step.
 
 Write a PRD
+
 ↳ PRD body sentence.
 press Space to toggle details
 Define problem
+
 ↳ Problem framing sentence.
 Skip for now"
 `;

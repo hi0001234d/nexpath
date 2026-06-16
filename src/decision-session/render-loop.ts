@@ -587,6 +587,14 @@ export function computeLayout(opts: RenderLoopOptions, state: LayoutState): Rend
       // telemetry event below.
       const isExpanded = requestedExpanded && expansionAllowed;
       if (!item.isMeta && item.descBase && item.descBase.length > 0) {
+        // Blank gap row between option-label and its desc-base — visually
+        // separates the two so they no longer read as one merged block.
+        // optionIndex: i so the row scrolls with the option (not counted
+        // as a fixed header row by the budget math). popup-why-help kind
+        // reuses the existing rail-only chrome prefix; isPadding=true
+        // marks it as a content-free spacer.
+        emissions.push({ kind: 'popup-why-help', text: '', optionIndex: i, isPadding: true });
+
         const cap      = isExpanded ? preExpandedCap : D1_TRUNCATED_LINE_CAP;
         // Kind is broadened to "expanded" (the readable dim tier) for the
         // focused option even when the user has not pressed Space to

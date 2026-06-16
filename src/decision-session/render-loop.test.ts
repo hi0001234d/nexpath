@@ -188,23 +188,35 @@ describe('render-loop — LineKind separate-element invariant (dev-plan §11.11)
     }
   });
 
-  it('option-label and its desc-base sub-line are emitted as DISTINCT elements (focused option also gets a shortcut-hint per §11.2)', () => {
-    // Focus the SECOND option so the first (unfocused) option emits exactly
-    // label + desc-base (2 elements). The focused option emits label + desc-base + shortcut-hint (3 elements).
+  it('option-label, gap row, desc-base sub-line (and shortcut-hint for the focused option) are emitted as DISTINCT elements (§11.2 + gap-row separation)', () => {
+    // Focus the SECOND option. Per-option emission shape:
+    //   unfocused: label + GAP + desc-base                 (3 elements)
+    //   focused:   label + GAP + desc-base + shortcut-hint (4 elements)
+    // The GAP row is a popup-why-help kind with empty text + isPadding=true,
+    // emitted under the option (optionIndex=i) so it scrolls with the block
+    // and is not counted as a fixed header row.
     const r           = computeLayout(makeOpts(), { ...FRESH_STATE, focusedIndex: 1 });
     const unfocused   = r.optionLineRanges.find((rg) => rg.itemIndex === 0)!;
     const focused     = r.optionLineRanges.find((rg) => rg.itemIndex === 1)!;
     const unfocSlice  = r.emissions.slice(unfocused.startIdx, unfocused.endIdx);
     const focSlice    = r.emissions.slice(focused.startIdx,   focused.endIdx);
 
-    expect(unfocSlice).toHaveLength(2);
+    expect(unfocSlice).toHaveLength(3);
     expect(unfocSlice[0].kind).toBe('option-label-unfocused');  // non-focused label fades to dim
-    expect(unfocSlice[1].kind).toBe('desc-base-truncated');      // non-focused desc-base stays gray
+    expect(unfocSlice[1].kind).toBe('popup-why-help');           // gap row
+    expect(unfocSlice[1].text).toBe('');
+    expect(unfocSlice[1].isPadding).toBe(true);
+    expect(unfocSlice[1].optionIndex).toBe(0);
+    expect(unfocSlice[2].kind).toBe('desc-base-truncated');      // non-focused desc-base stays gray
 
-    expect(focSlice).toHaveLength(3);
+    expect(focSlice).toHaveLength(4);
     expect(focSlice[0].kind).toBe('option-label');               // focused label is full-weight anchor
-    expect(focSlice[1].kind).toBe('desc-base-expanded');         // focused desc-base bumps to readable tier
-    expect(focSlice[2].kind).toBe('shortcut-hint');
+    expect(focSlice[1].kind).toBe('popup-why-help');             // gap row
+    expect(focSlice[1].text).toBe('');
+    expect(focSlice[1].isPadding).toBe(true);
+    expect(focSlice[1].optionIndex).toBe(1);
+    expect(focSlice[2].kind).toBe('desc-base-expanded');         // focused desc-base — full visibility (inherit)
+    expect(focSlice[3].kind).toBe('shortcut-hint');
   });
 });
 
@@ -216,7 +228,9 @@ describe('render-loop — styler dispatch', () => {
 
   it('styled kinds wrap the emission text with ANSI; inherit kinds pass through verbatim', () => {
     const r = computeLayout(makeOpts({ subtitle: 's', whyHelpBlock: 'a\nb\nc' }), FRESH_STATE);
-    const styledKinds = new Set(['popup-why-help', 'desc-base-truncated', 'desc-base-expanded', 'shortcut-hint', 'option-label-unfocused']);
+    // desc-base-expanded is INHERIT (focused desc-base — full visibility);
+    // visual separation comes from the gap row + indent + chrome rail.
+    const styledKinds = new Set(['popup-why-help', 'desc-base-truncated', 'shortcut-hint', 'option-label-unfocused']);
     let sawAtLeastOneStyledWrap = false;
     for (let i = 0; i < r.emissions.length; i++) {
       const { text, kind } = r.emissions[i];
@@ -456,7 +470,7 @@ describe('render-loop — auto-scroll viewport (§11.7 step 5 + §11.9 step 5)',
   it('auto-scrolls DOWN so the focused option\'s end fits inside the viewport', () => {
     const opts = makeManyOpts(10);
     // rows=14, no whyHelp → fixed = pinch+question+padding = 3; avail = 14-3-2 = 9
-    // Each unfocused option = 2 emissions (label + 1-line desc); focused = 3 (label + desc + hint)
+    // Each unfocused option = 3 emissions (label + gap + 1-line desc); focused = 4 (label + gap + desc + hint).
     // Focusing index 8 puts the focused option's end deep into the option list → must scroll.
     const r = computeLayout(opts, { focusedIndex: 8, expandedOptions: new Set(), scrollOffset: 0 });
     expect(r.viewport.appliedScrollOffset).toBeGreaterThan(0);
@@ -500,11 +514,12 @@ describe('render-loop — auto-scroll viewport (§11.7 step 5 + §11.9 step 5)',
   });
 
   it('reports the totalOptionRows for the interactive shell\'s scroll decisions', () => {
-    const opts = makeManyOpts(3);  // 3 options × 2 emissions each = 6 (focused option = 3, others = 2)
+    const opts = makeManyOpts(3);  // 3 options; per-option cost includes the gap row
     const r    = computeLayout(opts, { ...FRESH_STATE });
     expect(r.viewport.totalOptionRows).toBeGreaterThan(0);
-    // 1 focused (3 rows) + 2 unfocused (2 rows each) = 3 + 4 = 7 option rows
-    expect(r.viewport.totalOptionRows).toBe(7);
+    // 1 focused (label + gap + desc + hint = 4 rows) + 2 unfocused
+    // (label + gap + desc = 3 rows each) = 4 + 6 = 10 option rows
+    expect(r.viewport.totalOptionRows).toBe(10);
   });
 
   it('visibleStyledLines length === fixedLines + min(avail, totalOptionRows - appliedScrollOffset)', () => {
@@ -538,9 +553,10 @@ describe('render-loop — budget computation (§11.4 / §11.8 / §11.12)', () =>
   });
 
   it('fittedItems counts options whose total emission cost fits within avail', () => {
-    // Each option costs 2 lines (label + 1-line truncated desc-base), the
-    // focused option costs 3 (label + desc-base + shortcut-hint).
-    // 2 options total → 3 + 2 = 5 emissions of cost. With rows=40 (avail = 40-3-2=35) all fit.
+    // Each option costs 3 lines (label + gap + 1-line truncated desc-base),
+    // the focused option costs 4 (label + gap + desc-base + shortcut-hint).
+    // 2 options total → 4 + 3 = 7 emissions of cost. With rows=40
+    // (avail = 40-3-2=35) all fit.
     const r = computeLayout(makeOpts(), FRESH_STATE);
     expect(r.budget.fittedItems).toBe(2);
   });
@@ -559,10 +575,11 @@ describe('render-loop — budget computation (§11.4 / §11.8 / §11.12)', () =>
 
   it('a short terminal clips fittedItems to fewer than the total option count', () => {
     // rows=10, no whyHelp → fixedLines = pinch(1)+question(1)+padding(1) = 3
-    // avail = 10 - 3 - 2 = 5. focused option cost = 3, second option cost = 2 → fits 2.
+    // avail = 10 - 3 - 2 = 5. focused option cost = 4 (label + gap + desc + hint),
+    // second option cost = 3 (label + gap + desc). 4 + 3 = 7 > 5 → only 1 fits.
     const r = computeLayout(makeOpts({ rows: 10 }), FRESH_STATE);
     expect(r.budget.avail).toBe(5);
-    expect(r.budget.fittedItems).toBe(2);
+    expect(r.budget.fittedItems).toBe(1);
   });
 
   it('an EXPANDED option consumes more rows for its own block than the truncated state', () => {

@@ -79,16 +79,18 @@ export function isStylePassthroughActive(): boolean {
  * responsibility; layout never emits them.
  *
  * Style mapping (hierarchical — option labels remain the visual anchor,
- * supporting content fades in subordinate tiers). The why-help block
- * and the focused desc-base sit at the same readability tier as the
- * SHOW_SIMPLER_LABEL meta-row (dim, not gray) so the supporting text is
- * comfortably scannable; only the *unfocused* desc-base previews fade
- * one extra notch (gray) so the user's eye still lands on labels first:
+ * supporting content fades in subordinate tiers). Visual separation
+ * between the focused option-label and its desc-base comes from a blank
+ * gap row + the `↳` indent + the chrome rail, NOT from a color tier
+ * difference; the focused desc-base inherits the default foreground so
+ * it stays fully visible while the option is active. Only the
+ * *unfocused* desc-base previews fade (gray) so the user's eye still
+ * lands on the focused content first:
  *   - popup-why-help     → dim (readable; matches SHOW_SIMPLER tier)
- *   - desc-base-expanded → dim (focused detail bumps up to the why-help
- *                          tier — readable while the option is active)
- *   - desc-base-truncated→ gray (unfocused previews fade one notch so
- *                          the user scans labels first; still legible)
+ *   - desc-base-expanded → inherit (focused desc — full visibility;
+ *                          separation handled by gap row + indent)
+ *   - desc-base-truncated→ gray (unfocused previews fade so the user
+ *                          scans the focused option's content first)
  *   - shortcut-hint      → dim + italic (matches the existing
  *                          dim+italic precedent for hint text)
  *   - option-label       → inherit (focused option label — full-weight
@@ -192,7 +194,11 @@ function stylerInner(line: string, kind: LineKind): string {
 
   switch (kind) {
     case 'popup-why-help':         return pc.dim(line);
-    case 'desc-base-expanded':     return pc.dim(line);
+    // Focused desc-base inherits the default foreground — full visibility
+    // while the option is active. Visual separation from the focused
+    // option-label comes from the blank gap row + `↳` indent + chrome
+    // rail, NOT from a color tier difference.
+    case 'desc-base-expanded':     return line;
     case 'desc-base-truncated':    return pc.gray(line);
     case 'shortcut-hint':          return pc.dim(pc.italic(line));
     // option-label-unfocused handled above (ANSI-tolerant special case).

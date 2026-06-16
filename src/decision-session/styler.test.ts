@@ -73,12 +73,15 @@ describe('styler — per-kind styled dispatch', () => {
     expect(out).toMatch(/\x1b\[/);
   });
 
-  it('wraps desc-base-expanded with dim styling', () => {
+  it('passes desc-base-expanded through verbatim (focused desc inherits default foreground)', () => {
+    // Visual separation between the focused option-label and its desc-base
+    // comes from the blank gap row + `↳` indent + chrome rail, NOT from a
+    // color tier difference. The focused desc-base stays at full visibility
+    // while the option is active.
     const sample = 'sample line content';
     const out = styler(sample, 'desc-base-expanded');
-    expect(out).not.toBe(sample);
-    expect(out).toContain(sample);
-    expect(out).toMatch(/\x1b\[/);
+    expect(out).toBe(sample);
+    expect(out).not.toMatch(/\x1b\[/);
   });
 
   it('wraps shortcut-hint with dim+italic styling', () => {
