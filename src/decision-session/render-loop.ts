@@ -596,14 +596,15 @@ export function computeLayout(opts: RenderLoopOptions, state: LayoutState): Rend
         emissions.push({ kind: 'popup-why-help', text: '', optionIndex: i, isPadding: true });
 
         const cap      = isExpanded ? preExpandedCap : D1_TRUNCATED_LINE_CAP;
-        // Kind is broadened to "expanded" (the readable dim tier) for the
-        // focused option even when the user has not pressed Space to
-        // explicitly expand — the styler comment for desc-base-expanded
-        // already describes the tier as "readable while the option is
-        // active". The line CAP stays gated on isExpanded only, so the
-        // focused-but-unexpanded case still shows D1 (2 lines) preview;
-        // only the styling tier follows focus.
-        const kind     = (isExpanded || isFocused) ? 'desc-base-expanded' : 'desc-base-truncated';
+        // Kind follows FOCUS only — focused desc-base inherits the default
+        // foreground (full visibility while the option is active); every
+        // non-focused desc-base routes to the gray truncated tier so the
+        // user's eye still lands on the focused content first. An option
+        // the user previously expanded (Space) that has since lost focus
+        // keeps its expanded LINE CAP but fades to gray with the rest of
+        // the non-focused content — the cap is gated on isExpanded
+        // independently of the kind.
+        const kind     = isFocused ? 'desc-base-expanded' : 'desc-base-truncated';
         // Reserve CHROME_MAX_PREFIX_WIDTH columns from the wrap budget so
         // post-chrome lines stay within opts.cols. Without this reservation
         // the chrome prefix would push wrapped lines over the terminal
