@@ -46,6 +46,16 @@ difference from the Cursor bundle (where the extension does both):
   The hook entries embed the **absolute** `node "<repo>/dist/cli/index.js"` command
   (written by the real `writeWindsurfHooks`, identical to `nexpath install`), so the
   built CLI — not a PATH lookup — is what fires.
+
+  > **Windows / Devin Next (verified 2026-06-16):** Devin Next does **not** execute the
+  > user-level `~/.codeium/windsurf/hooks.json` — capture stays 0 even though the file is
+  > correct. Per the Cascade Hooks spec, hooks also load + merge from the **workspace-level
+  > `<workspace>/.windsurf/hooks.json`**, which Devin Next *does* honor. So on Windows the
+  > script (and `nexpath install`'s windsurf adapter) **also** write that workspace hook —
+  > that's what makes capture fire on Devin Next. macOS/Linux use the user-level hook only
+  > (writing both there would double-capture, so it's gated to win32). **All three OSes —
+  > Ubuntu, macOS/Devin, Windows/Devin Next — are now verified end-to-end** (capture →
+  > popup → Cascade inject via `sendChatActionMessage`).
 - **Delivery = terminal popup (PRIMARY), like Cursor / CLI.** On an advisory-firing
   prompt the **"Nexpath — Action Required"** terminal popup opens → pick an option →
   choose **"Send now"** → the **extension** injects it into Cascade's input. The
@@ -67,9 +77,11 @@ difference from the Cursor bundle (where the extension does both):
   Windsurf's Electron ABI — the most common bare-machine failure point.
   - Debian/Ubuntu: `sudo apt install build-essential python3`
   - macOS: `xcode-select --install`
-- **`node` must also be on PATH inside Windsurf's hook environment** — the Cascade
-  hook spawns `node "<cli>"`, so if the language server can't see `node`, capture is
-  silently 0. (Usually fine when Windsurf is launched from a normal shell.)
+- **`node` does NOT need to be on PATH inside the hook environment** — the hook now
+  embeds the **absolute** node binary (`process.execPath`) and absolute CLI path, so it
+  fires under the language server's sanitized PATH on every OS (the old "node not found
+  → capture 0" failure is fixed). A working `node` for the build steps above is still
+  required.
 - **Your own `OPENAI_API_KEY`** — get one at https://platform.openai.com/api-keys.
   Layer C needs it to generate advisories; without it, prompts are captured but
   **no advisory fires**. (The scripts prompt you for this automatically.)
@@ -148,8 +160,10 @@ script auto-detects it; you don't need to set anything.
 
 You do **not** hand-write `hooks.json`. Each run script's **Step 2** writes
 `~/.codeium/windsurf/hooks.json` automatically (via the real `writeWindsurfHooks`).
-**After it's written you must RESTART Windsurf once** so the language server reloads
-`hooks.json` — capture won't fire until you do.
+On **Windows** it also writes the workspace-level `<workspace>/.windsurf/hooks.json`
+(required for Devin Next — see the Windows note above). Step 2 prints every path it
+wrote. **After it's written you must RESTART Windsurf once** so the language server
+reloads the hooks — capture won't fire until you do.
 
 ---
 
@@ -186,7 +200,12 @@ cat ~/.codeium/windsurf/hooks.json     # must contain a nexpath `pre_user_prompt
 ```
 
 If prompt #1 captures 0, the language server didn't reload it — restart Windsurf
-again, and confirm `node` is on PATH in the environment Windsurf was launched from.
+again. **On Windows/Devin Next specifically**, the user-level file above is *not*
+executed; capture comes from the **workspace-level** `<workspace>/.windsurf/hooks.json`
+(Step 2 writes it on win32). Confirm it exists, and that the embedded CLI path is real
+(`C:/Users/.../dist/cli/index.js`, **not** `C:/c/Users/...`). The authoritative,
+cross-OS capture check is **`nexpath status`** → Prompt store / Hook activity; if its
+invocation count for the project is climbing, the hook is firing.
 
 **4. You need a graphical session + a supported terminal (Linux).** The advisory
 opens as a **separate gnome-terminal popup window** titled *"Nexpath — Action
@@ -319,8 +338,14 @@ and send the list back — it gets wired so inject lands automatically.
 
 ## Cross-OS
 
-- **Windows:** run the scripts inside **Git Bash**. `~/.codeium/windsurf/hooks.json`
-  and the `node "<cli>"` hook command are the same everywhere.
+- **Windows / Devin Next:** run the scripts inside **Git Bash**. Two Windows-specific
+  facts the harness now handles for you: (1) Win32 Node reads a Git Bash `/c/...` path
+  as `C:\c\...`, so the harness converts repo/HOME to native form (`cygpath -m`) before
+  writing `hooks.json` — otherwise the embedded CLI path is broken and capture is 0;
+  (2) **Devin Next does not execute the user-level `~/.codeium/windsurf/hooks.json`** —
+  capture comes from the **workspace-level `<workspace>/.windsurf/hooks.json`**, which
+  the harness (and `nexpath install`) write on win32. With both in place, Windows/Devin
+  Next is verified end-to-end (capture → popup → Cascade inject).
 - **Capture verification is engine-native, not `sqlite3`.** The harness reads the
   prompt store through nexpath's own **sql.js** (pure JS/WASM) with `os.homedir()`,
   so it needs no `sqlite3`/`better-sqlite3` binary and is immune to two things that
