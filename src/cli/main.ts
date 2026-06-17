@@ -13,6 +13,12 @@ import { runMigrations } from '../store/schema.js';
 import { logAction } from './commands/log.js';
 import { storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAction } from './commands/store.js';
 import { installAction, uninstallAction } from './commands/install.js';
+import {
+  DEFAULT_PLATFORM,
+  PLATFORM_VALUES,
+  validatePlatform,
+  type SupportedPlatform,
+} from './commands/supported-agents-by-platform.js';
 import { initAction } from './commands/init.js';
 import { registerAutoCommand } from './commands/auto.js';
 import { registerStopCommand } from './commands/stop.js';
@@ -42,8 +48,24 @@ export function createProgram(): Command {
     .description('Interactive 3-step setup: OpenAI API key → telemetry consent → agent registration')
     .option('-y, --yes', 'Non-interactive mode: skip the API key and telemetry prompts and auto-confirm agent registration')
     .option('--db <path>', 'Path to the SQLite database file')
-    .action(async (opts: { yes?: boolean; db?: string }) => {
-      await installAction(opts, { dbPath: opts.db ?? DEFAULT_DB_PATH });
+    .option(
+      '--for <platform>',
+      `Which install surface to target: ${PLATFORM_VALUES.join(' | ')}.`,
+      DEFAULT_PLATFORM,
+    )
+    .action(async (opts: { yes?: boolean; db?: string; for?: string }) => {
+      let platform: SupportedPlatform;
+      try {
+        platform = validatePlatform(opts.for);
+      } catch (err) {
+        process.stderr.write(`\n${(err as Error).message}\n\n`);
+        process.stderr.write('Run `nexpath install --help` for usage details.\n');
+        process.exit(1);
+      }
+      await installAction(
+        { yes: opts.yes, platform },
+        { dbPath: opts.db ?? DEFAULT_DB_PATH },
+      );
     });
 
   program

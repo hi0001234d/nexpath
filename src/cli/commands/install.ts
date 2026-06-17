@@ -504,6 +504,18 @@ export async function installAction(
 ): Promise<InstallSummary | null> {
   const platform = opts.platform ?? DEFAULT_PLATFORM;
   intro('Installing nexpath');
+  console.log(`Installing for: ${platform}`);
+
+  // Empty-bucket short-circuit — no API key prompt, no telemetry prompt, no
+  // DB open. Honest exit when the target platform has no officially-supported
+  // agents in this version yet.
+  if (supportedAgentsForPlatform(platform).length === 0) {
+    console.log('');
+    console.log(`No agents are officially supported on platform "${platform}" in this version yet.`);
+    console.log('See the README support roadmap for upcoming agents.');
+    outro('Installation finished — no agents registered.');
+    return null;
+  }
 
   const store = await openStore(dbPath);
 

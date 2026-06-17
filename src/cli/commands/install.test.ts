@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { openStore, closeStore } from '../../store/db.js';
 import { setConfig, isConfigSet, getConfig } from '../../store/config.js';
 
@@ -1061,6 +1061,132 @@ describe('installAction', () => {
       vi.unstubAllEnvs();
       cleanup();
     }
+  });
+
+  // ── --for <platform> wiring ────────────────────────────────────────────────
+  //
+  // The CLI's --for argument flows into installAction.opts.platform. Default
+  // (omitted) resolves to 'cli' inside installAction. When the chosen platform
+  // has no supported agents in this version, installAction short-circuits
+  // before Step 1, prints a friendly notice, and returns null.
+
+  it('prints "Installing for: <platform>" right after intro', async () => {
+    const { dir, cleanup } = tmpDir();
+    markClaudeInstalled(dir);
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true, platform: 'cli' }, {
+        paths, isWin: false, execFn: () => {}, skipClipboardCheck: true,
+      });
+      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
+      expect(output).toContain('Installing for: cli');
+    } finally { cleanup(); }
+  });
+
+  it('platform omitted = same behaviour as platform: "cli" (default)', async () => {
+    const { dir, cleanup } = tmpDir();
+    markClaudeInstalled(dir);
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true }, {
+        paths, isWin: false, execFn: () => {}, skipClipboardCheck: true,
+      });
+      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
+      expect(output).toContain('Installing for: cli');
+      expect(output).toContain('Claude Code');
+    } finally { cleanup(); }
+  });
+
+  it('--for vscode short-circuits with the empty-bucket notice and returns null', async () => {
+    const { dir, cleanup } = tmpDir();
+    // Claude Code IS installed — this proves the short-circuit ignores
+    // on-disk presence; eligibility is decided by the platform bucket alone.
+    markClaudeInstalled(dir);
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      const result = await installAction({ yes: true, platform: 'vscode' }, {
+        paths, isWin: false, execFn: () => {}, skipClipboardCheck: true,
+      });
+      expect(result).toBeNull();
+      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
+      expect(output).toContain('Installing for: vscode');
+      expect(output).toContain('No agents are officially supported on platform "vscode" in this version yet.');
+      // Claude Code MUST NOT have been registered or even mentioned in Step 3.
+      expect(output).not.toContain('Claude Code');
+    } finally { cleanup(); }
+  });
+
+  it('--for browser short-circuits with the empty-bucket notice', async () => {
+    const { dir, cleanup } = tmpDir();
+    markClaudeInstalled(dir);
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      const result = await installAction({ yes: true, platform: 'browser' }, {
+        paths, isWin: false, execFn: () => {}, skipClipboardCheck: true,
+      });
+      expect(result).toBeNull();
+      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
+      expect(output).toContain('No agents are officially supported on platform "browser" in this version yet.');
+    } finally { cleanup(); }
+  });
+
+  it('short-circuit happens before Step 1 — no API key prompt is invoked', async () => {
+    const { dir, cleanup } = tmpDir();
+    const apiKeyPromptSpy = vi.fn(async () => ({ kind: 'skip' as const }));
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ platform: 'vscode' }, {
+        paths, isWin: false, execFn: () => {},
+        promptFn: {
+          apiKeyPrompt:     apiKeyPromptSpy,
+          telemetryConsent: async () => ({ kind: 'disable' }),
+        },
+        skipClipboardCheck: true,
+      });
+      expect(apiKeyPromptSpy).not.toHaveBeenCalled();
+    } finally { cleanup(); }
+  });
+
+  it('short-circuit does NOT create the DB file at dbPath', async () => {
+    const { dir, cleanup } = tmpDir();
+    const dbPath = join(dir, 'should-not-exist.db');
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true, platform: 'browser' }, {
+        paths, isWin: false, execFn: () => {},
+        skipClipboardCheck: true,
+        dbPath,
+      });
+      expect(existsSync(dbPath)).toBe(false);
+    } finally { cleanup(); }
+  });
+
+  it('--for cli on a machine without Claude Code: "Not found: Claude Code" + hint still fires', async () => {
+    const { dir, cleanup } = tmpDir();
+    // Deliberately DO NOT call markClaudeInstalled — no ~/.claude.json,
+    // no ~/.claude/ dir. detectAgentsForPlatform returns []; missing = [Claude Code].
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const paths = resolveAgentPaths(dir, dir, dir);
+      await installAction({ yes: true, platform: 'cli' }, {
+        paths, isWin: false, execFn: () => {},
+        promptFn: {
+          apiKeyPrompt:     async () => ({ kind: 'skip' }),
+          telemetryConsent: async () => ({ kind: 'disable' }),
+        },
+        skipClipboardCheck: true,
+      });
+      const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
+      expect(output).toContain('Installing for: cli');
+      expect(output).toContain('Not found: Claude Code');
+      expect(output).toContain('nexpath currently supports Claude Code only');
+    } finally { cleanup(); }
   });
 });
 
