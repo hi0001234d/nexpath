@@ -50,8 +50,14 @@ describe('sub-constants shape', () => {
     expect(SUPPORTED_CLI_AGENTS).toEqual([{ id: 'claude', label: 'Claude Code' }]);
   });
 
-  it('ide, vscodeExt, and browser buckets are empty today', () => {
-    expect(SUPPORTED_IDE_AGENTS).toHaveLength(0);
+  it('ide bucket contains Cursor + Windsurf today', () => {
+    expect(SUPPORTED_IDE_AGENTS).toEqual([
+      { id: 'cursor', label: 'Cursor' },
+      { id: 'windsurf', label: 'Windsurf' },
+    ]);
+  });
+
+  it('vscodeExt and browser buckets are empty today', () => {
     expect(SUPPORTED_VSCODE_EXT_AGENTS).toHaveLength(0);
     expect(SUPPORTED_BROWSER_AGENTS).toHaveLength(0);
   });
@@ -72,8 +78,8 @@ describe('supportedIdsForPlatform', () => {
     expect([...supportedIdsForPlatform('cli')].sort()).toEqual(['claude']);
   });
 
-  it('returns the union of ide + vscodeExt for vscode (empty today)', () => {
-    expect(supportedIdsForPlatform('vscode').size).toBe(0);
+  it('returns the union of ide + vscodeExt for vscode (Cursor + Windsurf today)', () => {
+    expect([...supportedIdsForPlatform('vscode')].sort()).toEqual(['cursor', 'windsurf']);
   });
 
   it('returns the browser bucket for browser (empty today)', () => {
@@ -93,8 +99,11 @@ describe('supportedAgentsForPlatform', () => {
     expect(supportedAgentsForPlatform('cli')).toEqual([{ id: 'claude', label: 'Claude Code' }]);
   });
 
-  it('returns an empty array for vscode today', () => {
-    expect(supportedAgentsForPlatform('vscode')).toEqual([]);
+  it('returns Cursor + Windsurf for vscode today', () => {
+    expect(supportedAgentsForPlatform('vscode')).toEqual([
+      { id: 'cursor', label: 'Cursor' },
+      { id: 'windsurf', label: 'Windsurf' },
+    ]);
   });
 
   it('returns an empty array for browser today', () => {
@@ -102,8 +111,8 @@ describe('supportedAgentsForPlatform', () => {
   });
 
   it('order: ide entries precede vscodeExt entries for the vscode platform', () => {
-    // No-op today (both buckets empty), but the contract is stable so install.ts
-    // can rely on it once buckets fill in.
+    // ide bucket (Cursor, Windsurf) precedes the still-empty vscodeExt bucket.
+    // The contract is stable so install.ts can rely on the ordering.
     const got = supportedAgentsForPlatform('vscode');
     expect(got).toEqual([...SUPPORTED_IDE_AGENTS, ...SUPPORTED_VSCODE_EXT_AGENTS]);
   });
@@ -119,7 +128,7 @@ describe('supportedAgentsForPlatform', () => {
 
 describe('allSupportedIds', () => {
   it('returns the union of every platform bucket', () => {
-    expect([...allSupportedIds()].sort()).toEqual(['claude']);
+    expect([...allSupportedIds()].sort()).toEqual(['claude', 'cursor', 'windsurf']);
   });
 
   it('union equals concatenation of per-platform sets (no duplicates lost)', () => {

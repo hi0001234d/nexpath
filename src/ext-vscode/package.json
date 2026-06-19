@@ -72,20 +72,42 @@
         "command": "nexpath.testCascadeInject",
         "title": "Test Cascade Inject",
         "category": "Nexpath"
+      },
+      {
+        "command": "nexpath.runSetup",
+        "title": "Set up CLI",
+        "category": "Nexpath"
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "nexpath.gettingStarted",
+        "title": "Set up Nexpath",
+        "description": "Wire Nexpath into Claude Code, Cursor, and Windsurf — runs the setup the moment you're ready.",
+        "steps": [
+          {
+            "id": "nexpath.setup",
+            "title": "Set up the Nexpath CLI",
+            "description": "Install Nexpath and register it for your AI coding agents (Claude Code, Cursor, Windsurf). A terminal opens where you answer a couple of prompts — your OpenAI API key and telemetry — just like the manual install.\n[Set up Nexpath](command:nexpath.runSetup)",
+            "media": { "image": "media/icon.png", "altText": "Nexpath" },
+            "completionEvents": ["onCommand:nexpath.runSetup"]
+          }
+        ]
       }
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run build",
+    "vscode:prepublish": "npm run build && npm run bundle:cli",
     "build": "node esbuild.config.mjs",
+    "bundle:cli": "node scripts/bundle-cli.mjs",
     "watch": "node esbuild.config.mjs --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "dump-cursor-state": "tsx scripts/dump-cursor-state.ts",
     "rebuild:electron": "electron-rebuild --version $npm_package_nexpathTargets_electron --force --only better-sqlite3 --module-dir .",
     "rebuild:node": "npm rebuild better-sqlite3",
-    "package": "node scripts/package-with-electron-abi.mjs",
-    "package:all-platforms": "node scripts/package-per-platform.mjs",
+    "package": "npm run bundle:cli && node scripts/package-with-electron-abi.mjs",
+    "package:all-platforms": "npm run bundle:cli && node scripts/package-per-platform.mjs",
     "publish:ovsx": "ovsx publish",
     "publish:vsce": "vsce publish"
   },

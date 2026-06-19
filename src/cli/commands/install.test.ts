@@ -425,7 +425,7 @@ describe('detectAgentsForPlatform', () => {
     } finally { cleanup(); }
   });
 
-  it('on vscode today, returns empty even when Cursor / Windsurf / Cline dirs exist (buckets empty)', () => {
+  it('on vscode today, returns Cursor + Windsurf (ide bucket); Cline excluded (vscodeExt bucket still empty)', () => {
     const { dir, cleanup } = tmpDir();
     try {
       mkdirSync(join(dir, '.cursor'),              { recursive: true });
@@ -433,7 +433,9 @@ describe('detectAgentsForPlatform', () => {
       mkdirSync(join(dir, '.config', 'Code', 'User', 'globalStorage',
                 'saoudrizwan.claude-dev', 'settings'), { recursive: true });
       const paths = resolveAgentPaths(dir, dir, dir);
-      expect(detectAgentsForPlatform(paths, 'vscode')).toEqual([]);
+      const ids = detectAgentsForPlatform(paths, 'vscode').map((a) => a.id).sort();
+      expect(ids).toEqual(['cursor', 'windsurf']);
+      expect(ids).not.toContain('cline');
     } finally { cleanup(); }
   });
 
@@ -1122,10 +1124,11 @@ describe('installAction', () => {
     } finally { cleanup(); }
   });
 
-  it('--for vscode short-circuits with the empty-bucket notice and returns null', async () => {
+  it('--for vscode no longer short-circuits — Cursor + Windsurf are the eligible set (Claude Code excluded)', async () => {
     const { dir, cleanup } = tmpDir();
-    // Claude Code IS installed — this proves the short-circuit ignores
-    // on-disk presence; eligibility is decided by the platform bucket alone.
+    // Claude Code IS installed — this proves the vscode platform's eligibility is
+    // decided by the platform bucket (Cursor / Windsurf), NOT by on-disk presence
+    // of a cli-platform agent like Claude Code.
     markClaudeInstalled(dir);
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
@@ -1133,12 +1136,17 @@ describe('installAction', () => {
       const result = await installAction({ yes: true, platform: 'vscode' }, {
         paths, isWin: false, execFn: () => {}, skipClipboardCheck: true,
       });
-      expect(result).toBeNull();
+      // Buckets are populated now → no empty-bucket short-circuit; returns a summary.
+      expect(result).not.toBeNull();
       const output = spy.mock.calls.map((c) => c[0] as string).join('\n');
       expect(output).toContain('Installing for: vscode');
-      expect(output).toContain('No agents are officially supported on platform "vscode" in this version yet.');
-      // Claude Code MUST NOT have been registered or even mentioned in Step 3.
-      expect(output).not.toContain('Claude Code');
+      expect(output).not.toContain('No agents are officially supported on platform "vscode"');
+      // Neither Cursor nor Windsurf is on disk here → both reported as Not found.
+      expect(output).toContain('Not found:');
+      expect(output).toContain('Cursor');
+      expect(output).toContain('Windsurf');
+      // Claude Code is a cli-platform agent → never registered under --for vscode.
+      expect(result?.agents.registered ?? []).not.toContain('Claude Code');
     } finally { cleanup(); }
   });
 
@@ -1157,13 +1165,13 @@ describe('installAction', () => {
     } finally { cleanup(); }
   });
 
-  it('short-circuit happens before Step 1 — no API key prompt is invoked', async () => {
+  it('short-circuit happens before Step 1 — no API key prompt is invoked (browser: still an empty bucket)', async () => {
     const { dir, cleanup } = tmpDir();
     const apiKeyPromptSpy = vi.fn(async () => ({ kind: 'skip' as const }));
     vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       const paths = resolveAgentPaths(dir, dir, dir);
-      await installAction({ platform: 'vscode' }, {
+      await installAction({ platform: 'browser' }, {
         paths, isWin: false, execFn: () => {},
         promptFn: {
           apiKeyPrompt:     apiKeyPromptSpy,

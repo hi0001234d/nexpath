@@ -131,3 +131,13 @@ node_modules/simple-concat/**
 # bindings + file-uri-to-path: KEEP — these ARE required at runtime by
 # better-sqlite3's lib/index.js to locate the .node file.
 # Exception, so explicitly NOT excluded above.
+
+# ────────────────────────────────────────────────────────────────────────────
+# Bundled nexpath CLI (nexpath-cli/, produced by scripts/bundle-cli.mjs).
+# The extension stages this to ~/.nexpath/cli/<version>/ and runs
+# `npm install --omit=dev` there on the user's machine, so we ship the built
+# `dist/` + a runtime package.json but NEVER node_modules. Sourcemaps + .d.ts
+# are already stripped by the **/*.js.map / **/*.ts rules above.
+# nexpath-cli/dist/**/*.js + nexpath-cli/package.json are KEPT (not ignored).
+# ────────────────────────────────────────────────────────────────────────────
+nexpath-cli/node_modules/**
