@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   readLatestAdvisory,
+  readLatestAdvisoryMeta,
   readInjectedPrompt,
   parseJsonStringArray,
   defaultStorePath,
@@ -161,5 +162,51 @@ describe('readInjectedPrompt', () => {
   it('never throws when the reader rejects', async () => {
     const readState: ReadSessionStateFn = vi.fn().mockRejectedValue(new Error('locked'));
     await expect(readInjectedPrompt('/proj', { readState })).resolves.toBeNull();
+  });
+});
+
+describe('readLatestAdvisoryMeta (option-independent — Windsurf bridge)', () => {
+  it('returns {projectRoot, createdAt, status} EVEN when generated options are empty', async () => {
+    // The bug scenario: since the option auto→stop move, the parked row has no
+    // generated_l1/l2/l3 — readLatestAdvisory would discard it, but the bridge
+    // must still detect the advisory.
+    const emptyOptionsRow = {
+      project_root: '/proj',
+      stage: 'implementation',
+      flag_type: 'stage_transition',
+      pinch_label: 'Quick check.',
+      generated_l1: '', generated_l2: '', generated_l3: '',
+      created_at: 1700000000000,
+      status: 'shown',
+    };
+    const readRow: ReadAdvisoryRowFn = vi.fn().mockResolvedValue(emptyOptionsRow);
+
+    // readLatestAdvisory (options-aware) drops it…
+    expect(await readLatestAdvisory('/proj', { readRow, dbPath: '/db' })).toBeNull();
+    // …but the metadata reader still returns it so the bridge fires.
+    expect(await readLatestAdvisoryMeta('/proj', { readRow, dbPath: '/db' })).toEqual({
+      projectRoot: '/proj',
+      createdAt: 1700000000000,
+      status: 'shown',
+    });
+  });
+
+  it('returns null when no row exists', async () => {
+    const readRow: ReadAdvisoryRowFn = vi.fn().mockResolvedValue(null);
+    expect(await readLatestAdvisoryMeta('/proj', { readRow, dbPath: '/db' })).toBeNull();
+  });
+
+  it('coerces a string created_at and defaults missing status', async () => {
+    const readRow: ReadAdvisoryRowFn = vi.fn().mockResolvedValue({
+      project_root: '/proj', created_at: '1700000000001',
+    });
+    expect(await readLatestAdvisoryMeta('/proj', { readRow, dbPath: '/db' })).toEqual({
+      projectRoot: '/proj', createdAt: 1700000000001, status: '',
+    });
+  });
+
+  it('never throws — returns null when the reader rejects', async () => {
+    const readRow: ReadAdvisoryRowFn = vi.fn().mockRejectedValue(new Error('db gone'));
+    expect(await readLatestAdvisoryMeta('/proj', { readRow, dbPath: '/db' })).toBeNull();
   });
 });

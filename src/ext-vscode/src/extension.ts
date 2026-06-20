@@ -25,7 +25,7 @@ import { spawnAuto, spawnStop } from './ipc.js';
 import { resolveWorkspaceFromDbPath, canonicalizeCwd } from './resolve-db-workspace.js';
 import { createAdvisoryFallback, type AdvisoryFallback } from './advisory-fallback.js';
 import { createAdvisoryPoller, type AdvisoryPoller } from './advisory-poller.js';
-import { readLatestAdvisory, readInjectedPrompt } from './advisory-store-reader.js';
+import { readLatestAdvisoryMeta, readInjectedPrompt } from './advisory-store-reader.js';
 import { raiseWindsurfWindow, pasteKeystroke } from './windsurf-autopaste.js';
 import {
   injectViaCascadeAction,
@@ -263,7 +263,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const roots = Array.from(new Set([canonicalizeCwd(ws), ws]));
     advisoryPoller = createAdvisoryPoller({
       projectRoots: roots,
-      readAdvisory: (root) => readLatestAdvisory(root),
+      // Option-independent detection: the popup bridge must fire even though the
+      // advisory row has no generated options (option auto→stop move). The
+      // in-editor fallback (advisory-fallback.ts) keeps its own options-aware
+      // readLatestAdvisory for DISPLAY — unchanged.
+      readAdvisory: (root) => readLatestAdvisoryMeta(root),
       readInjected: (root) => readInjectedPrompt(root),
       // Popup selection → inject into Cascade + clear the fallback.
       onSelection: async (prompt) => {

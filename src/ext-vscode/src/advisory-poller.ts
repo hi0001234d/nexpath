@@ -1,4 +1,4 @@
-import type { StoredAdvisory } from './advisory-store-reader.js';
+import type { AdvisoryStatus } from './advisory-store-reader.js';
 
 /**
  * Windsurf delivery poller.
@@ -29,8 +29,14 @@ export interface AdvisoryPollerDeps {
    * workspace path — the Cascade hook's `auto`/`stop` may record either.
    */
   projectRoots: string[];
-  /** Read the latest advisory (incl. `status`) for a root. */
-  readAdvisory: (projectRoot: string) => Promise<StoredAdvisory | null>;
+  /**
+   * Read the latest advisory's metadata (created_at + status) for a root.
+   * Option-INDEPENDENT on purpose: since the option `auto`→`stop` move the row
+   * carries no generated options, but the bridge only needs to detect that an
+   * advisory exists (the selection is read separately via `readInjected`). Wire
+   * this to `readLatestAdvisoryMeta`, NOT `readLatestAdvisory`.
+   */
+  readAdvisory: (projectRoot: string) => Promise<AdvisoryStatus | null>;
   /** Read the popup's persisted selection (`session_states.lastInjectedPrompt`). */
   readInjected: (projectRoot: string) => Promise<string | null>;
   /** Inject the popup's selected prompt into Cascade (and clear the fallback). */
@@ -78,9 +84,9 @@ export function createAdvisoryPoller(deps: AdvisoryPollerDeps): AdvisoryPoller {
     inFlight = true;
     try {
       // Newest advisory across candidate roots.
-      let best: { root: string; advisory: StoredAdvisory } | null = null;
+      let best: { root: string; advisory: AdvisoryStatus } | null = null;
       for (const root of deps.projectRoots) {
-        let advisory: StoredAdvisory | null;
+        let advisory: AdvisoryStatus | null;
         try { advisory = await deps.readAdvisory(root); } catch { advisory = null; }
         if (advisory && (!best || advisory.createdAt > best.advisory.createdAt)) {
           best = { root, advisory };
