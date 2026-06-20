@@ -35,6 +35,7 @@ function makeDeps(over: Partial<SetupFlowDeps> = {}): {
     showError: ReturnType<typeof vi.fn>;
     showInfo: ReturnType<typeof vi.fn>;
     applyNexpathBin: ReturnType<typeof vi.fn>;
+    verifyStagedCli: ReturnType<typeof vi.fn>;
     writeFile: ReturnType<typeof vi.fn>;
     setState: ReturnType<typeof vi.fn>;
   };
@@ -45,6 +46,7 @@ function makeDeps(over: Partial<SetupFlowDeps> = {}): {
     showError: vi.fn(),
     showInfo: vi.fn(),
     applyNexpathBin: vi.fn(),
+    verifyStagedCli: vi.fn(() => true), // default: staged CLI runs (deps installed)
     writeFile: vi.fn(),
     setState: vi.fn(async (s: SetupState) => { state.value = s; }),
   };
@@ -59,6 +61,7 @@ function makeDeps(over: Partial<SetupFlowDeps> = {}): {
     showError: calls.showError,
     showInfo: calls.showInfo,
     applyNexpathBin: calls.applyNexpathBin,
+    verifyStagedCli: calls.verifyStagedCli,
     getState: () => state.value,
     setState: calls.setState,
     ...over,
@@ -136,6 +139,44 @@ describe('runSetupFlow', () => {
     expect(await runSetupFlow(deps)).toBe('failed');
     expect(state.value.done).toBe(false);
     expect(calls.showError).toHaveBeenCalledWith(expect.stringContaining('Set up CLI'));
+  });
+
+  // ── Directions 2/3/4: never trust/activate a staged CLI that doesn't run ────
+  it('does NOT point IPC at a staged CLI that fails to verify (dep-less copy)', async () => {
+    const { deps, calls } = makeDeps({
+      stageCli: () => CURRENT,
+      getState: () => ({ done: true, version: '0.1.3' }), // flag says done…
+      verifyStagedCli: vi.fn(() => false),                // …but the copy can't run
+    });
+    const outcome = await runSetupFlow(deps);
+    // Must NOT short-circuit to already-done, and must NOT set NEXPATH_BIN to the
+    // broken copy before the runner re-installs deps.
+    expect(outcome).not.toBe('already-done');
+    expect(calls.applyNexpathBin).not.toHaveBeenCalled();
+    expect(calls.runInTerminal).toHaveBeenCalledOnce();
+  });
+
+  it("treats a done+current copy as already-done ONLY when it verifies", async () => {
+    const verified = makeDeps({ stageCli: () => CURRENT, getState: () => ({ done: true, version: '0.1.3' }) });
+    expect(await runSetupFlow(verified.deps)).toBe('already-done');
+
+    const broken = makeDeps({
+      stageCli: () => CURRENT,
+      getState: () => ({ done: true, version: '0.1.3' }),
+      verifyStagedCli: vi.fn(() => false),
+    });
+    expect(await runSetupFlow(broken.deps)).not.toBe('already-done');
+  });
+
+  it("runner reports OK but the CLI still doesn't run → 'failed', not done", async () => {
+    const { deps, state, calls } = makeDeps({
+      runInTerminal: vi.fn(async () => ({ ok: true, detail: 'OK', timedOut: false })),
+      verifyStagedCli: vi.fn(() => false), // npm install "ran" but deps still missing
+    });
+    expect(await runSetupFlow(deps)).toBe('failed');
+    expect(state.value.done).toBe(false);
+    expect(calls.applyNexpathBin).not.toHaveBeenCalled();
+    expect(calls.showError).toHaveBeenCalledWith(expect.stringContaining('could not start'));
   });
 });
 

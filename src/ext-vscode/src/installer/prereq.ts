@@ -66,6 +66,26 @@ export function checkPrereqs(run: RunFn = defaultRun): PrereqStatus {
 }
 
 /**
+ * True if `<cmd> <args>` exits 0 — i.e. the CLI loads AND (for the staged CLI)
+ * its dependencies resolve. Two uses:
+ *   - `cliRuns('nexpath')` → detect an already-working `nexpath` on PATH so the
+ *     auto-installer stays a strict no-op (never overrides a working CLI).
+ *   - `cliRuns('node', [cliEntry, '--version'])` → refuse to point IPC at a
+ *     staged CLI whose `npm install` hasn't completed (deps missing → non-zero).
+ */
+export function cliRuns(
+  cmd: string,
+  args: string[] = ['--version'],
+  run: RunFn = defaultRun,
+): boolean {
+  try {
+    return run(cmd, args).status === 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Human-readable, OS-specific guidance for when a prerequisite is missing.
  * Used by the orchestrator to tell the user how to unblock — we never try to
  * install Node ourselves (that would need elevation / a package manager we

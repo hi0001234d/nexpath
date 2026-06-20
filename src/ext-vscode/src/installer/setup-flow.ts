@@ -45,6 +45,11 @@ export interface SetupFlowDeps {
   showInfo: (msg: string) => void;
   /** Point the extension's IPC at the staged CLI (e.g. set process.env.NEXPATH_BIN). */
   applyNexpathBin: (shimPath: string) => void;
+  /**
+   * True only if the staged CLI actually RUNS (its deps are installed). Used to
+   * refuse pointing IPC at, or trusting the `done` flag over, a dep-less copy.
+   */
+  verifyStagedCli: (cliEntry: string) => boolean;
   getState: () => SetupState;
   setState: (s: SetupState) => Promise<void>;
   log?: (line: string) => void;
@@ -78,15 +83,23 @@ export async function runSetupFlow(
     return 'failed';
   }
 
-  // Make the staged CLI usable by the extension's IPC right away — the shim path
-  // is stable for this version, independent of whether a (re)run is needed.
-  if (staged.shimPath) deps.applyNexpathBin(staged.shimPath);
+  // Direction 2/3: only point IPC at the staged CLI once it actually RUNS (its
+  // npm install has completed). A freshly-copied, dep-less copy must never
+  // become the active binary — that is what hijacked the working global CLI.
+  if (staged.shimPath && deps.verifyStagedCli(staged.cliEntry)) {
+    deps.applyNexpathBin(staged.shimPath);
+  }
 
   const state = deps.getState();
+  // Direction 4: don't trust the `done` flag over a broken copy — "already set
+  // up" also requires the staged CLI to verify (deps installed).
   const upToDate =
-    state.done && state.version === staged.version && staged.status === 'already-current';
+    state.done &&
+    state.version === staged.version &&
+    staged.status === 'already-current' &&
+    deps.verifyStagedCli(staged.cliEntry);
   if (upToDate && !opts.force) {
-    deps.log?.(`[nexpath] setup already complete for CLI ${staged.version}`);
+    deps.log?.(`[nexpath] setup already complete + verified for CLI ${staged.version}`);
     return 'already-done';
   }
 
@@ -102,7 +115,10 @@ export async function runSetupFlow(
   const command = deps.buildCommand(runnerPath, staged.stagedDir, sentinelPath, staged.cliEntry);
   const result = await deps.runInTerminal(command);
 
-  if (result.ok) {
+  // Mark done + point IPC at the staged CLI ONLY when the runner finished AND
+  // the CLI verifies (deps actually installed). This closes the gap where the
+  // runner could report OK but leave a CLI that can't start.
+  if (result.ok && deps.verifyStagedCli(staged.cliEntry)) {
     await deps.setState({ done: true, version: staged.version });
     if (staged.shimPath) deps.applyNexpathBin(staged.shimPath);
     deps.showInfo(
@@ -110,6 +126,13 @@ export async function runSetupFlow(
         'Reload the window or restart your agent to activate guidance.',
     );
     return 'done';
+  }
+  if (result.ok) {
+    deps.showError(
+      'Nexpath: setup ran but the CLI could not start (dependencies incomplete). ' +
+        'Retry from the Command Palette: "Nexpath: Set up CLI".',
+    );
+    return 'failed';
   }
 
   const why = result.timedOut ? 'setup did not finish in time' : `setup failed (${result.detail})`;

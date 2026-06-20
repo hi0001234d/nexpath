@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { checkPrereqs } from './prereq.js';
-import { stageCli, type StageResult } from './cli-stage.js';
+import { checkPrereqs, cliRuns } from './prereq.js';
+import { stageCli } from './cli-stage.js';
 import { SETUP_SENTINEL_FILENAME } from './setup-runner-source.js';
 import { runSetupInTerminal } from './terminal-runner.js';
 import {
@@ -80,6 +80,9 @@ function buildDeps(context: vscode.ExtensionContext, log: Logger): SetupFlowDeps
       process.env.NEXPATH_BIN = shim;
       log(`[nexpath] NEXPATH_BIN → ${shim}`);
     },
+    // The staged CLI "runs" only if `node <entry> --version` exits 0 — which
+    // requires its deps to be installed. Used to refuse a dep-less copy.
+    verifyStagedCli: (cliEntry) => cliRuns('node', [cliEntry, '--version']),
     getState: () =>
       context.globalState.get<SetupState>(SETUP_STATE_KEY) ?? { done: false, version: null },
     setState: (s) => Promise.resolve(context.globalState.update(SETUP_STATE_KEY, s)),
@@ -93,38 +96,53 @@ function buildDeps(context: vscode.ExtensionContext, log: Logger): SetupFlowDeps
  * activation (the env var doesn't persist across sessions). Returns the stage
  * result so the caller can decide whether to offer (re)setup.
  */
-function reconcile(deps: SetupFlowDeps): StageResult {
-  if (!checkPrereqs().ready) {
-    return { status: 'no-bundle', stagedDir: null, cliEntry: null, shimPath: null, version: null };
-  }
-  const staged = deps.stageCli(deps.bundledCliDir, deps.nexpathHome);
-  if (staged.shimPath) deps.applyNexpathBin(staged.shimPath);
-  return staged;
-}
-
 /**
- * Activation hook. Reconciles the staged CLI, then — only when setup is missing
- * or out of date — offers a one-click setup via a non-blocking notification.
- * Never auto-opens a terminal without consent. No-ops silently when the build
- * has no bundled CLI (dev) or prereqs are missing (the command surfaces guidance).
+ * Activation hook. Strictly additive — it must never override or break a
+ * `nexpath` that already works:
+ *
+ *   Direction 1: if a working `nexpath` already resolves on PATH (a global
+ *     install, or a prior manual setup), do NOTHING — don't stage, don't set
+ *     NEXPATH_BIN, don't offer. The extension then behaves exactly as it did
+ *     before this feature, so machines already running Claude/Cursor/Windsurf
+ *     are completely untouched.
+ *   Direction 2/3/4: only when there's no working CLI do we consider the staged
+ *     one — and we point IPC at it (and treat it as "already set up") ONLY if it
+ *     actually runs (deps installed). A dep-less copy is never made active.
+ *
+ * Never auto-opens a terminal without consent.
  */
 export async function offerSetupIfNeeded(
   context: vscode.ExtensionContext,
   log: Logger,
 ): Promise<void> {
   const deps = buildDeps(context, log);
-  const staged = reconcile(deps);
 
-  // Nothing we can act on automatically — stay quiet on startup.
+  // ── Direction 1 — a working CLI already resolves on PATH → no-op. ──────────
+  if (cliRuns('nexpath')) {
+    log('[nexpath] existing working nexpath on PATH — auto-setup is a no-op (NEXPATH_BIN untouched)');
+    return;
+  }
+
+  // No working CLI on PATH. We can only help if node/npm + a bundled CLI exist.
+  if (!checkPrereqs().ready) {
+    log('[nexpath] no working nexpath on PATH and node/npm missing — auto-setup not offered');
+    return;
+  }
+  const staged = deps.stageCli(deps.bundledCliDir, deps.nexpathHome);
   if (staged.status === 'no-bundle' || staged.status === 'error') {
     log(`[nexpath] CLI auto-setup not offered (stage: ${staged.status})`);
     return;
   }
 
+  // ── Direction 2/3/4 — the staged CLI counts only if it actually runs. ──────
+  const verified = staged.cliEntry ? deps.verifyStagedCli(staged.cliEntry) : false;
+  if (verified && staged.shimPath) deps.applyNexpathBin(staged.shimPath);
+
   const state = deps.getState();
-  const upToDate = state.done && state.version === staged.version && staged.status === 'already-current';
+  const upToDate =
+    state.done && state.version === staged.version && staged.status === 'already-current' && verified;
   if (upToDate) {
-    log(`[nexpath] CLI already set up (v${staged.version})`);
+    log(`[nexpath] CLI already set up + verified (v${staged.version})`);
     return;
   }
 

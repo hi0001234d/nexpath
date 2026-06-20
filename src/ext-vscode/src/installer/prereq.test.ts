@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkPrereqs, missingPrereqMessage, type RunFn } from './prereq.js';
+import { checkPrereqs, missingPrereqMessage, cliRuns, type RunFn } from './prereq.js';
 
 function fakeRun(map: Record<string, { status: number | null; stdout: string }>): RunFn {
   return (cmd) => map[cmd] ?? { status: 1, stdout: '' };
@@ -64,5 +64,22 @@ describe('missingPrereqMessage', () => {
     expect(msg).toContain('Node.js');
     expect(msg).not.toContain('npm and');
     expect(msg).toContain('apt');
+  });
+});
+
+describe('cliRuns', () => {
+  it('true when the command exits 0', () => {
+    const run: RunFn = () => ({ status: 0, stdout: '0.1.3' });
+    expect(cliRuns('nexpath', ['--version'], run)).toBe(true);
+  });
+
+  it('false when the command exits non-zero (e.g. missing deps)', () => {
+    const run: RunFn = () => ({ status: 1, stdout: '' });
+    expect(cliRuns('node', ['/staged/index.js', '--version'], run)).toBe(false);
+  });
+
+  it('false when the runner throws (ENOENT)', () => {
+    const run: RunFn = () => { throw new Error('spawn ENOENT'); };
+    expect(cliRuns('nexpath', ['--version'], run)).toBe(false);
   });
 });
