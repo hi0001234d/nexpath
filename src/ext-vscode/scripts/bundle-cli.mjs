@@ -11,9 +11,13 @@
  *      then build the root CLI (`tsc` → dist/). Root tsconfig excludes
  *      src/ext-vscode, so this compiles only Layer C + the CLI.
  *   2. Copy dist/ → nexpath-cli/dist/.
- *   3. Write a RUNTIME-only package.json (dependencies + bin + engines) — the
- *      extension runs `npm install --omit=dev` against it on the user's machine
- *      at setup time, fetching the correct native prebuilds for their platform.
+ *   3. Write a RUNTIME package.json (deps + devDeps mirror + bin + engines) AND
+ *      copy the repo-root package-lock.json alongside it — the extension runs
+ *      `npm ci --omit=dev` against them on the user's machine at setup time,
+ *      installing the EXACT tree the dist was built/tested against (reproducible;
+ *      no caret-range drift) and fetching the correct native prebuilds. devDeps
+ *      are mirrored only so package.json ⇿ package-lock.json stay in sync for
+ *      `npm ci`; `--omit=dev` skips installing them.
  *
  * node_modules is intentionally NOT shipped (installed at runtime). Idempotent:
  * the target dir is reset on each run.
@@ -56,8 +60,10 @@ rmSync(target, { recursive: true, force: true });
 mkdirSync(target, { recursive: true });
 cpSync(distSrc, join(target, 'dist'), { recursive: true });
 
-// 3. Runtime-only package.json (no devDeps / scripts — only what `npm install
-//    --omit=dev` + `node dist/cli/index.js` need).
+// 3. Runtime package.json (no scripts — only what `npm ci --omit=dev` +
+//    `node dist/cli/index.js` need). devDependencies are mirrored verbatim so
+//    package.json stays in sync with the bundled package-lock.json (npm ci is
+//    strict about that); `--omit=dev` skips installing them at runtime.
 const rootPkg = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8'));
 const runtimePkg = {
   name: rootPkg.name,
@@ -66,6 +72,7 @@ const runtimePkg = {
   type: rootPkg.type,
   bin: rootPkg.bin,
   dependencies: rootPkg.dependencies ?? {},
+  devDependencies: rootPkg.devDependencies ?? {},
   engines: rootPkg.engines,
 };
 writeFileSync(
@@ -74,4 +81,16 @@ writeFileSync(
   'utf8',
 );
 
-console.log(`[bundle-cli] bundled nexpath CLI v${runtimePkg.version} → ${target}`);
+// 3b. Ship the lockfile so the staged install is `npm ci` (reproducible). Now
+//     required — without it the staged install would fall back to a drifting
+//     caret-range `npm install`.
+const lockSrc = join(repoRoot, 'package-lock.json');
+if (!existsSync(lockSrc)) {
+  throw new Error(
+    '[bundle-cli] package-lock.json missing at repo root — required for a ' +
+    'reproducible staged install (npm ci). Run `npm install` at the repo root first.',
+  );
+}
+cpSync(lockSrc, join(target, 'package-lock.json'));
+
+console.log(`[bundle-cli] bundled nexpath CLI v${runtimePkg.version} (+ lockfile) → ${target}`);

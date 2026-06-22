@@ -19,9 +19,13 @@ describe('buildSetupRunnerSource', () => {
     expect(src).toContain('process.argv[4]'); // cliEntry
   });
 
-  it('runs npm install for production deps', () => {
-    expect(src).toContain("'install'");
+  it('installs production deps reproducibly via npm ci, with a clean npm install fallback', () => {
+    expect(src).toContain("'ci'");          // reproducible: exact bundled lockfile
     expect(src).toContain("'--omit=dev'");
+    expect(src).toContain("'install'");     // fallback when the lockfile is missing/out of sync
+    // the fallback clears a corrupted node_modules before retrying
+    expect(src).toContain('rmSync');
+    expect(src).toContain("'node_modules'");
   });
 
   it('registers Cursor + Windsurf via a SINGLE interactive --for vscode pass (no --for cli / Claude)', () => {
