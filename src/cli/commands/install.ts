@@ -599,7 +599,13 @@ export async function installAction(
   const agents      = detectAgentsForPlatform(paths, platform);
   const detectedIds = new Set(agents.map((a) => a.id));
   const missing     = supportedAgentsForPlatform(platform).filter((sa) => !detectedIds.has(sa.id));
-  if (agents.length > 0 && !onlyAgent) {
+  if (onlyAgent) {
+    // Extension-driven single-IDE setup: the extension runs INSIDE the target IDE,
+    // so it's definitely present — show just that one (matches the CLI's "Detected: X")
+    // regardless of the file-based detection above.
+    const onlyLabel = supportedAgentsForPlatform(platform).find((sa) => sa.id === onlyAgent)?.label ?? onlyAgent;
+    console.log(`Detected: ${onlyLabel}`);
+  } else if (agents.length > 0) {
     console.log(`Detected: ${agents.map((a) => a.label).join(', ')}`);
   }
   // Skip the "Not found" notice when deliberately targeting a single IDE — the
@@ -614,7 +620,7 @@ export async function installAction(
   // only when a supported agent (Claude Code) is actually present on disk. The
   // registry-driven adapter installs further below run regardless, so Cursor /
   // Windsurf VSCode extensions are still offered on machines without Claude Code.
-  if (agents.length > 0) {
+  if (agents.length > 0 || onlyAgent) {
     if (!opts.yes) {
       const ok = await confirmFn();
       if (!ok) {
@@ -652,6 +658,7 @@ export async function installAction(
               // object still control the target file independently of homedir().
               settingsPath: paths.claudeSettings,
             });
+            registered.push(agent.label);
           }
         } else if (REGISTER_MCP_SERVER) {
           if (agent.type === 'cline') {
@@ -732,9 +739,12 @@ export async function installAction(
     // and browser-extension adapters stay silent.
     if (!eligibleCategories.has(adapter.category)) continue;
     try {
-      await adapter.install(adapterCtx);
+      const res = await adapter.install(adapterCtx);
+      if (res.status === 'installed' || res.status === 'already-installed') registered.push(adapter.label);
+      else if (res.status === 'failed') failed.push(adapter.label);
     } catch (err) {
       console.log(`\u2717 ${adapter.label.padEnd(12)} \u2014 failed: ${(err as Error).message}`);
+      failed.push(adapter.label);
     }
   }
 
