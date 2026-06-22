@@ -8,14 +8,14 @@
 
 ### 1. Marketplace publisher accounts
 
-The extension publishes under the publisher id `emptyops` (matches `package.json#publisher`) — the org-scoped namespace per dev plan §6 Q3 resolution (revision 15). The full marketplace ID is `emptyops.nexpath-vscode`. You need credentials for both registries:
+The extension publishes under the publisher id `nexpath` (matches `package.json#publisher`). The full marketplace ID is `nexpath.nexpath-vscode`. The publisher **display name** is "NEXPATH" (set in each marketplace's publisher profile, not in code); the **legal entity** for any KYC / publisher verification is **ParseOS**. You need credentials for both registries:
 
 | Registry | Account | Token |
 |---|---|---|
-| **VS Code Marketplace** | Azure DevOps org with the `emptyops` publisher | Personal Access Token (PAT) with `Marketplace: Manage` scope. [Docs](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#get-a-personal-access-token). |
-| **Open VSX** | <https://open-vsx.org> account in the `emptyops` namespace | Access token from the user's profile page. [Docs](https://github.com/eclipse/openvsx/wiki/Publishing-Extensions). |
+| **VS Code Marketplace** | Azure DevOps org with the `nexpath` publisher (display "NEXPATH", legal entity ParseOS) | Personal Access Token (PAT) with `Marketplace: Manage` scope. [Docs](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#get-a-personal-access-token). |
+| **Open VSX** | <https://open-vsx.org> account in the `nexpath` namespace | Access token from the user's profile page. [Docs](https://github.com/eclipse/openvsx/wiki/Publishing-Extensions). |
 
-> **First-publish prerequisite — claim the publisher namespace.** Visit each marketplace and confirm that `emptyops` is either already owned by your account or available to claim. If `emptyops` is taken on either side, talk to the team lead before publishing — the choice was deliberately org-scoped to make collision unlikely, but verify before the first push.
+> **First-publish prerequisite — claim the publisher namespace.** Visit each marketplace and confirm `nexpath` is owned by / available to your account. If `nexpath` is taken on either side, pick a variant and update `package.json#publisher` + both adapters' `MARKETPLACE_ID` (the `marketplace-id` test enforces they stay in lockstep) before the first push.
 
 ### 2. Export the tokens
 
@@ -159,8 +159,8 @@ done
 After publish succeeds:
 
 1. **Marketplace listings live** — visit the URLs and confirm the version appears:
-   - <https://marketplace.visualstudio.com/items?itemName=emptyops.nexpath-vscode>
-   - <https://open-vsx.org/extension/emptyops/nexpath-vscode>
+   - <https://marketplace.visualstudio.com/items?itemName=nexpath.nexpath-vscode>
+   - <https://open-vsx.org/extension/nexpath/nexpath-vscode>
 2. **Install from each marketplace** (using a fresh Cursor profile, e.g. `cursor --user-data-dir /tmp/fresh-profile`) and confirm:
    - Extension shows up in the Extensions panel.
    - Activity bar icon appears after activation.
@@ -179,7 +179,7 @@ After publish succeeds:
 If a published version turns out to be broken:
 
 1. **Open VSX:** there's no "unpublish" endpoint — bump the patch version and publish a fix. The previous version stays listed but new installs get the fix.
-2. **VS Code Marketplace:** same — bump + republish. Use `vsce unpublish emptyops.nexpath-vscode@<version>` only as a last resort (causes marketplace to flag the publisher).
+2. **VS Code Marketplace:** same — bump + republish. Use `vsce unpublish nexpath.nexpath-vscode@<version>` only as a last resort (causes marketplace to flag the publisher).
 
 For both: keep `package.json#version` always strictly ahead of the latest published version.
 

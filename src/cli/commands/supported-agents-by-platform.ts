@@ -40,6 +40,14 @@ export const SUPPORTED_CLI_AGENTS: ReadonlyArray<SupportedAgent> = [
 ];
 
 export const SUPPORTED_IDE_AGENTS: ReadonlyArray<SupportedAgent> = [
+  // Cursor + Windsurf are VS Code forks integrated via the companion Nexpath
+  // VS Code extension (src/ext-vscode/). Listed here so `nexpath install --for
+  // vscode` detects + registers them (Windsurf writes its Cascade capture hook;
+  // Cursor needs only the extension, already installed). ids match the pushes in
+  // detectAgentsForCleanup() (install.ts). End-to-end validated on all three OSes
+  // (sub-10/sub-11); see docs/architecture/v0.1.3-coding-agent-hooks-architecture.md.
+  { id: 'cursor',   label: 'Cursor' },
+  { id: 'windsurf', label: 'Windsurf' },
 ];
 
 export const SUPPORTED_VSCODE_EXT_AGENTS: ReadonlyArray<SupportedAgent> = [

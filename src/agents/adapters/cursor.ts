@@ -35,7 +35,7 @@ import type {
  */
 
 /** Marketplace identifier used in both Open VSX and the VS Code Marketplace. */
-const MARKETPLACE_ID = 'emptyops.nexpath-vscode';
+const MARKETPLACE_ID = 'nexpath.nexpath-vscode';
 
 const OPEN_VSX_URL = `https://open-vsx.org/extension/${MARKETPLACE_ID.replace(
   '.',

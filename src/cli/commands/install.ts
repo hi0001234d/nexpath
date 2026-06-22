@@ -565,9 +565,22 @@ export async function installAction(
         return null;
       }
       telemetryEnabled = consent.kind === 'enable';
+      setConfig(store, 'telemetry.enabled',      String(telemetryEnabled));
+      setConfig(store, 'telemetry_sync_enabled', String(telemetryEnabled));
+    } else {
+      // --yes (non-interactive): preserve an existing telemetry choice. A re-run
+      // — e.g. the VS Code extension's two-pass setup (`--for cli` interactive,
+      // then `--for vscode --yes`) — must NOT silently re-enable telemetry the
+      // user disabled in the first pass. Mirrors how advisory_frequency / role
+      // below only write a default when unset. On a first install (unset) it
+      // still defaults to enabled, preserving prior `--yes` behaviour.
+      if (!isConfigSet(store.db, 'telemetry.enabled')) {
+        setConfig(store, 'telemetry.enabled',      'true');
+        setConfig(store, 'telemetry_sync_enabled', 'true');
+      } else {
+        telemetryEnabled = getConfig(store.db, 'telemetry.enabled') === 'true';
+      }
     }
-    setConfig(store, 'telemetry.enabled',      String(telemetryEnabled));
-    setConfig(store, 'telemetry_sync_enabled', String(telemetryEnabled));
   } finally {
     if (store.dbPath !== ':memory:' || telemetryEnabled !== true) {
       // close happens at end of step 3 path; nothing to do here

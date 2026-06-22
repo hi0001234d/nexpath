@@ -31,6 +31,7 @@ const {
   planWindowsPopupSpawn,
   planLinuxPopupSpawn,
   buildTerminalAppleScript,
+  nexpathAgentLabel,
 } = await import('./TtySelectFn.js');
 const { OPT_OUT_SENTINEL }       = await import('./DecisionSession.js');
 const { SHOW_SIMPLER, SKIP_NOW } = await import('./options.js');
@@ -2143,5 +2144,25 @@ describe('buildTerminalAppleScript — geometry supplied (Phase 4 bounds-setter)
     const squareGeom = { widthPx: 756, heightPx: 756, xPx: 162, yPx: 162, cols: 75, rows: 37 };
     const s = buildTerminalAppleScript('node /tmp/script.mjs', squareGeom);
     expect(s).toContain('set bounds of (first window whose selected tab is theTab) to {162, 162, 918, 918}');
+  });
+});
+
+describe('nexpathAgentLabel', () => {
+  it("defaults to 'Claude' when NEXPATH_AGENT is unset (Claude wording unchanged)", () => {
+    expect(nexpathAgentLabel({})).toBe('Claude');
+  });
+
+  it('names the Cursor / Windsurf surfaces', () => {
+    expect(nexpathAgentLabel({ NEXPATH_AGENT: 'cursor' })).toBe('Cursor');
+    expect(nexpathAgentLabel({ NEXPATH_AGENT: 'windsurf' })).toBe('Windsurf');
+  });
+
+  it('is case/space-insensitive and maps Devin → Windsurf', () => {
+    expect(nexpathAgentLabel({ NEXPATH_AGENT: '  CURSOR ' })).toBe('Cursor');
+    expect(nexpathAgentLabel({ NEXPATH_AGENT: 'Devin' })).toBe('Windsurf');
+  });
+
+  it("falls back to 'Claude' for an unknown agent", () => {
+    expect(nexpathAgentLabel({ NEXPATH_AGENT: 'something-else' })).toBe('Claude');
   });
 });

@@ -39,8 +39,8 @@ describe('windsurfAdapter — static fields', () => {
   });
 
   it('declares Open VSX + VS Code Marketplace ids', () => {
-    expect(windsurfAdapter.marketplace.openVsx).toBe('emptyops.nexpath-vscode');
-    expect(windsurfAdapter.marketplace.vsCode).toBe('emptyops.nexpath-vscode');
+    expect(windsurfAdapter.marketplace.openVsx).toBe('nexpath.nexpath-vscode');
+    expect(windsurfAdapter.marketplace.vsCode).toBe('nexpath.nexpath-vscode');
   });
 });
 

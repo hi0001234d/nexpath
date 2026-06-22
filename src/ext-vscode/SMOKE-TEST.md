@@ -48,9 +48,9 @@ node dist/cli/index.js install --yes
 Detected: Claude Code
 ✓ Claude Code  — advisory hook written to <HOME>/.claude/settings.json
 ✓ Cursor       — install the Nexpath extension to activate guidance:
-    Open VSX:            https://open-vsx.org/extension/emptyops/nexpath-vscode
-    VS Code Marketplace: https://marketplace.visualstudio.com/items?itemName=emptyops.nexpath-vscode
-    Or via CLI:          cursor --install-extension emptyops.nexpath-vscode
+    Open VSX:            https://open-vsx.org/extension/nexpath/nexpath-vscode
+    VS Code Marketplace: https://marketplace.visualstudio.com/items?itemName=nexpath.nexpath-vscode
+    Or via CLI:          cursor --install-extension nexpath.nexpath-vscode
 ```
 
 (If Windsurf is also installed, a Windsurf block appears too.)

@@ -182,6 +182,64 @@ export async function readLatestAdvisory(
   };
 }
 
+// ── Advisory metadata (option-independent) — for the Windsurf popup bridge ───
+
+/**
+ * Minimal advisory shape the Windsurf poller needs to DETECT + time an advisory:
+ * just whether one exists, when it was parked, and its status. Deliberately does
+ * NOT carry the generated options.
+ */
+export interface AdvisoryStatus {
+  projectRoot: string;
+  /** unix ms — when `nexpath auto` parked this advisory. */
+  createdAt: number;
+  /** 'pending' | 'shown'. */
+  status: string;
+}
+
+/**
+ * Read the latest advisory's metadata (created_at + status) for a project,
+ * WITHOUT requiring `generated_l1/l2/l3` to be present.
+ *
+ * Why this exists: since the option generation `auto`→`stop` move (commit
+ * 05ea1ca), options are produced at popup-render time and are NEVER parked in
+ * the `pending_advisories` row. {@link readLatestAdvisory} discards a row with no
+ * options (correct for the in-editor *display* fallback, which needs them), but
+ * that also blinded the Windsurf popup→Cascade *bridge*, which only needs to know
+ * an advisory exists so it can read the persisted selection
+ * (`lastInjectedPrompt`). This reader restores that detection without reverting
+ * the Layer-C move. Read-only; never throws.
+ */
+export async function readLatestAdvisoryMeta(
+  projectRoot: string,
+  deps: AdvisoryStoreReaderDeps = {},
+): Promise<AdvisoryStatus | null> {
+  const dbPath  = deps.dbPath ?? defaultStorePath();
+  const readRow = deps.readRow ?? defaultReadAdvisoryRow;
+
+  let row: Record<string, unknown> | null;
+  try {
+    row = await readRow(dbPath, projectRoot);
+  } catch {
+    return null;
+  }
+  if (!row) return null;
+
+  const createdAtRaw = row.created_at;
+  const createdAt =
+    typeof createdAtRaw === 'number'
+      ? createdAtRaw
+      : Number.isFinite(Number(createdAtRaw))
+        ? Number(createdAtRaw)
+        : 0;
+
+  return {
+    projectRoot: typeof row.project_root === 'string' ? row.project_root : projectRoot,
+    createdAt,
+    status: typeof row.status === 'string' ? row.status : '',
+  };
+}
+
 // ── Selected-prompt recovery (Windows crash-on-exit safety net) ──────────────
 
 /** Reads the `session_states.state_json` blob for a project (injectable for tests). */

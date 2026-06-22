@@ -142,6 +142,12 @@ jobs:
     needs: [package, package-linux-arm64]
     if: ${{ github.event_name == 'push' || inputs.publish == true }}
     runs-on: ubuntu-22.04
+    # PATs are lifted to job level so the per-step `if: env.* != ''` guards can
+    # actually see them — a step's OWN step-level env is NOT in scope for that
+    # step's `if`, so guarding on a step-defined env silently skips the step.
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -169,8 +175,6 @@ jobs:
 
       - name: Publish to VS Code Marketplace (vsce)
         if: ${{ env.VSCE_PAT != '' }}
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
         working-directory: src/ext-vscode
         run: |
           for vsix in ../../dist-vsix-all/*.vsix ; do
@@ -180,8 +184,6 @@ jobs:
 
       - name: Publish to Open VSX (ovsx)
         if: ${{ env.OVSX_PAT != '' }}
-        env:
-          OVSX_PAT: ${{ secrets.OVSX_PAT }}
         working-directory: src/ext-vscode
         run: |
           for vsix in ../../dist-vsix-all/*.vsix ; do
@@ -192,7 +194,7 @@ jobs:
       - name: Sanity-check publication
         run: |
           echo "If the steps above succeeded:"
-          echo "  - https://marketplace.visualstudio.com/items?itemName=emptyops.nexpath-vscode"
-          echo "  - https://open-vsx.org/extension/emptyops/nexpath-vscode"
+          echo "  - https://marketplace.visualstudio.com/items?itemName=nexpath.nexpath-vscode"
+          echo "  - https://open-vsx.org/extension/nexpath/nexpath-vscode"
           echo ""
           echo "Note: marketplace ingestion may lag a few minutes after publish."

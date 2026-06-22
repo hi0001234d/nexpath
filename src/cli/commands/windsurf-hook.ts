@@ -78,6 +78,10 @@ export function registerWindsurfHookCommand(program: Command): void {
     .option('-p, --project <dir>', 'Project root (defaults to the current working directory)')
     .action(async (event: string, opts: { project?: string }) => {
       try {
+        // Name this surface for Layer C's popup "Send to …" label. The spawned
+        // `nexpath stop` child inherits process.env (see windsurf-hook/spawn.ts
+        // baseOpts), so setting it here makes the Windsurf popup say "Windsurf".
+        process.env.NEXPATH_AGENT = 'windsurf';
         const result = await handleWindsurfHookCli(event, opts);
         // Await the Layer-C child so the prompt is fully written + auto has
         // persisted the advisory (and stop has rendered the popup) before we exit.

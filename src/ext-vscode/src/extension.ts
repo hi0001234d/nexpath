@@ -25,7 +25,7 @@ import { spawnAuto, spawnStop } from './ipc.js';
 import { resolveWorkspaceFromDbPath, canonicalizeCwd } from './resolve-db-workspace.js';
 import { createAdvisoryFallback, type AdvisoryFallback } from './advisory-fallback.js';
 import { createAdvisoryPoller, type AdvisoryPoller } from './advisory-poller.js';
-import { readLatestAdvisory, readInjectedPrompt } from './advisory-store-reader.js';
+import { readLatestAdvisoryMeta, readInjectedPrompt } from './advisory-store-reader.js';
 import { raiseWindsurfWindow, pasteKeystroke } from './windsurf-autopaste.js';
 import {
   injectViaCascadeAction,
@@ -34,6 +34,11 @@ import {
   OPEN_CHAT_PANEL_JSON,
 } from './windsurf-cascade-action.js';
 import type { ChatHistoryEvent, WatchTarget } from './chat-history-types.js';
+import {
+  offerSetupIfNeeded,
+  runSetupCommand,
+  RUN_SETUP_COMMAND,
+} from './installer/vscode-glue.js';
 
 /** globalState key gating the one-time "use the status bar fallback" hint. */
 const FALLBACK_HINT_KEY = 'nexpath.fallbackHintShown';
@@ -74,6 +79,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   //    first thing to check when a host shows up as vscode-generic unexpectedly.
   const host = detectHost();
   log(`[nexpath] host=${host} (appName=${JSON.stringify(vscode.env.appName)}, uriScheme=${JSON.stringify(vscode.env.uriScheme)})`);
+
+  // 1a. Tell Layer C's popup which agent it's sending to, so its "Send to …"
+  //     label names this surface (Cursor / Windsurf) instead of defaulting to
+  //     "Claude". Every `nexpath auto`/`stop` we spawn inherits process.env, so
+  //     setting it here is enough for the Cursor/extension-driven popup path.
+  if (host === 'cursor' || host === 'windsurf') {
+    process.env.NEXPATH_AGENT = host;
+  }
+
+  // 1b. CLI auto-installer (additive). The extension drives the nexpath CLI via
+  //     IPC; if the user installed only this extension (no manual CLI), nothing
+  //     would work. Register the manual "Set up CLI" command, and — deferred so
+  //     activation never blocks — reconcile the bundled CLI (pointing IPC at the
+  //     staged binary via NEXPATH_BIN) and offer one-click setup when it's
+  //     missing/outdated. Independent of the chat-watch consent below: it runs
+  //     regardless, and `nexpath install` has its own telemetry consent step.
+  //     Entirely best-effort — any failure leaves prior behaviour untouched.
+  context.subscriptions.push(
+    vscode.commands.registerCommand(RUN_SETUP_COMMAND, () =>
+      runSetupCommand(context, log),
+    ),
+  );
+  setTimeout(() => {
+    void offerSetupIfNeeded(context, log).catch((err) =>
+      log(`[nexpath] CLI setup offer failed: ${err instanceof Error ? err.message : String(err)}`),
+    );
+  }, 0);
 
   // 2. Construct + register the view provider with the B4 injectFn-aware
   //    onSelect. injectFn falls through to clipboard when the host has no
@@ -231,7 +263,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const roots = Array.from(new Set([canonicalizeCwd(ws), ws]));
     advisoryPoller = createAdvisoryPoller({
       projectRoots: roots,
-      readAdvisory: (root) => readLatestAdvisory(root),
+      // Option-independent detection: the popup bridge must fire even though the
+      // advisory row has no generated options (option auto→stop move). The
+      // in-editor fallback (advisory-fallback.ts) keeps its own options-aware
+      // readLatestAdvisory for DISPLAY — unchanged.
+      readAdvisory: (root) => readLatestAdvisoryMeta(root),
       readInjected: (root) => readInjectedPrompt(root),
       // Popup selection → inject into Cascade + clear the fallback.
       onSelection: async (prompt) => {

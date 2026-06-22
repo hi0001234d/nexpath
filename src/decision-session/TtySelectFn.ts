@@ -45,6 +45,24 @@ type ClipboardCmd = [cmd: string, args: string[]];
  * iterates until one succeeds (status 0). Single entry for Windows/macOS,
  * fallback chain for Linux (xclip → wl-copy → xsel).
  */
+/**
+ * Display name of the agent the popup will "Send to", derived from the
+ * `NEXPATH_AGENT` env var set by whoever triggered the popup — the VS Code
+ * extension (Cursor / Windsurf) or the windsurf-hook. Defaults to 'Claude'
+ * (the original label, left unchanged) for the Claude Code hook path which sets
+ * nothing — so only the Cursor / Windsurf surfaces get their own name, and
+ * Claude's existing wording is untouched. Devin (the Windsurf rebrand) is
+ * detected as windsurf and shown as "Windsurf".
+ */
+export function nexpathAgentLabel(env: NodeJS.ProcessEnv = process.env): string {
+  switch ((env.NEXPATH_AGENT ?? '').trim().toLowerCase()) {
+    case 'cursor':   return 'Cursor';
+    case 'windsurf': return 'Windsurf';
+    case 'devin':    return 'Windsurf';
+    default:         return 'Claude';
+  }
+}
+
 function buildMjsScript(
   clackUrl: string,
   optFileFwd: string,
@@ -52,6 +70,7 @@ function buildMjsScript(
   clipboardCmds: ClipboardCmd[],
   renderLoopUrl: string,
 ): string {
+  const agentLabel = nexpathAgentLabel();
   return `import { select, isCancel } from '${clackUrl}';
 import { renderLoop, eventsFromReadline } from '${renderLoopUrl}';
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
@@ -201,12 +220,12 @@ let picked = _rlResult.value;
 if (typeof picked === 'string'
     && picked !== opts.skipNow && picked !== opts.showSimpler) {
 
-  process.stdout.write('\\n\\x1b[2;3m  \\u21b5 hit enter to send directly to Claude\\x1b[0m\\n\\n');
+  process.stdout.write('\\n\\x1b[2;3m  \\u21b5 hit enter to send directly to ${agentLabel}\\x1b[0m\\n\\n');
 
   const action = await select({
     message: 'What would you like to do?',
     options: [
-      { value: 'send',      label: 'Send to Claude now' },
+      { value: 'send',      label: 'Send to ${agentLabel} now' },
       { value: 'clipboard', label: 'Copy to clipboard \\u2014 edit before sending' },
     ],
   });
@@ -1256,12 +1275,13 @@ function buildUnixSelectFn(
           }
 
           // Real content selection: show hint + send-vs-clipboard prompt.
+          const agentLabel = nexpathAgentLabel();
           streams.output.write(
-            `\n\x1b[2;3m  \u21b5 hit enter to send directly to Claude\x1b[0m\n\n`,
+            `\n\x1b[2;3m  \u21b5 hit enter to send directly to ${agentLabel}\x1b[0m\n\n`,
           );
           const actionLines = [
             `${pc.cyan('◆')}  What would you like to do?`,
-            `${pc.cyan('│')}  ${pc.green('1)')} Send to Claude now`,
+            `${pc.cyan('│')}  ${pc.green('1)')} Send to ${agentLabel} now`,
             `${pc.cyan('│')}  ${pc.green('2)')} Copy to clipboard \u2014 edit before sending`,
             pc.cyan('│'),
           ];

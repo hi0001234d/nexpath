@@ -42,8 +42,8 @@ describe('cursorAdapter — static fields', () => {
   });
 
   it('declares Open VSX + VS Code Marketplace ids', () => {
-    expect(cursorAdapter.marketplace.openVsx).toBe('emptyops.nexpath-vscode');
-    expect(cursorAdapter.marketplace.vsCode).toBe('emptyops.nexpath-vscode');
+    expect(cursorAdapter.marketplace.openVsx).toBe('nexpath.nexpath-vscode');
+    expect(cursorAdapter.marketplace.vsCode).toBe('nexpath.nexpath-vscode');
   });
 });
 
@@ -110,7 +110,7 @@ describe('cursorAdapter.install', () => {
     expect(allLogs).toContain('open-vsx.org');
     expect(allLogs).toContain('marketplace.visualstudio.com');
     expect(allLogs).toContain('cursor --install-extension');
-    expect(allLogs).toContain('emptyops.nexpath-vscode');
+    expect(allLogs).toContain('nexpath.nexpath-vscode');
   });
 });
 

@@ -36,7 +36,7 @@ import type {
  * decoding lives at the extension's runtime, not in the CLI adapter.
  */
 
-const MARKETPLACE_ID = 'emptyops.nexpath-vscode';
+const MARKETPLACE_ID = 'nexpath.nexpath-vscode';
 
 const OPEN_VSX_URL = `https://open-vsx.org/extension/${MARKETPLACE_ID.replace(
   '.',
