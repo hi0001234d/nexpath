@@ -112,6 +112,24 @@ describe('cursorAdapter.install', () => {
     expect(allLogs).toContain('cursor --install-extension');
     expect(allLogs).toContain('nexpath.nexpath-vscode');
   });
+
+  it('suppresses the marketplace deep-links when NEXPATH_EXT_SETUP is set (extension-driven)', async () => {
+    mkdirSync(join(tmp, '.config', 'Cursor'), { recursive: true });
+    const prev = process.env.NEXPATH_EXT_SETUP;
+    process.env.NEXPATH_EXT_SETUP = '1';
+    try {
+      const r = await cursorAdapter.install(makeCtx(tmp));
+      expect(r.status).toBe('installed');
+      const allLogs = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+      expect(allLogs).not.toContain('Open VSX');
+      expect(allLogs).not.toContain('open-vsx.org');
+      expect(allLogs).not.toContain('cursor --install-extension');
+      expect(allLogs).toContain('ready');
+    } finally {
+      if (prev === undefined) delete process.env.NEXPATH_EXT_SETUP;
+      else process.env.NEXPATH_EXT_SETUP = prev;
+    }
+  });
 });
 
 describe('cursorAdapter.uninstall', () => {

@@ -132,10 +132,16 @@ export const cursorAdapter: VSCodeExtensionAdapter = {
       console.log(`-  ${'Cursor'.padEnd(12)} — not detected; skipping`);
       return { status: 'skipped', notes: 'Cursor not installed on this machine' };
     }
-    console.log(`✓ ${'Cursor'.padEnd(12)} — install the Nexpath extension to activate guidance:`);
-    console.log(`    Open VSX:            ${OPEN_VSX_URL}`);
-    console.log(`    VS Code Marketplace: ${VS_CODE_MARKETPLACE_URL}`);
-    console.log(`    Or via CLI:          cursor --install-extension ${MARKETPLACE_ID}`);
+    if (process.env.NEXPATH_EXT_SETUP) {
+      // Setup launched BY the Nexpath extension → it's already installed, so the
+      // marketplace deep-links are redundant noise.
+      console.log(`✓ ${'Cursor'.padEnd(12)} — ready (Nexpath extension active)`);
+    } else {
+      console.log(`✓ ${'Cursor'.padEnd(12)} — install the Nexpath extension to activate guidance:`);
+      console.log(`    Open VSX:            ${OPEN_VSX_URL}`);
+      console.log(`    VS Code Marketplace: ${VS_CODE_MARKETPLACE_URL}`);
+      console.log(`    Or via CLI:          cursor --install-extension ${MARKETPLACE_ID}`);
+    }
     return {
       status: 'installed',
       notes:

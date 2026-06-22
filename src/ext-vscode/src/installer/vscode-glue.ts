@@ -59,8 +59,16 @@ function buildDeps(context: vscode.ExtensionContext, log: Logger): SetupFlowDeps
     buildCommand: buildSetupCommand,
     runInTerminal: (command) =>
       runSetupInTerminal(command, {
-        createTerminal: () =>
-          vscode.window.createTerminal({ name: 'Nexpath Setup' }),
+        createTerminal: () => {
+          // Drive the bundled CLI to (a) skip the redundant "install the
+          // extension" marketplace deep-links — we ARE the extension — and
+          // (b) register ONLY the IDE the user is in. Both are no-ops in the CLI
+          // when the env is unset, so manual `nexpath install` is unaffected.
+          const setupEnv: Record<string, string> = { NEXPATH_EXT_SETUP: '1' };
+          const agent = process.env.NEXPATH_AGENT;
+          if (agent === 'cursor' || agent === 'windsurf') setupEnv.NEXPATH_ONLY_AGENT = agent;
+          return vscode.window.createTerminal({ name: 'Nexpath Setup', env: setupEnv });
+        },
         readSentinel: () =>
           existsSync(sentinelPath) ? readFileSync(sentinelPath, 'utf8').trim() : null,
         clearSentinel: () => {
@@ -147,9 +155,13 @@ export async function offerSetupIfNeeded(
   }
 
   const isUpdate = state.done && state.version !== staged.version;
+  const agentLabel =
+    process.env.NEXPATH_AGENT === 'cursor' ? 'Cursor'
+    : process.env.NEXPATH_AGENT === 'windsurf' ? 'Windsurf'
+    : 'this editor';
   const message = isUpdate
-    ? `Nexpath CLI update available (v${staged.version}). Re-run setup to refresh Claude Code / Cursor / Windsurf?`
-    : 'Set up the Nexpath CLI now? This wires Claude Code, Cursor, and Windsurf (you can answer the prompts in the terminal).';
+    ? `Nexpath update available (v${staged.version}). Re-run setup for ${agentLabel}?`
+    : `Set up Nexpath for ${agentLabel} now? (you can answer the prompts in the terminal).`;
   const choice = await vscode.window.showInformationMessage(message, 'Set up', 'Later');
   if (choice === 'Set up') {
     await runSetupFlow(deps, { force: isUpdate });

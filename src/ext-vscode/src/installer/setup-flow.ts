@@ -121,8 +121,12 @@ export async function runSetupFlow(
   if (result.ok && deps.verifyStagedCli(staged.cliEntry)) {
     await deps.setState({ done: true, version: staged.version });
     if (staged.shimPath) deps.applyNexpathBin(staged.shimPath);
+    const agentLabel =
+      process.env.NEXPATH_AGENT === 'cursor' ? 'Cursor'
+      : process.env.NEXPATH_AGENT === 'windsurf' ? 'Windsurf'
+      : 'this editor';
     deps.showInfo(
-      'Nexpath is set up — Claude Code, Cursor, and Windsurf are now wired. ' +
+      `Nexpath is set up for ${agentLabel}. ` +
         'Reload the window or restart your agent to activate guidance.',
     );
     return 'done';

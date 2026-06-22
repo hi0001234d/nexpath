@@ -125,6 +125,27 @@ describe('windsurfAdapter.install', () => {
     expect(allLogs).toContain('Open VSX');
     expect(allLogs).toContain('windsurf --install-extension');
   });
+
+  it('still writes the Cascade hook but suppresses the marketplace deep-links when NEXPATH_EXT_SETUP is set', async () => {
+    mkdirSync(join(tmp, '.config', 'Windsurf'), { recursive: true });
+    const prev = process.env.NEXPATH_EXT_SETUP;
+    process.env.NEXPATH_EXT_SETUP = '1';
+    try {
+      const r = await windsurfAdapter.install(makeCtx(tmp));
+      expect(r.status).toBe('installed');
+      // capture hook is STILL written (extension-driven setup needs it)
+      const hooksPath = getWindsurfHooksPath(tmp);
+      expect(existsSync(hooksPath)).toBe(true);
+      const allLogs = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+      expect(allLogs).toContain('Cascade capture hook written');
+      // but the redundant "install the extension" deep-links are gone
+      expect(allLogs).not.toContain('Open VSX');
+      expect(allLogs).not.toContain('windsurf --install-extension');
+    } finally {
+      if (prev === undefined) delete process.env.NEXPATH_EXT_SETUP;
+      else process.env.NEXPATH_EXT_SETUP = prev;
+    }
+  });
 });
 
 describe('windsurfAdapter.uninstall', () => {
