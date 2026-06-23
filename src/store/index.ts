@@ -26,6 +26,12 @@ export {
 } from './skipped-sessions.js';
 export { importHistoricalPrompts } from './historical-import.js';
 export {
+  getUserDepthLevel,
+  listUserDepthLevels,
+  upsertUserDepthLevel,
+  type UserDepthRow,
+} from './user-depth-level.js';
+export {
   isEnvProbeEnabled,
   setProjectEnvFacts,
   getProjectEnvFacts,
