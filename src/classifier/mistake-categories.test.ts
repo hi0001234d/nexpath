@@ -64,6 +64,14 @@ describe('mistake-categories — seeded straddle entries (one per routing tag)',
     expect(c.detect([], { consecutiveAcceptanceStreak: 3 })).toBe(0);
     expect(c.detect([], {})).toBe(0);
   });
+
+  it('the two seeds whose detectors await their channel report 0 (Phase-1 placeholder)', () => {
+    // mode-mismatch needs the captured agent-mode channel; versioning-gap needs its
+    // governance handler — until those land their detectors assert nothing.
+    expect(byName('coding_agent_mode_mismatch').detect([], {})).toBe(0);
+    expect(byName('coding_agent_mode_mismatch').detect([], { currentAgentMode: 'execute' })).toBe(0);
+    expect(byName('prompt_versioning_gap').detect([], {})).toBe(0);
+  });
 });
 
 describe('mistake-categories — add-a-category (append one entry)', () => {
