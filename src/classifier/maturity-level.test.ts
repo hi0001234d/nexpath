@@ -43,6 +43,19 @@ describe('maturity-level — active-set selection', () => {
     expect(isActiveSignal(def('decision_fatigue_pattern'), meta)).toBe(false); // (−) anti-pattern
   });
 
+  it('includes nature/role/domain-MATCHED signals (positive branch)', () => {
+    expect(isActiveSignal(def('C', { nature: 'casual' }), meta)).toBe(true);          // nature match
+    expect(isActiveSignal(def('D', { role: 'indie_hacker' }), meta)).toBe(true);      // role match
+    expect(isActiveSignal(def('E', { relevantProjectTypes: ['cli'] }), meta)).toBe(true); // domain match
+  });
+
+  it('runs over the real SIGNAL_DEFINITIONS by default (no injected defs)', () => {
+    const out = computeMaturityScore(profileOf({}), {});
+    expect(out.activeCount).toBeGreaterThan(0); // universal signals form the default active set
+    expect(out.score).toBe(0);                   // empty profile → 0
+    expect(out.hasData).toBe(false);
+  });
+
   it('score = average over the ACTIVE set; irrelevant signals are EXCLUDED not 0; an active 0 counts', () => {
     const defs = [
       def('A'),                                   // active, 0.6

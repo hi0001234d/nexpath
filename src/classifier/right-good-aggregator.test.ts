@@ -1,11 +1,17 @@
 import { describe, it, expect } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   computeRightGoodProfile,
+  loadRightGoodProfile,
   getRightGoodState,
   CHANNEL_CONFIDENCE,
   HIGH_THRESHOLD,
   type RightGoodOptions,
 } from './right-good-aggregator.js';
+import { openStore, closeStore } from '../store/db.js';
+import { appendParamEvents } from '../telemetry/param-events.js';
 import type { ParamEvent, ParamEventChannel } from '../telemetry/param-events.js';
 import type { SignalDefinition, Stage } from './types.js';
 
@@ -189,12 +195,12 @@ describe('right-good-aggregator — robustness', () => {
 });
 
 describe('right-good-aggregator — channel-confidence ordering (shared with §5.2)', () => {
-  it('vibe < keyword ≤ stream_b/stage2 < transcript', () => {
+  it('enforces the 3-tier verifiability ladder: vibe < keyword < stream_b/stage2 < transcript', () => {
     const c = CHANNEL_CONFIDENCE;
-    expect(c.vibe).toBeLessThan(c.keyword);
-    expect(c.keyword).toBeLessThanOrEqual(c.stream_b);
-    expect(c.stream_b).toBe(c.stage2);
-    expect(c.transcript).toBeGreaterThan(c.keyword);
+    expect(c.vibe).toBeLessThan(c.keyword);          // weakest claim < plain claim
+    expect(c.keyword).toBeLessThan(c.stream_b);      // claim < LLM-assessed
+    expect(c.stream_b).toBe(c.stage2);               // both LLM-assessed
+    expect(c.stream_b).toBeLessThan(c.transcript);   // LLM-assessed < verified
   });
 
   it('a transcript hit contributes more presence than a keyword hit', () => {
@@ -223,5 +229,64 @@ describe('right-good-aggregator — rolling window', () => {
       windowDays: 30,
     });
     expect(p.K.score).toBeCloseTo(2 / 3, 5); // the 40-day-old hit dropped
+  });
+
+  it('windowCount keeps only the most recent N events', () => {
+    // 5 opportunity prompts + 5 K hits, but window keeps the most recent 4 events.
+    const events = [
+      ...opportunities(5).map((e, i) => ({ ...e, ts: NOW + i })),
+      ...Array.from({ length: 5 }, (_, i) => ev({ promptIndex: i, ts: NOW + 100 + i })),
+    ];
+    const p = computeRightGoodProfile(events, { signalLookup: lookup(), windowCount: 4 });
+    // The 4 most recent events are all K hits (highest ts); only 1 filler survives
+    // as an opportunity → opportunities falls back to the floor (3).
+    expect(p.K.stability.occurrences).toBe(4);
+  });
+});
+
+describe('right-good-aggregator — store integration + helpers', () => {
+  it('getRightGoodState returns a present key\'s state (not just the neutral default)', () => {
+    const events = [
+      ...opportunities(2, 'implementation', 's1'),
+      ...opportunities(2, 'implementation', 's2'),
+      ev({ sessionId: 's1', promptIndex: 0 }),
+      ev({ sessionId: 's1', promptIndex: 1 }),
+      ev({ sessionId: 's2', promptIndex: 0 }),
+    ];
+    const p = computeRightGoodProfile(events, { signalLookup: lookup() });
+    expect(getRightGoodState(p, 'K')).toBe('right_good');
+    expect(getRightGoodState(p, 'absent')).toBe('neutral');
+  });
+
+  it('historical vibe events compound source×channel weight (0.5 × 0.5)', () => {
+    const events = [
+      ...opportunities(6),
+      ev({ source: 'historical_import', stage: null, channel: 'vibe', sessionId: 'historical-import' }),
+      ev({ source: 'historical_import', stage: null, channel: 'vibe', sessionId: 'historical-import' }),
+    ];
+    const p = computeRightGoodProfile(events, { signalLookup: lookup() });
+    // presence_hist = 0.5 (vibe) × 2 = 1.0; numerator = 0 + HIST_WEIGHT(0.5)*1.0 = 0.5; /6
+    expect(p.K.score).toBeCloseTo(0.5 / 6, 5);
+  });
+
+  it('loadRightGoodProfile reads the persisted param-event log (real reader, real signal key)', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'nx-rg-'));
+    const store = await openStore(join(dir, 's.db'));
+    const base = { projectRoot: '/p', channel: 'keyword' as const, stage: 'implementation' as const, stageConfidence: null, source: 'live' as const };
+    // 'cross_confirming' is a real SIGNAL_DEFINITIONS key expecting 'implementation'.
+    appendParamEvents(store, [
+      { ...base, sessionId: 's1', promptIndex: 0, signalKey: 'problem_correction' }, // opportunity filler
+      { ...base, sessionId: 's1', promptIndex: 1, signalKey: 'problem_correction' },
+      { ...base, sessionId: 's1', promptIndex: 0, signalKey: 'cross_confirming' },
+      { ...base, sessionId: 's1', promptIndex: 1, signalKey: 'cross_confirming' },
+      { ...base, sessionId: 's2', promptIndex: 0, signalKey: 'cross_confirming' },
+    ]);
+    const p = loadRightGoodProfile(store, '/p');
+    expect(p.cross_confirming.stability.occurrences).toBe(3);
+    expect(p.cross_confirming.stability.sessions).toBe(2);
+    expect(p.cross_confirming.score).toBeCloseTo(1.0, 5); // 3 hits / max(3 opportunities, floor)
+    expect(p.cross_confirming.state).toBe('right_good');
+    closeStore(store);
+    rmSync(dir, { recursive: true, force: true });
   });
 });
