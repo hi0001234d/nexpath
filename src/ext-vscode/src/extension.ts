@@ -11,7 +11,7 @@ import {
   windsurfCodeiumDir,
   workspaceStorageDir,
 } from './host-detector.js';
-import { chatInputInject } from './chat-input-injector.js';
+import { chatInputInject, CANDIDATE_COMMANDS } from './chat-input-injector.js';
 import {
   enumerateStateVscdbPaths,
   globalStorageStateVscdbPath,
@@ -158,6 +158,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     handleOptionSelection(text, {
       injectFn: host === 'windsurf' ? windsurfInject : (t) => chatInputInject(t, { host }),
     });
+
+  // Diagnostic (Cursor): which insert command does THIS Cursor expose? We never
+  // call `composer.newChat` (it opens a NEW chat) — the advisory must land in the
+  // existing chat. Log the candidates present + all chat-related commands so the
+  // real "insert into existing chat input" command can be confirmed from Output
+  // without console eval, then wired as a verified candidate.
+  if (host === 'cursor') {
+    void vscode.commands.getCommands(true).then((cmds) => {
+      const present = CANDIDATE_COMMANDS.cursor.filter((c) => cmds.includes(c));
+      const chatish = cmds.filter((c) => /aichat|composer|aipopup|chat/i.test(c));
+      log(`[nexpath] cursor inject-command present: ${present.join(', ') || 'NONE (will use clipboard fallback → paste into existing chat)'}`);
+      log(`[nexpath] cursor chat-related commands (${chatish.length}): ${chatish.slice(0, 60).join(', ')}`);
+    }, () => { /* getCommands unavailable — ignore */ });
+  }
 
   // One-click self-test (Command Palette → "Nexpath: Test Cascade Inject"): runs
   // the exact inject path with a probe so the inject can be verified in isolation

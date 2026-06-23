@@ -28,12 +28,16 @@ interface CommandCandidate {
 }
 
 const CURSOR_CANDIDATES: ReadonlyArray<CommandCandidate> = [
-  // Educated guesses — verify against a live Cursor and prune.
+  // Candidates that insert into the EXISTING Cursor chat input. We deliberately
+  // do NOT include `composer.newChat` (opens a brand-new Agent/Composer tab — the
+  // advisory must land in the user's current chat, like Windsurf/CLI) or
+  // `workbench.action.chat.open` (VS Code's native chat — a different surface in
+  // Cursor). If none of these are registered on the host, the injector returns
+  // false and the caller falls back to the clipboard path (text copied for the
+  // user to paste into their existing chat — never a new chat).
   { id: 'cursor.aichat.insertWithSelection', args: (t) => [t] },
-  { id: 'composer.newChat', args: (t) => [t] },
   { id: 'cursor.composer.focus', args: (t) => [t] },
   { id: 'aichat.insertSelection', args: (t) => [t] },
-  { id: 'workbench.action.chat.open', args: (t) => [t] },
 ];
 
 const WINDSURF_CANDIDATES: ReadonlyArray<CommandCandidate> = [
