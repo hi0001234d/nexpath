@@ -14,7 +14,7 @@
  *    inside `packages/app/` does not falsely report "no version control".
  */
 
-import { existsSync, readFileSync, statSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, readdirSync, opendirSync } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import {
   type EnvFact,
@@ -30,6 +30,13 @@ import { resolveFramework } from './framework-fingerprints.js';
 const MAX_PACKAGE_JSON_BYTES = 1024 * 1024; // 1 MB
 /** Max ancestor levels the anchor walk-up will climb (S2). */
 const MAX_ANCHOR_LEVELS = 12;
+/**
+ * Hard ceiling on entries read from the anchored root in one probe. Real project
+ * roots have far fewer; this only bounds a pathological directory (e.g. a root
+ * with a huge file count) so the single readdir can never stall the host. ~1k
+ * entries costs ~1–2ms — well inside the <10ms budget — and stays finite.
+ */
+const MAX_ROOT_ENTRIES = 1024;
 
 /** Build a Tier-C fact. B1 emits only capability tier; Tier-P is a later phase. */
 function fact(value: FactValue, confidence: FactConfidence, detectedAt: number): EnvFact {
@@ -158,11 +165,27 @@ function detectProjectShape(entries: Set<string>, pkg: PackageJson | null): Proj
  * keeping the project probe within its bounded check budget. Read failure → {}.
  */
 function readRootEntries(root: string): Set<string> {
+  const set = new Set<string>();
+  let dir: ReturnType<typeof opendirSync> | undefined;
   try {
-    return new Set(readdirSync(root).map((e) => e.toLowerCase()));
+    // Stream entries (opendir) rather than readdir-all, so MAX_ROOT_ENTRIES is a
+    // genuine hard stop even on a pathologically large directory.
+    dir = opendirSync(root);
+    let count = 0;
+    for (let ent = dir.readSync(); ent !== null && count < MAX_ROOT_ENTRIES; ent = dir.readSync()) {
+      set.add(ent.name.toLowerCase());
+      count++;
+    }
   } catch {
-    return new Set();
+    /* unreadable root → empty set (every has_* falls back to false) */
+  } finally {
+    try {
+      dir?.closeSync();
+    } catch {
+      /* ignore */
+    }
   }
+  return set;
 }
 
 /** Case-insensitive: true if any root-level marker name is among the entries. */

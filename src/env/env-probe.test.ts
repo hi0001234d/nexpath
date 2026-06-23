@@ -175,6 +175,13 @@ describe('probeProject', () => {
     expect(probeProject(root, NOW).projectShape).toBe('monorepo');
   });
 
+  it('still detects a marker among many root entries (bounded streaming read)', () => {
+    const root = mkProject();
+    for (let i = 0; i < 200; i++) writeFileSync(join(root, `file-${i}.txt`), 'x');
+    writeFileSync(join(root, 'package-lock.json'), '{}');
+    expect(probeProject(root, NOW).facts.has_lockfile.value).toBe(true);
+  });
+
   it('matches root-level markers case-insensitively', () => {
     const root = mkProject();
     // Unusual casing must still be detected (matches OS case-insensitive FS behaviour).
