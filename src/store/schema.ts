@@ -1,5 +1,15 @@
 import type { Database } from 'sql.js';
 
+/**
+ * Current row schema version stamped onto rows in versioned tables
+ * (`content_templates`, `user_depth_level`, and the param-event log).
+ * Readers accept any row whose `schema_version` is <= this value; rows written
+ * by a newer, not-yet-understood writer are ignored so the caller can fall back
+ * to its built-in default. New writer versions only ADD fields — they never
+ * reinterpret existing ones — so old rows are never rewritten.
+ */
+export const SCHEMA_VERSION = 1;
+
 const DDL = `
 CREATE TABLE IF NOT EXISTS prompts (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,6 +78,35 @@ CREATE TABLE IF NOT EXISTS pending_advisories (
 
 CREATE INDEX IF NOT EXISTS idx_pending_advisories_project
   ON pending_advisories (project_root, status, created_at);
+
+-- Per-project generated + user-uploaded option-content templates, keyed by
+-- (project_root, signal_type, source). Shipped defaults live in source code,
+-- NOT here. record_json holds the serializable template payload as written;
+-- its shape is validated by the content-template engine on read. schema_version
+-- enables forward-compatible reads (see SCHEMA_VERSION).
+CREATE TABLE IF NOT EXISTS content_templates (
+  project_root   TEXT    NOT NULL,
+  signal_type    TEXT    NOT NULL,
+  source         TEXT    NOT NULL,
+  record_json    TEXT    NOT NULL,
+  schema_version INTEGER NOT NULL,
+  created_at     INTEGER NOT NULL,
+  updated_at     INTEGER NOT NULL,
+  PRIMARY KEY (project_root, signal_type, source)
+);
+
+-- Per-project workflow-maturity level + graduation state. A running aggregate
+-- that survives prompt pruning: current_level is the user's detected maturity
+-- band; the counters + timestamp drive graduation / down-graduation.
+CREATE TABLE IF NOT EXISTS user_depth_level (
+  project_root       TEXT    NOT NULL PRIMARY KEY,
+  current_level      INTEGER NOT NULL,
+  stability_counter  INTEGER NOT NULL DEFAULT 0,
+  last_graduation_at INTEGER,
+  hysteresis_counter INTEGER NOT NULL DEFAULT 0,
+  schema_version     INTEGER NOT NULL,
+  updated_at         INTEGER NOT NULL
+);
 `;
 
 export function migrate(db: Database): void {
