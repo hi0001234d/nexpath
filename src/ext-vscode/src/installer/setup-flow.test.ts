@@ -178,6 +178,27 @@ describe('runSetupFlow', () => {
     expect(calls.applyNexpathBin).not.toHaveBeenCalled();
     expect(calls.showError).toHaveBeenCalledWith(expect.stringContaining('could not start'));
   });
+
+  // ── preferExistingCli: a working GLOBAL nexpath exists → register this editor
+  //    but NEVER override the global (no applyNexpathBin), and don't gate "done"
+  //    on the staged copy verifying (the global is what runs). ──────────────────
+  it('preferExistingCli: marks done WITHOUT overriding the global, even if the staged copy does not verify', async () => {
+    const { deps, state, calls } = makeDeps({
+      verifyStagedCli: vi.fn(() => false), // staged copy can't run — but the global can
+    });
+    const outcome = await runSetupFlow(deps, { preferExistingCli: true });
+    expect(outcome).toBe('done');
+    expect(state.value).toEqual({ done: true, version: '0.1.3' });
+    expect(calls.runInTerminal).toHaveBeenCalledOnce();
+    expect(calls.applyNexpathBin).not.toHaveBeenCalled(); // the global is never overridden
+    expect(calls.showInfo).toHaveBeenCalled();
+  });
+
+  it('preferExistingCli: never points IPC at the staged shim even when it WOULD verify', async () => {
+    const { deps, calls } = makeDeps(); // verifyStagedCli defaults to true
+    expect(await runSetupFlow(deps, { preferExistingCli: true })).toBe('done');
+    expect(calls.applyNexpathBin).not.toHaveBeenCalled();
+  });
 });
 
 describe('buildSetupCommand', () => {

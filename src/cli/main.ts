@@ -40,7 +40,7 @@ export function createProgram(): Command {
   program
     .name('nexpath')
     .description('Behaviour guidance system for vibe coders using AI coding agents')
-    .version('0.1.2');
+    .version('0.1.3');
 
   // ── Lifecycle commands ────────────────────────────────────────────────────────
 

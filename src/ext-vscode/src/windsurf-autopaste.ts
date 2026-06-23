@@ -38,19 +38,25 @@ function defaultRun(cmd: string, args: string[]): boolean {
 }
 
 /**
- * Best-effort: raise the Windsurf window so the paste lands in it (Linux/X11).
- * No-op (returns false) elsewhere or when no tool is present.
+ * Best-effort: raise the window of the given app class so the paste lands in it
+ * (Linux/X11). No-op (returns false) elsewhere or when no tool is present.
+ * `appClass` is matched against the X11 window class (e.g. 'windsurf', 'cursor').
  */
-export function raiseWindsurfWindow(deps: AutoPasteDeps = {}): boolean {
+export function raiseAppWindow(appClass: string, deps: AutoPasteDeps = {}): boolean {
   const platform = deps.platform ?? process.platform;
   const env = deps.env ?? process.env;
   if (platform !== 'linux') return false;
   if (!env.DISPLAY && !env.WAYLAND_DISPLAY) return false;
   const has = deps.hasCommand ?? defaultHasCommand;
   const run = deps.run ?? defaultRun;
-  if (has('wmctrl')) return run('wmctrl', ['-x', '-a', 'windsurf']);
-  if (has('xdotool')) return run('xdotool', ['search', '--class', 'windsurf', 'windowactivate', '--sync']);
+  if (has('wmctrl')) return run('wmctrl', ['-x', '-a', appClass]);
+  if (has('xdotool')) return run('xdotool', ['search', '--class', appClass, 'windowactivate', '--sync']);
   return false;
+}
+
+/** Back-compat wrapper: raise the Windsurf window. */
+export function raiseWindsurfWindow(deps: AutoPasteDeps = {}): boolean {
+  return raiseAppWindow('windsurf', deps);
 }
 
 /**

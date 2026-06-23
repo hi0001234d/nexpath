@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { pasteKeystroke, raiseWindsurfWindow } from './windsurf-autopaste.js';
+import { pasteKeystroke, raiseWindsurfWindow, raiseAppWindow } from './windsurf-autopaste.js';
 
 const deps = (over = {}) => {
   const calls: Array<[string, string[]]> = [];
@@ -69,5 +69,26 @@ describe('raiseWindsurfWindow', () => {
   it('Linux without a display → false', () => {
     const d = deps({ platform: 'linux' as NodeJS.Platform, env: {} as NodeJS.ProcessEnv });
     expect(raiseWindsurfWindow(d)).toBe(false);
+  });
+});
+
+describe('raiseAppWindow (generalised — used for Cursor inject)', () => {
+  it('Linux with wmctrl → activates the given app class (cursor)', () => {
+    const d = deps({ platform: 'linux' as NodeJS.Platform });
+    expect(raiseAppWindow('cursor', d)).toBe(true);
+    expect(d.calls[0]).toEqual(['wmctrl', ['-x', '-a', 'cursor']]);
+  });
+
+  it('falls back to xdotool --class when wmctrl is absent', () => {
+    const d = deps({
+      platform: 'linux' as NodeJS.Platform,
+      hasCommand: (c: string) => c === 'xdotool',
+    });
+    expect(raiseAppWindow('cursor', d)).toBe(true);
+    expect(d.calls[0]).toEqual(['xdotool', ['search', '--class', 'cursor', 'windowactivate', '--sync']]);
+  });
+
+  it('non-Linux → no-op false', () => {
+    expect(raiseAppWindow('cursor', deps({ platform: 'darwin' as NodeJS.Platform }))).toBe(false);
   });
 });

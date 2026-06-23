@@ -59,8 +59,16 @@ function buildDeps(context: vscode.ExtensionContext, log: Logger): SetupFlowDeps
     buildCommand: buildSetupCommand,
     runInTerminal: (command) =>
       runSetupInTerminal(command, {
-        createTerminal: () =>
-          vscode.window.createTerminal({ name: 'Nexpath Setup' }),
+        createTerminal: () => {
+          // Drive the bundled CLI to (a) skip the redundant "install the
+          // extension" marketplace deep-links — we ARE the extension — and
+          // (b) register ONLY the IDE the user is in. Both are no-ops in the CLI
+          // when the env is unset, so manual `nexpath install` is unaffected.
+          const setupEnv: Record<string, string> = { NEXPATH_EXT_SETUP: '1' };
+          const agent = process.env.NEXPATH_AGENT;
+          if (agent === 'cursor' || agent === 'windsurf') setupEnv.NEXPATH_ONLY_AGENT = agent;
+          return vscode.window.createTerminal({ name: 'Nexpath Setup', env: setupEnv });
+        },
         readSentinel: () =>
           existsSync(sentinelPath) ? readFileSync(sentinelPath, 'utf8').trim() : null,
         clearSentinel: () => {
@@ -117,15 +125,19 @@ export async function offerSetupIfNeeded(
 ): Promise<void> {
   const deps = buildDeps(context, log);
 
-  // ── Direction 1 — a working CLI already resolves on PATH → no-op. ──────────
-  if (cliRuns('nexpath')) {
-    log('[nexpath] existing working nexpath on PATH — auto-setup is a no-op (NEXPATH_BIN untouched)');
-    return;
+  // A working global `nexpath` may already resolve on PATH (e.g. a separate
+  // `nexpath install --for cli` setup). We must NEVER override or break it — but
+  // we STILL offer the per-IDE setup so THIS editor (Cursor/Windsurf) gets
+  // registered + remembered independently of any CLI setup. `preferExistingCli`
+  // carries that through: keep IPC on the global, just register this editor.
+  const hasGlobalCli = cliRuns('nexpath');
+  if (hasGlobalCli) {
+    log('[nexpath] working nexpath on PATH — will use it (NEXPATH_BIN untouched); still offering per-IDE setup');
   }
 
-  // No working CLI on PATH. We can only help if node/npm + a bundled CLI exist.
+  // We can only stage/run setup if node/npm + a bundled CLI exist.
   if (!checkPrereqs().ready) {
-    log('[nexpath] no working nexpath on PATH and node/npm missing — auto-setup not offered');
+    log('[nexpath] node/npm missing — auto-setup not offered');
     return;
   }
   const staged = deps.stageCli(deps.bundledCliDir, deps.nexpathHome);
@@ -134,27 +146,34 @@ export async function offerSetupIfNeeded(
     return;
   }
 
-  // ── Direction 2/3/4 — the staged CLI counts only if it actually runs. ──────
+  // The staged CLI becomes the IPC binary ONLY if it runs AND there is no working
+  // global to defer to (never override the global — the additive guarantee).
   const verified = staged.cliEntry ? deps.verifyStagedCli(staged.cliEntry) : false;
-  if (verified && staged.shimPath) deps.applyNexpathBin(staged.shimPath);
+  if (!hasGlobalCli && verified && staged.shimPath) deps.applyNexpathBin(staged.shimPath);
 
   const state = deps.getState();
+  // "Ready" is satisfied by the global CLI when present, else by the staged copy.
+  const cliReady = hasGlobalCli || verified;
   const upToDate =
-    state.done && state.version === staged.version && staged.status === 'already-current' && verified;
+    state.done && state.version === staged.version && staged.status === 'already-current' && cliReady;
   if (upToDate) {
-    log(`[nexpath] CLI already set up + verified (v${staged.version})`);
+    log(`[nexpath] this editor already set up (v${staged.version})`);
     return;
   }
 
   const isUpdate = state.done && state.version !== staged.version;
+  const agentLabel =
+    process.env.NEXPATH_AGENT === 'cursor' ? 'Cursor'
+    : process.env.NEXPATH_AGENT === 'windsurf' ? 'Windsurf'
+    : 'this editor';
   const message = isUpdate
-    ? `Nexpath CLI update available (v${staged.version}). Re-run setup to refresh Claude Code / Cursor / Windsurf?`
-    : 'Set up the Nexpath CLI now? This wires Claude Code, Cursor, and Windsurf (you can answer the prompts in the terminal).';
+    ? `Nexpath update available (v${staged.version}). Re-run setup for ${agentLabel}?`
+    : `Set up Nexpath for ${agentLabel} now? (you can answer the prompts in the terminal).`;
   const choice = await vscode.window.showInformationMessage(message, 'Set up', 'Later');
   if (choice === 'Set up') {
-    await runSetupFlow(deps, { force: isUpdate });
+    await runSetupFlow(deps, { force: isUpdate, preferExistingCli: hasGlobalCli });
   } else {
-    log('[nexpath] user deferred CLI setup');
+    log('[nexpath] user deferred per-IDE setup');
   }
 }
 

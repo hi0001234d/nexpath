@@ -58,6 +58,14 @@ export interface SetupFlowDeps {
 export interface SetupFlowOptions {
   /** Re-run even when state says it's already done (the manual command path). */
   force?: boolean;
+  /**
+   * A working global `nexpath` already resolves on PATH. We still run the per-IDE
+   * setup (register THIS editor), but we must NEVER override that working CLI:
+   * skip `applyNexpathBin` (keep IPC on the user's global) and don't gate "done"
+   * on the staged copy verifying. The additive guarantee, decoupled from the
+   * per-IDE offer.
+   */
+  preferExistingCli?: boolean;
 }
 
 export async function runSetupFlow(
@@ -86,18 +94,21 @@ export async function runSetupFlow(
   // Direction 2/3: only point IPC at the staged CLI once it actually RUNS (its
   // npm install has completed). A freshly-copied, dep-less copy must never
   // become the active binary — that is what hijacked the working global CLI.
-  if (staged.shimPath && deps.verifyStagedCli(staged.cliEntry)) {
+  // When a working global CLI exists (preferExistingCli) we never override it.
+  if (!opts.preferExistingCli && staged.shimPath && deps.verifyStagedCli(staged.cliEntry)) {
     deps.applyNexpathBin(staged.shimPath);
   }
 
   const state = deps.getState();
   // Direction 4: don't trust the `done` flag over a broken copy — "already set
-  // up" also requires the staged CLI to verify (deps installed).
+  // up" also requires the staged CLI to verify (deps installed). With a working
+  // global CLI, "ready" is satisfied by the global, not the staged copy.
+  const cliReady = opts.preferExistingCli || deps.verifyStagedCli(staged.cliEntry);
   const upToDate =
     state.done &&
     state.version === staged.version &&
     staged.status === 'already-current' &&
-    deps.verifyStagedCli(staged.cliEntry);
+    cliReady;
   if (upToDate && !opts.force) {
     deps.log?.(`[nexpath] setup already complete + verified for CLI ${staged.version}`);
     return 'already-done';
@@ -118,11 +129,15 @@ export async function runSetupFlow(
   // Mark done + point IPC at the staged CLI ONLY when the runner finished AND
   // the CLI verifies (deps actually installed). This closes the gap where the
   // runner could report OK but leave a CLI that can't start.
-  if (result.ok && deps.verifyStagedCli(staged.cliEntry)) {
+  if (result.ok && (opts.preferExistingCli || deps.verifyStagedCli(staged.cliEntry))) {
     await deps.setState({ done: true, version: staged.version });
-    if (staged.shimPath) deps.applyNexpathBin(staged.shimPath);
+    if (!opts.preferExistingCli && staged.shimPath) deps.applyNexpathBin(staged.shimPath);
+    const agentLabel =
+      process.env.NEXPATH_AGENT === 'cursor' ? 'Cursor'
+      : process.env.NEXPATH_AGENT === 'windsurf' ? 'Windsurf'
+      : 'this editor';
     deps.showInfo(
-      'Nexpath is set up — Claude Code, Cursor, and Windsurf are now wired. ' +
+      `Nexpath is set up for ${agentLabel}. ` +
         'Reload the window or restart your agent to activate guidance.',
     );
     return 'done';

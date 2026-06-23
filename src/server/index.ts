@@ -52,7 +52,7 @@ process.on('SIGTERM', () => {
 // ── MCP server ────────────────────────────────────────────────────────────────
 
 const server = new Server(
-  { name: 'nexpath-prompt-store', version: '0.1.2' },
+  { name: 'nexpath-prompt-store', version: '0.1.3' },
   { capabilities: { tools: {} } }
 );
 

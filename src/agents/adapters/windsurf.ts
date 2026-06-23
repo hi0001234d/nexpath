@@ -134,10 +134,14 @@ export const windsurfAdapter: VSCodeExtensionAdapter = {
     }
 
     // Delivery: the extension must be installed for the advisory UI + inject.
-    console.log(`   ${' '.repeat(12)}   Then install the Nexpath extension to deliver guidance:`);
-    console.log(`    Open VSX:            ${OPEN_VSX_URL}`);
-    console.log(`    VS Code Marketplace: ${VS_CODE_MARKETPLACE_URL}`);
-    console.log(`    Or via CLI:          windsurf --install-extension ${MARKETPLACE_ID}`);
+    // Skip the marketplace deep-links when setup is driven BY the extension
+    // (it's already installed). The Cascade capture hook above is still written.
+    if (!process.env.NEXPATH_EXT_SETUP) {
+      console.log(`   ${' '.repeat(12)}   Then install the Nexpath extension to deliver guidance:`);
+      console.log(`    Open VSX:            ${OPEN_VSX_URL}`);
+      console.log(`    VS Code Marketplace: ${VS_CODE_MARKETPLACE_URL}`);
+      console.log(`    Or via CLI:          windsurf --install-extension ${MARKETPLACE_ID}`);
+    }
     return {
       status: 'installed',
       notes:

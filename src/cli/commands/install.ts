@@ -588,13 +588,29 @@ export async function installAction(
   }
 
   // ── Step 3: Agent detection + registration ────────────────────────────────
+  // When the VS Code extension drives setup it targets ONLY the IDE the user is
+  // in (NEXPATH_ONLY_AGENT = cursor|windsurf). Additive: with the env unset this
+  // is a no-op and the legacy multi-agent behaviour is byte-identical.
+  // NOTE: we do NOT filter `agents` itself — the API-key/telemetry/frequency/role
+  // prompt gating below keys off `agents.length`, so filtering here could skip
+  // those prompts. We only (a) suppress the multi-agent "Detected/Not found"
+  // notices and (b) gate the per-adapter install loop further down on onlyAgent.
+  const onlyAgent   = process.env.NEXPATH_ONLY_AGENT;
   const agents      = detectAgentsForPlatform(paths, platform);
   const detectedIds = new Set(agents.map((a) => a.id));
   const missing     = supportedAgentsForPlatform(platform).filter((sa) => !detectedIds.has(sa.id));
-  if (agents.length > 0) {
+  if (onlyAgent) {
+    // Extension-driven single-IDE setup: the extension runs INSIDE the target IDE,
+    // so it's definitely present — show just that one (matches the CLI's "Detected: X")
+    // regardless of the file-based detection above.
+    const onlyLabel = supportedAgentsForPlatform(platform).find((sa) => sa.id === onlyAgent)?.label ?? onlyAgent;
+    console.log(`Detected: ${onlyLabel}`);
+  } else if (agents.length > 0) {
     console.log(`Detected: ${agents.map((a) => a.label).join(', ')}`);
   }
-  if (missing.length > 0) {
+  // Skip the "Not found" notice when deliberately targeting a single IDE — the
+  // other agents aren't "missing", they're just not the target.
+  if (missing.length > 0 && !onlyAgent) {
     console.log(`Not found: ${missing.map((sa) => sa.label).join(', ')}`);
     console.log('nexpath currently supports Claude Code only — support for Cursor, Windsurf, and other agents is coming in future updates.');
   }
@@ -604,7 +620,7 @@ export async function installAction(
   // only when a supported agent (Claude Code) is actually present on disk. The
   // registry-driven adapter installs further below run regardless, so Cursor /
   // Windsurf VSCode extensions are still offered on machines without Claude Code.
-  if (agents.length > 0) {
+  if (agents.length > 0 || onlyAgent) {
     if (!opts.yes) {
       const ok = await confirmFn();
       if (!ok) {
@@ -642,6 +658,7 @@ export async function installAction(
               // object still control the target file independently of homedir().
               settingsPath: paths.claudeSettings,
             });
+            registered.push(agent.label);
           }
         } else if (REGISTER_MCP_SERVER) {
           if (agent.type === 'cline') {
@@ -715,14 +732,19 @@ export async function installAction(
   const eligibleCategories  = eligibleCategoriesForPlatform(platform);
   for (const adapter of detectedAdapters) {
     if (adapter.id === 'claude-code') continue;
+    // Extension-driven single-IDE setup: install only the target agent.
+    if (onlyAgent && adapter.id !== onlyAgent) continue;
     // Platform gate: only run adapter.install() for adapters whose category
     // matches the chosen install platform. Under --for cli, vscode-extension
     // and browser-extension adapters stay silent.
     if (!eligibleCategories.has(adapter.category)) continue;
     try {
-      await adapter.install(adapterCtx);
+      const res = await adapter.install(adapterCtx);
+      if (res.status === 'installed' || res.status === 'already-installed') registered.push(adapter.label);
+      else if (res.status === 'failed') failed.push(adapter.label);
     } catch (err) {
       console.log(`\u2717 ${adapter.label.padEnd(12)} \u2014 failed: ${(err as Error).message}`);
+      failed.push(adapter.label);
     }
   }
 
