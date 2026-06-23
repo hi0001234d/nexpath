@@ -1914,16 +1914,25 @@ export const SIGNAL_DEFINITIONS: SignalDefinition[] = [
 /**
  * Returns the keys of all signals detected as present in the given prompt text.
  */
-export function detectSignals(text: string): string[] {
+/** A detected signal plus the channel that matched it (provenance). */
+export type DetectedSignal = { key: string; channel: 'keyword' | 'vibe' };
+
+/**
+ * Detect present signals AND the detection channel for each:
+ *  - full-weight `detectionKeywords` (any single hit) → `'keyword'`
+ *  - `vibeKeywords` (2+ hits, 0.5 weight each = 1.0 credit) → `'vibe'`
+ * Order matches SIGNAL_DEFINITIONS; full-weight wins over vibe for a given key.
+ */
+export function detectSignalsByChannel(text: string): DetectedSignal[] {
   const lower = text.toLowerCase();
-  const found: string[] = [];
+  const found: DetectedSignal[] = [];
   for (const sig of SIGNAL_DEFINITIONS) {
     // Full-weight check — any single match = signal present
     let fullHit = false;
     for (const kw of sig.detectionKeywords) {
       if (lower.includes(kw)) { fullHit = true; break; }
     }
-    if (fullHit) { found.push(sig.key); continue; }
+    if (fullHit) { found.push({ key: sig.key, channel: 'keyword' }); continue; }
 
     // Vibe-keyword check — 2+ hits required (0.5 weight each = 1.0 credit)
     if (sig.vibeKeywords) {
@@ -1931,10 +1940,14 @@ export function detectSignals(text: string): string[] {
       for (const vk of sig.vibeKeywords) {
         if (lower.includes(vk)) vibeHits++;
       }
-      if (vibeHits >= 2) found.push(sig.key);
+      if (vibeHits >= 2) found.push({ key: sig.key, channel: 'vibe' });
     }
   }
   return found;
+}
+
+export function detectSignals(text: string): string[] {
+  return detectSignalsByChannel(text).map((d) => d.key);
 }
 
 // ── Signal lookup ─────────────────────────────────────────────────────────────

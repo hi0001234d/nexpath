@@ -2,10 +2,11 @@ import { randomUUID } from 'node:crypto';
 import type { Store } from '../store/db.js';
 import { saveStore } from '../store/db.js';
 import type { SessionState, Stage, PromptRecord, ClassificationResult, UserProfile } from './types.js';
-import { detectSignals, initialSignalCounters } from './signals.js';
+import { detectSignalsByChannel, initialSignalCounters } from './signals.js';
 import { buildSafeDefaults } from './LLMProfileClassifier.js';
 import { getProject } from '../store/projects.js';
 import type { StreamBPresenceResult } from './StreamBPresenceClassifier.js';
+import { appendParamEvents, type ParamEventChannel } from '../telemetry/param-events.js';
 
 /** Gap in ms after which the session resets (30 minutes per research). */
 export const SESSION_GAP_MS = 30 * 60 * 1000;
@@ -190,7 +191,8 @@ export class SessionStateManager {
     if (s.promptHistory.length > MAX_HISTORY) s.promptHistory.shift();
 
     // ── Signal counters ───────────────────────────────────────────────────────
-    const detected = detectSignals(promptText);
+    const detectedWithChannel = detectSignalsByChannel(promptText);
+    const detected = detectedWithChannel.map((d) => d.key);
 
     // Inject or suppress Stream B signals based on LLM result.
     // `effectiveDetected` is used ONLY for signalCounters — NOT for correction_seeking below.
@@ -213,6 +215,30 @@ export class SessionStateManager {
         s.signalCounters[key].present    = true;
         s.signalCounters[key].lastSeenAt = promptIndex;
       }
+    }
+
+    // ── Param-event log (longitudinal detection record) ───────────────────────
+    // One append-only event per signal detected this prompt — signal key +
+    // channel + stage, NO prompt text. Channel = stream_b for Stream-B-asserted
+    // keys, else the keyword/vibe channel that matched. No-op for in-memory stores.
+    if (effectiveDetected.length > 0) {
+      const channelByKey = new Map<string, ParamEventChannel>();
+      for (const d of detectedWithChannel) channelByKey.set(d.key, d.channel);
+      if (streamBOverrides) {
+        if (streamBOverrides.feature_scope_before_build) channelByKey.set('feature_scope_before_build', 'stream_b');
+        if (streamBOverrides.implementation_checkpoint)  channelByKey.set('implementation_checkpoint', 'stream_b');
+        if (streamBOverrides.spec_before_code)           channelByKey.set('spec_before_code', 'stream_b');
+      }
+      appendParamEvents(store, effectiveDetected.map((key) => ({
+        projectRoot:     s.projectRoot,
+        sessionId:       s.sessionId,
+        promptIndex,
+        signalKey:       key,
+        channel:         channelByKey.get(key) ?? 'keyword',
+        stage:           s.currentStage,
+        stageConfidence: s.stageConfidence,
+        source:          'live' as const,
+      })));
     }
 
     // ── Consecutive acceptance streak ─────────────────────────────────────────
@@ -311,14 +337,28 @@ export class SessionStateManager {
    * Only updates keys that exist in signalCounters — unknown LLM-returned keys are ignored.
    */
   applyStage2SignalUpdates(store: Store, signalsPresent: string[]): void {
-    const promptIndex = this.state.promptCount - 1;
+    const s = this.state;
+    const promptIndex = s.promptCount - 1;
+    const recorded: string[] = [];
     for (const key of signalsPresent) {
-      if (key in this.state.signalCounters) {
-        this.state.signalCounters[key].present    = true;
-        this.state.signalCounters[key].lastSeenAt = promptIndex;
+      if (key in s.signalCounters) {
+        s.signalCounters[key].present    = true;
+        s.signalCounters[key].lastSeenAt = promptIndex;
+        recorded.push(key);
       }
     }
-    saveState(store, this.state);
+    // Stage-2 (LLM-assessed) detections → the param-event log. No-op for :memory:.
+    appendParamEvents(store, recorded.map((key) => ({
+      projectRoot:     s.projectRoot,
+      sessionId:       s.sessionId,
+      promptIndex,
+      signalKey:       key,
+      channel:         'stage2' as const,
+      stage:           s.currentStage,
+      stageConfidence: s.stageConfidence,
+      source:          'live' as const,
+    })));
+    saveState(store, s);
   }
 
   /**

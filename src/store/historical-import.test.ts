@@ -8,6 +8,7 @@ import { getRecentPrompts, insertPrompt } from './prompts.js';
 import { upsertProject, getProject } from './projects.js';
 import { importHistoricalPrompts } from './historical-import.js';
 import { SessionStateManager } from '../classifier/SessionStateManager.js';
+import { readParamEvents } from '../telemetry/param-events.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -306,5 +307,60 @@ describe('importHistoricalPrompts', () => {
     expect(mgr.current.promptHistory[1].text).toBe('new prompt b');
     expect(mgr.current.promptHistory[2].text).toBe('old prompt a');
     expect(mgr.current.promptHistory[3].text).toBe('old prompt b');
+  });
+});
+
+// ── §1.8 retro-population — param-event backfill (disk-backed store) ─────────────
+describe('importHistoricalPrompts — param-event retro (§1.8 backfill)', () => {
+  let store: Store;
+  let dbDir: string;
+  let claudeDir: string;
+  let origEnv: string | undefined;
+
+  beforeEach(async () => {
+    dbDir     = mkdtempSync(join(tmpdir(), 'nexpath-hist-db-'));
+    store     = await openStore(join(dbDir, 'prompt-store.db')); // disk store → param-events write
+    claudeDir = mkdtempSync(join(tmpdir(), 'nexpath-hist-claude-'));
+    origEnv   = process.env['CLAUDE_CONFIG_DIR'];
+    process.env['CLAUDE_CONFIG_DIR'] = claudeDir;
+    upsertProject(store, { projectRoot: PROJECT_ROOT, name: 'hist-project' });
+  });
+
+  afterEach(() => {
+    store.db.close();
+    rmSync(dbDir, { recursive: true, force: true });
+    rmSync(claudeDir, { recursive: true, force: true });
+    if (origEnv === undefined) delete process.env['CLAUDE_CONFIG_DIR'];
+    else process.env['CLAUDE_CONFIG_DIR'] = origEnv;
+  });
+
+  it('records historical_import param-events (stage null) for signals in imported prompts', async () => {
+    const projDir = setupProjDir(claudeDir);
+    writeJsonl(projDir, 'session.jsonl', [
+      makeUserLine('please double check this code'),  // → cross_confirming
+      makeUserLine('just some unrelated chatter'),
+    ]);
+
+    await importHistoricalPrompts(store, PROJECT_ROOT);
+
+    const rows = readParamEvents(store, PROJECT_ROOT);
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => r.source === 'historical_import')).toBe(true);
+    expect(rows.every((r) => r.stage === null)).toBe(true);
+    expect(rows.some((r) => r.signalKey === 'cross_confirming')).toBe(true);
+    // promptIndex tracks position in the imported window
+    expect(rows.find((r) => r.signalKey === 'cross_confirming')!.promptIndex).toBe(0);
+  });
+
+  it('is idempotent — re-import does not duplicate param-events (prompts guard)', async () => {
+    const projDir = setupProjDir(claudeDir);
+    writeJsonl(projDir, 'session.jsonl', [makeUserLine('please double check this code')]);
+
+    await importHistoricalPrompts(store, PROJECT_ROOT);
+    const first = readParamEvents(store, PROJECT_ROOT).length;
+    expect(first).toBeGreaterThan(0);
+
+    await importHistoricalPrompts(store, PROJECT_ROOT); // 2nd call returns early (prompts exist)
+    expect(readParamEvents(store, PROJECT_ROOT).length).toBe(first);
   });
 });

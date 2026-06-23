@@ -6,9 +6,14 @@ import { insertPrompt, getRecentPrompts } from './prompts.js';
 import { setDetectedLanguage } from './projects.js';
 import { detectLanguage, LANG_WINDOW } from '../classifier/LanguageDetector.js';
 import { SessionStateManager, MAX_HISTORY } from '../classifier/SessionStateManager.js';
+import { detectSignalsByChannel } from '../classifier/signals.js';
+import { appendParamEvents } from '../telemetry/param-events.js';
 import type { PromptRecord, Stage } from '../classifier/types.js';
 
 const IMPORT_CAP = 500;
+
+/** Session marker for param-events derived from the historical-import backfill. */
+const HISTORICAL_IMPORT_SESSION_ID = 'historical-import';
 
 export async function importHistoricalPrompts(store: Store, projectRoot: string): Promise<void> {
   // Guard: skip if prompts already exist for this project
@@ -61,6 +66,27 @@ export async function importHistoricalPrompts(store: Store, projectRoot: string)
   for (const text of collected) {
     insertPrompt(store, { projectRoot, promptText: text, agent: 'claude-code' });
   }
+
+  // §1.8 retro-population — record param-detection events for the imported
+  // history so the longitudinal detectors see the user's full pre-install
+  // behaviour, not just post-install prompts. Stage-agnostic (no real stage for
+  // historical prompts → stage: null, never a fake stamp); pure-CPU keyword scan,
+  // no LLM / no network. Idempotent: this whole function returns early (the
+  // prompts-exist guard above) once prompts exist, so the retro runs only on the
+  // first import per project. No-op for in-memory stores.
+  const retroEvents = collected.flatMap((text, i) =>
+    detectSignalsByChannel(text).map((d) => ({
+      projectRoot,
+      sessionId:       HISTORICAL_IMPORT_SESSION_ID,
+      promptIndex:     i,
+      signalKey:       d.key,
+      channel:         d.channel,
+      stage:           null,
+      stageConfidence: null,
+      source:          'historical_import' as const,
+    })),
+  );
+  appendParamEvents(store, retroEvents);
 
   // Bootstrap: language detection on most recent LANG_WINDOW prompts
   const langTexts = collected.slice(0, LANG_WINDOW);
