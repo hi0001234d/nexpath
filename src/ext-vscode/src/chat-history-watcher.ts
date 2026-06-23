@@ -99,6 +99,30 @@ export const defaultReadWindsurfJsonFiles: ReadWindsurfJsonFilesFn = async (
 };
 
 /**
+ * Pick the bundled better-sqlite3 binary matching the host's Electron ABI.
+ *
+ * The .vsix ships `prebuilds/<NODE_MODULE_VERSION>/better_sqlite3.node` for
+ * several ABIs (see scripts/package-with-electron-abi.mjs). At runtime we load
+ * the one matching `process.versions.modules`, so the watcher works on ANY
+ * Cursor / VS Code Electron version — not just the one `build/Release` was
+ * compiled for. Returns the absolute binding path, or `null` to fall back to
+ * better-sqlite3's default `build/Release` binding (no extRoot, or no matching
+ * prebuild bundled).
+ *
+ * Pure (fs + path-join injected) so it unit-tests without a real filesystem.
+ */
+export function resolveBundledNativeBinding(
+  extRoot: string | undefined,
+  abi: string,
+  exists: (p: string) => boolean,
+  joinFn: (...parts: string[]) => string,
+): string | null {
+  if (!extRoot) return null;
+  const candidate = joinFn(extRoot, 'prebuilds', abi, 'better_sqlite3.node');
+  return exists(candidate) ? candidate : null;
+}
+
+/**
  * Default WAL-aware reader using better-sqlite3.
  *
  * Strategy:
@@ -156,7 +180,7 @@ export const defaultReadItemTable: ReadItemTableFn = async (dbPath) => {
   }
 
   const mod = (await import('better-sqlite3')) as unknown as {
-    default: new (path: string, options?: { readonly?: boolean }) => {
+    default: new (path: string, options?: { readonly?: boolean; nativeBinding?: string }) => {
       prepare(sql: string): {
         all(...params: unknown[]): Array<Record<string, unknown>>;
       };
@@ -165,7 +189,24 @@ export const defaultReadItemTable: ReadItemTableFn = async (dbPath) => {
     };
   };
   const Database = mod.default;
-  const db = new Database(stagedMain, { readonly: true });
+  // Scalable across Electron versions: the .vsix bundles better-sqlite3 binaries
+  // for several ABIs under prebuilds/<NODE_MODULE_VERSION>/. Load the one matching
+  // THIS host's ABI (process.versions.modules) so the watcher works on ANY Cursor /
+  // VS Code Electron version — not just the one build/Release was compiled for.
+  // Falls back to the default binding when no bundled prebuild matches.
+  const dbOptions: { readonly: boolean; nativeBinding?: string } = { readonly: true };
+  try {
+    const binding = resolveBundledNativeBinding(
+      process.env.NEXPATH_EXT_ROOT,
+      process.versions.modules,
+      existsSync,
+      join,
+    );
+    if (binding) dbOptions.nativeBinding = binding;
+  } catch {
+    /* fall back to the default build/Release binding */
+  }
+  const db = new Database(stagedMain, dbOptions);
   try {
     try {
       db.pragma('wal_checkpoint(TRUNCATE)');

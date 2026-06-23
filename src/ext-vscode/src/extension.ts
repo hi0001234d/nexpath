@@ -73,6 +73,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(logChannel);
   log('[nexpath] extension activated');
 
+  // Expose the extension root so the chat-history watcher can load the
+  // better-sqlite3 binary matching THIS host's Electron ABI from prebuilds/<abi>/
+  // (scalable across Cursor / VS Code Electron versions).
+  process.env.NEXPATH_EXT_ROOT = context.extensionPath;
+
   // 1. Detect host (Cursor / Windsurf / vscode-generic). Stable for the
   //    lifetime of this extension instance. Log the raw identity too — the
   //    Windsurf→Devin rebrand changed appName/uriScheme, so this line is the

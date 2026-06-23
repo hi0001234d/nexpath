@@ -47,6 +47,20 @@ describe('native-binding ABI cross-file invariant (Electron version pinning)', (
     expect(pkg.nexpathTargets.electronAbi).toBeGreaterThan(0);
   });
 
+  it('electronVersions is a non-empty semver list that INCLUDES the primary electron', () => {
+    // The packager builds a better-sqlite3 prebuild per electronVersions entry into
+    // prebuilds/<ABI>/ and the watcher loads the one matching the host. The primary
+    // (nexpathTargets.electron) must be in the set so build/Release stays consistent.
+    const pkg = readPkg();
+    const list = pkg.nexpathTargets.electronVersions;
+    expect(Array.isArray(list), 'nexpathTargets.electronVersions must be an array').toBe(true);
+    expect(list.length, 'electronVersions must not be empty').toBeGreaterThan(0);
+    for (const v of list) expect(v, `electronVersions entry ${v} must be semver`).toMatch(/^\d+\.\d+\.\d+/);
+    expect(list, 'electronVersions must include the primary nexpathTargets.electron').toContain(
+      pkg.nexpathTargets.electron,
+    );
+  });
+
   it('rebuild:electron script references the package.json electron version', () => {
     const pkg = readPkg();
     const rebuildCmd = pkg.scripts?.['rebuild:electron'];

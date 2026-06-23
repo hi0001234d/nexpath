@@ -7,6 +7,7 @@ import {
   createChatHistoryWatcher,
   defaultReadItemTable,
   defaultReadWindsurfJsonFiles,
+  resolveBundledNativeBinding,
   type ReadItemTableFn,
   type ReadWindsurfJsonFilesFn,
 } from './chat-history-watcher.js';
@@ -942,5 +943,36 @@ describe('defaultReadItemTable', () => {
     // Delete and read again — second read should return [] cleanly.
     rmSync(dbPath, { force: true });
     expect(await defaultReadItemTable(dbPath)).toEqual([]);
+  });
+});
+
+describe('resolveBundledNativeBinding (multi-ABI prebuild selection)', () => {
+  const j = (...p: string[]) => p.join('/');
+
+  it('returns the prebuild path matching the host ABI when it is bundled', () => {
+    const present = new Set(['/ext/prebuilds/143/better_sqlite3.node']);
+    expect(
+      resolveBundledNativeBinding('/ext', '143', (p) => present.has(p), j),
+    ).toBe('/ext/prebuilds/143/better_sqlite3.node');
+  });
+
+  it('selects by the actual host ABI, not a fixed one (140 vs 143)', () => {
+    const present = new Set([
+      '/ext/prebuilds/140/better_sqlite3.node',
+      '/ext/prebuilds/143/better_sqlite3.node',
+    ]);
+    expect(resolveBundledNativeBinding('/ext', '140', (p) => present.has(p), j))
+      .toBe('/ext/prebuilds/140/better_sqlite3.node');
+    expect(resolveBundledNativeBinding('/ext', '143', (p) => present.has(p), j))
+      .toBe('/ext/prebuilds/143/better_sqlite3.node');
+  });
+
+  it('returns null (→ default build/Release binding) when no prebuild matches', () => {
+    const present = new Set(['/ext/prebuilds/143/better_sqlite3.node']);
+    expect(resolveBundledNativeBinding('/ext', '999', (p) => present.has(p), j)).toBeNull();
+  });
+
+  it('returns null when the extension root is unknown', () => {
+    expect(resolveBundledNativeBinding(undefined, '143', () => true, j)).toBeNull();
   });
 });
