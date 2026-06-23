@@ -157,6 +157,36 @@ describe('probeProject', () => {
     expect(facts.has_test_runner.value).toBe(true);
   });
 
+  it('detects a test runner from a real test script, but not the npm placeholder', () => {
+    const withScript = mkProject();
+    writeFileSync(join(withScript, 'package.json'), JSON.stringify({ scripts: { test: 'vitest run' } }));
+    expect(probeProject(withScript, NOW).facts.has_test_runner.value).toBe(true);
+
+    const placeholder = mkProject();
+    writeFileSync(
+      join(placeholder, 'package.json'),
+      JSON.stringify({ scripts: { test: 'echo "Error: no test specified" && exit 1' } }),
+    );
+    expect(probeProject(placeholder, NOW).facts.has_test_runner.value).toBe(false);
+  });
+
+  it('detects nested context + CI markers (not just root-level)', () => {
+    const root = mkProject();
+    mkdirSync(join(root, '.github'), { recursive: true });
+    writeFileSync(join(root, '.github', 'copilot-instructions.md'), '# rules');
+    mkdirSync(join(root, '.circleci'), { recursive: true });
+    writeFileSync(join(root, '.circleci', 'config.yml'), 'version: 2');
+    const { facts } = probeProject(root, NOW);
+    expect(facts.has_persistent_context_file.value).toBe(true);
+    expect(facts.has_ci_pipeline.value).toBe(true);
+  });
+
+  it('an empty .github/workflows dir does NOT count as a CI pipeline', () => {
+    const root = mkProject();
+    mkdirSync(join(root, '.github', 'workflows'), { recursive: true });
+    expect(probeProject(root, NOW).facts.has_ci_pipeline.value).toBe(false);
+  });
+
   it('resolves project_framework from package.json deps (open-nominal axis)', () => {
     const root = mkProject();
     writeFileSync(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '14', react: '18' } }));

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { envAction } from './env.js';
 import { configSetAction } from './config.js';
 import { openStore, closeStore } from '../../store/db.js';
@@ -60,6 +60,25 @@ describe('nexpath env command', () => {
     store = await openStore(dbPath);
     expect(getProjectEnvFacts(store, '/p')).toBeNull();
     expect(getMachineFacts(store)).toBeNull();
+    closeStore(store);
+  });
+
+  it('--clear --project purges only the named project', async () => {
+    // envAction resolve()s --project, so store under the resolved paths to match.
+    const pRoot = resolve('/p');
+    const qRoot = resolve('/q');
+    let store = await openStore(dbPath);
+    upsertProject(store, { projectRoot: pRoot, name: 'p' });
+    upsertProject(store, { projectRoot: qRoot, name: 'q' });
+    setProjectEnvFacts(store, pRoot, facts(), NOW);
+    setProjectEnvFacts(store, qRoot, facts(), NOW);
+    closeStore(store);
+
+    await envAction({ db: dbPath, clear: true, project: '/p' });
+
+    store = await openStore(dbPath);
+    expect(getProjectEnvFacts(store, pRoot)).toBeNull();
+    expect(getProjectEnvFacts(store, qRoot)).not.toBeNull();
     closeStore(store);
   });
 

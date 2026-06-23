@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { openStore, type Store } from './db.js';
+import { openStore, getSql, type Store } from './db.js';
+import { migrate, applyIncrementalMigrations } from './schema.js';
 import { upsertProject } from './projects.js';
 import { setConfig } from './config.js';
 import {
@@ -11,6 +12,7 @@ import {
   clearProjectEnvFacts,
   purgeAllEnvFacts,
   ENV_PROBE_ENABLED_KEY,
+  MACHINE_FACTS_KEY,
 } from './env-facts.js';
 import type { FactMap } from '../env/types.js';
 
@@ -34,6 +36,50 @@ describe('env-facts — consent default', () => {
   it('is enabled by default (no key set)', async () => {
     const store = await freshStore();
     expect(isEnvProbeEnabled(store.db)).toBe(true);
+    store.db.close();
+  });
+});
+
+describe('env-facts — schema migration (addIfMissing)', () => {
+  it('adds env_facts columns to a projects table that lacks them', async () => {
+    const SQL = await getSql();
+    const db = new SQL.Database();
+    migrate(db); // current schema (projects already has env_facts)
+    // Simulate a pre-B1 DB: rebuild projects WITHOUT the env_facts columns.
+    db.run(`
+      CREATE TABLE projects_old AS
+        SELECT id, project_root, name, project_type, language, description,
+               detected_language, decision_session_count, created_at FROM projects;
+      DROP TABLE projects;
+      ALTER TABLE projects_old RENAME TO projects;
+    `);
+    const before = (db.exec('PRAGMA table_info(projects)')[0]?.values ?? []).map((r) => r[1] as string);
+    expect(before).not.toContain('env_facts');
+
+    applyIncrementalMigrations(db);
+
+    const after = (db.exec('PRAGMA table_info(projects)')[0]?.values ?? []).map((r) => r[1] as string);
+    expect(after).toContain('env_facts');
+    expect(after).toContain('env_facts_detected_at');
+    db.close();
+  });
+});
+
+describe('env-facts — defensive reads (corrupt stored JSON)', () => {
+  it('returns null when a project row holds corrupt env_facts JSON', async () => {
+    const store = await freshStore();
+    store.db.run(
+      'UPDATE projects SET env_facts = ?, env_facts_detected_at = ? WHERE project_root = ?',
+      ['{ not valid json', NOW, ROOT],
+    );
+    expect(getProjectEnvFacts(store, ROOT)).toBeNull();
+    store.db.close();
+  });
+
+  it('returns null when machine facts JSON is corrupt', async () => {
+    const store = await freshStore();
+    setConfig(store, MACHINE_FACTS_KEY, 'not-json-at-all');
+    expect(getMachineFacts(store)).toBeNull();
     store.db.close();
   });
 });
