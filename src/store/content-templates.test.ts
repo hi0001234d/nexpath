@@ -15,6 +15,11 @@ function tableExists(store: Store, name: string): boolean {
   return (res[0]?.values?.length ?? 0) > 0;
 }
 
+function columnsOf(store: Store, table: string): string[] {
+  const res = store.db.exec(`PRAGMA table_info(${table})`);
+  return (res[0]?.values ?? []).map((r) => r[1] as string);
+}
+
 describe('schema — versioned tables', () => {
   let store: Store;
   beforeEach(async () => { store = await openStore(':memory:'); });
@@ -33,6 +38,18 @@ describe('schema — versioned tables', () => {
     }).not.toThrow();
     expect(tableExists(store, 'content_templates')).toBe(true);
     expect(tableExists(store, 'user_depth_level')).toBe(true);
+  });
+
+  it('content_templates has the planned columns', () => {
+    expect(columnsOf(store, 'content_templates')).toEqual([
+      'project_root', 'signal_type', 'source', 'record_json', 'schema_version', 'created_at', 'updated_at',
+    ]);
+  });
+
+  it('user_depth_level has the planned columns', () => {
+    expect(columnsOf(store, 'user_depth_level')).toEqual([
+      'project_root', 'current_level', 'stability_counter', 'last_graduation_at', 'hysteresis_counter', 'schema_version', 'updated_at',
+    ]);
   });
 });
 
@@ -73,6 +90,21 @@ describe('content-templates persistence', () => {
     upsertContentTemplate(store, { projectRoot: '/p', signalType: 'S', source: 'autogen', record: { who: 'gen' } });
     expect(getContentTemplate(store.db, '/p', 'S', 'uploaded')!.record).toEqual({ who: 'user' });
     expect(getContentTemplate(store.db, '/p', 'S', 'autogen')!.record).toEqual({ who: 'gen' });
+  });
+
+  it('accepts a row written by an older schema_version (<= current)', () => {
+    // An older writer (schema_version below current) must still be read — the
+    // reader accepts any row whose version is <= the current SCHEMA_VERSION.
+    store.db.run(
+      `INSERT INTO content_templates
+         (project_root, signal_type, source, record_json, schema_version, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ['/p', 'S', 'autogen', JSON.stringify({ old: true }), SCHEMA_VERSION - 1, 1, 1],
+    );
+    const got = getContentTemplate(store.db, '/p', 'S', 'autogen');
+    expect(got).not.toBeNull();
+    expect(got!.record).toEqual({ old: true });
+    expect(got!.schemaVersion).toBe(SCHEMA_VERSION - 1);
   });
 
   it('ignores a row written by a newer schema_version (forward-compatible read)', () => {
