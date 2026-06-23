@@ -89,6 +89,7 @@ vi.mock('./host-detector.js', () => ({
 }));
 vi.mock('./chat-input-injector.js', () => ({
   chatInputInject: vi.fn(),
+  CANDIDATE_COMMANDS: { cursor: [], windsurf: [] },
 }));
 vi.mock('./path-enumerator.js', () => ({
   enumerateStateVscdbPaths: mockEnumerateStateVscdbPaths,
