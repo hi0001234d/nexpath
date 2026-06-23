@@ -64,6 +64,24 @@ describe('probeMachine', () => {
     expect(f.shell_type.confidence).toBe('low');
     expect(f.terminal_type.confidence).toBe('low');
   });
+
+  it('reports os_platform per-platform (win32 / darwin / linux fixtures)', () => {
+    const orig = process.platform;
+    try {
+      for (const plat of ['win32', 'darwin', 'linux'] as const) {
+        Object.defineProperty(process, 'platform', { value: plat, configurable: true });
+        const f = probeMachine(NOW);
+        expect(f.os_platform.value).toBe(plat);
+        // is_wsl must never be a confident negative-by-crash on any platform.
+        expect([true, false]).toContain(f.is_wsl.value);
+        // shell/terminal stay LOW everywhere (weakest on win32, where they're unset).
+        expect(f.shell_type.confidence).toBe('low');
+        expect(f.terminal_type.confidence).toBe('low');
+      }
+    } finally {
+      Object.defineProperty(process, 'platform', { value: orig, configurable: true });
+    }
+  });
 });
 
 // ── Project probe ────────────────────────────────────────────────────────────
