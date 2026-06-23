@@ -169,6 +169,22 @@ describe('probeProject', () => {
     expect(probeProject(root, NOW).projectShape).toBe('monorepo');
   });
 
+  it('detects a monorepo shape from a root marker file (pnpm-workspace.yaml)', () => {
+    const root = mkProject();
+    writeFileSync(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - "packages/*"');
+    expect(probeProject(root, NOW).projectShape).toBe('monorepo');
+  });
+
+  it('matches root-level markers case-insensitively', () => {
+    const root = mkProject();
+    // Unusual casing must still be detected (matches OS case-insensitive FS behaviour).
+    writeFileSync(join(root, 'Claude.MD'), '# rules');
+    writeFileSync(join(root, 'DOCKERFILE'), 'FROM node');
+    const { facts } = probeProject(root, NOW);
+    expect(facts.has_persistent_context_file.value).toBe(true);
+    expect(facts.has_deploy_config.value).toBe(true);
+  });
+
   it('S3: a malformed package.json never crashes → framework UNKNOWN (null)', () => {
     const root = mkProject();
     writeFileSync(join(root, 'package.json'), '{ this is not json ');

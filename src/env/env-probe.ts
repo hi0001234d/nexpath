@@ -147,17 +147,27 @@ function anchorRepoRoot(start: string): string {
   return start; // no .git found — fall back to the input root
 }
 
-function detectProjectShape(root: string, pkg: PackageJson | null): ProjectShape {
+function detectProjectShape(entries: Set<string>, pkg: PackageJson | null): ProjectShape {
   if (pkg?.hasWorkspaces) return 'monorepo';
-  const markers = ['pnpm-workspace.yaml', 'lerna.json', 'turbo.json', 'nx.json'];
-  for (const m of markers) {
-    try {
-      if (existsSync(join(root, m))) return 'monorepo';
-    } catch {
-      /* ignore */
-    }
+  return rootHasAny(entries, SHAPE_MARKERS_ROOT) ? 'monorepo' : 'single';
+}
+
+/**
+ * List the anchored root's direct entries ONCE (lowercased) so root-level marker
+ * checks are case-insensitive set lookups rather than one `existsSync` each —
+ * keeping the project probe within its bounded check budget. Read failure → {}.
+ */
+function readRootEntries(root: string): Set<string> {
+  try {
+    return new Set(readdirSync(root).map((e) => e.toLowerCase()));
+  } catch {
+    return new Set();
   }
-  return 'single';
+}
+
+/** Case-insensitive: true if any root-level marker name is among the entries. */
+function rootHasAny(entries: Set<string>, names: readonly string[]): boolean {
+  return names.some((n) => entries.has(n));
 }
 
 /** True if any of the given relative paths exists under root. */
@@ -181,34 +191,39 @@ function dirNonEmpty(root: string, rel: string): boolean {
   }
 }
 
-const CONTEXT_FILES = [
-  'CLAUDE.md', 'AGENTS.md', 'GEMINI.md', '.cursorrules', '.windsurfrules',
-  '.clinerules', join('.cursor', 'rules'), join('.github', 'copilot-instructions.md'),
+// Root-level markers are matched case-insensitively against the single readdir
+// of the anchored root (entries are lowercased, so keep these lowercase too).
+// Markers nested below the root keep a targeted existsSync each.
+const CONTEXT_FILES_ROOT = [
+  'claude.md', 'agents.md', 'gemini.md', '.cursorrules', '.windsurfrules', '.clinerules',
 ];
+const CONTEXT_FILES_NESTED = [join('.cursor', 'rules'), join('.github', 'copilot-instructions.md')];
 const TEST_DEPS = [
   'jest', 'vitest', 'mocha', 'ava', 'jasmine', 'karma', 'tape', 'uvu',
   '@playwright/test', 'cypress', '@jest/core', 'node-tap',
 ];
-const DEPLOY_FILES = [
-  'Dockerfile', 'docker-compose.yml', 'docker-compose.yaml', 'vercel.json',
-  'netlify.toml', 'fly.toml', 'Procfile', 'render.yaml', 'app.yaml',
+const DEPLOY_FILES_ROOT = [
+  'dockerfile', 'docker-compose.yml', 'docker-compose.yaml', 'vercel.json',
+  'netlify.toml', 'fly.toml', 'procfile', 'render.yaml', 'app.yaml',
   'serverless.yml', 'serverless.yaml',
 ];
-const SECURITY_FILES = [
-  join('.github', 'dependabot.yml'), join('.github', 'dependabot.yaml'), '.snyk',
-  'renovate.json', '.renovaterc', '.renovaterc.json', join('.github', 'renovate.json'),
-  '.semgrep.yml', 'semgrep.yml',
+const SECURITY_FILES_ROOT = [
+  '.snyk', 'renovate.json', '.renovaterc', '.renovaterc.json', '.semgrep.yml', 'semgrep.yml',
 ];
-const ENV_SEP_FILES = [
+const SECURITY_FILES_NESTED = [
+  join('.github', 'dependabot.yml'), join('.github', 'dependabot.yaml'), join('.github', 'renovate.json'),
+];
+const ENV_SEP_FILES_ROOT = [
   '.env.example', '.env.sample', '.env.template', '.env.development', '.env.production',
 ];
-const LOCKFILES = [
+const LOCKFILES_ROOT = [
   'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', 'bun.lockb', 'npm-shrinkwrap.json',
 ];
-const CI_FILES = [
-  '.gitlab-ci.yml', join('.circleci', 'config.yml'), 'azure-pipelines.yml',
-  'Jenkinsfile', '.travis.yml', 'bitbucket-pipelines.yml',
+const CI_FILES_ROOT = [
+  '.gitlab-ci.yml', 'azure-pipelines.yml', 'jenkinsfile', '.travis.yml', 'bitbucket-pipelines.yml',
 ];
+const CI_FILES_NESTED = [join('.circleci', 'config.yml')];
+const SHAPE_MARKERS_ROOT = ['pnpm-workspace.yaml', 'lerna.json', 'turbo.json', 'nx.json'];
 
 function detectHasTestRunner(pkg: PackageJson | null): boolean {
   if (!pkg) return false;
@@ -225,22 +240,35 @@ function detectHasTestRunner(pkg: PackageJson | null): boolean {
 export function probeProject(inputRoot: string, now: number = Date.now()): ProjectProbeResult {
   const anchoredRoot = anchorRepoRoot(inputRoot);
   const pkg = readPackageJsonSafe(anchoredRoot);
-  const projectShape = detectProjectShape(anchoredRoot, pkg);
+  const entries = readRootEntries(anchoredRoot); // single readdir of the anchored root
+  const projectShape = detectProjectShape(entries, pkg);
   const r = anchoredRoot;
 
   const facts: FactMap = {
-    has_version_control:         fact(safe(() => anyExists(r, ['.git'])), 'high', now),
-    has_persistent_context_file: fact(safe(() => anyExists(r, CONTEXT_FILES)), 'high', now),
-    has_test_runner:             fact(safe(() => detectHasTestRunner(pkg)), 'high', now),
-    has_ci_pipeline:             fact(
-      safe(() => dirNonEmpty(r, join('.github', 'workflows')) || anyExists(r, CI_FILES)),
+    has_version_control:         fact(safe(() => entries.has('.git')), 'high', now),
+    has_persistent_context_file: fact(
+      safe(() => rootHasAny(entries, CONTEXT_FILES_ROOT) || anyExists(r, CONTEXT_FILES_NESTED)),
       'high',
       now,
     ),
-    has_deploy_config:           fact(safe(() => anyExists(r, DEPLOY_FILES)), 'high', now),
-    has_security_scanner:        fact(safe(() => anyExists(r, SECURITY_FILES)), 'high', now),
-    has_env_separation:          fact(safe(() => anyExists(r, ENV_SEP_FILES)), 'high', now),
-    has_lockfile:                fact(safe(() => anyExists(r, LOCKFILES)), 'high', now),
+    has_test_runner:             fact(safe(() => detectHasTestRunner(pkg)), 'high', now),
+    has_ci_pipeline:             fact(
+      safe(() =>
+        dirNonEmpty(r, join('.github', 'workflows')) ||
+        rootHasAny(entries, CI_FILES_ROOT) ||
+        anyExists(r, CI_FILES_NESTED),
+      ),
+      'high',
+      now,
+    ),
+    has_deploy_config:           fact(safe(() => rootHasAny(entries, DEPLOY_FILES_ROOT)), 'high', now),
+    has_security_scanner:        fact(
+      safe(() => rootHasAny(entries, SECURITY_FILES_ROOT) || anyExists(r, SECURITY_FILES_NESTED)),
+      'high',
+      now,
+    ),
+    has_env_separation:          fact(safe(() => rootHasAny(entries, ENV_SEP_FILES_ROOT)), 'high', now),
+    has_lockfile:                fact(safe(() => rootHasAny(entries, LOCKFILES_ROOT)), 'high', now),
     project_framework:           fact(
       safe(() => (pkg ? resolveFramework(pkg.dependencyNames) : null)),
       'high',
