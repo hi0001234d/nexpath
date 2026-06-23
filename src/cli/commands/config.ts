@@ -1,5 +1,6 @@
 import { password, confirm, isCancel } from '@clack/prompts';
 import { openStore, closeStore, DEFAULT_DB_PATH, getConfig, setConfig, deleteConfig } from '../../store/index.js';
+import { ENV_PROBE_ENABLED_KEY, purgeAllEnvFacts } from '../../store/env-facts.js';
 import {
   ConfigValidationError,
   setAdvisoryFrequency,
@@ -33,6 +34,11 @@ export async function configSetAction(key: string, value: string, dbPath = DEFAU
       setAdvisoryFrequency(store, key, value);
     } else {
       setConfig(store, key, value);
+      // S6: turning the dev-env probe off purges the stored facts (data-at-rest
+      // minimisation), in addition to the read-gate that hides them while off.
+      if (key === ENV_PROBE_ENABLED_KEY && value === 'false') {
+        purgeAllEnvFacts(store);
+      }
     }
   } catch (err) {
     closeStore(store);

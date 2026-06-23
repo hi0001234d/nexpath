@@ -20,6 +20,7 @@ import {
   type SupportedPlatform,
 } from './commands/supported-agents-by-platform.js';
 import { initAction } from './commands/init.js';
+import { envAction } from './commands/env.js';
 import { registerAutoCommand } from './commands/auto.js';
 import { registerStopCommand } from './commands/stop.js';
 import { registerWindsurfHookCommand } from './commands/windsurf-hook.js';
@@ -99,6 +100,18 @@ export function createProgram(): Command {
   // ── Status command ────────────────────────────────────────────────────────────
 
   registerStatusCommand(program);
+
+  // ── Env command (dev-environment probe transparency) ────────────────────────────
+
+  program
+    .command('env')
+    .description('Show locally-probed dev-environment facts (or --clear to purge them)')
+    .option('--clear', 'Purge stored dev-env facts instead of probing')
+    .option('--project <path>', 'Target project root (defaults to cwd)')
+    .option('--db <path>', 'Path to the SQLite database file')
+    .action(async (opts: { clear?: boolean; project?: string; db?: string }) => {
+      await envAction(opts);
+    });
 
   // ── Log command ───────────────────────────────────────────────────────────────
 

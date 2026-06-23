@@ -26,6 +26,18 @@ export {
 } from './skipped-sessions.js';
 export { importHistoricalPrompts } from './historical-import.js';
 export {
+  isEnvProbeEnabled,
+  setProjectEnvFacts,
+  getProjectEnvFacts,
+  setMachineFacts,
+  getMachineFacts,
+  clearProjectEnvFacts,
+  purgeAllEnvFacts,
+  ENV_PROBE_ENABLED_KEY,
+  MACHINE_FACTS_KEY,
+  type StoredFacts,
+} from './env-facts.js';
+export {
   upsertPendingAdvisory,
   getPendingAdvisory,
   markAdvisoryShown,

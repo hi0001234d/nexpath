@@ -567,6 +567,22 @@ export async function installAction(
       telemetryEnabled = consent.kind === 'enable';
       setConfig(store, 'telemetry.enabled',      String(telemetryEnabled));
       setConfig(store, 'telemetry_sync_enabled', String(telemetryEnabled));
+
+      // Dev-environment probe disclosure (Channel Y, B1). Local-only, on by
+      // default — no separate consent prompt (nothing leaves the machine).
+      note(
+        [
+          'nexpath reads a few local facts about your machine + project',
+          '(OS, version control, test runner, framework, etc.) to give',
+          'more relevant guidance.',
+          '',
+          'These facts stay on your machine — they are NEVER transmitted.',
+          '',
+          'See them:  nexpath env',
+          'Turn off:  nexpath config set env_probe_enabled false',
+        ].join('\n'),
+        'Dev-environment facts (local-only)',
+      );
     } else {
       // --yes (non-interactive): preserve an existing telemetry choice. A re-run
       // — e.g. the VS Code extension's two-pass setup (`--for cli` interactive,
