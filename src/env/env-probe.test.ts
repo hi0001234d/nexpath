@@ -14,6 +14,7 @@ describe('probeMachine', () => {
   const TOUCHED = [
     'CI', 'GITHUB_ACTIONS', 'WSL_DISTRO_NAME', 'WSL_INTEROP', 'REMOTE_CONTAINERS',
     'DEVCONTAINER', 'CODESPACES', 'GITPOD_WORKSPACE_ID', 'TERM_PROGRAM', 'TERM',
+    'SHELL', 'PSModulePath', 'ComSpec',
   ];
   let saved: Record<string, string | undefined>;
   beforeEach(() => {
@@ -63,6 +64,22 @@ describe('probeMachine', () => {
     const f = probeMachine(NOW);
     expect(f.shell_type.confidence).toBe('low');
     expect(f.terminal_type.confidence).toBe('low');
+  });
+
+  it('derives shell_type from SHELL, and terminal_type from TERM_PROGRAM', () => {
+    process.env.SHELL = '/usr/bin/zsh';
+    process.env.TERM_PROGRAM = 'iTerm.app';
+    const f = probeMachine(NOW);
+    expect(f.shell_type.value).toBe('zsh');
+    expect(f.terminal_type.value).toBe('iTerm.app');
+  });
+
+  it('falls back to a Windows shell signal when SHELL is unset (LOW confidence)', () => {
+    // SHELL is unset (deleted in beforeEach); the Windows fallback should fire.
+    process.env.PSModulePath = 'C:\\Program Files\\PowerShell\\Modules';
+    const f = probeMachine(NOW);
+    expect(f.shell_type.value).toBe('powershell');
+    expect(f.shell_type.confidence).toBe('low');
   });
 
   it('reports os_platform per-platform (win32 / darwin / linux fixtures)', () => {
