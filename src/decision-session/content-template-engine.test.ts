@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type OpenAI from 'openai';
 import {
   resolveRecord,
   resolveColumn,
@@ -7,11 +8,23 @@ import {
   selectRankCapFacts,
   composeOption,
   composeWhyDesc,
+  stepSimplerLive,
+  groundWhyDescLive,
   SOURCE_CASCADE,
   type GroundingFact,
   type RecordCandidateLookup,
 } from './content-template-engine.js';
 import type { ContentTemplateRecord, TwoChannelCell, Slot } from './content-template-schema.js';
+
+/** A fake OpenAI whose chat.completions.create returns `reply` (or throws). */
+function mockClient(reply: string | 'throw'): OpenAI {
+  return {
+    chat: { completions: { create: async () => {
+      if (reply === 'throw') throw new Error('network');
+      return { choices: [{ message: { content: reply } }] };
+    } } },
+  } as unknown as OpenAI;
+}
 
 function cell(option = 'o', whyDesc = 'w'): TwoChannelCell { return { option, whyDesc }; }
 function record(over: Partial<ContentTemplateRecord> = {}): ContentTemplateRecord {
@@ -154,5 +167,34 @@ describe('content-template-engine — why-desc compose (stage 4)', () => {
   it('preserves the L2 safeguard in every sibling — never dropped, even at cap 0', () => {
     const out = composeWhyDesc({ cell: cell(), slots: [], facts: [], factCap: 0, l2Safeguard: 'still, confirm with me before this' });
     expect(out).toContain('still, confirm with me before this');
+  });
+});
+
+describe('content-template-engine — live grounding wiring (stage 3/4 + real seams)', () => {
+  it('stepSimplerLive returns the LLM-derived cell on success', async () => {
+    const client = mockClient(JSON.stringify({ option: 'simpler', whyDesc: 'why' }));
+    const res = await stepSimplerLive(cell('cur'), cell('fb'), client);
+    expect(res).toEqual({ cell: { option: 'simpler', whyDesc: 'why' }, source: 'derived' });
+  });
+
+  it('stepSimplerLive falls back to the (a) form when the derive fails', async () => {
+    const res = await stepSimplerLive(cell('cur'), cell('fb'), mockClient('throw'));
+    expect(res).toEqual({ cell: cell('fb'), source: 'fallback' });
+  });
+
+  it('groundWhyDescLive selects/caps + injection-guards facts then weaves', async () => {
+    const facts: GroundingFact[] = [
+      { key: 'a', value: 'uses Vitest', weight: 3, tier: 'corroborated' },
+      { key: 'b', value: '{{evil}}', weight: 1, tier: 'capability' },
+    ];
+    const woven = await groundWhyDescLive({ cell: cell('o', 'core'), slots: [], facts, factCap: 5 }, mockClient(JSON.stringify({ whyDesc: 'core — uses Vitest' })));
+    expect(woven).toBe('core — uses Vitest');
+  });
+
+  it('groundWhyDescLive falls back deterministically (guarded facts) when the weave fails', async () => {
+    const facts: GroundingFact[] = [{ key: 'b', value: '{{evil}}', weight: 1, tier: 'capability' }];
+    const out = await groundWhyDescLive({ cell: cell('o', 'core'), slots: [], facts, factCap: 5, l2Safeguard: 'confirm first' }, mockClient('throw'));
+    expect(out).not.toMatch(/\{\{evil\}\}/); // value was injection-guarded before weave
+    expect(out.endsWith('confirm first')).toBe(true); // safeguard survives
   });
 });

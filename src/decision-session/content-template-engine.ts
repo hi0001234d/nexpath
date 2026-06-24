@@ -35,6 +35,7 @@
  * in place (a later activation step).
  */
 
+import type OpenAI from 'openai';
 import type { Engine, ContentSpec } from './engine-registry.js';
 import {
   validateContentTemplateRecord,
@@ -50,6 +51,7 @@ import {
   type Slot,
   type SlotContext,
 } from './content-template-schema.js';
+import { deriveSimplerCell, weaveWhyDesc } from './content-template-grounding.js';
 
 export const contentTemplateEngine: Engine = {
   name: 'content-template',
@@ -215,4 +217,33 @@ export function composeWhyDesc(input: ComposeWhyDescInput): string {
   }
   if (input.l2Safeguard) lines.push(input.l2Safeguard); // survives in every sibling — never dropped
   return composePhase1(lines.join('\n'), input.slots, input.ctx);
+}
+
+// ── Live grounding wiring (the real LLM seams bound to the orchestration) ───────
+
+/**
+ * The (a)+(b) hybrid, live: run the always-fire simpler-derive through the real
+ * LLM grounding, with the supplied (a) form as the bounded-failure fallback.
+ */
+export function stepSimplerLive(
+  current: TwoChannelCell,
+  fallback: TwoChannelCell,
+  client?: OpenAI,
+  opts: { timeoutMs?: number } = {},
+): Promise<StrengthStepResult> {
+  return stepSimpler(current, (cell) => deriveSimplerCell(cell, client), fallback, opts);
+}
+
+/**
+ * The why-desc multi-value grounding, live: deterministically select/rank/cap the
+ * facts and injection-guard their values, then weave them with the frozen core
+ * line via the LLM (the deterministic assembly is the weave's own fallback, and
+ * the safeguard survives regardless). The result still carries any `{R...}` for
+ * the downstream runtime/F7 pass — which runs AFTER this, via the existing
+ * substitution pipeline (wired at the migration step), not through the weave.
+ */
+export async function groundWhyDescLive(input: ComposeWhyDescInput, client?: OpenAI): Promise<string> {
+  const factLines = (input.facts && input.factCap !== undefined ? selectRankCapFacts(input.facts, input.factCap) : [])
+    .map((f) => escapeSlotValue(f.value));
+  return weaveWhyDesc({ coreLine: input.cell.whyDesc, factLines, l2Safeguard: input.l2Safeguard }, client);
 }
