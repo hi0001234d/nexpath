@@ -23,6 +23,7 @@ import {
   type ContentTemplateRecord,
   type MaturityLevel,
 } from './content-template-schema.js';
+import { detectL2TriggersInText } from './r5-injection.js';
 
 // ── De-jargon ──────────────────────────────────────────────────────────────────
 
@@ -167,4 +168,88 @@ export function reviewRecord(record: ContentTemplateRecord, keyword: string): Re
     headlineOnly,
     jargonByLevel,
   };
+}
+
+// ── Layer-1 VOICE gate (the message is the user's words TO the agent) ───────────
+
+export interface VoicePattern {
+  pattern: string;
+  desc: string;
+}
+
+/**
+ * Banned voice patterns — third-person references to the agent or to the prompt
+ * itself, which break the "this text IS the user's message to the agent" rule.
+ * Mirrors the literal set enforced by `voice-rule-invariant.test.ts`.
+ */
+export const BANNED_VOICE_PATTERNS: readonly VoicePattern[] = [
+  { pattern: 'the AI',          desc: 'third-person AI reference' },
+  { pattern: 'ask the AI',      desc: 'third-person directive to AI' },
+  { pattern: 'have the AI',     desc: 'third-person directive to AI' },
+  { pattern: 'get the AI',      desc: 'third-person directive to AI' },
+  { pattern: 'instruct the AI', desc: 'third-person directive to AI' },
+  { pattern: 'tell the AI',     desc: 'third-person directive to AI' },
+  { pattern: 'its answer',      desc: 'third-person AI possessive' },
+  { pattern: 'its output',      desc: 'third-person AI possessive' },
+  { pattern: 'this option',     desc: 'third-person frame about the prompt-as-object' },
+  { pattern: 'the action below', desc: 'third-person frame about the prompt-as-object' },
+  { pattern: 'the prompt above', desc: 'third-person frame about the prompt-as-object' },
+  { pattern: 'the option above', desc: 'third-person frame about the prompt-as-object' },
+];
+
+/** Find banned voice patterns in a string (case-insensitive literal match). */
+export function findVoiceViolations(text: string): VoicePattern[] {
+  const lower = text.toLowerCase();
+  return BANNED_VOICE_PATTERNS.filter((p) => lower.includes(p.pattern.toLowerCase()));
+}
+
+export interface VoiceReview {
+  ok: boolean;
+  /** Per authored level: voice violations found in the option + whyDesc. */
+  byLevel: Partial<Record<MaturityLevel, VoicePattern[]>>;
+}
+
+/** Layer-1 voice gate over a record (every authored form, both channels). */
+export function checkVoice(record: ContentTemplateRecord): VoiceReview {
+  const byLevel: Partial<Record<MaturityLevel, VoicePattern[]>> = {};
+  for (const level of MATURITY_LEVELS) {
+    const form = record.levelForms[level];
+    if (!form) continue;
+    const v = [...findVoiceViolations(form.cell.option), ...findVoiceViolations(form.cell.whyDesc)];
+    if (v.length) byLevel[level] = v;
+  }
+  return { ok: Object.keys(byLevel).length === 0, byLevel };
+}
+
+// ── Layer-2 SAFEGUARD gate (a sensitive action must carry the confirm-seek) ────
+
+/** Markers that indicate a confirm-before-acting safeguard sentence is present. */
+const SAFEGUARD_MARKERS = /\b(confirm|go-ahead|go ahead|ask me|check with me)\b/i;
+
+export interface L2SafeguardReview {
+  ok: boolean;
+  /** Authored levels whose option proposes a sensitive action but whose why-desc lacks a safeguard. */
+  unguardedLevels: MaturityLevel[];
+  /** Per flagged level: the trigger category names detected. */
+  triggersByLevel: Partial<Record<MaturityLevel, string[]>>;
+}
+
+/**
+ * Layer-2 gate: when an authored form's option proposes a sensitive action (an L2
+ * trigger), its why-desc MUST carry a confirm-before-acting safeguard sentence.
+ */
+export function checkL2Safeguard(record: ContentTemplateRecord): L2SafeguardReview {
+  const unguardedLevels: MaturityLevel[] = [];
+  const triggersByLevel: Partial<Record<MaturityLevel, string[]>> = {};
+  for (const level of MATURITY_LEVELS) {
+    const form = record.levelForms[level];
+    if (!form) continue;
+    const triggers = detectL2TriggersInText(form.cell.option);
+    if (triggers.length === 0) continue;
+    if (!SAFEGUARD_MARKERS.test(form.cell.whyDesc)) {
+      unguardedLevels.push(level);
+      triggersByLevel[level] = triggers.map((t) => t.name);
+    }
+  }
+  return { ok: unguardedLevels.length === 0, unguardedLevels, triggersByLevel };
 }

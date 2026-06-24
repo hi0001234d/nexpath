@@ -820,6 +820,20 @@ export function f7DetectL2TriggerMatches(history: readonly PromptRecord[]): L2Tr
   return out;
 }
 
+/**
+ * String-level L2 trigger detection (reuses the same trigger patterns). Used by
+ * the authoring-side L2 gate to tell whether a single authored form proposes a
+ * sensitive action (so it can require the safeguard). `promptIndex` is always 0.
+ */
+export function detectL2TriggersInText(text: string): L2TriggerMatch[] {
+  const out: L2TriggerMatch[] = [];
+  for (const { name, re } of L2_TRIGGER_PATTERNS) {
+    const m = text.match(re);
+    if (m) out.push({ name, matchedText: m[0].replace(/\s+/g, ' ').trim(), promptIndex: 0 });
+  }
+  return out;
+}
+
 // ─── Haiku LLM rewrite wrapper + 70-80% concentration rule ────────────
 //
 // The rewrite step takes the filtered vocab list + signal + register

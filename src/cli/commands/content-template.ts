@@ -22,7 +22,14 @@ import {
   type MaturityLevel,
   type ValidationResult,
 } from '../../decision-session/content-template-schema.js';
-import { reviewRecord, type RecordReview } from '../../decision-session/content-authoring-rules.js';
+import {
+  reviewRecord,
+  checkVoice,
+  checkL2Safeguard,
+  type RecordReview,
+  type VoiceReview,
+  type L2SafeguardReview,
+} from '../../decision-session/content-authoring-rules.js';
 
 const PLACEHOLDER: LevelForm = { kind: 'slot-variant', cell: { option: 'TODO: option text', whyDesc: 'TODO: why-desc core line' } };
 
@@ -41,13 +48,18 @@ export interface RecordValidation {
   schema: ValidationResult;
   /** Review gates — present only when the schema passed (and, for keyword retention, a keyword was given). */
   review?: RecordReview;
+  /** Layer-1 voice gate (§4.E6) — present when the schema passed. */
+  voice?: VoiceReview;
+  /** Layer-2 sensitive-action safeguard gate (§4.E6) — present when the schema passed. */
+  l2?: L2SafeguardReview;
 }
 
-/** Schema-validate a record object, then (if valid) run the review gates. */
+/** Schema-validate a record object, then (if valid) run the review + voice + L2 gates. */
 export function validateRecordObject(record: unknown, keyword?: string): RecordValidation {
   const schema = validateContentTemplateRecord(record);
   if (!schema.ok) return { schema };
-  return { schema, review: reviewRecord(record as ContentTemplateRecord, keyword ?? '') };
+  const r = record as ContentTemplateRecord;
+  return { schema, review: reviewRecord(r, keyword ?? ''), voice: checkVoice(r), l2: checkL2Safeguard(r) };
 }
 
 // ── CLI actions (thin) ─────────────────────────────────────────────────────────
@@ -65,7 +77,7 @@ export function contentTemplateValidateAction(filePath: string, opts: { keyword?
     process.exitCode = 1;
     return;
   }
-  const { schema, review } = validateRecordObject(parsed, opts.keyword);
+  const { schema, review, voice, l2 } = validateRecordObject(parsed, opts.keyword);
   if (!schema.ok) {
     console.error('SCHEMA FAIL:');
     for (const e of schema.errors) console.error(`  - ${e}`);
@@ -79,6 +91,16 @@ export function contentTemplateValidateAction(filePath: string, opts: { keyword?
     if (opts.keyword && !review.keywordRetention.ok) gateFailures.push(`keyword retention: missing at levels ${review.keywordRetention.missingLevels.join(', ')}`);
     for (const [lvl, viols] of Object.entries(review.jargonByLevel)) {
       gateFailures.push(`de-jargon (level ${lvl}): ${viols.map((v) => v.term).join(', ')}`);
+    }
+  }
+  if (voice && !voice.ok) {
+    for (const [lvl, viols] of Object.entries(voice.byLevel)) {
+      gateFailures.push(`voice (level ${lvl}): ${viols.map((v) => v.pattern).join(', ')}`);
+    }
+  }
+  if (l2 && !l2.ok) {
+    for (const lvl of l2.unguardedLevels) {
+      gateFailures.push(`L2 safeguard (level ${lvl}): sensitive action [${(l2.triggersByLevel[lvl] ?? []).join(', ')}] without a confirm-seek in the why-desc`);
     }
   }
   if (gateFailures.length > 0) {

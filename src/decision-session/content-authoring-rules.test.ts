@@ -6,6 +6,9 @@ import {
   checkCoverage,
   checkHeadlineOnly,
   reviewRecord,
+  findVoiceViolations,
+  checkVoice,
+  checkL2Safeguard,
   DE_JARGON_TABLE,
   TOP_COLUMN_ALLOWED_CONCEPTS,
 } from './content-authoring-rules.js';
@@ -161,5 +164,43 @@ describe('content-authoring-rules — aggregate review', () => {
     expect(review.ok).toBe(false);
     expect(review.jargonByLevel[1]?.map((v) => v.term)).toEqual(['observability']);
     expect(review.keywordRetention.ok).toBe(true); // keyword lives in the option, which is clean
+  });
+});
+
+describe('content-authoring-rules — Layer-1 voice gate', () => {
+  it('flags banned third-person AI / prompt-object phrases', () => {
+    expect(findVoiceViolations('Ask the AI to review this option').map((v) => v.pattern).sort())
+      .toEqual(['ask the AI', 'the AI', 'this option'].sort());
+  });
+
+  it('passes clean first-person/imperative voice', () => {
+    expect(findVoiceViolations('Review the login flow and tell me what you find')).toEqual([]);
+  });
+
+  it('checkVoice reports per-level violations across both channels', () => {
+    const r = rec({ 1: form('plan it', 'the AI will plan'), 3: form('write a plan', 'clean why') });
+    const res = checkVoice(r);
+    expect(res.ok).toBe(false);
+    expect(res.byLevel[1]?.map((v) => v.pattern)).toContain('the AI');
+    expect(res.byLevel[3]).toBeUndefined();
+  });
+});
+
+describe('content-authoring-rules — Layer-2 safeguard gate', () => {
+  it('flags a sensitive action whose why-desc lacks a confirm-seek', () => {
+    const r = rec({ 1: form('delete the old records', 'this cleans things up') });
+    const res = checkL2Safeguard(r);
+    expect(res.ok).toBe(false);
+    expect(res.unguardedLevels).toEqual([1]);
+    expect(res.triggersByLevel[1]).toContain('destructive-fs');
+  });
+
+  it('passes a sensitive action that carries a confirm-seek in the why-desc', () => {
+    const r = rec({ 1: form('delete the old records', 'cleanup — still, confirm with me before this') });
+    expect(checkL2Safeguard(r).ok).toBe(true);
+  });
+
+  it('passes a non-sensitive action regardless of safeguard wording', () => {
+    expect(checkL2Safeguard(rec({ 1: form('review the plan', 'a quick check') })).ok).toBe(true);
   });
 });
