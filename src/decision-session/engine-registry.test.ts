@@ -59,8 +59,8 @@ describe('ContentTemplateEngine', () => {
     expect(contentTemplateEngine.accepts('meta')).toBe(false);
   });
 
-  it('run() is deferred to the content-template layer (throws until built)', () => {
-    expect(() => contentTemplateEngine.run({} as EngineInput)).toThrow(/content-template layer/);
+  it('run() is not yet wired live (throws until records + render-path + grounding land)', () => {
+    expect(() => contentTemplateEngine.run({} as EngineInput)).toThrow(/not yet wired live/);
   });
 });
 
