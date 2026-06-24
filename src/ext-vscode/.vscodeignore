@@ -1,0 +1,143 @@
+# Files NOT to include in the packaged .vsix.
+#
+# `vsce package` walks the sub-package directory and includes everything
+# EXCEPT what matches a pattern here (or in the default ignore list).
+# What we ship in the final .vsix is the minimum runtime surface:
+#   - out/extension.cjs (the esbuild bundle, ~33 KB — .cjs to bypass package.json type:module)
+#   - media/icon.svg
+#   - package.json (with the marketplace metadata)
+#   - README.md (user-facing)
+#   - LICENSE (mandatory for Open VSX)
+#   - node_modules/better-sqlite3/  (native dep — marked external by esbuild)
+#
+# Everything else is dev/test/build noise.
+
+# Source TypeScript — bundled by esbuild into out/, never imported at runtime
+src/**
+**/*.ts
+**/*.ts.map
+**/*.js.map
+
+# Test fixtures + dump artefacts — never used at runtime
+test-fixtures/**
+
+# Build / runtime configs — needed only at dev time
+tsconfig.json
+esbuild.config.mjs
+vitest.config.ts
+.vscode/**
+.editorconfig
+.eslintrc*
+.eslintignore
+.prettierrc*
+
+# Test infrastructure
+**/*.test.ts
+**/*.test.js
+**/__snapshots__/**
+
+# Dev scripts — engineer-only, not needed at runtime
+scripts/**
+
+# Internal docs — public README is the only doc that ships
+SMOKE-TEST.md
+PUBLISH.md
+CROSS-OS-VERIFY.md
+CHANGELOG-internal.md
+
+# Build outputs that should NOT ship
+dist-vsix/**
+*.vsix
+out/**/*.map
+
+# Source-control / CI / OS junk
+.git/
+.gitignore
+.gitattributes
+.github/**
+.travis.yml
+.circleci/**
+.DS_Store
+Thumbs.db
+
+# Lockfile — vsce defaults to ignoring this; explicit for clarity
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ────────────────────────────────────────────────────────────────────────────
+# Native-module slimming — strip the parts of better-sqlite3 that aren't
+# needed at runtime. The extension only loads
+#   node_modules/better-sqlite3/lib/index.js  →  build/Release/better_sqlite3.node
+# Everything else (C++ source, SQLite amalgamation, node-gyp intermediates)
+# is build-time only and ships ~25 MB of dead weight if not excluded.
+# ────────────────────────────────────────────────────────────────────────────
+
+# C++ source + SQLite amalgamation (huge, source-build only)
+node_modules/better-sqlite3/src/**
+node_modules/better-sqlite3/deps/**
+node_modules/better-sqlite3/binding.gyp
+
+# node-gyp intermediate files — keep only the final .node binary
+node_modules/better-sqlite3/build/config.gypi
+node_modules/better-sqlite3/build/Makefile
+node_modules/better-sqlite3/build/binding.Makefile
+node_modules/better-sqlite3/build/better_sqlite3.target.mk
+node_modules/better-sqlite3/build/sqlite3.target.mk
+node_modules/better-sqlite3/build/test_extension.target.mk
+node_modules/better-sqlite3/build/Release/.deps/**
+node_modules/better-sqlite3/build/Release/obj/**
+node_modules/better-sqlite3/build/Release/obj.target/**
+node_modules/better-sqlite3/build/Release/test_extension.node
+
+# prebuild-install + its transitive deps — only used at install time.
+# Without these the vsce package step would still pass, but the user's
+# Cursor never runs `npm install` after install, so they're dead weight.
+node_modules/prebuild-install/**
+node_modules/detect-libc/**
+node_modules/expand-template/**
+node_modules/github-from-package/**
+node_modules/mkdirp-classic/**
+node_modules/napi-build-utils/**
+node_modules/node-abi/**
+node_modules/pump/**
+node_modules/simple-get/**
+node_modules/tar-fs/**
+node_modules/tar-stream/**
+node_modules/tunnel-agent/**
+node_modules/decompress-response/**
+node_modules/mimic-response/**
+node_modules/rc/**
+node_modules/deep-extend/**
+node_modules/ini/**
+node_modules/minimist/**
+node_modules/strip-json-comments/**
+node_modules/end-of-stream/**
+node_modules/once/**
+node_modules/wrappy/**
+node_modules/chownr/**
+node_modules/fs-constants/**
+node_modules/buffer/**
+node_modules/base64-js/**
+node_modules/ieee754/**
+node_modules/bl/**
+node_modules/readable-stream/**
+node_modules/safe-buffer/**
+node_modules/inherits/**
+node_modules/string_decoder/**
+node_modules/util-deprecate/**
+node_modules/simple-concat/**
+
+# bindings + file-uri-to-path: KEEP — these ARE required at runtime by
+# better-sqlite3's lib/index.js to locate the .node file.
+# Exception, so explicitly NOT excluded above.
+
+# ────────────────────────────────────────────────────────────────────────────
+# Bundled nexpath CLI (nexpath-cli/, produced by scripts/bundle-cli.mjs).
+# The extension stages this to ~/.nexpath/cli/<version>/ and runs
+# `npm install --omit=dev` there on the user's machine, so we ship the built
+# `dist/` + a runtime package.json but NEVER node_modules. Sourcemaps + .d.ts
+# are already stripped by the **/*.js.map / **/*.ts rules above.
+# nexpath-cli/dist/**/*.js + nexpath-cli/package.json are KEPT (not ignored).
+# ────────────────────────────────────────────────────────────────────────────
+nexpath-cli/node_modules/**

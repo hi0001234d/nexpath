@@ -1,0 +1,12 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`installAction snapshot (M1 zero-diff safety net) > writes the same settings.json bytes and stdout as the pre-refactor baseline 1`] = `
+{
+  "settingsContent": null,
+  "stdout": "Installing for: cli
+Not found: Claude Code
+nexpath currently supports Claude Code only — support for Cursor, Windsurf, and other agents is coming in future updates.
+
+Restart your agents to activate nexpath-prompt-store.",
+}
+`;

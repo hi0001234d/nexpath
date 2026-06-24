@@ -1,6 +1,6 @@
 {
   "name": "nexpath",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Behaviour guidance system for vibe coders using AI coding agents",
   "type": "module",
   "bin": {
@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "postbuild": "node -e \"['dist/cli/index.js','dist/server/index.js'].forEach(f => require('fs').chmodSync(f, 0o755))\"",
     "dev:cli": "tsx src/cli/index.ts",
     "dev:server": "tsx src/server/index.ts",
     "typecheck": "tsc --noEmit",

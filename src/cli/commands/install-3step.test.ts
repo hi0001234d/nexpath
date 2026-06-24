@@ -19,7 +19,7 @@ import {
 } from './install.js';
 import * as resolver from '../../config/ApiKeyResolver.js';
 import { openStore, closeStore } from '../../store/db.js';
-import { getConfig, isConfigSet } from '../../store/config.js';
+import { getConfig, isConfigSet, setConfig } from '../../store/config.js';
 
 function tmpDirAgents(): { dir: string; cleanup: () => void } {
   const dir = join(tmpdir(), `nexpath-install3-${randomUUID()}`);
@@ -214,6 +214,37 @@ describe('install 3-step — Step 2: Telemetry consent', () => {
       expect(isConfigSet(store.db, 'telemetry.enabled')).toBe(true);
       expect(isConfigSet(store.db, 'telemetry_sync_enabled')).toBe(true);
       closeStore(store);
+    } finally { cleanup(); }
+  });
+
+  it('--yes mode PRESERVES an existing telemetry choice (does NOT re-enable a disabled opt-out)', async () => {
+    // Guards the VS Code extension's two-pass setup (`--for cli` interactive,
+    // then `--for vscode --yes`): a prior pass where the user disabled telemetry
+    // must survive the second --yes pass. Mirrors freq/role preservation.
+    const { dir, cleanup } = tmpDirAgents();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const dbPath = join(dir, 'telem-yes-preserve.db');
+    try {
+      // Simulate pass 1: user explicitly disabled telemetry.
+      const pre = await openStore(dbPath);
+      setConfig(pre, 'telemetry.enabled',      'false');
+      setConfig(pre, 'telemetry_sync_enabled', 'false');
+      closeStore(pre);
+
+      // Pass 2: a non-interactive --yes install must NOT flip it back to true.
+      const paths = resolveAgentPaths(dir, dir, dir);
+      const summary = await installAction({ yes: true, platform: 'vscode' }, {
+        paths, isWin: false, execFn: () => {}, skipClipboardCheck: true,
+        freqPromptFn: noopFreqPrompt, rolePromptFn: noopRolePrompt,
+        dbPath,
+      });
+
+      const store = await openStore(dbPath);
+      expect(getConfig(store.db, 'telemetry.enabled')).toBe('false');
+      expect(getConfig(store.db, 'telemetry_sync_enabled')).toBe('false');
+      closeStore(store);
+      // Summary reflects the preserved (disabled) state, not a forced true.
+      expect(summary?.telemetry.enabled).toBe(false);
     } finally { cleanup(); }
   });
 

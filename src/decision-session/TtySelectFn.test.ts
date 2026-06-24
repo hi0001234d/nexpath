@@ -31,6 +31,7 @@ const {
   planWindowsPopupSpawn,
   planLinuxPopupSpawn,
   buildTerminalAppleScript,
+  nexpathAgentLabel,
 } = await import('./TtySelectFn.js');
 const { OPT_OUT_SENTINEL }       = await import('./DecisionSession.js');
 const { SHOW_SIMPLER, SKIP_NOW } = await import('./options.js');
@@ -484,14 +485,14 @@ describe('createTtySelectFn — Windows — .mjs script wires renderLoop for the
     expect(script).toContain('isMeta:');
   });
 
-  it('keeps clack select for the sub-menu action prompt (Send to Claude / Copy to clipboard)', async () => {
+  it('keeps clack select for the sub-menu action prompt (Send to your agent / Copy to clipboard)', async () => {
     const script = await captureScript();
     // Sub-menu select call still uses clack — verified by the explicit
     // import of `select` from clackUrl staying in place and the
     // "What would you like to do?" prompt still being a clack select.
     expect(script).toContain("import { select, isCancel } from '");
     expect(script).toContain("'What would you like to do?'");
-    expect(script).toContain("'Send to Claude now'");
+    expect(script).toContain("'Send to your agent now'");
   });
 
   it('translates renderLoop null (cancel) to an empty result-file write', async () => {
@@ -2143,5 +2144,29 @@ describe('buildTerminalAppleScript — geometry supplied (Phase 4 bounds-setter)
     const squareGeom = { widthPx: 756, heightPx: 756, xPx: 162, yPx: 162, cols: 75, rows: 37 };
     const s = buildTerminalAppleScript('node /tmp/script.mjs', squareGeom);
     expect(s).toContain('set bounds of (first window whose selected tab is theTab) to {162, 162, 918, 918}');
+  });
+});
+
+describe('nexpathAgentLabel', () => {
+  it("returns the agent-neutral 'your agent' label", () => {
+    expect(nexpathAgentLabel()).toBe('your agent');
+  });
+
+  it('is the same label regardless of which surface triggered the popup', () => {
+    // The popup wording no longer varies per agent — Claude Code, Cursor and
+    // Windsurf / Devin all share one label, so there is no per-agent code to
+    // keep in sync.
+    const original = process.env.NEXPATH_AGENT;
+    try {
+      for (const agent of ['cursor', 'windsurf', 'devin', 'something-else', '']) {
+        process.env.NEXPATH_AGENT = agent;
+        expect(nexpathAgentLabel()).toBe('your agent');
+      }
+      delete process.env.NEXPATH_AGENT;
+      expect(nexpathAgentLabel()).toBe('your agent');
+    } finally {
+      if (original === undefined) delete process.env.NEXPATH_AGENT;
+      else process.env.NEXPATH_AGENT = original;
+    }
   });
 });

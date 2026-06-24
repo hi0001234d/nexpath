@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { PassThrough } from 'node:stream';
 import {
   computeLayout,
@@ -520,28 +520,202 @@ describe('render-loop — auto-scroll viewport (§11.7 step 5 + §11.9 step 5)',
     expect(r.viewport.totalOptionRows).toBe(10);
   });
 
-  it('visibleStyledLines length === fixedLines + min(avail, totalOptionRows - appliedScrollOffset)', () => {
+  it('visibleStyledLines length === fixedVisualRows + min(avail, totalOptionRows - appliedScrollOffset)', () => {
     const opts = makeManyOpts(10);
     const r    = computeLayout(opts, { focusedIndex: 5, expandedOptions: new Set(), scrollOffset: 0 });
-    const expectedVisible = r.budget.fixedLines + Math.min(r.budget.avail, r.viewport.totalOptionRows - r.viewport.appliedScrollOffset);
+    const expectedVisible = r.budget.fixedVisualRows + Math.min(r.budget.avail, r.viewport.totalOptionRows - r.viewport.appliedScrollOffset);
     expect(r.viewport.visibleStyledLines.length).toBe(expectedVisible);
   });
 });
 
+describe('render-loop — visual-row-aware budget (ui-bug-fix plan §5.4 Candidate A)', () => {
+  // Sum the visual rows produced when all the given styled lines are emitted at the given cols.
+  function totalVisualRows(lines: readonly string[], cols: number): number {
+    return lines.reduce((acc, line) => acc + visualRows(line, cols), 0);
+  }
+
+  // Sum the visual rows for the FIXED (non-option) region — i.e. pageHeader,
+  // pinch label, optional subtitle, question, whyHelpBlock lines, and the
+  // D4 padding row. Walks emissions in parallel with styledLines so the
+  // count reflects the styled width that the terminal will actually render.
+  function fixedVisualRows(
+    r: ReturnType<typeof computeLayout>,
+    cols: number,
+  ): number {
+    let total = 0;
+    for (let i = 0; i < r.emissions.length; i++) {
+      if (r.emissions[i].optionIndex === null) {
+        total += visualRows(r.styledLines[i], cols);
+      }
+    }
+    return total;
+  }
+
+  it('T1 — wide terminal (cols=120, no wrap): avail equals rows - fixedVisualRows - 2 — baseline preserved when no emission wraps', () => {
+    // Short pinch + short question + no whyHelp + D4 padding → no wrapping at cols=120.
+    // Each fixed emission contributes exactly 1 visual row, so visual-row sum equals
+    // the existing emission count. avail must match the existing behaviour exactly.
+    const opts = makeOpts({ cols: 120, rows: 30 });
+    const r    = computeLayout(opts, FRESH_STATE);
+
+    const emissionCount = r.emissions.filter((e) => e.optionIndex === null).length;
+    const vrCount       = fixedVisualRows(r, opts.cols);
+    expect(vrCount).toBe(emissionCount);  // No wrap → 1:1 correspondence.
+
+    expect(r.budget.avail).toBe(Math.max(0, opts.rows - vrCount - 2));
+  });
+
+  it('T2 — narrow terminal (cols=30) where pinch + question wrap: avail accounts for VISUAL row count, AND the option region shrinks proportionally', () => {
+    // On cols=30 the long pinch label wraps to 3 visual rows and the long
+    // question wraps to 4 visual rows — but each is still a SINGLE emission.
+    // The current emission-count budget under-reserves by ~5 rows; Candidate A
+    // must reserve the full visual height. Same content rendered at cols=120
+    // (no wrap) gives the baseline against which the shrink is measured.
+    const longPinch    = 'Service boundary established — contract tests defined for downstream?';
+    const longQuestion = 'Task done — reviewed and tested across all dimensions that matter for production readiness?';
+    const optsBase = {
+      rows:       30,
+      pinchLabel: longPinch,
+      question:   longQuestion,
+      options:    Array.from({ length: 8 }, (_, i) => ({
+        value:    `o${i}`,
+        label:    `Option ${i} with a fairly long label that will also wrap on narrow terminals so fittedItems can drop`,
+        descBase: `Desc-base ${i} content that may also wrap to extra visual rows when the terminal is narrow and budget-tight.`,
+      })),
+    };
+    const narrow = computeLayout(makeOpts({ ...optsBase, cols: 30  }), FRESH_STATE);
+    const wide   = computeLayout(makeOpts({ ...optsBase, cols: 120 }), FRESH_STATE);
+
+    const narrowEmissionCount = narrow.emissions.filter((e) => e.optionIndex === null).length;
+    const narrowVrCount       = fixedVisualRows(narrow, 30);
+
+    // Visual-row count MUST exceed the emission count because the long pinch
+    // and long question each consume multiple visual rows when wrapped.
+    expect(narrowVrCount).toBeGreaterThan(narrowEmissionCount);
+
+    // avail must reserve based on actual visual height — this is the load-bearing
+    // assertion that fails under the current emission-count budget and passes
+    // under Candidate A.
+    expect(narrow.budget.avail).toBe(Math.max(0, 30 - narrowVrCount - 2));
+
+    // Option region shrinks proportionally: a narrower terminal with the same
+    // content + same rows MUST fit STRICTLY fewer options than a wide one,
+    // because both the header reservation grows (less room for options) AND
+    // each option's own content wraps to more visual rows (per-option cost grows).
+    expect(narrow.budget.fittedItems).toBeLessThan(wide.budget.fittedItems);
+  });
+
+  it('T3 — narrow + deep popup approximating the Image 2 repro: total visible visual rows ≤ opts.rows - 2 (no terminal overflow possible)', () => {
+    // Realistic scenario built from the production content shape on a narrow
+    // popup (cols=40 — comparable to a small Windows Terminal column count):
+    //   - NEXPATH page header (3 emissions, 3 visual rows)
+    //   - Pinch label that wraps to 2 visual rows on cols=40
+    //   - Question that wraps to 2 visual rows on cols=40
+    //   - 2-line whyHelp block (each line wraps to 2 visual rows)
+    //   - D4 padding (1 row)
+    //   - 5 options each with a long label + long descBase that wrap
+    // Under an EMISSION-count budget, visibleStyledLines easily exceeds the
+    // terminal viewport in VISUAL rows — the terminal auto-scrolls inside
+    // the alt buffer and the pinch label / NEXPATH header scrolls off the
+    // top. The dimensions deliberately leave room for fixedVisualRows to
+    // fit so the test exercises the option-region clamp (not the separate
+    // "header alone exceeds viewport" edge case flagged in the plan).
+    const NEXPATH_PAGE_HEADER  = '▲  NEXPATH CLI\n────────────────────────\n';
+    const opts = makeOpts({
+      pageHeader:   NEXPATH_PAGE_HEADER,
+      pinchLabel:   'Service boundary established — contract tests?',
+      question:     'Have we anchored consumer-driven contract coverage?',
+      whyHelpBlock:
+        'Recent prompts moved into implementation stage with steady velocity.\n' +
+        '— review the options below for the next step before moving forward.',
+      cols: 40,
+      rows: 22,
+      options: Array.from({ length: 5 }, (_, i) => ({
+        value:    `opt-${i}`,
+        label:    `Establish contract tests for option ${i} across all consumer interfaces`,
+        descBase: `(I'm flagging this because:) Service contracts evolved without consumer-driven contract testing keeping pace.`,
+      })),
+    });
+    const r = computeLayout(opts, { focusedIndex: 3, expandedOptions: new Set(), scrollOffset: 0 });
+
+    const visibleVR = totalVisualRows(r.viewport.visibleStyledLines, opts.cols);
+
+    // Load-bearing assertion: the TOTAL VISUAL ROWS of what writeFrame will
+    // emit must fit inside the popup viewport (with the standard 2-row gutter).
+    // Failing this assertion means the terminal will auto-scroll inside the
+    // alt buffer and push the sticky header rows off the top of the viewport
+    // — the exact symptom reported in the Image 2 screenshot.
+    expect(visibleVR).toBeLessThanOrEqual(opts.rows - 2);
+
+    // Sticky-header guarantee: ALL header content types must remain in the
+    // visible output regardless of how aggressively the option region scrolls.
+    // Page-header wordmark, pinch label, question, and the first whyHelp line
+    // are each checked individually so a regression in any one of them is
+    // caught by name rather than a single contains-anything check.
+    const visibleText = r.viewport.visibleStyledLines.join('\n');
+    expect(visibleText).toContain('NEXPATH CLI');               // page-header wordmark
+    expect(visibleText).toContain('Service boundary established');  // pinch label
+    expect(visibleText).toContain('Have we anchored');          // question
+    expect(visibleText).toContain('Recent prompts moved');      // whyHelp first line
+  });
+
+  it('T4 — at cols=30/rows=18 (Image 2 dims) where fixed region exceeds viewport: NEXPATH page header + pinch label remain sticky via Tier 2 drop', () => {
+    // The original Image 2 repro environment: cols=30/rows=18 where the long
+    // pinch label + question + 3-line whyHelp wrap aggressively and the FULL
+    // header region's visual rows exceed opts.rows. The sticky-header priority
+    // tiers drop question + whyHelp + D4 padding from the bottom so that the
+    // uncroppable NEXPATH page header + pinch label stay in view and total
+    // visible visual rows fit the viewport.
+    const NEXPATH_PAGE_HEADER  = '▲  NEXPATH CLI\n────────────────────────\n';
+    const opts = makeOpts({
+      pageHeader:   NEXPATH_PAGE_HEADER,
+      pinchLabel:   'Service boundary established — contract tests defined for downstream?',
+      question:     'Have we anchored the consumer-driven contract test coverage across all consumer surfaces?',
+      whyHelpBlock:
+        'Recent prompts indicate a transition from one development stage to the next stage.\n' +
+        'Confirmation that the prior stage outputs are complete has not surfaced in any prompt.\n' +
+        '— review the options below to determine the next step before moving forward.',
+      cols: 30,
+      rows: 18,
+      options: Array.from({ length: 5 }, (_, i) => ({
+        value:    `opt-${i}`,
+        label:    `Establish consumer-driven contract tests for option ${i} across all the interfaces`,
+        descBase: `(I'm flagging this because:) Service contracts have evolved without consumer-driven contract testing keeping pace with the recent changes.`,
+      })),
+    });
+    const r = computeLayout(opts, { focusedIndex: 3, expandedOptions: new Set(), scrollOffset: 0 });
+
+    const visibleVR = totalVisualRows(r.viewport.visibleStyledLines, opts.cols);
+
+    // No-overflow invariant: total visible visual rows fit within the viewport
+    // even at this tight popup size, because Tier 2 drop releases room from
+    // the bottom of the header region.
+    expect(visibleVR).toBeLessThanOrEqual(opts.rows - 2);
+
+    // Tier 1 uncroppable guarantee: NEXPATH wordmark + pinch label MUST
+    // remain in the visible output. These are the user's visual identity
+    // and the per-session context anchor — the bug report specifically
+    // targets their loss when the popup viewport is tight.
+    const visibleText = r.viewport.visibleStyledLines.join('\n');
+    expect(visibleText).toContain('NEXPATH CLI');                   // page-header wordmark
+    expect(visibleText).toContain('Service boundary established');  // pinch label
+  });
+});
+
 describe('render-loop — budget computation (§11.4 / §11.8 / §11.12)', () => {
-  it('fixedLines counts all header / why-help / D4-padding emissions (optionIndex === null)', () => {
+  it('fixedVisualRows counts all header / why-help / D4-padding emissions (optionIndex === null) in visual-row units', () => {
     const r = computeLayout(makeOpts({ whyHelpBlock: 'w1\nw2\nw3' }), FRESH_STATE);
-    // pinch (1) + question (1) + whyHelp (3) + D4 padding (1) = 6
-    expect(r.budget.fixedLines).toBe(6);
+    // No wrap at cols=80 → 1 visual row per emission: pinch (1) + question (1) + whyHelp (3) + D4 padding (1) = 6
+    expect(r.budget.fixedVisualRows).toBe(6);
   });
 
-  it('fixedLines includes the subtitle row when present', () => {
+  it('fixedVisualRows includes the subtitle row when present', () => {
     const r = computeLayout(makeOpts({ subtitle: 'lighter' }), FRESH_STATE);
-    // pinch (1) + subtitle (1) + question (1) + D4 padding (1) = 4 (no whyHelp here)
-    expect(r.budget.fixedLines).toBe(4);
+    // No wrap at cols=80 → 1 visual row per emission: pinch (1) + subtitle (1) + question (1) + D4 padding (1) = 4 (no whyHelp here)
+    expect(r.budget.fixedVisualRows).toBe(4);
   });
 
-  it('avail = rows - fixedLines - 2, clamped to 0 for tiny terminals', () => {
+  it('avail = rows - fixedVisualRows - 2, clamped to 0 for tiny terminals', () => {
     const big = computeLayout(makeOpts(), { ...FRESH_STATE });
     expect(big.budget.avail).toBe(big.budget.avail);
     expect(big.budget.avail).toBe(big.budget.avail >= 0 ? big.budget.avail : 0);
@@ -572,7 +746,7 @@ describe('render-loop — budget computation (§11.4 / §11.8 / §11.12)', () =>
   });
 
   it('a short terminal clips fittedItems to fewer than the total option count', () => {
-    // rows=10, no whyHelp → fixedLines = pinch(1)+question(1)+padding(1) = 3
+    // rows=10, no whyHelp, no wrap → fixedVisualRows = pinch(1)+question(1)+padding(1) = 3
     // avail = 10 - 3 - 2 = 5. focused option cost = 4 (label + gap + desc + hint),
     // second option cost = 3 (label + gap + desc). 4 + 3 = 7 > 5 → only 1 fits.
     const r = computeLayout(makeOpts({ rows: 10 }), FRESH_STATE);
@@ -812,6 +986,117 @@ describe('render-loop — renderLoop interactive shell', () => {
     });
     const seen = Buffer.concat(chunks).toString('utf8');
     expect(seen).toContain('PINCH_LABEL_MARKER');
+  });
+});
+
+describe('render-loop — resize listener', () => {
+  const simpleLayout: RenderLoopOptions = {
+    pinchLabel: 'P',
+    question:   'Q',
+    options:    [{ value: 'a', label: 'A', descBase: 'a' }],
+    rows: 20,
+    cols: 80,
+  };
+
+  it('T6 — resize event triggers a re-render via writeFrame', async () => {
+    // Spy on process.stdout.on so the resize handler installed by renderLoop
+    // can be captured and triggered manually — we cannot rely on a real OS
+    // SIGWINCH inside the test process.
+    let capturedResize: (() => void) | null = null;
+    const onSpy = vi.spyOn(process.stdout, 'on').mockImplementation(
+      ((event: string, handler: () => void) => {
+        if (event === 'resize') capturedResize = handler;
+        return process.stdout;
+      }) as typeof process.stdout.on,
+    );
+    const offSpy = vi.spyOn(process.stdout, 'off').mockImplementation(
+      (() => process.stdout) as typeof process.stdout.off,
+    );
+
+    const out = new PassThrough();
+    const chunks: Buffer[] = [];
+    out.on('data', (c: Buffer) => chunks.push(c));
+
+    // Controlled iterator: lets the test trigger the resize between the
+    // initial frame and the terminal event so the extra write is observable.
+    let pending: ((v: KeyEvent | null) => void) | null = null;
+    const keyEvents: AsyncIterable<KeyEvent> = {
+      [Symbol.asyncIterator]: () => ({
+        next: async () => {
+          const ev = await new Promise<KeyEvent | null>((r) => { pending = r; });
+          if (ev === null) return { value: undefined as unknown as KeyEvent, done: true };
+          return { value: ev, done: false };
+        },
+      }),
+    };
+    const sendKey = (ev: KeyEvent) => {
+      const p = pending;
+      pending  = null;
+      p?.(ev);
+    };
+
+    const loopPromise = renderLoop({
+      layout:    simpleLayout,
+      out,
+      keyEvents,
+    });
+
+    // Wait for the initial frame to land before measuring.
+    await new Promise((r) => setImmediate(r));
+    const initialByteCount = Buffer.concat(chunks).length;
+
+    expect(capturedResize).not.toBeNull();
+
+    // Simulate a terminal-window resize — should fire writeFrame again and
+    // produce additional output on `out`.
+    capturedResize!();
+    await new Promise((r) => setImmediate(r));
+    expect(Buffer.concat(chunks).length).toBeGreaterThan(initialByteCount);
+
+    // Terminate the loop cleanly.
+    sendKey({ name: 'enter' });
+    await loopPromise;
+
+    onSpy.mockRestore();
+    offSpy.mockRestore();
+  });
+
+  it('T7 — resize listener removed on every exit path (enter, escape, ctrl-c, iterator exhaust)', async () => {
+    const exitPaths: { name: string; events: KeyEvent['name'][] }[] = [
+      { name: 'enter',            events: ['enter'] },
+      { name: 'escape',           events: ['escape'] },
+      { name: 'ctrl-c',           events: ['ctrl-c'] },
+      { name: 'iterator-exhaust', events: [] },
+    ];
+
+    for (const path of exitPaths) {
+      let onCount  = 0;
+      let offCount = 0;
+      const onSpy = vi.spyOn(process.stdout, 'on').mockImplementation(
+        ((event: string) => {
+          if (event === 'resize') onCount++;
+          return process.stdout;
+        }) as typeof process.stdout.on,
+      );
+      const offSpy = vi.spyOn(process.stdout, 'off').mockImplementation(
+        ((event: string) => {
+          if (event === 'resize') offCount++;
+          return process.stdout;
+        }) as typeof process.stdout.off,
+      );
+
+      await renderLoop({
+        layout:    simpleLayout,
+        out:       new PassThrough(),
+        keyEvents: eventsOf(...path.events),
+      });
+
+      expect(onCount,  `${path.name}: resize listener registered exactly once`).toBe(1);
+      expect(offCount, `${path.name}: resize listener removed exactly once`).toBe(1);
+
+      onSpy.mockRestore();
+      offSpy.mockRestore();
+    }
   });
 });
 
@@ -1213,7 +1498,7 @@ describe('render-loop — D5 edge case (c): short-terminal refuse-to-expand', ()
   });
 
   it('refuses the expansion and falls back to truncated when avail-5 < 2', () => {
-    // Very short terminal: rows=8, so avail = 8 - fixedLines(2 + 1 padding) - 2 = 3.
+    // Very short terminal: rows=8, so avail = 8 - fixedVisualRows(2 + 1 padding) - 2 = 3.
     // avail - 5 = -2 → secondaryCap = max(0, -2) = 0 → 0 < D5_MIN_EFFECTIVE_CAP(2)
     // → refusal. desc-base lines should be desc-base-truncated, not -expanded.
     //
@@ -1349,7 +1634,7 @@ describe('render-loop — page-header emission + cursor visibility', () => {
     it('counts page-header lines in preFixedLines so option budget reserves space', () => {
       const baseline = computeLayout(makeOptsP(), FRESH_STATE);
       const withHeader = computeLayout(makeOptsP({ pageHeader: 'A\nB\nC' }), FRESH_STATE);
-      expect(withHeader.budget.fixedLines - baseline.budget.fixedLines).toBe(3);
+      expect(withHeader.budget.fixedVisualRows - baseline.budget.fixedVisualRows).toBe(3);
     });
   });
 

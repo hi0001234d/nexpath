@@ -21,6 +21,37 @@ import {
   type KeySource,
 } from '../../config/ApiKeyResolver.js';
 
+// Side-effect import: registers all coding-agent adapters with the in-process
+// registry. Must precede any getAdapter() / detectAll() call in installAction below.
+import '../../agents/index.js';
+import { getAdapter, detectAll } from '../../agents/registry.js';
+import type { HookAdapter, InstallContext } from '../../agents/types.js';
+// Internal use + backward-compat re-export of the Claude Code hook helpers
+// (moved to src/agents/adapters/claude-code.ts in M1 Branch 2 — v0.1.3/m1/claude-code-refactor).
+import {
+  getClaudeSettingsPath,
+  buildHookCommand,
+  buildStopHookCommand,
+  buildHookEntry,
+  writeHookEntry,
+  removeHookEntry,
+} from '../../agents/adapters/claude-code.js';
+import {
+  type SupportedPlatform,
+  DEFAULT_PLATFORM,
+  supportedAgentsForPlatform,
+  supportedIdsForPlatform,
+  eligibleCategoriesForPlatform,
+} from './supported-agents-by-platform.js';
+export {
+  getClaudeSettingsPath,
+  buildHookCommand,
+  buildStopHookCommand,
+  buildHookEntry,
+  writeHookEntry,
+  removeHookEntry,
+};
+
 export const MCP_SERVER_NAME = 'nexpath-prompt-store';
 
 // ── Config entry builders (pure — no I/O) ─────────────────────────────────────
@@ -118,43 +149,9 @@ export type DetectedAgent = {
 };
 
 /**
- * Officially-supported agents in the current nexpath version — single source
- * of truth for the registration allow-list AND the "Not found" notice.
- *
- * Only entries here appear in `detectAgents()` output, get nexpath registration
- * written during install, and show up in `nexpath status`. Agents present on
- * disk but not listed here are silently filtered out.
- *
- * During install, any supported agent NOT detected on disk produces a
- * "Not found: <label>" line so users know which expected agent is missing.
- *
- * To officially support a new agent in a future version:
- *   1. Add { id, label } to this array.
- *   2. Verify the matching push site in detectAgentsForCleanup() builds
- *      the correct DetectedAgent.
- *   3. Verify the registration path (writeMcpEntry / writeOpenCodeEntry / …)
- *      is wired in installAction's per-agent loop.
- *
- * Uninstall uses detectAgentsForCleanup() directly so it can still remove
- * registration entries written by older nexpath versions, even for IDs no
- * longer listed here.
- */
-export const SUPPORTED_AGENTS: ReadonlyArray<{ id: string; label: string }> = [
-  { id: 'claude', label: 'Claude Code' },
-];
-
-/** Derived ID set used by the detectAgents filter. Mirrors SUPPORTED_AGENTS. */
-export const SUPPORTED_AGENT_IDS: ReadonlySet<string> = new Set(
-  SUPPORTED_AGENTS.map((a) => a.id),
-);
-
-/**
  * Detect every agent whose config directory exists on disk, without applying
- * the SUPPORTED_AGENT_IDS filter. Used by the uninstall flow so that legacy
- * registration entries written by older nexpath versions can still be removed.
- *
- * Claude Code is always included — home dir is always present, and the CLI
- * command (claude mcp add) is attempted first regardless.
+ * any platform gate. Used by the uninstall flow so that legacy registration
+ * entries written by older nexpath versions can still be removed.
  */
 export function detectAgentsForCleanup(paths: AgentPaths): DetectedAgent[] {
   const found: DetectedAgent[] = [];
@@ -197,13 +194,17 @@ export function detectAgentsForCleanup(paths: AgentPaths): DetectedAgent[] {
 }
 
 /**
- * Determine which agents to register on install / surface in status.
- *
- * Returns only agents whose `id` appears in SUPPORTED_AGENT_IDS. Agents
- * present on disk but not officially supported are silently filtered out.
+ * Determine which agents to register on install for a given install target.
+ * Returns only agents whose `id` is officially supported on `platform`.
+ * Agents present on disk but outside the platform's supported set are
+ * silently filtered out.
  */
-export function detectAgents(paths: AgentPaths): DetectedAgent[] {
-  return detectAgentsForCleanup(paths).filter((a) => SUPPORTED_AGENT_IDS.has(a.id));
+export function detectAgentsForPlatform(
+  paths: AgentPaths,
+  platform: SupportedPlatform,
+): DetectedAgent[] {
+  const supportedIds = supportedIdsForPlatform(platform);
+  return detectAgentsForCleanup(paths).filter((a) => supportedIds.has(a.id));
 }
 
 // ── Config read / write helpers ───────────────────────────────────────────────
@@ -265,145 +266,10 @@ export function removeOpenCodeEntry(filePath: string): boolean {
 }
 
 // ── Claude Code hook helpers ──────────────────────────────────────────────────
-
-/** Path to the user-level Claude Code settings file (where hooks are configured). */
-export function getClaudeSettingsPath(home: string): string {
-  return join(home, '.claude', 'settings.json');
-}
-
-/**
- * Build the shell command string for the UserPromptSubmit hook.
- *
- * Uses `node` explicitly with the absolute path to the running CLI so the hook
- * works regardless of whether nexpath is globally installed or run from a local
- * build (PATH is not required).
- *
- * Forward slashes are used throughout so the value is safe in PowerShell and cmd
- * on Windows as well as bash/zsh on Unix.
- */
-export function buildHookCommand(home: string, platform = process.platform): string {
-  const cliPath = resolve(process.argv[1]).replace(/\\/g, '/');
-  const dbPath  = join(home, '.nexpath', 'prompt-store.db').replace(/\\/g, '/');
-  return `node "${cliPath}" auto --db "${dbPath}"`;
-}
-
-/** Build the shell command string for the Stop hook. */
-export function buildStopHookCommand(home: string, platform = process.platform): string {
-  const cliPath = resolve(process.argv[1]).replace(/\\/g, '/');
-  const dbPath  = join(home, '.nexpath', 'prompt-store.db').replace(/\\/g, '/');
-  return `node "${cliPath}" stop --db "${dbPath}"`;
-}
-
-/**
- * Build the UserPromptSubmit + Stop hook entry objects.
- *
- * The `_nexpath_hook: true` field is the reliable deduplication and removal
- * marker — it survives path changes across reinstalls, unlike scanning the
- * command string.
- *
- * No `timeout` field is set so Claude Code uses its default (600 s), which is
- * required for hooks that block for UI interaction (the decision session).
- */
-export function buildHookEntry(home: string, platform = process.platform): Record<string, unknown> {
-  return {
-    UserPromptSubmit: [
-      {
-        _nexpath_hook: true,
-        matcher:       '',
-        hooks: [
-          {
-            type:    'command',
-            command: buildHookCommand(home, platform),
-          },
-        ],
-      },
-    ],
-    Stop: [
-      {
-        _nexpath_hook: true,
-        matcher:       '',
-        hooks: [
-          {
-            type:    'command',
-            command: buildStopHookCommand(home, platform),
-          },
-        ],
-      },
-    ],
-  };
-}
-
-/**
- * Write the nexpath UserPromptSubmit and Stop hooks into ~/.claude/settings.json.
- *
- * Uses a read-filter-append pattern so existing hooks written by other tools are
- * preserved.  Any prior nexpath hook group (identified by `_nexpath_hook: true`)
- * is removed before appending the fresh entry, making this operation idempotent.
- */
-export function writeHookEntry(filePath: string, home: string, platform = process.platform): void {
-  const data  = readJsonSafe(filePath);
-  const hooks = (data.hooks as Record<string, unknown> | undefined) ?? {};
-  const entry = buildHookEntry(home, platform);
-
-  // UserPromptSubmit
-  const existingUPS = (hooks.UserPromptSubmit as Array<Record<string, unknown>> | undefined) ?? [];
-  hooks.UserPromptSubmit = [
-    ...existingUPS.filter((g) => !g._nexpath_hook),
-    ...(entry.UserPromptSubmit as unknown[]),
-  ];
-
-  // Stop
-  const existingStop = (hooks.Stop as Array<Record<string, unknown>> | undefined) ?? [];
-  hooks.Stop = [
-    ...existingStop.filter((g) => !g._nexpath_hook),
-    ...(entry.Stop as unknown[]),
-  ];
-
-  data.hooks = hooks;
-  writeJson(filePath, data);
-}
-
-/**
- * Remove the nexpath UserPromptSubmit and Stop hooks from ~/.claude/settings.json.
- *
- * Identifies nexpath-written hook groups by the `_nexpath_hook: true` field.
- * Returns false if the file does not exist or no nexpath hooks were found.
- */
-export function removeHookEntry(filePath: string): boolean {
-  if (!existsSync(filePath)) return false;
-  const data  = readJsonSafe(filePath);
-  const hooks = data.hooks as Record<string, unknown> | undefined;
-  if (!hooks) return false;
-
-  let removed = false;
-
-  // UserPromptSubmit
-  const upsGroups = hooks.UserPromptSubmit as Array<Record<string, unknown>> | undefined;
-  if (upsGroups) {
-    const filtered = upsGroups.filter((g) => !g._nexpath_hook);
-    if (filtered.length < upsGroups.length) {
-      removed = true;
-      if (filtered.length === 0) delete hooks.UserPromptSubmit;
-      else hooks.UserPromptSubmit = filtered;
-    }
-  }
-
-  // Stop
-  const stopGroups = hooks.Stop as Array<Record<string, unknown>> | undefined;
-  if (stopGroups) {
-    const filtered = stopGroups.filter((g) => !g._nexpath_hook);
-    if (filtered.length < stopGroups.length) {
-      removed = true;
-      if (filtered.length === 0) delete hooks.Stop;
-      else hooks.Stop = filtered;
-    }
-  }
-
-  if (!removed) return false;
-  data.hooks = hooks;
-  writeJson(filePath, data);
-  return true;
-}
+// Function definitions moved to src/agents/adapters/claude-code.ts in M1 Branch 2
+// (v0.1.3/m1/claude-code-refactor). Bodies are byte-identical to what lived
+// here before; the import + re-export at the top of this file preserves the
+// existing public API so callers importing from './install.js' are unaffected.
 
 // ── Claude Code CLI helpers ───────────────────────────────────────────────────
 
@@ -612,7 +478,7 @@ export interface InstallSummary {
 }
 
 export async function installAction(
-  opts: { yes?: boolean } = {},
+  opts: { yes?: boolean; platform?: SupportedPlatform } = {},
   {
     isWin = process.platform === 'win32',
     paths = resolveAgentPaths(),
@@ -637,7 +503,20 @@ export async function installAction(
     platformForKeychain?: NodeJS.Platform;
   } = {},
 ): Promise<InstallSummary | null> {
+  const platform = opts.platform ?? DEFAULT_PLATFORM;
   intro('Installing nexpath');
+  console.log(`Installing for: ${platform}`);
+
+  // Empty-bucket short-circuit — no API key prompt, no telemetry prompt, no
+  // DB open. Honest exit when the target platform has no officially-supported
+  // agents in this version yet.
+  if (supportedAgentsForPlatform(platform).length === 0) {
+    console.log('');
+    console.log(`No agents are officially supported on platform "${platform}" in this version yet.`);
+    console.log('See the README support roadmap for upcoming agents.');
+    outro('Installation finished — no agents registered.');
+    return null;
+  }
 
   const store = await openStore(dbPath);
 
@@ -686,9 +565,22 @@ export async function installAction(
         return null;
       }
       telemetryEnabled = consent.kind === 'enable';
+      setConfig(store, 'telemetry.enabled',      String(telemetryEnabled));
+      setConfig(store, 'telemetry_sync_enabled', String(telemetryEnabled));
+    } else {
+      // --yes (non-interactive): preserve an existing telemetry choice. A re-run
+      // — e.g. the VS Code extension's two-pass setup (`--for cli` interactive,
+      // then `--for vscode --yes`) — must NOT silently re-enable telemetry the
+      // user disabled in the first pass. Mirrors how advisory_frequency / role
+      // below only write a default when unset. On a first install (unset) it
+      // still defaults to enabled, preserving prior `--yes` behaviour.
+      if (!isConfigSet(store.db, 'telemetry.enabled')) {
+        setConfig(store, 'telemetry.enabled',      'true');
+        setConfig(store, 'telemetry_sync_enabled', 'true');
+      } else {
+        telemetryEnabled = getConfig(store.db, 'telemetry.enabled') === 'true';
+      }
     }
-    setConfig(store, 'telemetry.enabled',      String(telemetryEnabled));
-    setConfig(store, 'telemetry_sync_enabled', String(telemetryEnabled));
   } finally {
     if (store.dbPath !== ':memory:' || telemetryEnabled !== true) {
       // close happens at end of step 3 path; nothing to do here
@@ -696,115 +588,163 @@ export async function installAction(
   }
 
   // ── Step 3: Agent detection + registration ────────────────────────────────
-  const agents      = detectAgents(paths);
+  // When the VS Code extension drives setup it targets ONLY the IDE the user is
+  // in (NEXPATH_ONLY_AGENT = cursor|windsurf). Additive: with the env unset this
+  // is a no-op and the legacy multi-agent behaviour is byte-identical.
+  // NOTE: we do NOT filter `agents` itself — the API-key/telemetry/frequency/role
+  // prompt gating below keys off `agents.length`, so filtering here could skip
+  // those prompts. We only (a) suppress the multi-agent "Detected/Not found"
+  // notices and (b) gate the per-adapter install loop further down on onlyAgent.
+  const onlyAgent   = process.env.NEXPATH_ONLY_AGENT;
+  const agents      = detectAgentsForPlatform(paths, platform);
   const detectedIds = new Set(agents.map((a) => a.id));
-  const missing     = SUPPORTED_AGENTS.filter((sa) => !detectedIds.has(sa.id));
-
-  if (agents.length > 0) {
+  const missing     = supportedAgentsForPlatform(platform).filter((sa) => !detectedIds.has(sa.id));
+  if (onlyAgent) {
+    // Extension-driven single-IDE setup: the extension runs INSIDE the target IDE,
+    // so it's definitely present — show just that one (matches the CLI's "Detected: X")
+    // regardless of the file-based detection above.
+    const onlyLabel = supportedAgentsForPlatform(platform).find((sa) => sa.id === onlyAgent)?.label ?? onlyAgent;
+    console.log(`Detected: ${onlyLabel}`);
+  } else if (agents.length > 0) {
     console.log(`Detected: ${agents.map((a) => a.label).join(', ')}`);
   }
-  if (missing.length > 0) {
+  // Skip the "Not found" notice when deliberately targeting a single IDE — the
+  // other agents aren't "missing", they're just not the target.
+  if (missing.length > 0 && !onlyAgent) {
     console.log(`Not found: ${missing.map((sa) => sa.label).join(', ')}`);
     console.log('nexpath currently supports Claude Code only — support for Cursor, Windsurf, and other agents is coming in future updates.');
   }
-
-  if (agents.length === 0) {
-    closeStore(store);
-    return {
-      apiKey:    { source: apiKeySource },
-      telemetry: { enabled: telemetryEnabled },
-      agents:    { registered: [], failed: [] },
-      extras:    { clipboardInstalled: false, clipboardTool: null },
-    };
-  }
-
-  if (!opts.yes) {
-    const ok = await confirmFn();
-    if (!ok) {
-      console.log('Cancelled.');
-      closeStore(store);
-      return null;
-    }
-  }
-
-  // NOTE: Enable REGISTER_MCP_SERVER when MCP tools are added to src/server/tools.ts.
-  // Currently TOOLS is empty — no reason to spin up the MCP server process yet.
-  const REGISTER_MCP_SERVER = false;
-
   const registered: string[] = [];
   const failed:     string[] = [];
-
-  for (const agent of agents) {
-    try {
-      if (agent.type === 'claude-cli') {
-        if (REGISTER_MCP_SERVER) {
-          const ok = claudeCliInstall(execFn);
-          if (ok) {
-            console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 registered via claude mcp add`);
-          } else {
-            // Fallback: write ~/.claude.json directly
-            writeMcpEntry(agent.configPath, buildStandardEntry(isWin));
-            console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath} (CLI fallback)`);
-          }
-        }
-        // Register the advisory pipeline hook (separate from MCP — different file)
-        try {
-          writeHookEntry(paths.claudeSettings, homedir(), isWin ? 'win32' : process.platform);
-          console.log(`\u2713 ${'Claude Code'.padEnd(12)} \u2014 advisory hook written to ${paths.claudeSettings}`);
-          registered.push('Claude Code');
-        } catch (err) {
-          console.log(`\u26a0 ${'Claude Code'.padEnd(12)} \u2014 hook write failed: ${(err as Error).message}`);
-          failed.push('Claude Code');
-        }
-      } else if (REGISTER_MCP_SERVER) {
-        if (agent.type === 'cline') {
-          writeMcpEntry(agent.configPath, buildClineEntry(isWin));
-          console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
-        } else if (agent.type === 'kilo') {
-          writeMcpEntry(agent.configPath, buildKiloEntry(isWin));
-          console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
-        } else if (agent.type === 'opencode') {
-          writeOpenCodeEntry(agent.configPath, buildOpenCodeEntry(isWin));
-          console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
-        } else {
-          writeMcpEntry(agent.configPath, buildStandardEntry(isWin));
-          console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
-        }
-        registered.push(agent.label);
+  // Confirmation, Claude Code registration, and the frequency / role prompts run
+  // only when a supported agent (Claude Code) is actually present on disk. The
+  // registry-driven adapter installs further below run regardless, so Cursor /
+  // Windsurf VSCode extensions are still offered on machines without Claude Code.
+  if (agents.length > 0 || onlyAgent) {
+    if (!opts.yes) {
+      const ok = await confirmFn();
+      if (!ok) {
+        console.log('Cancelled.');
+        closeStore(store);
+        return null;
       }
+    }
+    // NOTE: Enable REGISTER_MCP_SERVER when MCP tools are added to src/server/tools.ts.
+    // Currently TOOLS is empty — no reason to spin up the MCP server process yet.
+    const REGISTER_MCP_SERVER = false;
+    for (const agent of agents) {
+      try {
+        if (agent.type === 'claude-cli') {
+          if (REGISTER_MCP_SERVER) {
+            const ok = claudeCliInstall(execFn);
+            if (ok) {
+              console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 registered via claude mcp add`);
+            } else {
+              // Fallback: write ~/.claude.json directly
+              writeMcpEntry(agent.configPath, buildStandardEntry(isWin));
+              console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}
+(CLI fallback)`);
+            }
+          }
+          // Register the advisory pipeline hook (separate from MCP — different file)
+          const claudeAdapter = getAdapter('claude-code') as HookAdapter | undefined;
+          if (claudeAdapter) {
+            await claudeAdapter.install({
+              home:         homedir(),
+              cwd:          process.cwd(),
+              yes:          !!opts.yes,
+              dbPath,
+              // Pass paths.claudeSettings so tests that inject a custom paths
+              // object still control the target file independently of homedir().
+              settingsPath: paths.claudeSettings,
+            });
+            registered.push(agent.label);
+          }
+        } else if (REGISTER_MCP_SERVER) {
+          if (agent.type === 'cline') {
+            writeMcpEntry(agent.configPath, buildClineEntry(isWin));
+            console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
+          } else if (agent.type === 'kilo') {
+            writeMcpEntry(agent.configPath, buildKiloEntry(isWin));
+            console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
+          } else if (agent.type === 'opencode') {
+            writeOpenCodeEntry(agent.configPath, buildOpenCodeEntry(isWin));
+            console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
+          } else {
+            writeMcpEntry(agent.configPath, buildStandardEntry(isWin));
+            console.log(`\u2713 ${agent.label.padEnd(12)} \u2014 written to ${agent.configPath}`);
+          }
+          registered.push(agent.label);
+        }
+      } catch (err) {
+        console.log(`\u2717 ${agent.label.padEnd(12)} \u2014 failed: ${(err as Error).message}`);
+        failed.push(agent.label);
+      }
+    }
+
+    // ── Frequency + role prompts ───────────────────────────────────────────────
+    // Reuse the already-open `store` — opening a second store on the same dbPath
+    // would deadlock on the exclusive file lock and clobber these writes when the
+    // first store is closed afterwards.
+    const currentFreq = readInstallFreq(store.db);
+    if (opts.yes) {
+      if (!isConfigSet(store.db, 'advisory_frequency')) {
+        setAdvisoryFrequency(store, 'advisory_frequency', currentFreq);
+      }
+    } else {
+      const picked = await freqPromptFn(currentFreq);
+      if (!isCancel(picked) && typeof picked === 'string') {
+        setAdvisoryFrequency(store, 'advisory_frequency', picked);
+        console.log(`✓ advisory_frequency = ${picked}`);
+      }
+    }
+
+    const currentRole = readInstallRole(store.db);
+    if (opts.yes) {
+      if (!isConfigSet(store.db, 'role')) {
+        setRole(store, 'role', currentRole);
+      }
+    } else {
+      const picked = await rolePromptFn(currentRole);
+      if (!isCancel(picked) && typeof picked === 'string') {
+        setRole(store, 'role', picked);
+        console.log(`✓ role = ${picked}`);
+      }
+    }
+  }
+
+  // ── Registry-driven adapter installs (M2+) ────────────────────────────────────
+  // VSCodeExtensionAdapters (cursor, windsurf) self-register via
+  // src/agents/index.ts side-effect imports. detectAll() asks each registered
+  // adapter if it should run on THIS machine; only those whose detect() returns
+  // true end up in the list. claude-code is excluded here because it's already
+  // handled in the legacy for-loop above (agent.type === 'claude-cli' branch).
+  //
+  // This block runs regardless of whether Claude Code was detected, so Cursor /
+  // Windsurf extension installs are still offered on machines without Claude.
+  const adapterCtx: InstallContext = {
+    home: homedir(),
+    cwd:  process.cwd(),
+    yes:  !!opts.yes,
+    dbPath,
+  };
+  const detectedAdapters    = await detectAll(adapterCtx);
+  const eligibleCategories  = eligibleCategoriesForPlatform(platform);
+  for (const adapter of detectedAdapters) {
+    if (adapter.id === 'claude-code') continue;
+    // Extension-driven single-IDE setup: install only the target agent.
+    if (onlyAgent && adapter.id !== onlyAgent) continue;
+    // Platform gate: only run adapter.install() for adapters whose category
+    // matches the chosen install platform. Under --for cli, vscode-extension
+    // and browser-extension adapters stay silent.
+    if (!eligibleCategories.has(adapter.category)) continue;
+    try {
+      const res = await adapter.install(adapterCtx);
+      if (res.status === 'installed' || res.status === 'already-installed') registered.push(adapter.label);
+      else if (res.status === 'failed') failed.push(adapter.label);
     } catch (err) {
-      console.log(`\u2717 ${agent.label.padEnd(12)} \u2014 failed: ${(err as Error).message}`);
-      failed.push(agent.label);
-    }
-  }
-
-  // ── Frequency + role prompts ───────────────────────────────────────────────
-  // Reuse the already-open `store` — opening a second store on the same dbPath
-  // would deadlock on the exclusive file lock and clobber these writes when the
-  // first store is closed afterwards.
-  const currentFreq = readInstallFreq(store.db);
-  if (opts.yes) {
-    if (!isConfigSet(store.db, 'advisory_frequency')) {
-      setAdvisoryFrequency(store, 'advisory_frequency', currentFreq);
-    }
-  } else {
-    const picked = await freqPromptFn(currentFreq);
-    if (!isCancel(picked) && typeof picked === 'string') {
-      setAdvisoryFrequency(store, 'advisory_frequency', picked);
-      console.log(`✓ advisory_frequency = ${picked}`);
-    }
-  }
-
-  const currentRole = readInstallRole(store.db);
-  if (opts.yes) {
-    if (!isConfigSet(store.db, 'role')) {
-      setRole(store, 'role', currentRole);
-    }
-  } else {
-    const picked = await rolePromptFn(currentRole);
-    if (!isCancel(picked) && typeof picked === 'string') {
-      setRole(store, 'role', picked);
-      console.log(`✓ role = ${picked}`);
+      console.log(`\u2717 ${adapter.label.padEnd(12)} \u2014 failed: ${(err as Error).message}`);
+      failed.push(adapter.label);
     }
   }
 
@@ -816,6 +756,9 @@ export async function installAction(
   let clipboardResult: ClipboardEnsureResult = { installed: false, toolName: null, alreadyHad: false };
   if (!skipClipboardCheck) {
     clipboardResult = await ensureLinuxClipboard({ autoConfirm: opts.yes });
+    // Keystroke tool for the Windsurf in-editor auto-inject (clipboard → focus
+    // Cascade → paste). Linux-only; no-op on macOS/Windows. Degrades to clipboard if declined.
+    await ensureLinuxInjectTools({ autoConfirm: opts.yes });
   }
 
   // ── Final summary (note + outro) ─────────────────────────────────────────
@@ -942,6 +885,72 @@ export async function ensureLinuxClipboard(
   }
 }
 
+
+/**
+ * On Linux, ensure the keystroke tool the Windsurf in-editor auto-inject needs
+ * (`xdotool` on X11, `wtype` on Wayland) is installed — so the popup selection
+ * auto-pastes into Cascade instead of falling back to "copy to clipboard". The
+ * same tool also raises the Cursor advisory popup. macOS/Windows use built-in
+ * automation (osascript / SendKeys), so this is Linux-only. If skipped/failed,
+ * Windsurf advisories degrade gracefully to the clipboard path.
+ */
+export async function ensureLinuxInjectTools(
+  deps: {
+    platform?: string;
+    spawnFn?: typeof spawnSync;
+    execFn?: typeof execSync;
+    confirmFn?: ConfirmFn;
+    autoConfirm?: boolean;
+    waylandDisplay?: string;
+  } = {},
+): Promise<void> {
+  const plat  = deps.platform ?? process.platform;
+  const spawn = deps.spawnFn  ?? spawnSync;
+  const exec  = deps.execFn   ?? execSync;
+
+  if (plat !== 'linux') return;
+
+  const isWayland = !!(deps.waylandDisplay ?? process.env.WAYLAND_DISPLAY);
+  const toolName  = isWayland ? 'wtype' : 'xdotool'; // package name == tool name
+
+  if (spawn('which', [toolName], { stdio: 'pipe' }).status === 0) return; // already present
+
+  const pkgManagers = PKG_MANAGERS.map((p) => ({
+    cmd: p.cmd,
+    install: p.install.map((arg) => (arg === 'xclip' ? toolName : arg)),
+  }));
+  const pm = pkgManagers.find((p) => spawn('which', [p.cmd], { stdio: 'pipe' }).status === 0);
+  if (!pm) {
+    console.log(`⚠ No keystroke tool (${toolName}) found — install it for Windsurf auto-inject.`);
+    return;
+  }
+
+  console.log('');
+  console.log(`Windsurf auto-inject (paste into Cascade) requires ${toolName} (not found on this system).`);
+
+  if (!deps.autoConfirm) {
+    const confirmFn = deps.confirmFn ?? (async () => {
+      const answer = await confirm({ message: `Install ${toolName} using ${pm.cmd}?` });
+      return !isCancel(answer) && answer === true;
+    });
+    const ok = await confirmFn();
+    if (!ok) {
+      console.log('⚠ Skipped — Windsurf advisories will fall back to "copy to clipboard".');
+      return;
+    }
+  }
+
+  try {
+    exec(pm.install.join(' '), { stdio: 'inherit' });
+    if (spawn('which', [toolName], { stdio: 'pipe' }).status === 0) {
+      console.log(`✓ ${toolName} installed successfully`);
+    } else {
+      console.log(`⚠ ${toolName} install command ran but ${toolName} not found — check output above`);
+    }
+  } catch {
+    console.log(`⚠ ${toolName} installation failed — install manually: sudo ${pm.cmd} install ${toolName}`);
+  }
+}
 // ── uninstallAction ────────────────────────────────────────────────────────────
 
 export type UninstallApiKeyConfirmFn = () => Promise<boolean>;
@@ -1006,6 +1015,28 @@ export async function uninstallAction(
       }
     } catch (err) {
       console.log(`\u2717 ${agent.label.padEnd(12)} \u2014 failed: ${(err as Error).message}`);
+    }
+  }
+
+  // \u2500\u2500 Registry-driven adapter uninstalls (M2+) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // Mirror of the installAction's registry block. Skips claude-code (already
+  // handled in the legacy for-loop above) and calls each detected adapter's
+  // uninstall() so the user can cleanly back out of every adapter the install
+  // touched. Errors are surfaced as a single line per adapter \u2014 they don't
+  // halt the rest of the uninstall.
+  const adapterCtx: InstallContext = {
+    home: homedir(),
+    cwd:  process.cwd(),
+    yes:  false,
+    dbPath: ':memory:',
+  };
+  const detectedAdapters = await detectAll(adapterCtx);
+  for (const adapter of detectedAdapters) {
+    if (adapter.id === 'claude-code') continue;
+    try {
+      await adapter.uninstall(adapterCtx);
+    } catch (err) {
+      console.log(`\u2717 ${adapter.label.padEnd(12)} \u2014 failed: ${(err as Error).message}`);
     }
   }
 

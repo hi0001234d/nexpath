@@ -6,11 +6,12 @@ import { getPromptStats } from '../../store/prompts.js';
 import { getAllConfig, DEFAULT_CONFIG } from '../../store/config.js';
 import { readHookStats, type ProjectHookStats } from '../../store/hook-stats.js';
 import {
-  detectAgents,
+  detectAgentsForCleanup,
   resolveAgentPaths,
   MCP_SERVER_NAME,
   type DetectedAgent,
 } from './install.js';
+import { allSupportedIds } from './supported-agents-by-platform.js';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -109,7 +110,10 @@ export interface StatusInput {
 
 export async function runStatus(input: StatusInput): Promise<StatusResult> {
   const home         = input.home         ?? homedir();
-  const agents       = input.agents       ?? detectAgents(resolveAgentPaths(home));
+  const agents       = input.agents       ?? (() => {
+    const supported = allSupportedIds();
+    return detectAgentsForCleanup(resolveAgentPaths(home)).filter((a) => supported.has(a.id));
+  })();
   const settingsPath = input.settingsPath ?? join(home, '.claude', 'settings.json');
 
   // ── Agent MCP registration ─────────────────────────────────────────────────
