@@ -52,7 +52,7 @@ function parseJson(raw: string): Record<string, unknown> | null {
 // ── (b) one-notch-simpler derive ───────────────────────────────────────────────
 
 function buildSimplerPrompt(current: TwoChannelCell): string {
-  return `Rewrite this decision-session option ONE notch simpler — shorter, gentler, less jargon — WITHOUT changing what it asks for or dropping its key topic word. The "option" is the message the user sends to their coding agent; the "whyDesc" is the short explanation.
+  return `Rewrite this decision-session option ONE notch simpler — shorter, gentler, less jargon — WITHOUT changing what it asks for or dropping its key topic word. The "option" is the message the user sends to their coding agent; the "whyDesc" is the short explanation. If the option proposes a risky action (deleting, force-pushing, deploying, schema changes, secrets) that a "confirm with me first" sentence cannot adequately make safe, DROP the risky clause entirely while KEEPING the topic/keyword and the rest of the instruction — never carry an un-neutralizable risky action into a simpler form.
 
 Current:
 ${JSON.stringify({ option: current.option, whyDesc: current.whyDesc })}

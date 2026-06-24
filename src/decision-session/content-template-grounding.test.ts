@@ -46,6 +46,19 @@ describe('content-template-grounding — simpler derive (b)', () => {
     await expect(deriveSimplerCell({ option: 'o', whyDesc: 'w' }, throwingClient())).rejects.toThrow();
   });
 
+  it('the derive prompt carries the drop-over-neutralize instruction (keep topic, drop un-neutralizable risk)', async () => {
+    let seen = '';
+    const spy = {
+      chat: { completions: { create: async (args: { messages: { content: string }[] }) => {
+        seen = args.messages[0].content;
+        return { choices: [{ message: { content: '{"option":"o","whyDesc":"w"}' } }] };
+      } } },
+    } as unknown as import('openai').default;
+    await deriveSimplerCell({ option: 'o', whyDesc: 'w' }, spy);
+    expect(seen).toMatch(/DROP the risky clause/i);
+    expect(seen).toMatch(/KEEPING the topic\/keyword/i);
+  });
+
   it('re-appends the L2 safeguard if the simplified why-desc dropped it', async () => {
     const safeguard = 'still, confirm with me before deleting anything';
     const client = mockClient(JSON.stringify({ option: 'simpler', whyDesc: 'simpler why (no safeguard)' }));
