@@ -188,6 +188,14 @@ describe('content-template-engine — live grounding wiring (stage 3/4 + real se
     expect(res).toEqual({ cell: cell('fb'), source: 'fallback' });
   });
 
+  it('stepSimplerLive preserves the L2 safeguard in the derived sibling', async () => {
+    const safeguard = 'confirm with me before this';
+    const client = mockClient(JSON.stringify({ option: 'simpler', whyDesc: 'simpler why' }));
+    const res = await stepSimplerLive(cell('cur'), cell('fb'), client, { l2Safeguard: safeguard });
+    expect(res.source).toBe('derived');
+    expect(res.cell.whyDesc.endsWith(safeguard)).toBe(true);
+  });
+
   it('groundWhyDescLive selects/caps + injection-guards facts then weaves', async () => {
     const facts: GroundingFact[] = [
       { key: 'a', value: 'uses Vitest', weight: 3, tier: 'corroborated' },

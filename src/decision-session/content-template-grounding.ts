@@ -64,8 +64,16 @@ Return JSON only, no markdown:
  * Derive the one-notch-simpler cell via the LLM. Rejects on failure / malformed
  * output / timeout so the engine's strength-step falls back to its (a) form — the
  * ONLY path to the fallback.
+ *
+ * Safeguard survival (non-negotiable): if `opts.l2Safeguard` is supplied and the
+ * simplified why-desc dropped it, it is re-appended — a simpler sibling must never
+ * shed the sensitive-action safeguard.
  */
-export async function deriveSimplerCell(current: TwoChannelCell, client?: OpenAI): Promise<TwoChannelCell> {
+export async function deriveSimplerCell(
+  current: TwoChannelCell,
+  client?: OpenAI,
+  opts: { l2Safeguard?: string } = {},
+): Promise<TwoChannelCell> {
   const openai = client ?? new OpenAI();
   const raw = await chat(openai, buildSimplerPrompt(current));
   const obj = parseJson(raw);
@@ -73,7 +81,9 @@ export async function deriveSimplerCell(current: TwoChannelCell, client?: OpenAI
     logger.debug('content_template_simpler_derive_invalid', { raw: raw.slice(0, 200) });
     throw new Error('simpler-derive produced no valid cell');
   }
-  return { option: obj.option, whyDesc: obj.whyDesc };
+  let whyDesc = obj.whyDesc;
+  if (opts.l2Safeguard && !whyDesc.includes(opts.l2Safeguard)) whyDesc = `${whyDesc}\n${opts.l2Safeguard}`;
+  return { option: obj.option, whyDesc };
 }
 
 // ── prompt-derived param extraction ─────────────────────────────────────────────

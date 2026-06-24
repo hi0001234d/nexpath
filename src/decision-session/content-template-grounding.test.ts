@@ -45,6 +45,20 @@ describe('content-template-grounding — simpler derive (b)', () => {
   it('rejects when the client throws', async () => {
     await expect(deriveSimplerCell({ option: 'o', whyDesc: 'w' }, throwingClient())).rejects.toThrow();
   });
+
+  it('re-appends the L2 safeguard if the simplified why-desc dropped it', async () => {
+    const safeguard = 'still, confirm with me before deleting anything';
+    const client = mockClient(JSON.stringify({ option: 'simpler', whyDesc: 'simpler why (no safeguard)' }));
+    const cell = await deriveSimplerCell({ option: 'o', whyDesc: 'w' }, client, { l2Safeguard: safeguard });
+    expect(cell.whyDesc.endsWith(safeguard)).toBe(true);
+  });
+
+  it('does not duplicate the safeguard when the simplified why-desc kept it', async () => {
+    const safeguard = 'confirm with me first';
+    const client = mockClient(JSON.stringify({ option: 'simpler', whyDesc: `simpler why. ${safeguard}` }));
+    const cell = await deriveSimplerCell({ option: 'o', whyDesc: 'w' }, client, { l2Safeguard: safeguard });
+    expect(cell.whyDesc.split(safeguard).length - 1).toBe(1); // appears exactly once
+  });
 });
 
 describe('content-template-grounding — why-desc weave', () => {

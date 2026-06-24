@@ -230,9 +230,9 @@ export function stepSimplerLive(
   current: TwoChannelCell,
   fallback: TwoChannelCell,
   client?: OpenAI,
-  opts: { timeoutMs?: number } = {},
+  opts: { timeoutMs?: number; l2Safeguard?: string } = {},
 ): Promise<StrengthStepResult> {
-  return stepSimpler(current, (cell) => deriveSimplerCell(cell, client), fallback, opts);
+  return stepSimpler(current, (cell) => deriveSimplerCell(cell, client, { l2Safeguard: opts.l2Safeguard }), fallback, opts);
 }
 
 /** Default weight for a prompt-derived fact (stated-in-prompt → `capability` tier). */
