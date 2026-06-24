@@ -11,6 +11,8 @@ import {
   ABSENCE_CONTENT_PRO_GEEK_SOUL,
 } from './options.js';
 import { ABSENCE_CONTENT_BEGINNER } from './options-beginner.js';
+import { TRANSITION_CONTENT } from './options.js';
+import { WHY_HELP_BY_SIGNAL_TYPE } from './why-help-by-signal-type.js';
 import { resolveSelection, selectionRegister } from './selection-registry.js';
 import { profileToRegister } from './register.js';
 
@@ -110,5 +112,53 @@ describe('selection-registry — completeness', () => {
         expect(typeof a.signalType).toBe('string');
       }
     }
+  });
+
+  it('every one of the 136 mapped signalTypes resolves AND matches the cascade', () => {
+    const signalTypes = Object.keys(WHY_HELP_BY_SIGNAL_TYPE);
+    expect(signalTypes.length).toBe(136);
+    for (const nature of NATURES) {
+      const p = profile(nature, undefined);
+      for (const st of signalTypes) {
+        const flag = `absence:${st}` as FlagType;
+        const got = resolveSelection('implementation', flag, p);
+        expect(got).toBeTruthy();
+        expect(got).toBe(resolveDecisionContent('implementation', flag, p));
+      }
+    }
+  });
+});
+
+describe('selection-registry — multi-axis chaining precedence', () => {
+  it('a role override outranks the register absence map for the same signalKey', () => {
+    // Prefer a key whose role entry DIFFERS from the register entry (so the
+    // precedence is observable by reference); fall back to any founder key.
+    const differing = Object.keys(ABSENCE_CONTENT_FOUNDER).find(
+      (k) => k in ABSENCE_CONTENT_CASUAL && ABSENCE_CONTENT_FOUNDER[k] !== ABSENCE_CONTENT_CASUAL[k],
+    );
+    const key = differing ?? Object.keys(ABSENCE_CONTENT_FOUNDER)[0];
+    expect(key).toBeTruthy();
+    // cool_geek → casual register (non-beginner, so role applies), role = founder.
+    const got = resolveSelection('implementation', `absence:${key}` as FlagType, profile('cool_geek', 'founder'));
+    expect(got).toBe(ABSENCE_CONTENT_FOUNDER[key]); // role map consulted first
+    if (differing) expect(got).not.toBe(ABSENCE_CONTENT_CASUAL[key]); // and it genuinely outranks register
+  });
+
+  it('the pro_geek_soul override outranks the register absence map (no role)', () => {
+    const key = Object.keys(ABSENCE_CONTENT_PRO_GEEK_SOUL)[0];
+    expect(key).toBeTruthy();
+    const got = resolveSelection('implementation', `absence:${key}` as FlagType, profile('pro_geek_soul', null));
+    expect(got).toBe(ABSENCE_CONTENT_PRO_GEEK_SOUL[key]);
+  });
+});
+
+describe('selection-registry — stage-transition skip mechanism', () => {
+  it('a skipped transition returns the nearest intermediate content (not the direct stage)', () => {
+    // idea → architecture skips prd; the nearest intermediate transition is prd's.
+    const p = profile('hardcore_pro', null); // formal register → TRANSITION_CONTENT
+    const got = resolveSelection('architecture', 'stage_transition', p, 'idea');
+    expect(got).toBe(TRANSITION_CONTENT['prd']);
+    expect(got).not.toBe(TRANSITION_CONTENT['architecture']); // skip fired, not the direct stage
+    expect(got).toBe(resolveDecisionContent('architecture', 'stage_transition', p, 'idea'));
   });
 });
