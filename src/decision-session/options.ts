@@ -33,6 +33,14 @@ import type { WhyHelpEntry } from './why-help.js';
  *            desc-base for this option yet (populated by later content
  *            authoring passes).
  */
+/**
+ * Content-type forward-compat discipline: every NEW field added to an in-source
+ * content interface below MUST be optional (`?:`) with a documented
+ * default-when-omitted, and consumers narrow-check it (e.g. `x ?? default`), so
+ * older code keeps compiling when fields are added. Required slots are fixed;
+ * new capability/behaviour fields are additive-optional. Enforced by
+ * content-type-optionality.test.ts.
+ */
 export interface OptionEntry {
   option:   string;
   descBase: string;
