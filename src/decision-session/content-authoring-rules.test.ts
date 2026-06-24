@@ -6,6 +6,8 @@ import {
   checkCoverage,
   checkHeadlineOnly,
   reviewRecord,
+  DE_JARGON_TABLE,
+  TOP_COLUMN_ALLOWED_CONCEPTS,
 } from './content-authoring-rules.js';
 import type { ContentTemplateRecord, LevelForm, MaturityLevel } from './content-template-schema.js';
 
@@ -47,8 +49,28 @@ describe('content-authoring-rules — de-jargon', () => {
       .toEqual(['observability', 'secrets manager']);
   });
 
+  it('flags the non-genuine-concept terms even at the heaviest column (CI gate, edge-case matrix)', () => {
+    expect(findJargonViolations('add a CI gate', { level: 5 }).map((v) => v.term)).toEqual(['CI gate']);
+    expect(findJargonViolations('build an edge-case matrix', { level: 5 }).map((v) => v.term)).toEqual(['edge-case matrix']);
+  });
+
   it('passes plain instruction text', () => {
     expect(findJargonViolations('roll it out to a few users first and watch for errors')).toEqual([]);
+  });
+});
+
+describe('content-authoring-rules — de-jargon data integrity', () => {
+  it('every required de-jargon term is present, each with a plain-language alternative', () => {
+    const required = ['ADR', 'canary', 'blue-green', 'CI gate', 'observability', 'secrets manager', 'min-permission DB', 'edge-case matrix'];
+    const terms = DE_JARGON_TABLE.map((t) => t.term);
+    for (const r of required) expect(terms).toContain(r);
+    for (const t of DE_JARGON_TABLE) expect(t.plain.trim().length).toBeGreaterThan(0);
+  });
+
+  it('the bare-at-top genuine-concept set is exactly the three concepts and all live in the table', () => {
+    expect([...TOP_COLUMN_ALLOWED_CONCEPTS]).toEqual(['ADR', 'canary', 'blue-green', 'min-permission DB']);
+    const lowered = DE_JARGON_TABLE.map((t) => t.term.toLowerCase());
+    for (const c of TOP_COLUMN_ALLOWED_CONCEPTS) expect(lowered).toContain(c.toLowerCase());
   });
 });
 
