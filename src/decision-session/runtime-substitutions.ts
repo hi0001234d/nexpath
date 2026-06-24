@@ -73,6 +73,14 @@ export async function applyRuntimeSubstitutionsAllLevels(
   register:     R5Register,
   injectOptions?: InjectR5Options,
 ): Promise<{ l1: OptionEntry[]; l2: OptionEntry[]; l3: OptionEntry[] }> {
+  // Capability opt-out: a set may declare `descBaseEnabled: false` to skip the
+  // desc-base pipeline entirely. Options keep their generated text; desc-bases
+  // are emitted empty. Defaults to enabled when omitted.
+  if (content.descBaseEnabled === false) {
+    const skip = (texts: readonly string[]): OptionEntry[] => texts.map((option) => ({ option, descBase: '' }));
+    return { l1: skip(generated.l1), l2: skip(generated.l2), l3: skip(generated.l3) };
+  }
+
   // Per-set length budget comes from DecisionContent. Merge it into
   // injectOptions so injectR5 enforces the tier ceiling.
   const mergedOptions: InjectR5Options = {
