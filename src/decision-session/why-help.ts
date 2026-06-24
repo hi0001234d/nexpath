@@ -23,7 +23,15 @@ export type UniversalWhyHelpVariants = {
 /** Non-standard subset — any subset of the 3 registers. */
 export type NonStandardWhyHelpVariants = Partial<UniversalWhyHelpVariants>;
 
-/** Class-aware storage entry — discriminated union by class register-structure. */
+/**
+ * Class-aware storage entry — a discriminated union by `structure` (the
+ * register-shape capability tag). This is the capability-based content-typing
+ * pattern: a consumer narrow-checks `structure` before reading a register
+ * sub-field (see `composeWhyHelpBlock`), so a variant is never asked for a
+ * register it does not carry. Keep this union BOUNDED — prefer one discriminant
+ * tag over many ad-hoc capability booleans; do not let it grow into a god-union.
+ * Enforced by content-capability-typing.test.ts.
+ */
 export type WhyHelpEntry =
   | { structure: 'universal-triplet';   content: UniversalWhyHelpVariants }
   | { structure: 'class7-vibe-coder';   content: { casual: string; beginner: string } }
