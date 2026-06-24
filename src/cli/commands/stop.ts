@@ -29,7 +29,7 @@ import { resolveOpenAIKey, getKeySource } from '../../config/ApiKeyResolver.js';
  *   1. Exits immediately when stop_hook_active is true (loop guard).
  *   2. Looks up a pending advisory for the project (stored by the auto hook).
  *   3. If found: marks it shown, opens /dev/tty, renders the decision session UI.
- *   4. If the user picks "Send to Claude": writes { decision: "block", reason }
+ *   4. If the user picks "Send to your agent": writes { decision: "block", reason }
  *      so Claude Code receives the prompt as the next user turn.
  *      If the user picks "Copy to clipboard": text is already in clipboard
  *      (copied by the popup window); exits 0, Claude stops normally.

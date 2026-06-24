@@ -485,14 +485,14 @@ describe('createTtySelectFn — Windows — .mjs script wires renderLoop for the
     expect(script).toContain('isMeta:');
   });
 
-  it('keeps clack select for the sub-menu action prompt (Send to Claude / Copy to clipboard)', async () => {
+  it('keeps clack select for the sub-menu action prompt (Send to your agent / Copy to clipboard)', async () => {
     const script = await captureScript();
     // Sub-menu select call still uses clack — verified by the explicit
     // import of `select` from clackUrl staying in place and the
     // "What would you like to do?" prompt still being a clack select.
     expect(script).toContain("import { select, isCancel } from '");
     expect(script).toContain("'What would you like to do?'");
-    expect(script).toContain("'Send to Claude now'");
+    expect(script).toContain("'Send to your agent now'");
   });
 
   it('translates renderLoop null (cancel) to an empty result-file write', async () => {
@@ -2148,21 +2148,25 @@ describe('buildTerminalAppleScript — geometry supplied (Phase 4 bounds-setter)
 });
 
 describe('nexpathAgentLabel', () => {
-  it("defaults to 'Claude' when NEXPATH_AGENT is unset (Claude wording unchanged)", () => {
-    expect(nexpathAgentLabel({})).toBe('Claude');
+  it("returns the agent-neutral 'your agent' label", () => {
+    expect(nexpathAgentLabel()).toBe('your agent');
   });
 
-  it('names the Cursor / Windsurf surfaces', () => {
-    expect(nexpathAgentLabel({ NEXPATH_AGENT: 'cursor' })).toBe('Cursor');
-    expect(nexpathAgentLabel({ NEXPATH_AGENT: 'windsurf' })).toBe('Windsurf');
-  });
-
-  it('is case/space-insensitive and maps Devin → Windsurf', () => {
-    expect(nexpathAgentLabel({ NEXPATH_AGENT: '  CURSOR ' })).toBe('Cursor');
-    expect(nexpathAgentLabel({ NEXPATH_AGENT: 'Devin' })).toBe('Windsurf');
-  });
-
-  it("falls back to 'Claude' for an unknown agent", () => {
-    expect(nexpathAgentLabel({ NEXPATH_AGENT: 'something-else' })).toBe('Claude');
+  it('is the same label regardless of which surface triggered the popup', () => {
+    // The popup wording no longer varies per agent — Claude Code, Cursor and
+    // Windsurf / Devin all share one label, so there is no per-agent code to
+    // keep in sync.
+    const original = process.env.NEXPATH_AGENT;
+    try {
+      for (const agent of ['cursor', 'windsurf', 'devin', 'something-else', '']) {
+        process.env.NEXPATH_AGENT = agent;
+        expect(nexpathAgentLabel()).toBe('your agent');
+      }
+      delete process.env.NEXPATH_AGENT;
+      expect(nexpathAgentLabel()).toBe('your agent');
+    } finally {
+      if (original === undefined) delete process.env.NEXPATH_AGENT;
+      else process.env.NEXPATH_AGENT = original;
+    }
   });
 });

@@ -46,21 +46,13 @@ type ClipboardCmd = [cmd: string, args: string[]];
  * fallback chain for Linux (xclip → wl-copy → xsel).
  */
 /**
- * Display name of the agent the popup will "Send to", derived from the
- * `NEXPATH_AGENT` env var set by whoever triggered the popup — the VS Code
- * extension (Cursor / Windsurf) or the windsurf-hook. Defaults to 'Claude'
- * (the original label, left unchanged) for the Claude Code hook path which sets
- * nothing — so only the Cursor / Windsurf surfaces get their own name, and
- * Claude's existing wording is untouched. Devin (the Windsurf rebrand) is
- * detected as windsurf and shown as "Windsurf".
+ * Display name the popup uses in its "Send to …" wording. A single, agent-
+ * neutral label is shown across every surface (Claude Code, Cursor, Windsurf /
+ * Devin) so the same popup code serves all agents — there is no per-agent
+ * wording to keep in sync.
  */
-export function nexpathAgentLabel(env: NodeJS.ProcessEnv = process.env): string {
-  switch ((env.NEXPATH_AGENT ?? '').trim().toLowerCase()) {
-    case 'cursor':   return 'Cursor';
-    case 'windsurf': return 'Windsurf';
-    case 'devin':    return 'Windsurf';
-    default:         return 'Claude';
-  }
+export function nexpathAgentLabel(): string {
+  return 'your agent';
 }
 
 function buildMjsScript(
