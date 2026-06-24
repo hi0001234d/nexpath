@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { R5_D_FALLBACKS } from './r5-fallbacks.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const CONTENT_DIR = join(HERE, 'content-templates');
 
 const VARIANT_SUFFIXES = ['_CASUAL', '_FORMAL', '_BEGINNER'] as const;
 
@@ -39,16 +40,18 @@ function scanDeclarations(source: string): Array<{ constName: string; signalType
 }
 
 function loadAllDeclarations() {
-  const optionsFile  = readFileSync(join(HERE, 'options.ts'),          'utf8');
-  const beginnerFile = readFileSync(join(HERE, 'options-beginner.ts'), 'utf8');
-  return [
-    ...scanDeclarations(optionsFile).map((d)  => ({ ...d, file: 'options.ts'          })),
-    ...scanDeclarations(beginnerFile).map((d) => ({ ...d, file: 'options-beginner.ts' })),
-  ];
+  // The DecisionContent consts now live in the per-class content-template files.
+  return readdirSync(CONTENT_DIR)
+    .filter((f) => f.endsWith('.ts') && /^class\d+-/.test(f))
+    .flatMap((f) => scanDeclarations(readFileSync(join(CONTENT_DIR, f), 'utf8')).map((d) => ({ ...d, file: `content-templates/${f}` })));
 }
 
 describe('DecisionContent signalType coverage invariant', () => {
   const declarations = loadAllDeclarations();
+
+  it('scans the full content set (guard against a vacuous pass)', () => {
+    expect(declarations.length).toBeGreaterThan(200);
+  });
 
   it('every DecisionContent constant declares a signalType as its first field', () => {
     const missing = declarations.filter((d) => d.signalType === null);

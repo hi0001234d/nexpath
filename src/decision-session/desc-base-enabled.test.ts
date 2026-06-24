@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { applyRuntimeSubstitutionsAllLevels } from './runtime-substitutions.js';
@@ -7,6 +7,9 @@ import type { DecisionContent } from './options.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// The per-set DecisionContent now lives in the per-class content-template files.
+const CONTENT_DIR = join(__dirname, 'content-templates');
 
 // Pins the per-set descBaseEnabled outcome of the R1 opt-out evaluation:
 // every R3 sub-research's per-set opt-out section (R3.1-Sub1.7,
@@ -18,13 +21,18 @@ const __dirname = dirname(__filename);
 // set's desc-base pipeline against the locked decision.
 
 function readOptionsSources(): string {
-  return (
-    readFileSync(join(__dirname, 'options.ts'), 'utf-8') +
-    readFileSync(join(__dirname, 'options-beginner.ts'), 'utf-8')
-  );
+  return readdirSync(CONTENT_DIR)
+    .filter((f) => f.endsWith('.ts'))
+    .map((f) => readFileSync(join(CONTENT_DIR, f), 'utf-8'))
+    .join('\n');
 }
 
 describe('descBaseEnabled — per-set opt-out invariant', () => {
+  it('scans real content (guard against a vacuous pass)', () => {
+    // Every set carries desc-bases, so the content source must contain many.
+    expect((readOptionsSources().match(/descBase:/g) ?? []).length).toBeGreaterThan(200);
+  });
+
   it('no set in the source has descBaseEnabled set to false', () => {
     const src = readOptionsSources();
     expect(src).not.toMatch(/descBaseEnabled:\s*false/);

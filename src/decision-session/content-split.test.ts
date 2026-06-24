@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { TASK_REVIEW, IDEA_TO_PRD } from './options.js';
+import { TASK_REVIEW as TASK_REVIEW_VIA_CLASS } from './content-templates/class1-stage-transition.js';
 
 // Layer-G content split invariants: every signalType lands in exactly one
 // per-class file (partition completeness), the god-files no longer hold any
@@ -97,5 +99,11 @@ describe('Layer-G split — import-graph (god-files emptied)', () => {
   it('the relocated content is re-exported so importers keep resolving (e.g. TASK_REVIEW)', () => {
     const src = readFileSync(join(HERE, 'options.ts'), 'utf-8');
     expect(src).toMatch(/export \* from '\.\/content-templates\//);
+  });
+
+  it('relocated consts resolve at runtime via the options.ts re-export and are the same object', () => {
+    expect(TASK_REVIEW.signalType).toBe('TASK_REVIEW');
+    expect(IDEA_TO_PRD.signalType).toBe('IDEA_TO_PRD');
+    expect(TASK_REVIEW).toBe(TASK_REVIEW_VIA_CLASS); // re-export, not a copy
   });
 });
