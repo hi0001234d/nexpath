@@ -10935,3 +10935,16 @@ export {
   ABSENCE_OPERATIONAL_RUNBOOK_GAP_FORMAL,
   ABSENCE_SLO_DEFINITION_GAP_FORMAL,
 };
+
+// ── Selection-axis maps + helper (consumed by the single-dispatch
+//    selection-registry, which mirrors the resolveDecisionContent cascade) ───────
+export {
+  ABSENCE_CONTENT,
+  ABSENCE_CONTENT_CASUAL,
+  ABSENCE_CONTENT_FOUNDER,
+  ABSENCE_CONTENT_INDIE_HACKER,
+  ABSENCE_CONTENT_PM,
+  ABSENCE_CONTENT_PRO_GEEK_SOUL,
+  TRANSITION_CONTENT,
+  resolveSkippedTransitionContent,
+};
