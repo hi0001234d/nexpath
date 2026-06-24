@@ -275,6 +275,32 @@ export async function deriveSimplerLevel(
   }));
 }
 
+export interface DerivedLadder {
+  l1: OptionEntry[];
+  l2: OptionEntry[];
+  l3: OptionEntry[];
+}
+
+/**
+ * Produce the full strength ladder EAGERLY from the authored L1 tier: L2 is one
+ * notch simpler than L1, L3 one notch simpler than L2 (progressive). All tiers are
+ * derived up front (no per-click LLM call) so the render path serves them
+ * instantly — same UX as today, with the engine producing the simpler tiers
+ * instead of hand-authoring them. Per-entry static fallbacks (the existing
+ * authored L2/L3, when supplied) keep a failed derive from blanking a tier.
+ */
+export async function deriveLadder(
+  l1: readonly OptionEntry[],
+  fallback: { l2?: readonly OptionEntry[]; l3?: readonly OptionEntry[] } = {},
+  client?: OpenAI,
+  opts: { timeoutMs?: number } = {},
+): Promise<DerivedLadder> {
+  const l1Out = [...l1];
+  const l2 = await deriveSimplerLevel(l1Out, fallback.l2 ?? l1Out, client, opts);
+  const l3 = await deriveSimplerLevel(l2, fallback.l3 ?? l2, client, opts);
+  return { l1: l1Out, l2, l3 };
+}
+
 /**
  * The why-desc multi-value grounding, live: deterministically select/rank/cap the
  * facts and injection-guard their values, then weave them with the frozen core

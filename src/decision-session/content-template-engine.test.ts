@@ -13,6 +13,7 @@ import {
   promptDerivedFacts,
   extractPromptFacts,
   deriveSimplerLevel,
+  deriveLadder,
   PROMPT_FACT_WEIGHT,
   SOURCE_CASCADE,
   type GroundingFact,
@@ -238,5 +239,21 @@ describe('content-template-engine — render-path bridge (deriveSimplerLevel)', 
   it('uses the entry itself as fallback when the static tier has fewer entries', async () => {
     const out = await deriveSimplerLevel(current, [fallback[0]], mockClient('throw'));
     expect(out[1]).toEqual({ option: 'Run the tests.', descBase: 'why b' }); // own entry as fallback
+  });
+
+  it('deriveLadder produces L1 (as-is) + eagerly-derived L2 + L3', async () => {
+    const l1: OptionEntry[] = [{ option: 'Carefully review the diff.', descBase: 'why' }];
+    const ladder = await deriveLadder(l1, {}, mockClient(JSON.stringify({ option: 'simpler', whyDesc: 'sw' })));
+    expect(ladder.l1).toEqual(l1); // L1 unchanged
+    expect(ladder.l2).toEqual([{ option: 'simpler', descBase: 'sw' }]);
+    expect(ladder.l3).toEqual([{ option: 'simpler', descBase: 'sw' }]);
+  });
+
+  it('deriveLadder falls back to the supplied static tiers when a derive fails', async () => {
+    const l1: OptionEntry[] = [{ option: 'L1 opt', descBase: 'L1 why' }];
+    const fb = { l2: [{ option: 'static L2', descBase: 'L2 why' }], l3: [{ option: 'static L3', descBase: 'L3 why' }] };
+    const ladder = await deriveLadder(l1, fb, mockClient('throw'));
+    expect(ladder.l2).toEqual(fb.l2);
+    expect(ladder.l3).toEqual(fb.l3);
   });
 });
