@@ -33,6 +33,11 @@
  *  - abstraction level: share of prompts spent in design/architecture stages vs
  *                       the implementation stage. A keyword-based secondary input
  *                       is a noted future refinement, not yet folded in.
+ *
+ * Event source: decision rhythm counts BOTH live and historical-import events (a
+ * trait reads over the full behavioural history). Abstraction level is LIVE-ONLY —
+ * it needs per-prompt stage attribution, which historical-import rows (stage-less)
+ * don't carry — so those rows are skipped there.
  *  - explanation depth: DORMANT — it needs a transcript-channel signal (how the
  *                       user reacts to long vs terse output) that is not yet
  *                       captured, so it always reports UNSET for now. The axis is

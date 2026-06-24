@@ -131,6 +131,19 @@ describe('work-style-traits — decision rhythm', () => {
     const events = rhythm('alternatives_seeking', ['s1', 's1', 's1', 's1']);
     expect(computeWorkStyleProfile(events).decisionRhythm.value).toBeNull();
   });
+
+  it('counts historical-import events too (reads over the full behavioural history)', () => {
+    const hist = (key: string, session: string) =>
+      ev({ signalKey: key, sessionId: session, promptIndex: pidx++, stage: null, source: 'historical_import' });
+    const events = [
+      hist('restart_impulse_check', 's1'), hist('restart_impulse_check', 's2'),
+      hist('restart_impulse_check', 's1'), hist('restart_impulse_check', 's2'),
+      hist('alternatives_seeking', 's1'),
+    ];
+    const t = computeWorkStyleProfile(events).decisionRhythm;
+    expect(t.observations).toBe(5);
+    expect(t.value).toBe('decisive');
+  });
 });
 
 describe('work-style-traits — abstraction level', () => {
@@ -170,6 +183,14 @@ describe('work-style-traits — abstraction level', () => {
     expect(t.observations).toBe(4); // deduped distinct prompts, not 8 raw events
     expect(t.sessions).toBe(2);
     expect(t.value).toBe('architecture_first');
+  });
+
+  it('excludes historical-import events even when they carry a stage (live-only attribution)', () => {
+    const events = ['s1', 's2', 's1', 's2'].map((s) =>
+      ev({ signalKey: 'x', sessionId: s, promptIndex: pidx++, stage: 'architecture', source: 'historical_import' }));
+    const t = computeWorkStyleProfile(events).abstractionLevel;
+    expect(t.observations).toBe(0); // source !== 'live' → skipped
+    expect(t.value).toBeNull();
   });
 
   it('ignores stages outside the design/code clusters and honours cold-start', () => {
