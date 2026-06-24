@@ -11,9 +11,13 @@ import {
   WORK_STYLE_MIN_OBSERVATIONS,
 } from './work-style-traits.js';
 import type { ParamEvent } from '../telemetry/param-events.js';
+import { appendParamEvents } from '../telemetry/param-events.js';
 import type { Stage } from './types.js';
 import { NATURE_DEPTH_RECOMPUTE_INTERVAL } from './UserProfileClassifier.js';
 import { openStore, closeStore } from '../store/db.js';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 let seq = 0;
 function ev(over: Partial<ParamEvent> = {}): ParamEvent {
@@ -235,6 +239,32 @@ describe('work-style-traits — rolling window + store-backed load', () => {
       expect(p.explanationDepth.dormant).toBe(true);
     } finally {
       closeStore(store);
+    }
+  });
+
+  it('reads persisted events from a real store and filters by project', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'nx-ws-'));
+    const store = await openStore(join(dir, 's.db'));
+    const base = { channel: 'keyword' as const, stage: null, stageConfidence: null, source: 'live' as const };
+    try {
+      appendParamEvents(store, [
+        // project /p — act-then-restart dominates → decisive
+        { ...base, projectRoot: '/p', sessionId: 's1', promptIndex: 0, signalKey: 'restart_impulse_check' },
+        { ...base, projectRoot: '/p', sessionId: 's2', promptIndex: 1, signalKey: 'restart_impulse_check' },
+        { ...base, projectRoot: '/p', sessionId: 's1', promptIndex: 2, signalKey: 'restart_impulse_check' },
+        { ...base, projectRoot: '/p', sessionId: 's2', promptIndex: 3, signalKey: 'restart_impulse_check' },
+        { ...base, projectRoot: '/p', sessionId: 's1', promptIndex: 4, signalKey: 'alternatives_seeking' },
+        // project /other — option-weighing dominates → deliberative (must NOT leak into /p)
+        { ...base, projectRoot: '/other', sessionId: 'o1', promptIndex: 0, signalKey: 'alternatives_seeking' },
+        { ...base, projectRoot: '/other', sessionId: 'o2', promptIndex: 1, signalKey: 'alternatives_seeking' },
+        { ...base, projectRoot: '/other', sessionId: 'o1', promptIndex: 2, signalKey: 'alternatives_seeking' },
+        { ...base, projectRoot: '/other', sessionId: 'o2', promptIndex: 3, signalKey: 'alternatives_seeking' },
+      ]);
+      expect(loadWorkStyleProfile(store, '/p').decisionRhythm.value).toBe('decisive');
+      expect(loadWorkStyleProfile(store, '/other').decisionRhythm.value).toBe('deliberative');
+    } finally {
+      closeStore(store);
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });
