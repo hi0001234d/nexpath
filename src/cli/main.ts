@@ -34,6 +34,7 @@ import {
   telemetrySyncRunAction,
   telemetrySyncPingAction,
 } from './commands/telemetry-sync.js';
+import { contentTemplateCreateAction, contentTemplateValidateAction } from './commands/content-template.js';
 
 export function createProgram(): Command {
   const program = new Command();
@@ -180,6 +181,28 @@ export function createProgram(): Command {
     .description('Remove the stored OpenAI API key from both the keychain and the fallback file')
     .action(async () => {
       await configRemoveApiKeyAction();
+    });
+
+  // ── Content-template authoring command ─────────────────────────────────────────
+
+  const contentTemplateCmd = program
+    .command('content-template')
+    .description('Author and validate shipped-preset content-template records');
+
+  contentTemplateCmd
+    .command('create <signalType>')
+    .description('Scaffold a content-template record skeleton')
+    .option('--shape', 'Scaffold the full 5-column maturity ladder (default: level-1 floor only)')
+    .action((signalType: string, opts: { shape?: boolean }) => {
+      contentTemplateCreateAction(signalType, opts);
+    });
+
+  contentTemplateCmd
+    .command('validate <file>')
+    .description('Schema-validate a record file and run the review gates')
+    .option('--keyword <keyword>', 'Run the same-topic keyword-retention gate for this keyword')
+    .action((file: string, opts: { keyword?: string }) => {
+      contentTemplateValidateAction(file, opts);
     });
 
   // ── Store command ─────────────────────────────────────────────────────────────
