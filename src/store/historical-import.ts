@@ -67,7 +67,7 @@ export async function importHistoricalPrompts(store: Store, projectRoot: string)
     insertPrompt(store, { projectRoot, promptText: text, agent: 'claude-code' });
   }
 
-  // §1.8 retro-population — record param-detection events for the imported
+  // retro-population — record param-detection events for the imported
   // history so the longitudinal detectors see the user's full pre-install
   // behaviour, not just post-install prompts. Stage-agnostic (no real stage for
   // historical prompts → stage: null, never a fake stamp); pure-CPU keyword scan,

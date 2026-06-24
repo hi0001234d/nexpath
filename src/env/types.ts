@@ -1,10 +1,10 @@
 /**
- * Dev-environment probe — fact model (Channel Y, B1).
+ * Dev-environment probe — fact model.
  *
  * The probe reads the local machine + project to derive a closed allowlist of
  * environment facts. Each fact is a small record carrying its value, a trust
- * tier, a confidence, and when it was detected. Facts are pure-local: in B1 they
- * are stored on the machine only and never transmitted anywhere.
+ * tier, a confidence, and when it was detected. Facts are pure-local: they are
+ * stored on the machine only and never transmitted anywhere.
  */
 
 /**
@@ -19,7 +19,7 @@ export type FactValue = string | boolean | null;
  *  - 'C' (capability) — the environment HAS the thing (a config/file/marker is
  *    present). Grounds capability-aware wording only.
  *  - 'P' (practice)   — the user actually DOES the thing, corroborated by
- *    behavioural evidence. Promotion to 'P' is a later phase; B1 emits only 'C'.
+ *    behavioural evidence. This layer emits only 'C'.
  */
 export type FactTier = 'C' | 'P';
 

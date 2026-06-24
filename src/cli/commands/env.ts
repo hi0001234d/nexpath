@@ -1,5 +1,5 @@
 /**
- * `nexpath env` — dev-environment probe transparency + control (Channel Y, B1).
+ * `nexpath env` — dev-environment probe transparency + control.
  *
  * With no flag: probe the machine + current project, persist the facts locally
  * (consent permitting), and print every fact with its value, trust tier,
@@ -7,7 +7,7 @@
  * (all, or a single project with `--project`).
  *
  * The probe is pure-local — zero LLM, zero network. Facts never leave the
- * machine in B1.
+ * machine.
  */
 
 import { resolve } from 'node:path';

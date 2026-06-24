@@ -45,7 +45,7 @@ describe('env-facts — schema migration (addIfMissing)', () => {
     const SQL = await getSql();
     const db = new SQL.Database();
     migrate(db); // current schema (projects already has env_facts)
-    // Simulate a pre-B1 DB: rebuild projects WITHOUT the env_facts columns.
+    // Simulate an older DB: rebuild projects WITHOUT the env_facts columns.
     db.run(`
       CREATE TABLE projects_old AS
         SELECT id, project_root, name, project_type, language, description,

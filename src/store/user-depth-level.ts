@@ -1,10 +1,9 @@
 /**
  * CRUD for the `user_depth_level` table — the per-project workflow-maturity
- * graduation STATE (AR-5, §5.4 / §5.9.9.4). The table itself is created by Layer
- * L (§3.L, schema.ts); this module owns its reads/writes. The row is a RUNNING
- * AGGREGATE so the maturity level survives the prompts 500-FIFO and param-event
- * pruning. The maturity computation + graduation logic live in
- * classifier/maturity-level.ts.
+ * graduation STATE. The table itself is created in schema.ts; this module owns
+ * its reads/writes. The row is a RUNNING AGGREGATE so the maturity level
+ * survives the prompts 500-FIFO and param-event pruning. The maturity
+ * computation + graduation logic live in classifier/maturity-level.ts.
  */
 
 import { saveStore, type Store } from './db.js';

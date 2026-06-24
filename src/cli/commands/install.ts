@@ -568,8 +568,8 @@ export async function installAction(
       setConfig(store, 'telemetry.enabled',      String(telemetryEnabled));
       setConfig(store, 'telemetry_sync_enabled', String(telemetryEnabled));
 
-      // Dev-environment probe disclosure (Channel Y, B1). Local-only, on by
-      // default — no separate consent prompt (nothing leaves the machine).
+      // Dev-environment probe disclosure. Local-only, on by default — no
+      // separate consent prompt (nothing leaves the machine).
       note(
         [
           'nexpath reads a few local facts about your machine + project',

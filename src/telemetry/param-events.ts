@@ -27,7 +27,7 @@ import type { Stage } from '../classifier/types.js';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
-/** Where a detected signal came from. Extensible (additive): `'transcript'` (Channel X) and `'probe'` (Channel Y) land with their readers. */
+/** Where a detected signal came from. Extensible (additive): `'transcript'` and `'probe'` land with their readers. */
 export type ParamEventChannel = 'keyword' | 'vibe' | 'stream_b' | 'stage2' | 'transcript' | 'probe';
 
 export type ParamEventSource = 'live' | 'historical_import';

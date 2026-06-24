@@ -1,16 +1,16 @@
 /**
- * Dev-environment probe (Channel Y, B1) — zero LLM, zero network, pure-local.
+ * Dev-environment probe — zero LLM, zero network, pure-local.
  *
  * `probeMachine()` reads machine-scoped env/platform facts (once per CLI start).
  * `probeProject(root)` anchors at the repo root and reads project-scoped facts
  * (per session, bounded checks, well under ~10ms).
  *
  * Robustness invariants:
- *  - S9 per-fact isolation: every detector runs inside `safe()`; a throwing read
+ *  - per-fact isolation: every detector runs inside `safe()`; a throwing read
  *    yields UNKNOWN (`null`), NEVER a confident `false`, and the probe continues.
- *  - S3 safe-parse: package.json is read size-capped and JSON-parsed defensively
+ *  - safe-parse: package.json is read size-capped and JSON-parsed defensively
  *    (a missing / oversize / malformed file → no crash, framework UNKNOWN).
- *  - S2 anchoring: the project probe walks up to the enclosing repo root so a run
+ *  - anchoring: the project probe walks up to the enclosing repo root so a run
  *    inside `packages/app/` does not falsely report "no version control".
  */
 
@@ -26,9 +26,9 @@ import {
 } from './types.js';
 import { resolveFramework } from './framework-fingerprints.js';
 
-/** Largest package.json the probe will parse (S3). Bigger → treated as absent. */
+/** Largest package.json the probe will parse. Bigger → treated as absent. */
 const MAX_PACKAGE_JSON_BYTES = 1024 * 1024; // 1 MB
-/** Max ancestor levels the anchor walk-up will climb (S2). */
+/** Max ancestor levels the anchor walk-up will climb. */
 const MAX_ANCHOR_LEVELS = 12;
 /**
  * Hard ceiling on entries read from the anchored root in one probe. Real project
@@ -38,7 +38,7 @@ const MAX_ANCHOR_LEVELS = 12;
  */
 const MAX_ROOT_ENTRIES = 1024;
 
-/** Build a Tier-C fact. B1 emits only capability tier; Tier-P is a later phase. */
+/** Build a fact. This layer emits only the capability tier ('C'). */
 function fact(value: FactValue, confidence: FactConfidence, detectedAt: number): EnvFact {
   return { value, tier: 'C', confidence, detectedAt };
 }
@@ -119,7 +119,7 @@ interface PackageJson {
   hasWorkspaces: boolean;
 }
 
-/** Read + parse package.json defensively (S3): missing/oversize/malformed → null. */
+/** Read + parse package.json defensively: missing/oversize/malformed → null. */
 function readPackageJsonSafe(root: string): PackageJson | null {
   const path = join(root, 'package.json');
   try {
@@ -258,7 +258,7 @@ function detectHasTestRunner(pkg: PackageJson | null): boolean {
 
 /**
  * Probe project-scoped facts (9 keys) against the anchored repo root.
- * Returns the facts plus the anchoring metadata used (S2).
+ * Returns the facts plus the anchoring metadata used.
  */
 export function probeProject(inputRoot: string, now: number = Date.now()): ProjectProbeResult {
   const anchoredRoot = anchorRepoRoot(inputRoot);

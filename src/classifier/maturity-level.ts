@@ -1,23 +1,22 @@
 /**
- * AR-5 maturity-level detection + graduation (§5.4 / §5.9 / §5.9.9).
+ * Workflow-maturity level detection + graduation.
  *
  * Produces the per-user workflow-maturity LEVEL (1–5) the content-template
  * maturity matrix consumes. This is NET-NEW and ORTHOGONAL to the existing
  * `SessionDepth` ('low'|'medium'|'high') and to the L1/L2/L3 strength tiers.
  *
- * Detection (§5.9.9.2): a relevance-weighted average of the AR-9 RIGHT&GOOD
- * `score` (§5.3) over the user's ACTIVE good-practice set — universal +
- * nature-matched + role-matched + in-scope-domain signals. Irrelevant /
- * role-mismatched / out-of-domain signals are EXCLUDED from the set (NOT scored
- * 0, which would wrongly drag the average). The 3 (−) anti-pattern detectors are
- * excluded from the good set; v1 runs on the signal-rate score alone (the
- * net-new detectors + prompt-structure features are Task-11).
+ * Detection: a relevance-weighted average of the RIGHT&GOOD `score` over the
+ * user's ACTIVE good-practice set — universal + nature-matched + role-matched +
+ * in-scope-domain signals. Irrelevant / role-mismatched / out-of-domain signals
+ * are EXCLUDED from the set (NOT scored 0, which would wrongly drag the average).
+ * The anti-pattern detectors are excluded from the good set; v1 runs on the
+ * signal-rate score alone.
  *
- * Bands (§5.9.9.3): equal-fifth placeholder, recalibrated to percentiles once
- * telemetry exists. Cold-start → L2. Storage + graduation (§5.9.9.4): the
- * `user_depth_level` running aggregate; +1-only graduation via a stability
- * counter, −1 down-graduation via a (stickier) hysteresis counter; a new
- * project seeds from the median level of the user's existing projects.
+ * Bands: equal-fifth placeholder, recalibrated to percentiles once telemetry
+ * exists. Cold-start → L2. Storage + graduation: the `user_depth_level` running
+ * aggregate; +1-only graduation via a stability counter, −1 down-graduation via
+ * a (stickier) hysteresis counter; a new project seeds from the median level of
+ * the user's existing projects.
  */
 
 import type { SignalDefinition, UserNature, UserRole } from './types.js';
@@ -34,7 +33,7 @@ import {
 
 export type MaturityLevel = 1 | 2 | 3 | 4 | 5;
 
-/** Cold-start default for a first-ever project with no seed (USER-LOCKED). */
+/** Cold-start default for a first-ever project with no seed. */
 export const COLD_START_LEVEL: MaturityLevel = 2;
 
 /** Consecutive above-level detections before a +1 graduation (months-scale; tunable). */
@@ -43,9 +42,9 @@ export const GRADUATION_STABILITY = 3;
 export const HYSTERESIS_THRESHOLD = 5;
 
 /**
- * The 3 (−) anti-pattern state detectors. Excluded from the good-practice active
- * set; in a later refinement they may enter as a subtracting fire-rate penalty,
- * but v1 scores on `s_core` alone (§5.9.0).
+ * The (−) anti-pattern state detectors. Excluded from the good-practice active
+ * set; a later refinement may fold them in as a subtracting fire-rate penalty,
+ * but v1 scores on `s_core` alone.
  */
 export const ANTI_PATTERN_KEYS: ReadonlySet<string> = new Set([
   'decision_fatigue_pattern',
@@ -93,7 +92,7 @@ export function isActiveSignal(sig: SignalDefinition, meta: MaturityMeta): boole
 }
 
 /**
- * Compute the maturity score `s_core` as the equal-weighted average of the AR-9
+ * Compute the maturity score `s_core` as the equal-weighted average of the
  * RIGHT&GOOD score over the active set. An active signal the user hasn't done
  * counts as 0 (legitimately drags the average); irrelevant signals are excluded.
  */

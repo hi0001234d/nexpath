@@ -141,7 +141,7 @@ export function applyIncrementalMigrations(db: Database): void {
   // sub-10 — deferred option gen + cross-session guard
   addIfMissing('pending_advisories', 'prev_stage', 'TEXT');
 
-  // v0.1.1 — dev-environment probe (Channel Y, B1)
+  // v0.1.1 — dev-environment probe
   addIfMissing('projects', 'env_facts',             'TEXT');
   addIfMissing('projects', 'env_facts_detected_at', 'INTEGER');
 }
@@ -175,7 +175,7 @@ export function runMigrations(db: Database): void {
   // sub-10 — deferred option gen + cross-session guard
   addIfMissing('pending_advisories', 'prev_stage', 'TEXT');
 
-  // v0.1.1 — dev-environment probe (Channel Y, B1)
+  // v0.1.1 — dev-environment probe
   addIfMissing('projects', 'env_facts',             'TEXT');
   addIfMissing('projects', 'env_facts_detected_at', 'INTEGER');
 }

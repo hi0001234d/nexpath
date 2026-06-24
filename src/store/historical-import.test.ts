@@ -310,8 +310,8 @@ describe('importHistoricalPrompts', () => {
   });
 });
 
-// ── §1.8 retro-population — param-event backfill (disk-backed store) ─────────────
-describe('importHistoricalPrompts — param-event retro (§1.8 backfill)', () => {
+// ── retro-population — param-event backfill (disk-backed store) ──────────────
+describe('importHistoricalPrompts — param-event retro (backfill)', () => {
   let store: Store;
   let dbDir: string;
   let claudeDir: string;

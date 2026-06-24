@@ -1,13 +1,13 @@
 /**
- * Storage for dev-environment probe facts (Channel Y, B1) with consent gating.
+ * Storage for dev-environment probe facts, with consent gating.
  *
  * Project-scoped facts live on the `projects` row (`env_facts` JSON +
  * `env_facts_detected_at`); machine-scoped facts live in the `config` table
- * under one JSON key. Everything is local-only in B1 — nothing is ever synced.
+ * under one JSON key. Everything is local-only — nothing is ever synced.
  *
  * Consent (`env_probe_enabled`, default ON):
  *  - READ gate: while disabled, every getter returns null so NO consumer can see
- *    stored facts (S6) — even if rows still exist on disk for a moment.
+ *    stored facts — even if rows still exist on disk for a moment.
  *  - Auto-purge: turning consent off purges the stored facts (`purgeAllEnvFacts`,
  *    wired into the config setter) and `nexpath env --clear` purges on demand.
  */
@@ -57,7 +57,7 @@ export function setProjectEnvFacts(
   saveStore(store);
 }
 
-/** Read project facts, or null when absent OR while consent is disabled (S6 gate). */
+/** Read project facts, or null when absent OR while consent is disabled (gated). */
 export function getProjectEnvFacts(store: Store, projectRoot: string): StoredFacts | null {
   if (!isEnvProbeEnabled(store.db)) return null;
   const res = store.db.exec(
@@ -83,7 +83,7 @@ export function setMachineFacts(store: Store, facts: FactMap, detectedAt: number
   saveStore(store);
 }
 
-/** Read machine facts, or null when absent OR while consent is disabled (S6 gate). */
+/** Read machine facts, or null when absent OR while consent is disabled (gated). */
 export function getMachineFacts(store: Store): StoredFacts | null {
   if (!isEnvProbeEnabled(store.db)) return null;
   const raw = getConfig(store.db, MACHINE_FACTS_KEY);
@@ -97,7 +97,7 @@ export function getMachineFacts(store: Store): StoredFacts | null {
   }
 }
 
-// ── Purge (S6 auto-purge + `nexpath env --clear`) ────────────────────────────
+// ── Purge (consent-off auto-purge + `nexpath env --clear`) ───────────────────
 
 /** Clear stored facts for one project, or all projects when no root is given. */
 export function clearProjectEnvFacts(store: Store, projectRoot?: string): void {

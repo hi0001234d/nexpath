@@ -194,7 +194,7 @@ describe('right-good-aggregator — robustness', () => {
   });
 });
 
-describe('right-good-aggregator — channel-confidence ordering (shared with §5.2)', () => {
+describe('right-good-aggregator — channel-confidence ordering', () => {
   it('enforces the 3-tier verifiability ladder: vibe < keyword < stream_b/stage2 < transcript', () => {
     const c = CHANNEL_CONFIDENCE;
     expect(c.vibe).toBeLessThan(c.keyword);          // weakest claim < plain claim
