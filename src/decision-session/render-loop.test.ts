@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { PassThrough } from 'node:stream';
 import {
   computeLayout,
@@ -986,6 +986,117 @@ describe('render-loop — renderLoop interactive shell', () => {
     });
     const seen = Buffer.concat(chunks).toString('utf8');
     expect(seen).toContain('PINCH_LABEL_MARKER');
+  });
+});
+
+describe('render-loop — resize listener', () => {
+  const simpleLayout: RenderLoopOptions = {
+    pinchLabel: 'P',
+    question:   'Q',
+    options:    [{ value: 'a', label: 'A', descBase: 'a' }],
+    rows: 20,
+    cols: 80,
+  };
+
+  it('T6 — resize event triggers a re-render via writeFrame', async () => {
+    // Spy on process.stdout.on so the resize handler installed by renderLoop
+    // can be captured and triggered manually — we cannot rely on a real OS
+    // SIGWINCH inside the test process.
+    let capturedResize: (() => void) | null = null;
+    const onSpy = vi.spyOn(process.stdout, 'on').mockImplementation(
+      ((event: string, handler: () => void) => {
+        if (event === 'resize') capturedResize = handler;
+        return process.stdout;
+      }) as typeof process.stdout.on,
+    );
+    const offSpy = vi.spyOn(process.stdout, 'off').mockImplementation(
+      (() => process.stdout) as typeof process.stdout.off,
+    );
+
+    const out = new PassThrough();
+    const chunks: Buffer[] = [];
+    out.on('data', (c: Buffer) => chunks.push(c));
+
+    // Controlled iterator: lets the test trigger the resize between the
+    // initial frame and the terminal event so the extra write is observable.
+    let pending: ((v: KeyEvent | null) => void) | null = null;
+    const keyEvents: AsyncIterable<KeyEvent> = {
+      [Symbol.asyncIterator]: () => ({
+        next: async () => {
+          const ev = await new Promise<KeyEvent | null>((r) => { pending = r; });
+          if (ev === null) return { value: undefined as unknown as KeyEvent, done: true };
+          return { value: ev, done: false };
+        },
+      }),
+    };
+    const sendKey = (ev: KeyEvent) => {
+      const p = pending;
+      pending  = null;
+      p?.(ev);
+    };
+
+    const loopPromise = renderLoop({
+      layout:    simpleLayout,
+      out,
+      keyEvents,
+    });
+
+    // Wait for the initial frame to land before measuring.
+    await new Promise((r) => setImmediate(r));
+    const initialByteCount = Buffer.concat(chunks).length;
+
+    expect(capturedResize).not.toBeNull();
+
+    // Simulate a terminal-window resize — should fire writeFrame again and
+    // produce additional output on `out`.
+    capturedResize!();
+    await new Promise((r) => setImmediate(r));
+    expect(Buffer.concat(chunks).length).toBeGreaterThan(initialByteCount);
+
+    // Terminate the loop cleanly.
+    sendKey({ name: 'enter' });
+    await loopPromise;
+
+    onSpy.mockRestore();
+    offSpy.mockRestore();
+  });
+
+  it('T7 — resize listener removed on every exit path (enter, escape, ctrl-c, iterator exhaust)', async () => {
+    const exitPaths: { name: string; events: KeyEvent['name'][] }[] = [
+      { name: 'enter',            events: ['enter'] },
+      { name: 'escape',           events: ['escape'] },
+      { name: 'ctrl-c',           events: ['ctrl-c'] },
+      { name: 'iterator-exhaust', events: [] },
+    ];
+
+    for (const path of exitPaths) {
+      let onCount  = 0;
+      let offCount = 0;
+      const onSpy = vi.spyOn(process.stdout, 'on').mockImplementation(
+        ((event: string) => {
+          if (event === 'resize') onCount++;
+          return process.stdout;
+        }) as typeof process.stdout.on,
+      );
+      const offSpy = vi.spyOn(process.stdout, 'off').mockImplementation(
+        ((event: string) => {
+          if (event === 'resize') offCount++;
+          return process.stdout;
+        }) as typeof process.stdout.off,
+      );
+
+      await renderLoop({
+        layout:    simpleLayout,
+        out:       new PassThrough(),
+        keyEvents: eventsOf(...path.events),
+      });
+
+      expect(onCount,  `${path.name}: resize listener registered exactly once`).toBe(1);
+      expect(offCount, `${path.name}: resize listener removed exactly once`).toBe(1);
+
+      onSpy.mockRestore();
+      offSpy.mockRestore();
+    }
   });
 });
 

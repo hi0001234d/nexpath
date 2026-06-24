@@ -951,6 +951,15 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
   // terminal state (cursor visibility, content) is restored cleanly
   // regardless of whether the popup ends via Enter, Esc, Ctrl+C, an
   // iterator-exhaust cancel, or an uncaught exception.
+  // Mutable layout wrapper so the resize listener can swap in fresh
+  // rows/cols values when the terminal window is resized mid-popup. The
+  // initial dimensions are inherited from the popup spawn context
+  // (TtySelectFn captures process.stdout.rows/cols at spawn time); the
+  // listener installed below re-reads them whenever the OS emits a
+  // SIGWINCH-style resize event so layout decisions stay in sync with
+  // the actual viewport.
+  let layoutOpts: RenderLoopOptions = opts.layout;
+
   const cursorWasHidden = process.stdout.isTTY === true;
   if (cursorWasHidden) {
     out.write('\x1b[?1049h');
@@ -958,7 +967,7 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
   }
 
   const writeFrame = () => {
-    const layout = computeLayout(opts.layout, state);
+    const layout = computeLayout(layoutOpts, state);
     // Persist the auto-adjusted scroll offset back into state so subsequent
     // events (focus moves, expand toggles) start from the correctly
     // scrolled viewport rather than a stale state.scrollOffset value.
@@ -995,6 +1004,26 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
     out.write(parts.join(''));
   };
 
+  // Resize listener — keeps the popup layout reactive to terminal window
+  // resize. When the popup is dragged smaller or larger, re-read the current
+  // stdout rows/cols and trigger a redraw so visible content always matches
+  // the actual viewport. Attached only when stdout is a TTY (the popup spawn
+  // context); non-TTY targets (pipe / redirect / CI) cannot resize so there
+  // is nothing to listen for. The listener captures `layoutOpts` by closure
+  // and assigns a fresh wrapper on each event so writeFrame's next call
+  // picks up the new dimensions via the let-binding.
+  const onResize = () => {
+    layoutOpts = {
+      ...layoutOpts,
+      rows: process.stdout.rows    ?? layoutOpts.rows,
+      cols: process.stdout.columns ?? layoutOpts.cols,
+    };
+    writeFrame();
+  };
+  if (cursorWasHidden) {
+    process.stdout.on('resize', onResize);
+  }
+
   try {
     writeFrame();
 
@@ -1015,7 +1044,7 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
         // Recompute layout to populate the telemetry payload with the
         // post-toggle budget + focused-option range. Cheap (pure function;
         // the same recompute happens inside writeFrame() below).
-        const layout         = computeLayout(opts.layout, state);
+        const layout         = computeLayout(layoutOpts, state);
         const nowExpanded    = state.expandedOptions.has(state.focusedIndex);
         const focusedRange   = layout.optionLineRanges.find((r) => r.itemIndex === state.focusedIndex);
         const expandedHeight = focusedRange ? focusedRange.endIdx - focusedRange.startIdx : 0;
@@ -1055,18 +1084,19 @@ export async function renderLoop(opts: RenderLoopRunOptions): Promise<Selectable
     // Iterator exhausted without a terminal event — treat as cancel.
     return null;
   } finally {
-    // Restore the terminal cursor visibility AND exit the alternate
-    // screen buffer regardless of how we exit: Enter resolved with
-    // `return picked`, Esc/Ctrl+C with `return null`, iterator
-    // exhaustion with `return null`, or any thrown exception.
+    // Restore the terminal cursor visibility, detach the resize listener,
+    // AND exit the alternate screen buffer regardless of how we exit:
+    // Enter resolved with `return picked`, Esc/Ctrl+C with `return null`,
+    // iterator exhaustion with `return null`, or any thrown exception.
     //
-    // Order matters: show the cursor first (inside the alt buffer
-    // state), then exit the alt buffer. This way the user's prior
-    // terminal state (cursor visibility, content, scrollback) is
-    // restored cleanly when the alt buffer flips back to the normal
-    // screen buffer.
+    // Order matters: show the cursor first (inside the alt buffer state),
+    // then detach the resize listener so no stray writeFrame fires after
+    // alt-buffer exit, then exit the alt buffer. This way the user's prior
+    // terminal state (cursor visibility, content, scrollback) is restored
+    // cleanly when the alt buffer flips back to the normal screen buffer.
     if (cursorWasHidden) {
       out.write('\x1b[?25h');
+      process.stdout.off('resize', onResize);
       out.write('\x1b[?1049l');
     }
   }
