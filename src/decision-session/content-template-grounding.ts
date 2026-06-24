@@ -145,7 +145,7 @@ export interface WeaveInput {
 }
 
 function buildWeavePrompt(input: WeaveInput): string {
-  return `Weave the core line and the supporting facts below into a smooth why-desc of at most ${input.maxLines ?? 5} short lines, read by a coding agent. Rules: keep the core line's meaning; do NOT invent facts beyond those given; do NOT add new instructions.${input.l2Safeguard ? ' Keep the final safeguard sentence EXACTLY as given — never reword or drop it.' : ''}
+  return `Weave the core line and the supporting facts below into a smooth why-desc of at most ${input.maxLines ?? 5} short lines, read by a coding agent. Rules: keep the core line's meaning; do NOT invent facts beyond those given; do NOT add new instructions. Preserve any placeholder tokens (e.g. {{name}}, {R4_OPEN}, {R4_CLOSE}, {R5_INJECT: ...}) EXACTLY as they appear — never reword, translate, move out of context, or remove them.${input.l2Safeguard ? ' Keep the final safeguard sentence EXACTLY as given — never reword or drop it.' : ''}
 
 Core line: ${JSON.stringify(input.coreLine)}
 Facts: ${JSON.stringify(input.factLines)}${input.l2Safeguard ? `\nSafeguard (verbatim, must be the last line): ${JSON.stringify(input.l2Safeguard)}` : ''}
@@ -160,6 +160,9 @@ Return JSON only, no markdown:
  * the why-desc is never lost — and if a safeguard was supplied but the model
  * somehow dropped it, it is re-appended (survival is non-negotiable).
  */
+/** Runtime / composition placeholder tokens that must survive the weave verbatim. */
+const PLACEHOLDER_TOKEN_RE = /\{R4_OPEN\}|\{R4_CLOSE\}|\{R5_INJECT:[^}]*\}|\{\{\w+\}\}/g;
+
 export async function weaveWhyDesc(input: WeaveInput, client?: OpenAI): Promise<string> {
   const deterministic = [input.coreLine, ...input.factLines, ...(input.l2Safeguard ? [input.l2Safeguard] : [])].join('\n');
   try {
@@ -168,6 +171,14 @@ export async function weaveWhyDesc(input: WeaveInput, client?: OpenAI): Promise<
     const obj = parseJson(raw);
     const woven = obj && typeof obj.whyDesc === 'string' ? obj.whyDesc.trim() : '';
     if (!woven) return deterministic;
+    // Placeholder preservation: if the weave dropped/mangled any {R...} / {{...}}
+    // token from the core line, fall back to the deterministic assembly (which keeps
+    // them intact) so the downstream {{}}-compose / runtime / F7 pass still works.
+    const required = input.coreLine.match(PLACEHOLDER_TOKEN_RE) ?? [];
+    if (required.some((tok) => !woven.includes(tok))) {
+      logger.debug('content_template_weave_dropped_placeholder', { required });
+      return deterministic;
+    }
     // Safeguard survival is non-negotiable: re-append if the weave dropped it.
     if (input.l2Safeguard && !woven.includes(input.l2Safeguard)) return `${woven}\n${input.l2Safeguard}`;
     return woven;

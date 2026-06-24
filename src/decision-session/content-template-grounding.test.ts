@@ -92,6 +92,33 @@ describe('content-template-grounding — why-desc weave', () => {
     const out = await weaveWhyDesc({ ...base, l2Safeguard: safeguard }, client);
     expect(out.endsWith(safeguard)).toBe(true);
   });
+
+  it('falls back deterministically when the weave drops a runtime placeholder', async () => {
+    const withToken = { coreLine: 'Review {R4_OPEN}the change{R4_CLOSE}.', factLines: ['uses Vitest'] };
+    // Model returns prose WITHOUT the {R...} tokens → must fall back (deterministic keeps them).
+    const out = await weaveWhyDesc(withToken, mockClient(JSON.stringify({ whyDesc: 'Review the change. uses Vitest' })));
+    expect(out).toContain('{R4_OPEN}');
+    expect(out).toContain('{R4_CLOSE}');
+    expect(out).toBe('Review {R4_OPEN}the change{R4_CLOSE}.\nuses Vitest');
+  });
+
+  it('keeps the weave when all placeholders survive', async () => {
+    const withToken = { coreLine: 'See {R5_INJECT: last prompts} here.', factLines: [] };
+    const out = await weaveWhyDesc(withToken, mockClient(JSON.stringify({ whyDesc: 'See {R5_INJECT: last prompts} here, nicely woven.' })));
+    expect(out).toBe('See {R5_INJECT: last prompts} here, nicely woven.');
+  });
+
+  it('the weave prompt instructs placeholder preservation', async () => {
+    let seen = '';
+    const spy = {
+      chat: { completions: { create: async (args: { messages: { content: string }[] }) => {
+        seen = args.messages[0].content;
+        return { choices: [{ message: { content: '{"whyDesc":"x"}' } }] };
+      } } },
+    } as unknown as import('openai').default;
+    await weaveWhyDesc({ coreLine: 'c', factLines: [] }, spy);
+    expect(seen).toMatch(/Preserve any placeholder tokens/i);
+  });
 });
 
 describe('content-template-grounding — prompt-derived param extraction', () => {

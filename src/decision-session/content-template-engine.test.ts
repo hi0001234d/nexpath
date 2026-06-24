@@ -301,4 +301,11 @@ describe('content-template-engine — end-to-end orchestration (composeAdvisory)
     expect(out?.level).toBe(1); // level-1 floor served for an unauthored level 5
     expect(out?.option).toBe('floor opt');
   });
+
+  it('preserves runtime {R...} in the why-desc end-to-end (weave drops it -> deterministic fallback)', async () => {
+    const rec = record({ levelForms: { 1: { kind: 'slot-variant', cell: cell('opt', 'core {R5_INJECT: last prompts}') } } });
+    // The mock weave returns prose without the token -> composeAdvisory must keep it via fallback.
+    const out = await composeAdvisory({ lookup: lookupOf({ shipped: rec }), level: 1 }, mockClient(JSON.stringify({ whyDesc: 'core only, token gone' })));
+    expect(out?.whyDesc).toContain('{R5_INJECT: last prompts}');
+  });
 });
