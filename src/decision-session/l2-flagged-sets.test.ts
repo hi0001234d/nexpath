@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// The per-set DecisionContent now lives in the per-class content-template files.
+const CONTENT_DIR = join(__dirname, 'content-templates');
+function readContentSources(): string {
+  return readdirSync(CONTENT_DIR)
+    .filter((f) => f.endsWith('.ts'))
+    .map((f) => readFileSync(join(CONTENT_DIR, f), 'utf-8'))
+    .join('\n');
+}
 
 // Verifies the deferred L2 safeguard pass scope: the per-set marker
 // `l2SafeguardRequired: true` must be present on exactly the 32 sets
@@ -19,12 +28,7 @@ const __dirname = dirname(__filename);
 //                      DATABASE_MIGRATION_SAFETY / DEPLOYMENT_STRATEGY_
 //                      ABSENCE)
 
-function readOptionsSources(): string {
-  return (
-    readFileSync(join(__dirname, 'options.ts'), 'utf-8') +
-    readFileSync(join(__dirname, 'options-beginner.ts'), 'utf-8')
-  );
-}
+const readOptionsSources = readContentSources;
 
 const REQUIRED = [
   // Class 4 — 21 sets
@@ -72,7 +76,7 @@ describe('L2 safeguard marker — flagged-set inventory', () => {
     expect(missing).toEqual([]);
   });
 
-  it('source contains exactly 32 occurrences of l2SafeguardRequired: true across both options files', () => {
+  it('source contains exactly 32 occurrences of l2SafeguardRequired: true across the content-template files', () => {
     const src = readOptionsSources();
     const count = (src.match(/l2SafeguardRequired:\s*true/g) ?? []).length;
     expect(count).toBe(32);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -17,11 +17,17 @@ const __dirname = dirname(__filename);
 // authored desc-base MAY use the injection placeholder but is not
 // required to. This test does not assert on it.
 
-const OPTIONS_FILE          = join(__dirname, 'options.ts');
-const OPTIONS_BEGINNER_FILE = join(__dirname, 'options-beginner.ts');
+// The per-set DecisionContent (and its descBase templates) now live in the
+// per-class content-template files.
+const CONTENT_DIR = join(__dirname, 'content-templates');
+function readContentSource(): string {
+  return readdirSync(CONTENT_DIR)
+    .filter((f) => f.endsWith('.ts'))
+    .map((f) => readFileSync(join(CONTENT_DIR, f), 'utf-8'))
+    .join('\n');
+}
 
-function extractTemplates(filePath: string): { snippet: string; text: string }[] {
-  const src = readFileSync(filePath, 'utf-8');
+function extractTemplates(src: string): { snippet: string; text: string }[] {
   const re = /descBase:\s*`((?:[^`\\]|\\.)*)`/g;
   const out: { snippet: string; text: string }[] = [];
   let m: RegExpExecArray | null;
@@ -36,51 +42,25 @@ function extractTemplates(filePath: string): { snippet: string; text: string }[]
 }
 
 describe('desc-base placeholder invariant', () => {
-  describe('options.ts', () => {
-    const entries = extractTemplates(OPTIONS_FILE);
+  const entries = extractTemplates(readContentSource());
 
-    it('extracts a reasonable number of templates (sanity)', () => {
-      expect(entries.length).toBeGreaterThan(800);
-    });
-
-    it('every template contains the {R4_OPEN} bookend placeholder', () => {
-      const missing = entries.filter((e) => !e.text.includes('{R4_OPEN}'));
-      if (missing.length > 0) {
-        const sample = missing.slice(0, 5).map((e) => `  …${e.snippet}…`).join('\n');
-        throw new Error(`${missing.length} template(s) missing {R4_OPEN}:\n${sample}`);
-      }
-    });
-
-    it('every template contains the {R4_CLOSE} bookend placeholder', () => {
-      const missing = entries.filter((e) => !e.text.includes('{R4_CLOSE}'));
-      if (missing.length > 0) {
-        const sample = missing.slice(0, 5).map((e) => `  …${e.snippet}…`).join('\n');
-        throw new Error(`${missing.length} template(s) missing {R4_CLOSE}:\n${sample}`);
-      }
-    });
+  it('extracts a reasonable number of templates (sanity)', () => {
+    expect(entries.length).toBeGreaterThan(1000);
   });
 
-  describe('options-beginner.ts', () => {
-    const entries = extractTemplates(OPTIONS_BEGINNER_FILE);
+  it('every template contains the {R4_OPEN} bookend placeholder', () => {
+    const missing = entries.filter((e) => !e.text.includes('{R4_OPEN}'));
+    if (missing.length > 0) {
+      const sample = missing.slice(0, 5).map((e) => `  …${e.snippet}…`).join('\n');
+      throw new Error(`${missing.length} template(s) missing {R4_OPEN}:\n${sample}`);
+    }
+  });
 
-    it('extracts a reasonable number of templates (sanity)', () => {
-      expect(entries.length).toBeGreaterThan(200);
-    });
-
-    it('every template contains the {R4_OPEN} bookend placeholder', () => {
-      const missing = entries.filter((e) => !e.text.includes('{R4_OPEN}'));
-      if (missing.length > 0) {
-        const sample = missing.slice(0, 5).map((e) => `  …${e.snippet}…`).join('\n');
-        throw new Error(`${missing.length} template(s) missing {R4_OPEN}:\n${sample}`);
-      }
-    });
-
-    it('every template contains the {R4_CLOSE} bookend placeholder', () => {
-      const missing = entries.filter((e) => !e.text.includes('{R4_CLOSE}'));
-      if (missing.length > 0) {
-        const sample = missing.slice(0, 5).map((e) => `  …${e.snippet}…`).join('\n');
-        throw new Error(`${missing.length} template(s) missing {R4_CLOSE}:\n${sample}`);
-      }
-    });
+  it('every template contains the {R4_CLOSE} bookend placeholder', () => {
+    const missing = entries.filter((e) => !e.text.includes('{R4_CLOSE}'));
+    if (missing.length > 0) {
+      const sample = missing.slice(0, 5).map((e) => `  …${e.snippet}…`).join('\n');
+      throw new Error(`${missing.length} template(s) missing {R4_CLOSE}:\n${sample}`);
+    }
   });
 });

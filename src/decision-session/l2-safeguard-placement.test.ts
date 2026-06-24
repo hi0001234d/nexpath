@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// The per-set DecisionContent now lives in the per-class content-template files.
+const CONTENT_DIR = join(__dirname, 'content-templates');
 
 // Verifies the L2 inline safeguard placement invariant:
 //
@@ -23,10 +26,9 @@ const __dirname = dirname(__filename);
 const SAFEGUARD_NEEDLE = 'ask me for go-ahead confirmation';
 
 function readOptionsSources(): { path: string; text: string }[] {
-  return [
-    { path: 'options.ts',          text: readFileSync(join(__dirname, 'options.ts'), 'utf-8') },
-    { path: 'options-beginner.ts', text: readFileSync(join(__dirname, 'options-beginner.ts'), 'utf-8') },
-  ];
+  return readdirSync(CONTENT_DIR)
+    .filter((f) => f.endsWith('.ts'))
+    .map((f) => ({ path: `content-templates/${f}`, text: readFileSync(join(CONTENT_DIR, f), 'utf-8') }));
 }
 
 interface SetBlock {
