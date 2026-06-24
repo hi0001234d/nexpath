@@ -123,6 +123,10 @@ describe('content-authoring-rules — headline-only', () => {
     const bad = rec({ 1: { kind: 'slot-variant', cell: { option: 'a', whyDesc: 'w', L2: ['x'] } as never } });
     expect(checkHeadlineOnly(bad).offendingLevels).toEqual([1]);
   });
+  it('flags a two-key cell whose keys are not exactly option + whyDesc', () => {
+    const bad = rec({ 1: { kind: 'slot-variant', cell: { option: 'a', extra: 'b' } as never } });
+    expect(checkHeadlineOnly(bad).offendingLevels).toEqual([1]);
+  });
 });
 
 describe('content-authoring-rules — aggregate review', () => {
@@ -150,5 +154,12 @@ describe('content-authoring-rules — aggregate review', () => {
     const review = reviewRecord(bad, 'plan');
     expect(review.ok).toBe(false);
     expect(review.headlineOnly.offendingLevels).toEqual([1]);
+  });
+
+  it('detects jargon in the why-desc channel, not just the option', () => {
+    const review = reviewRecord(rec({ 1: form('plan it', 'add observability') }), 'plan');
+    expect(review.ok).toBe(false);
+    expect(review.jargonByLevel[1]?.map((v) => v.term)).toEqual(['observability']);
+    expect(review.keywordRetention.ok).toBe(true); // keyword lives in the option, which is clean
   });
 });
