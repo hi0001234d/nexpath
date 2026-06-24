@@ -51,6 +51,7 @@ import {
   type Slot,
   type SlotContext,
 } from './content-template-schema.js';
+import type { OptionEntry } from './options.js';
 import { deriveSimplerCell, weaveWhyDesc, extractParamsFromPrompts, type ExtractedParam } from './content-template-grounding.js';
 
 export const contentTemplateEngine: Engine = {
@@ -245,6 +246,33 @@ export function promptDerivedFacts(extracted: readonly ExtractedParam[]): Ground
 /** Extract prompt-derived grounding facts via the LLM, mapped for the engine. */
 export async function extractPromptFacts(prompts: readonly string[], client?: OpenAI): Promise<GroundingFact[]> {
   return promptDerivedFacts(await extractParamsFromPrompts(prompts, client));
+}
+
+// ── Render-path bridge: the (a)+(b) hybrid over a strength tier's OptionEntry[] ──
+
+/**
+ * The "show simpler" intercept, level-wise: derive each option's one-notch-simpler
+ * form via (b), with the matching static next-tier entry as its (a) fallback. The
+ * `option`↔`whyDesc`/`descBase` mapping bridges the engine's two-channel cell to
+ * the render path's OptionEntry. A per-entry derive failure falls back to that
+ * entry's static form — never blank, never the whole tier lost.
+ */
+export async function deriveSimplerLevel(
+  current: readonly OptionEntry[],
+  fallback: readonly OptionEntry[],
+  client?: OpenAI,
+  opts: { timeoutMs?: number } = {},
+): Promise<OptionEntry[]> {
+  return Promise.all(current.map(async (entry, i) => {
+    const fb = fallback[i] ?? entry;
+    const res = await stepSimplerLive(
+      { option: entry.option, whyDesc: entry.descBase },
+      { option: fb.option, whyDesc: fb.descBase },
+      client,
+      opts,
+    );
+    return { option: res.cell.option, descBase: res.cell.whyDesc };
+  }));
 }
 
 /**

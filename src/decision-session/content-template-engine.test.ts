@@ -12,11 +12,13 @@ import {
   groundWhyDescLive,
   promptDerivedFacts,
   extractPromptFacts,
+  deriveSimplerLevel,
   PROMPT_FACT_WEIGHT,
   SOURCE_CASCADE,
   type GroundingFact,
   type RecordCandidateLookup,
 } from './content-template-engine.js';
+import type { OptionEntry } from './options.js';
 import type { ContentTemplateRecord, TwoChannelCell, Slot } from './content-template-schema.js';
 
 /** A fake OpenAI whose chat.completions.create returns `reply` (or throws). */
@@ -209,5 +211,32 @@ describe('content-template-engine — live grounding wiring (stage 3/4 + real se
     const client = mockClient(JSON.stringify({ facts: [{ key: 'test_runner', value: 'uses Vitest' }] }));
     const facts = await extractPromptFacts(['I run vitest'], client);
     expect(facts).toEqual([{ key: 'test_runner', value: 'uses Vitest', weight: PROMPT_FACT_WEIGHT, tier: 'capability' }]);
+  });
+});
+
+describe('content-template-engine — render-path bridge (deriveSimplerLevel)', () => {
+  const current: OptionEntry[] = [{ option: 'Review the change.', descBase: 'why a' }, { option: 'Run the tests.', descBase: 'why b' }];
+  const fallback: OptionEntry[] = [{ option: 'Look it over.', descBase: 'fb a' }, { option: 'Run tests.', descBase: 'fb b' }];
+
+  it('derives each entry one notch simpler via (b)', async () => {
+    const client = mockClient(JSON.stringify({ option: 'simpler', whyDesc: 'simpler why' }));
+    const out = await deriveSimplerLevel(current, fallback, client);
+    expect(out).toEqual([
+      { option: 'simpler', descBase: 'simpler why' },
+      { option: 'simpler', descBase: 'simpler why' },
+    ]);
+  });
+
+  it('falls back per-entry to the static next-tier form when a derive fails', async () => {
+    const out = await deriveSimplerLevel(current, fallback, mockClient('throw'));
+    expect(out).toEqual([
+      { option: 'Look it over.', descBase: 'fb a' },
+      { option: 'Run tests.', descBase: 'fb b' },
+    ]);
+  });
+
+  it('uses the entry itself as fallback when the static tier has fewer entries', async () => {
+    const out = await deriveSimplerLevel(current, [fallback[0]], mockClient('throw'));
+    expect(out[1]).toEqual({ option: 'Run the tests.', descBase: 'why b' }); // own entry as fallback
   });
 });
