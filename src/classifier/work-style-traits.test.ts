@@ -159,6 +159,19 @@ describe('work-style-traits — abstraction level', () => {
     expect(computeWorkStyleProfile(events).abstractionLevel.value).toBe('balanced');
   });
 
+  it('counts a prompt once even when it emits several param-events (distinct-prompt dedup)', () => {
+    // Each prompt fires two signals at the same (session, promptIndex) → 8 events, 4 distinct prompts.
+    const dupPrompt = (session: string, idx: number) => [
+      ev({ signalKey: 'a', sessionId: session, promptIndex: idx, stage: 'architecture' }),
+      ev({ signalKey: 'b', sessionId: session, promptIndex: idx, stage: 'architecture' }),
+    ];
+    const events = [...dupPrompt('s1', 0), ...dupPrompt('s2', 1), ...dupPrompt('s1', 2), ...dupPrompt('s2', 3)];
+    const t = computeWorkStyleProfile(events).abstractionLevel;
+    expect(t.observations).toBe(4); // deduped distinct prompts, not 8 raw events
+    expect(t.sessions).toBe(2);
+    expect(t.value).toBe('architecture_first');
+  });
+
   it('ignores stages outside the design/code clusters and honours cold-start', () => {
     const events = [
       ...stagePrompts('review_testing', ['s1', 's2', 's1', 's2']), // neither cluster
