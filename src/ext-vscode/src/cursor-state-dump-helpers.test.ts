@@ -98,27 +98,30 @@ describe('redactValue', () => {
   });
 });
 
+/** Normalise path separators so these assertions hold on POSIX and Windows CI runners. */
+const fwd = (p: string | null): string | null => (p == null ? p : p.replace(/\\/g, '/'));
+
 describe('cursorConfigRoot', () => {
   it('returns the linux path under ~/.config/Cursor', () => {
     expect(
-      cursorConfigRoot({ platform: 'linux', home: '/home/u' }),
+      fwd(cursorConfigRoot({ platform: 'linux', home: '/home/u' })),
     ).toBe('/home/u/.config/Cursor');
   });
 
   it('returns the macOS path under ~/Library/Application Support/Cursor', () => {
     expect(
-      cursorConfigRoot({ platform: 'darwin', home: '/Users/u' }),
+      fwd(cursorConfigRoot({ platform: 'darwin', home: '/Users/u' })),
     ).toBe('/Users/u/Library/Application Support/Cursor');
   });
 
   it('returns the Windows path under %APPDATA%/Cursor when APPDATA is provided', () => {
     expect(
-      cursorConfigRoot({
+      fwd(cursorConfigRoot({
         platform: 'win32',
         home: 'C:\\Users\\u',
         appdata: 'C:\\Users\\u\\AppData\\Roaming',
-      }),
-    ).toBe('C:\\Users\\u\\AppData\\Roaming/Cursor');
+      })),
+    ).toBe('C:/Users/u/AppData/Roaming/Cursor');
   });
 
   it('falls back to <home>/AppData/Roaming/Cursor on Windows when APPDATA missing', () => {
@@ -129,7 +132,7 @@ describe('cursorConfigRoot', () => {
 
   it('treats unknown platforms as linux-style', () => {
     expect(
-      cursorConfigRoot({ platform: 'freebsd' as NodeJS.Platform, home: '/home/u' }),
+      fwd(cursorConfigRoot({ platform: 'freebsd' as NodeJS.Platform, home: '/home/u' })),
     ).toBe('/home/u/.config/Cursor');
   });
 });

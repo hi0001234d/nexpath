@@ -32,7 +32,8 @@ describe('parseJsonStringArray', () => {
 
 describe('defaultStorePath', () => {
   it('points at ~/.nexpath/prompt-store.db (mirrors Layer C DEFAULT_DB_PATH)', () => {
-    expect(defaultStorePath('/home/u')).toBe('/home/u/.nexpath/prompt-store.db');
+    // Normalise separators so the assertion holds on POSIX and Windows CI runners.
+    expect(defaultStorePath('/home/u').replace(/\\/g, '/')).toBe('/home/u/.nexpath/prompt-store.db');
   });
 });
 
