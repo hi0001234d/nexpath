@@ -31,7 +31,8 @@
  *                       act-then-restart events (lean decisive). Decision latency
  *                       is a noted future refinement, not yet folded in.
  *  - abstraction level: share of prompts spent in design/architecture stages vs
- *                       the implementation stage.
+ *                       the implementation stage. A keyword-based secondary input
+ *                       is a noted future refinement, not yet folded in.
  *  - explanation depth: DORMANT — it needs a transcript-channel signal (how the
  *                       user reacts to long vs terse output) that is not yet
  *                       captured, so it always reports UNSET for now. The axis is

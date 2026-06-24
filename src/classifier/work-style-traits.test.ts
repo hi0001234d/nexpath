@@ -61,12 +61,42 @@ describe('work-style-traits — value spectra (closed ordinal, balanced midpoint
 });
 
 describe('work-style-traits — decision rhythm', () => {
-  it('reads decisive when act-then-restart dominates', () => {
+  it('reads decisive when act-then-restart dominates (and marks the trait stable)', () => {
     const events = [
       ...rhythm('restart_impulse_check', ['s1', 's2', 's1', 's2']),
       ...rhythm('alternatives_seeking', ['s1']),
     ];
-    expect(computeWorkStyleProfile(events).decisionRhythm.value).toBe('decisive');
+    const t = computeWorkStyleProfile(events).decisionRhythm;
+    expect(t.value).toBe('decisive');
+    expect(t.stable).toBe(true);
+    expect(t.observations).toBe(5);
+    expect(t.sessions).toBe(2);
+  });
+
+  it('treats the neutral-band edges inclusively (0.4 → decisive, 0.6 → deliberative)', () => {
+    // ratio = deliberative / total. 2/5 = 0.4 (edge low) → decisive.
+    const lowEdge = [
+      ...rhythm('alternatives_seeking', ['s1', 's2']),
+      ...rhythm('restart_impulse_check', ['s1', 's2', 's1']),
+    ];
+    expect(computeWorkStyleProfile(lowEdge).decisionRhythm.value).toBe('decisive');
+    // 3/5 = 0.6 (edge high) → deliberative.
+    const highEdge = [
+      ...rhythm('alternatives_seeking', ['s1', 's2', 's1']),
+      ...rhythm('restart_impulse_check', ['s1', 's2']),
+    ];
+    expect(computeWorkStyleProfile(highEdge).decisionRhythm.value).toBe('deliberative');
+  });
+
+  it('is set exactly at the cold-start floor (4 observations across 2 sessions)', () => {
+    const events = [
+      ...rhythm('alternatives_seeking', ['s1', 's2']),
+      ...rhythm('restart_impulse_check', ['s1', 's2']),
+    ];
+    const t = computeWorkStyleProfile(events).decisionRhythm;
+    expect(t.observations).toBe(4);
+    expect(t.stable).toBe(true);
+    expect(t.value).toBe('balanced');
   });
 
   it('reads deliberative when option-weighing dominates', () => {
@@ -182,6 +212,18 @@ describe('work-style-traits — rolling window + store-backed load', () => {
       ...rhythm('restart_impulse_check', ['s1', 's2', 's1', 's2']),
     ];
     expect(computeWorkStyleProfile(events, { windowCount: 4 }).decisionRhythm.value).toBe('decisive');
+  });
+
+  it('windowDays drops events older than the cutoff', () => {
+    const NOW = 10_000_000_000;
+    const DAY = 24 * 60 * 60 * 1000;
+    const old = ['s1', 's2', 's1', 's2'].map((s, i) =>
+      ev({ signalKey: 'alternatives_seeking', sessionId: s, promptIndex: pidx++, stage: null, ts: NOW - 5 * DAY - i }));
+    const recent = ['s1', 's2', 's1', 's2'].map((s, i) =>
+      ev({ signalKey: 'restart_impulse_check', sessionId: s, promptIndex: pidx++, stage: null, ts: NOW - i }));
+    // Without a window, the 4+4 even split → balanced; windowing to 1 day drops the old → decisive.
+    expect(computeWorkStyleProfile([...old, ...recent]).decisionRhythm.value).toBe('balanced');
+    expect(computeWorkStyleProfile([...old, ...recent], { now: NOW, windowDays: 1 }).decisionRhythm.value).toBe('decisive');
   });
 
   it('an in-memory store yields an all-UNSET profile (no events on disk)', async () => {
