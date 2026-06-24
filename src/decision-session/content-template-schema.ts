@@ -46,6 +46,10 @@ export interface LevelForm {
 export type SlotType = 'static-ref' | 'literal' | 'param-value' | 'choice';
 export const SLOT_TYPES: readonly SlotType[] = ['static-ref', 'literal', 'param-value', 'choice'];
 
+/** AR-1 Option-C param-axis representation tags (the closed set a record may declare). */
+export type ParamAxisTag = 'closed-ordinal' | 'nominal' | 'extensible' | 'open';
+export const PARAM_AXIS_TAGS: readonly ParamAxisTag[] = ['closed-ordinal', 'nominal', 'extensible', 'open'];
+
 export interface Slot {
   /** Referenced in a cell as `{{name}}`. */
   name: string;
@@ -65,8 +69,8 @@ export interface ContentTemplateRecord {
   /** Sparse maturity map: level → headline form. The level-1 floor is MANDATORY. */
   levelForms: Partial<Record<MaturityLevel, LevelForm>>;
   slots: Slot[];
-  /** AR-1 param-axis tags (closed-ordinal / nominal / extensible / open). */
-  paramAxes?: Record<string, string>;
+  /** AR-1 param-axis tags, keyed by axis name (each value is a closed AR-1 tag). */
+  paramAxes?: Record<string, ParamAxisTag>;
 }
 
 // ── Validation (the single schema gate) ───────────────────────────────────────
@@ -120,6 +124,19 @@ export function validateContentTemplateRecord(record: unknown): ValidationResult
       }
       if (s.type === 'choice' && (!Array.isArray(s.choices) || s.choices.length === 0)) {
         errors.push(`slot ${s.name}: choice requires a non-empty choices[]`);
+      }
+    }
+  }
+
+  // param-axes — optional, but when present every value must be a closed AR-1 tag.
+  if (r.paramAxes !== undefined) {
+    if (typeof r.paramAxes !== 'object' || r.paramAxes === null) {
+      errors.push('paramAxes must be an object when present');
+    } else {
+      for (const [axis, tag] of Object.entries(r.paramAxes)) {
+        if (!PARAM_AXIS_TAGS.includes(tag as ParamAxisTag)) {
+          errors.push(`paramAxes.${axis}: tag must be one of ${PARAM_AXIS_TAGS.join('|')}`);
+        }
       }
     }
   }

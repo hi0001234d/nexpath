@@ -56,6 +56,14 @@ describe('content-template-schema — validation (the single gate)', () => {
     expect(validateContentTemplateRecord(validRecord({ levelForms: { 1: { kind: 'nope' as never, cell: cell() } } })).ok).toBe(false);
     expect(validateContentTemplateRecord(validRecord({ levelForms: { 1: { kind: 'slot-variant', cell: { option: 'o' } as never } } })).ok).toBe(false);
   });
+
+  it('validates param-axes tags against the closed AR-1 set (optional field)', () => {
+    expect(validateContentTemplateRecord(validRecord({ paramAxes: { framework: 'open', test_runner: 'nominal' } })).ok).toBe(true);
+    expect(validateContentTemplateRecord(validRecord())).toEqual({ ok: true, errors: [] }); // omitted is fine
+    const bad = validateContentTemplateRecord(validRecord({ paramAxes: { framework: 'bogus' as never } }));
+    expect(bad.ok).toBe(false);
+    expect(bad.errors.join(' ')).toMatch(/paramAxes\.framework/);
+  });
 });
 
 describe('content-template-schema — two-phase compose (Phase-1 preserves {R...})', () => {
