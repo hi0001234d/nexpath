@@ -15,12 +15,20 @@ import {
   deriveSimplerLevel,
   deriveLadder,
   composeAdvisory,
+  envFactsToGrounding,
+  rightGoodToGrounding,
+  workStyleToGrounding,
+  retrieveGroundingFacts,
   PROMPT_FACT_WEIGHT,
   SOURCE_CASCADE,
   type GroundingFact,
   type RecordCandidateLookup,
 } from './content-template-engine.js';
 import type { OptionEntry } from './options.js';
+import type { FactMap } from '../env/types.js';
+import type { RightGoodProfile } from './../classifier/right-good-aggregator.js';
+import type { WorkStyleProfile } from './../classifier/work-style-traits.js';
+import type { SignalDefinition } from '../classifier/types.js';
 import type { ContentTemplateRecord, TwoChannelCell, Slot } from './content-template-schema.js';
 
 /** A fake OpenAI whose chat.completions.create returns `reply` (or throws). */
@@ -277,6 +285,78 @@ describe('content-template-engine — render-path bridge (deriveSimplerLevel)', 
     const ladder = await deriveLadder(l1, fb, mockClient('throw'));
     expect(ladder.l2).toEqual(fb.l2);
     expect(ladder.l3).toEqual(fb.l3);
+  });
+});
+
+describe('content-template-engine — param-source retrieval (AR-10 / AR-9 / AR-3)', () => {
+  it('envFactsToGrounding maps present capabilities, skips unknown/absent', () => {
+    const facts: FactMap = {
+      project_framework: { value: 'next.js', tier: 'C', confidence: 'high', detectedAt: 0 },
+      has_test_runner: { value: true, tier: 'C', confidence: 'high', detectedAt: 0 },
+      has_ci_pipeline: { value: false, tier: 'C', confidence: 'high', detectedAt: 0 }, // absent → skip
+      shell_type: { value: null, tier: 'C', confidence: 'low', detectedAt: 0 },        // unknown → skip
+    };
+    expect(envFactsToGrounding(facts)).toEqual([
+      { key: 'project_framework', value: 'next.js', weight: 1, tier: 'capability' },
+      { key: 'has_test_runner', value: 'has_test_runner', weight: 1, tier: 'capability' },
+    ]);
+  });
+
+  it('envFactsToGrounding honours tier P (corroborated) and low confidence (weight 0.5)', () => {
+    const facts: FactMap = { x: { value: 'v', tier: 'P', confidence: 'low', detectedAt: 0 } };
+    expect(envFactsToGrounding(facts)).toEqual([{ key: 'x', value: 'v', weight: 0.5, tier: 'corroborated' }]);
+  });
+
+  it('rightGoodToGrounding maps only the good side, using the signal description', () => {
+    const profile: RightGoodProfile = {
+      good_sig: { score: 0.8, state: 'right_good', stability: { sessions: 2, occurrences: 3, stable: true }, lastUpdated: 1 },
+      bad_sig: { score: 0.1, state: 'mistake', stability: { sessions: 1, occurrences: 1, stable: false }, lastUpdated: 1 },
+      meh_sig: { score: 0.2, state: 'neutral', stability: { sessions: 1, occurrences: 1, stable: false }, lastUpdated: 1 },
+    };
+    const lookup = (k: string): SignalDefinition | undefined =>
+      k === 'good_sig' ? ({ key: k, description: 'reliably cross-confirms changes' } as SignalDefinition) : undefined;
+    expect(rightGoodToGrounding(profile, lookup)).toEqual([
+      { key: 'good_sig', value: 'reliably cross-confirms changes', weight: 0.8, tier: 'corroborated' },
+    ]);
+  });
+
+  it('rightGoodToGrounding falls back to the key when no description exists', () => {
+    const profile: RightGoodProfile = {
+      k: { score: 0.6, state: 'right_good', stability: { sessions: 2, occurrences: 3, stable: true }, lastUpdated: 1 },
+    };
+    expect(rightGoodToGrounding(profile, () => undefined)).toEqual([{ key: 'k', value: 'k', weight: 0.6, tier: 'corroborated' }]);
+  });
+
+  it('workStyleToGrounding maps SET traits and skips UNSET', () => {
+    const profile: WorkStyleProfile = {
+      decisionRhythm: { value: 'decisive', stable: true, observations: 5, sessions: 2, dormant: false },
+      abstractionLevel: { value: null, stable: false, observations: 0, sessions: 0, dormant: false },
+      explanationDepth: { value: null, stable: false, observations: 0, sessions: 0, dormant: true },
+    };
+    expect(workStyleToGrounding(profile)).toEqual([
+      { key: 'decisionRhythm', value: 'decisive', weight: PROMPT_FACT_WEIGHT, tier: 'capability' },
+    ]);
+  });
+
+  it('retrieveGroundingFacts combines all four sources', async () => {
+    const env: FactMap = { project_framework: { value: 'vite', tier: 'C', confidence: 'high', detectedAt: 0 } };
+    const rightGood: RightGoodProfile = {
+      g: { score: 0.7, state: 'right_good', stability: { sessions: 2, occurrences: 3, stable: true }, lastUpdated: 1 },
+    };
+    const workStyle: WorkStyleProfile = {
+      decisionRhythm: { value: 'deliberative', stable: true, observations: 5, sessions: 2, dormant: false },
+      abstractionLevel: { value: null, stable: false, observations: 0, sessions: 0, dormant: false },
+      explanationDepth: { value: null, stable: false, observations: 0, sessions: 0, dormant: true },
+    };
+    const facts = await retrieveGroundingFacts(
+      { env, rightGood, workStyle, prompts: ['I use vite'] },
+      mockClient(JSON.stringify({ facts: [{ key: 'test_runner', value: 'uses Vitest' }] })),
+    );
+    expect(facts.map((f) => f.key)).toEqual(['project_framework', 'g', 'decisionRhythm', 'test_runner']);
+  });
+
+  it('retrieveGroundingFacts returns [] for no sources', async () => {
+    expect(await retrieveGroundingFacts({})).toEqual([]);
   });
 });
 

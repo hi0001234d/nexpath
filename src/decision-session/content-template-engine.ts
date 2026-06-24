@@ -52,6 +52,11 @@ import {
   type SlotContext,
 } from './content-template-schema.js';
 import type { OptionEntry } from './options.js';
+import type { FactMap } from '../env/types.js';
+import type { RightGoodProfile } from '../classifier/right-good-aggregator.js';
+import type { WorkStyleProfile } from '../classifier/work-style-traits.js';
+import type { SignalDefinition } from '../classifier/types.js';
+import { SIGNAL_MAP } from '../classifier/signals.js';
 import { deriveSimplerCell, weaveWhyDesc, extractParamsFromPrompts, type ExtractedParam } from './content-template-grounding.js';
 
 export const contentTemplateEngine: Engine = {
@@ -246,6 +251,85 @@ export function promptDerivedFacts(extracted: readonly ExtractedParam[]): Ground
 /** Extract prompt-derived grounding facts via the LLM, mapped for the engine. */
 export async function extractPromptFacts(prompts: readonly string[], client?: OpenAI): Promise<GroundingFact[]> {
   return promptDerivedFacts(await extractParamsFromPrompts(prompts, client));
+}
+
+// ── Param-source retrieval: map the AR param SETS into grounding facts ──────────
+
+/**
+ * AR-10 dev-env probe → grounding facts. Only PRESENT capabilities ground content
+ * (a `null` UNKNOWN or `false` absence is skipped). A string fact carries its
+ * value (e.g. the framework); a boolean capability carries its key (the weave
+ * phrases it). Probe tier 'C'→capability / 'P'→corroborated; confidence sets weight.
+ */
+export function envFactsToGrounding(facts: FactMap): GroundingFact[] {
+  const out: GroundingFact[] = [];
+  for (const [key, f] of Object.entries(facts)) {
+    if (f.value === null || f.value === false) continue;
+    out.push({
+      key,
+      value: typeof f.value === 'string' ? f.value : key,
+      weight: f.confidence === 'high' ? 1 : 0.5,
+      tier: f.tier === 'P' ? 'corroborated' : 'capability',
+    });
+  }
+  return out;
+}
+
+/**
+ * AR-9 workflow aggregate → grounding facts. Only the GOOD side grounds the
+ * content-template engine (signals the user reliably DOES → corroborated). The
+ * human phrasing reuses the existing signal `description` (not new content).
+ */
+export function rightGoodToGrounding(
+  profile: RightGoodProfile,
+  lookup: (key: string) => SignalDefinition | undefined = (k) => SIGNAL_MAP.get(k),
+): GroundingFact[] {
+  const out: GroundingFact[] = [];
+  for (const [key, sig] of Object.entries(profile)) {
+    if (sig.state !== 'right_good') continue;
+    out.push({ key, value: lookup(key)?.description ?? key, weight: sig.score, tier: 'corroborated' });
+  }
+  return out;
+}
+
+/**
+ * AR-3 work-style traits → grounding facts. Each SET trait (non-UNSET) becomes a
+ * neutral descriptor fact carrying its pole value (the weave renders the tone);
+ * UNSET traits are skipped. Neutral → capability tier (never a signed claim).
+ */
+export function workStyleToGrounding(profile: WorkStyleProfile): GroundingFact[] {
+  const out: GroundingFact[] = [];
+  for (const [key, trait] of Object.entries(profile)) {
+    if (trait.value === null) continue;
+    out.push({ key, value: trait.value, weight: PROMPT_FACT_WEIGHT, tier: 'capability' });
+  }
+  return out;
+}
+
+export interface GroundingSources {
+  /** AR-10 dev-env probe facts. */
+  env?: FactMap;
+  /** AR-9 workflow aggregate. */
+  rightGood?: RightGoodProfile;
+  /** AR-3 work-style traits. */
+  workStyle?: WorkStyleProfile;
+  /** Recent prompts for prompt-derived extraction. */
+  prompts?: readonly string[];
+}
+
+/**
+ * Retrieve the full grounding-fact set from the param SOURCES (AR-10 dev-env /
+ * AR-9 workflow / AR-3 work-style / prompt-derived). The caller obtains the raw
+ * profiles via the existing loaders (`loadRightGoodProfile`/`loadWorkStyleProfile`/
+ * the env probe); this maps + combines them into one fact list for select/rank/cap.
+ */
+export async function retrieveGroundingFacts(sources: GroundingSources, client?: OpenAI): Promise<GroundingFact[]> {
+  const facts: GroundingFact[] = [];
+  if (sources.env) facts.push(...envFactsToGrounding(sources.env));
+  if (sources.rightGood) facts.push(...rightGoodToGrounding(sources.rightGood));
+  if (sources.workStyle) facts.push(...workStyleToGrounding(sources.workStyle));
+  if (sources.prompts && sources.prompts.length > 0) facts.push(...(await extractPromptFacts(sources.prompts, client)));
+  return facts;
 }
 
 // ── Render-path bridge: the (a)+(b) hybrid over a strength tier's OptionEntry[] ──
