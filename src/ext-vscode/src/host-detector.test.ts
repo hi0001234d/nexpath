@@ -60,6 +60,9 @@ describe('detectHost', () => {
   });
 });
 
+/** Normalise path separators so these path assertions hold on POSIX and Windows CI runners. */
+const fwd = (p: string | null): string | null => (p == null ? p : p.replace(/\\/g, '/'));
+
 describe('chatHistoryBaseDir', () => {
   it('returns null for vscode-generic (no chat-history watching)', () => {
     expect(
@@ -69,33 +72,33 @@ describe('chatHistoryBaseDir', () => {
 
   it('cursor on linux → ~/.config/Cursor', () => {
     expect(
-      chatHistoryBaseDir({ host: 'cursor', home: '/home/u', platform: 'linux' }),
+      fwd(chatHistoryBaseDir({ host: 'cursor', home: '/home/u', platform: 'linux' })),
     ).toBe('/home/u/.config/Cursor');
   });
 
   it('cursor on darwin → Library/Application Support', () => {
     expect(
-      chatHistoryBaseDir({ host: 'cursor', home: '/Users/u', platform: 'darwin' }),
+      fwd(chatHistoryBaseDir({ host: 'cursor', home: '/Users/u', platform: 'darwin' })),
     ).toBe('/Users/u/Library/Application Support/Cursor');
   });
 
   it('cursor on win32 with APPDATA → uses it', () => {
     expect(
-      chatHistoryBaseDir({
+      fwd(chatHistoryBaseDir({
         host: 'cursor',
         home: 'C:\\Users\\u',
         platform: 'win32',
         appdata: 'C:\\Users\\u\\AppData\\Roaming',
-      }),
-    ).toBe('C:\\Users\\u\\AppData\\Roaming/Cursor');
+      })),
+    ).toBe('C:/Users/u/AppData/Roaming/Cursor');
   });
 
   it('windsurf paths mirror cursor paths', () => {
     expect(
-      chatHistoryBaseDir({ host: 'windsurf', home: '/home/u', platform: 'linux' }),
+      fwd(chatHistoryBaseDir({ host: 'windsurf', home: '/home/u', platform: 'linux' })),
     ).toBe('/home/u/.config/Windsurf');
     expect(
-      chatHistoryBaseDir({ host: 'windsurf', home: '/Users/u', platform: 'darwin' }),
+      fwd(chatHistoryBaseDir({ host: 'windsurf', home: '/Users/u', platform: 'darwin' })),
     ).toBe('/Users/u/Library/Application Support/Windsurf');
   });
 });
@@ -103,7 +106,7 @@ describe('chatHistoryBaseDir', () => {
 describe('workspaceStorageDir', () => {
   it('appends User/workspaceStorage to the host base dir', () => {
     expect(
-      workspaceStorageDir({ host: 'cursor', home: '/home/u', platform: 'linux' }),
+      fwd(workspaceStorageDir({ host: 'cursor', home: '/home/u', platform: 'linux' })),
     ).toBe('/home/u/.config/Cursor/User/workspaceStorage');
   });
 
