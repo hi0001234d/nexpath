@@ -133,11 +133,19 @@ export async function extractParamsFromPrompts(prompts: readonly string[], clien
 
 // ── why-desc multi-value weave ──────────────────────────────────────────────────
 
+/** A grounding fact for the weave, carrying its trust tier (drives the wording). */
+export interface WeaveFact {
+  /** Already injection-guarded value text. */
+  text: string;
+  /** `corroborated` = the user DOES it (practice wording); `capability` = the environment HAS it (capability wording). */
+  tier: 'corroborated' | 'capability';
+}
+
 export interface WeaveInput {
   /** The frozen core line (authored — kept intact). */
   coreLine: string;
-  /** Already-selected, already-injection-guarded grounding fact strings. */
-  factLines: readonly string[];
+  /** Already-selected, already-injection-guarded grounding facts (with tier). */
+  facts: readonly WeaveFact[];
   /** Sensitive-action safeguard line — kept VERBATIM, never dropped. */
   l2Safeguard?: string;
   /** Soft line budget for the woven result. */
@@ -145,10 +153,14 @@ export interface WeaveInput {
 }
 
 function buildWeavePrompt(input: WeaveInput): string {
-  return `Weave the core line and the supporting facts below into a smooth why-desc of at most ${input.maxLines ?? 5} short lines, read by a coding agent. Rules: keep the core line's meaning; do NOT invent facts beyond those given; do NOT add new instructions. Preserve any placeholder tokens (e.g. {{name}}, {R4_OPEN}, {R4_CLOSE}, {R5_INJECT: ...}) EXACTLY as they appear — never reword, translate, move out of context, or remove them.${input.l2Safeguard ? ' Keep the final safeguard sentence EXACTLY as given — never reword or drop it.' : ''}
+  const factListing = input.facts
+    .map((f) => `- [${f.tier === 'corroborated' ? 'established practice' : 'available capability'}] ${f.text}`)
+    .join('\n');
+  return `Weave the core line and the supporting facts below into a smooth why-desc of at most ${input.maxLines ?? 5} short lines, read by a coding agent. Rules: keep the core line's meaning; do NOT invent facts beyond those given; do NOT add new instructions. Phrase each fact by its tier: an [established practice] fact = something the user reliably DOES (e.g. "you already…"); an [available capability] fact = something the user's environment HAS or COULD use (e.g. "your setup has…", "you could…") — never state a capability as an established habit. Drop the bracketed tier tags from the final text. Preserve any placeholder tokens (e.g. {{name}}, {R4_OPEN}, {R4_CLOSE}, {R5_INJECT: ...}) EXACTLY as they appear — never reword, translate, move out of context, or remove them.${input.l2Safeguard ? ' Keep the final safeguard sentence EXACTLY as given — never reword or drop it.' : ''}
 
 Core line: ${JSON.stringify(input.coreLine)}
-Facts: ${JSON.stringify(input.factLines)}${input.l2Safeguard ? `\nSafeguard (verbatim, must be the last line): ${JSON.stringify(input.l2Safeguard)}` : ''}
+Facts:
+${factListing}${input.l2Safeguard ? `\nSafeguard (verbatim, must be the last line): ${JSON.stringify(input.l2Safeguard)}` : ''}
 
 Return JSON only, no markdown:
 {"whyDesc":"..."}`;
@@ -164,7 +176,7 @@ Return JSON only, no markdown:
 const PLACEHOLDER_TOKEN_RE = /\{R4_OPEN\}|\{R4_CLOSE\}|\{R5_INJECT:[^}]*\}|\{\{\w+\}\}/g;
 
 export async function weaveWhyDesc(input: WeaveInput, client?: OpenAI): Promise<string> {
-  const deterministic = [input.coreLine, ...input.factLines, ...(input.l2Safeguard ? [input.l2Safeguard] : [])].join('\n');
+  const deterministic = [input.coreLine, ...input.facts.map((f) => f.text), ...(input.l2Safeguard ? [input.l2Safeguard] : [])].join('\n');
   try {
     const openai = client ?? new OpenAI();
     const raw = await chat(openai, buildWeavePrompt(input));

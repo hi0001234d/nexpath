@@ -62,7 +62,7 @@ describe('content-template-grounding — simpler derive (b)', () => {
 });
 
 describe('content-template-grounding — why-desc weave', () => {
-  const base = { coreLine: 'Review what changed.', factLines: ['uses Vitest', 'small team'] };
+  const base = { coreLine: 'Review what changed.', facts: [{ text: 'uses Vitest', tier: 'capability' as const }, { text: 'small team', tier: 'capability' as const }] };
 
   it('returns the woven why-desc on valid output', async () => {
     const client = mockClient(JSON.stringify({ whyDesc: 'Review what changed — you use Vitest, small team.' }));
@@ -94,7 +94,7 @@ describe('content-template-grounding — why-desc weave', () => {
   });
 
   it('falls back deterministically when the weave drops a runtime placeholder', async () => {
-    const withToken = { coreLine: 'Review {R4_OPEN}the change{R4_CLOSE}.', factLines: ['uses Vitest'] };
+    const withToken = { coreLine: 'Review {R4_OPEN}the change{R4_CLOSE}.', facts: [{ text: 'uses Vitest', tier: 'capability' as const }] };
     // Model returns prose WITHOUT the {R...} tokens → must fall back (deterministic keeps them).
     const out = await weaveWhyDesc(withToken, mockClient(JSON.stringify({ whyDesc: 'Review the change. uses Vitest' })));
     expect(out).toContain('{R4_OPEN}');
@@ -103,12 +103,12 @@ describe('content-template-grounding — why-desc weave', () => {
   });
 
   it('keeps the weave when all placeholders survive', async () => {
-    const withToken = { coreLine: 'See {R5_INJECT: last prompts} here.', factLines: [] };
+    const withToken = { coreLine: 'See {R5_INJECT: last prompts} here.', facts: [] };
     const out = await weaveWhyDesc(withToken, mockClient(JSON.stringify({ whyDesc: 'See {R5_INJECT: last prompts} here, nicely woven.' })));
     expect(out).toBe('See {R5_INJECT: last prompts} here, nicely woven.');
   });
 
-  it('the weave prompt instructs placeholder preservation', async () => {
+  it('the weave prompt instructs placeholder preservation + tier-bound wording', async () => {
     let seen = '';
     const spy = {
       chat: { completions: { create: async (args: { messages: { content: string }[] }) => {
@@ -116,8 +116,13 @@ describe('content-template-grounding — why-desc weave', () => {
         return { choices: [{ message: { content: '{"whyDesc":"x"}' } }] };
       } } },
     } as unknown as import('openai').default;
-    await weaveWhyDesc({ coreLine: 'c', factLines: [] }, spy);
+    await weaveWhyDesc({ coreLine: 'c', facts: [
+      { text: 'reliably writes tests', tier: 'corroborated' },
+      { text: 'has CI', tier: 'capability' },
+    ] }, spy);
     expect(seen).toMatch(/Preserve any placeholder tokens/i);
+    expect(seen).toMatch(/established practice/i);   // corroborated → practice wording
+    expect(seen).toMatch(/available capability/i);   // capability → capability wording
   });
 });
 

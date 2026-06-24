@@ -394,9 +394,9 @@ export async function deriveLadder(
  * substitution pipeline (wired at the migration step), not through the weave.
  */
 export async function groundWhyDescLive(input: ComposeWhyDescInput, client?: OpenAI): Promise<string> {
-  const factLines = (input.facts && input.factCap !== undefined ? selectRankCapFacts(input.facts, input.factCap) : [])
-    .map((f) => escapeSlotValue(f.value));
-  return weaveWhyDesc({ coreLine: input.cell.whyDesc, factLines, l2Safeguard: input.l2Safeguard }, client);
+  const facts = (input.facts && input.factCap !== undefined ? selectRankCapFacts(input.facts, input.factCap) : [])
+    .map((f) => ({ text: escapeSlotValue(f.value), tier: f.tier }));
+  return weaveWhyDesc({ coreLine: input.cell.whyDesc, facts, l2Safeguard: input.l2Safeguard }, client);
 }
 
 // ── End-to-end orchestration (stages 1 → 4 for one advisory) ────────────────────
