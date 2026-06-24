@@ -51,7 +51,7 @@ import {
   type Slot,
   type SlotContext,
 } from './content-template-schema.js';
-import { deriveSimplerCell, weaveWhyDesc } from './content-template-grounding.js';
+import { deriveSimplerCell, weaveWhyDesc, extractParamsFromPrompts, type ExtractedParam } from './content-template-grounding.js';
 
 export const contentTemplateEngine: Engine = {
   name: 'content-template',
@@ -232,6 +232,19 @@ export function stepSimplerLive(
   opts: { timeoutMs?: number } = {},
 ): Promise<StrengthStepResult> {
   return stepSimpler(current, (cell) => deriveSimplerCell(cell, client), fallback, opts);
+}
+
+/** Default weight for a prompt-derived fact (stated-in-prompt → `capability` tier). */
+export const PROMPT_FACT_WEIGHT = 1;
+
+/** Map extracted prompt params to grounding facts (prompt-stated → capability tier). */
+export function promptDerivedFacts(extracted: readonly ExtractedParam[]): GroundingFact[] {
+  return extracted.map((p) => ({ key: p.key, value: p.value, weight: PROMPT_FACT_WEIGHT, tier: 'capability' as const }));
+}
+
+/** Extract prompt-derived grounding facts via the LLM, mapped for the engine. */
+export async function extractPromptFacts(prompts: readonly string[], client?: OpenAI): Promise<GroundingFact[]> {
+  return promptDerivedFacts(await extractParamsFromPrompts(prompts, client));
 }
 
 /**

@@ -52,6 +52,8 @@ export interface OptionGenContext {
   currentStage:          Stage;
   prevStage?:            Stage;
   promptsInCurrentStage: number;
+  /** Optional 2–5-word must-follow action anchor, merged into the Pass-2 call. */
+  actionAnchor?:         string;
 }
 
 // ── Project grounding — completed artifact detection ──────────────────────────
@@ -333,7 +335,11 @@ export function buildEmbeddingPrompt(
     l3: adaptedOptions.l3.map(toPromptItem),
   });
 
-  return `${groundingSection.trimStart()}
+  const anchorSection = context?.actionAnchor
+    ? `\nAction anchor: also merge this short must-follow step into the single most relevant option where it reads naturally — keep it 2–5 words, merge it into ONE option only, and do NOT force it into options where it does not fit: ${JSON.stringify(context.actionAnchor)}\n`
+    : '';
+
+  return `${groundingSection.trimStart()}${anchorSection}
 
 Embed the extracted feature noun into each adapted option below. Prefer replacing a standard generic phrase if present:
   "what was just built", "what was just made", "what was just created",

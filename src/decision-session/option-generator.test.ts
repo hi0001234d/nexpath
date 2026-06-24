@@ -734,6 +734,24 @@ describe('buildEmbeddingPrompt — feature word grounding', () => {
     expect(prompt).not.toContain('Advisory context:');
   });
 
+  it('merges the action anchor into the Pass-2 prompt when provided', () => {
+    const context: OptionGenContext = {
+      flagType:              'stage_transition',
+      currentStage:          'review_testing',
+      promptsInCurrentStage: 3,
+      actionAnchor:          'then run tests',
+    };
+    const prompt = buildEmbeddingPrompt(adaptedOpts, [makePrompt('fix the tests', 0)], context);
+    expect(prompt).toContain('Action anchor');
+    expect(prompt).toContain('then run tests');
+    expect(prompt).toContain('merge it into ONE option only');
+  });
+
+  it('no action anchor section when actionAnchor is absent', () => {
+    const prompt = buildEmbeddingPrompt(adaptedOpts, [makePrompt('build the login page', 0)]);
+    expect(prompt).not.toContain('Action anchor');
+  });
+
   it('respects promptWindow — prompts outside window do not appear', () => {
     const history = [
       makePrompt('OUTSIDE_WINDOW_SENTINEL', 0),

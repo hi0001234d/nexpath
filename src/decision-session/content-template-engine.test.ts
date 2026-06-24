@@ -10,6 +10,9 @@ import {
   composeWhyDesc,
   stepSimplerLive,
   groundWhyDescLive,
+  promptDerivedFacts,
+  extractPromptFacts,
+  PROMPT_FACT_WEIGHT,
   SOURCE_CASCADE,
   type GroundingFact,
   type RecordCandidateLookup,
@@ -196,5 +199,15 @@ describe('content-template-engine — live grounding wiring (stage 3/4 + real se
     const out = await groundWhyDescLive({ cell: cell('o', 'core'), slots: [], facts, factCap: 5, l2Safeguard: 'confirm first' }, mockClient('throw'));
     expect(out).not.toMatch(/\{\{evil\}\}/); // value was injection-guarded before weave
     expect(out.endsWith('confirm first')).toBe(true); // safeguard survives
+  });
+
+  it('promptDerivedFacts maps extracted params to capability-tier facts', () => {
+    expect(promptDerivedFacts([{ key: 'k', value: 'v' }])).toEqual([{ key: 'k', value: 'v', weight: PROMPT_FACT_WEIGHT, tier: 'capability' }]);
+  });
+
+  it('extractPromptFacts extracts via the LLM and maps to grounding facts', async () => {
+    const client = mockClient(JSON.stringify({ facts: [{ key: 'test_runner', value: 'uses Vitest' }] }));
+    const facts = await extractPromptFacts(['I run vitest'], client);
+    expect(facts).toEqual([{ key: 'test_runner', value: 'uses Vitest', weight: PROMPT_FACT_WEIGHT, tier: 'capability' }]);
   });
 });

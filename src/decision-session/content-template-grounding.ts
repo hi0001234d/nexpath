@@ -76,6 +76,51 @@ export async function deriveSimplerCell(current: TwoChannelCell, client?: OpenAI
   return { option: obj.option, whyDesc: obj.whyDesc };
 }
 
+// ── prompt-derived param extraction ─────────────────────────────────────────────
+
+/** A non-sensitive tooling/workflow fact mined from recent prompt text. */
+export interface ExtractedParam {
+  key: string;
+  value: string;
+}
+
+function buildParamExtractionPrompt(prompts: readonly string[]): string {
+  return `From these recent user prompts to a coding agent, extract concrete TOOLING / WORKFLOW / STACK facts the user has explicitly revealed (e.g. framework, test runner, language, deploy target, team size).
+STRICT SAFETY: never extract secrets, API keys, tokens, credentials, file paths, URLs, emails, or any personal/identifying data. Only general, non-sensitive facts. Include a fact only if explicitly evidenced — no guesses. Summarise each as a short phrase; do NOT copy raw prompt text.
+
+Prompts:
+${JSON.stringify(prompts)}
+
+Return JSON only, no markdown:
+{"facts":[{"key":"test_runner","value":"uses Vitest"}]}`;
+}
+
+/**
+ * Mine recent prompts for non-sensitive tooling/workflow param values via the LLM.
+ * Returns summarised {key,value} facts (never raw prompt text). Graceful: returns
+ * [] on empty input / failure / malformed output. The values are injection-guarded
+ * by the engine before they reach any CA-bound output.
+ */
+export async function extractParamsFromPrompts(prompts: readonly string[], client?: OpenAI): Promise<ExtractedParam[]> {
+  if (prompts.length === 0) return [];
+  try {
+    const openai = client ?? new OpenAI();
+    const raw = await chat(openai, buildParamExtractionPrompt(prompts));
+    const obj = parseJson(raw);
+    const rawFacts = obj && Array.isArray(obj.facts) ? obj.facts : [];
+    const out: ExtractedParam[] = [];
+    for (const f of rawFacts as Array<Record<string, unknown>>) {
+      if (f && typeof f.key === 'string' && typeof f.value === 'string' && f.key.trim() !== '' && f.value.trim() !== '') {
+        out.push({ key: f.key, value: f.value });
+      }
+    }
+    return out;
+  } catch (err) {
+    logger.debug('content_template_param_extract_error', { error: String(err) });
+    return [];
+  }
+}
+
 // ── why-desc multi-value weave ──────────────────────────────────────────────────
 
 export interface WeaveInput {

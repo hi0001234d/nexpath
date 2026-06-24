@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type OpenAI from 'openai';
-import { deriveSimplerCell, weaveWhyDesc } from './content-template-grounding.js';
+import { deriveSimplerCell, weaveWhyDesc, extractParamsFromPrompts } from './content-template-grounding.js';
 
 /** A fake OpenAI whose chat.completions.create returns `reply` (or throws if a thunk that throws). */
 function mockClient(reply: string | (() => never)): OpenAI {
@@ -77,5 +77,42 @@ describe('content-template-grounding — why-desc weave', () => {
     const client = mockClient(JSON.stringify({ whyDesc: 'Review what changed (safeguard omitted by the model).' }));
     const out = await weaveWhyDesc({ ...base, l2Safeguard: safeguard }, client);
     expect(out.endsWith(safeguard)).toBe(true);
+  });
+});
+
+describe('content-template-grounding — prompt-derived param extraction', () => {
+  it('maps valid extracted facts', async () => {
+    const client = mockClient(JSON.stringify({ facts: [{ key: 'test_runner', value: 'uses Vitest' }, { key: 'lang', value: 'TypeScript' }] }));
+    await expect(extractParamsFromPrompts(['I run vitest', 'all in TS'], client)).resolves.toEqual([
+      { key: 'test_runner', value: 'uses Vitest' },
+      { key: 'lang', value: 'TypeScript' },
+    ]);
+  });
+
+  it('returns [] for empty prompt input (no call made)', async () => {
+    await expect(extractParamsFromPrompts([], throwingClient())).resolves.toEqual([]);
+  });
+
+  it('filters malformed / empty entries', async () => {
+    const client = mockClient(JSON.stringify({ facts: [{ key: 'ok', value: 'v' }, { key: '', value: 'x' }, { key: 'k' }, { nope: 1 }] }));
+    await expect(extractParamsFromPrompts(['p'], client)).resolves.toEqual([{ key: 'ok', value: 'v' }]);
+  });
+
+  it('returns [] on malformed JSON and on a client error', async () => {
+    await expect(extractParamsFromPrompts(['p'], mockClient('garbage'))).resolves.toEqual([]);
+    await expect(extractParamsFromPrompts(['p'], throwingClient())).resolves.toEqual([]);
+  });
+
+  it('the extraction prompt forbids secrets/PII and raw-text copying', async () => {
+    let seen = '';
+    const spy = {
+      chat: { completions: { create: async (args: { messages: { content: string }[] }) => {
+        seen = args.messages[0].content;
+        return { choices: [{ message: { content: '{"facts":[]}' } }] };
+      } } },
+    } as unknown as import('openai').default;
+    await extractParamsFromPrompts(['p'], spy);
+    expect(seen).toMatch(/never extract secrets/i);
+    expect(seen).toMatch(/do NOT copy raw prompt text/i);
   });
 });
