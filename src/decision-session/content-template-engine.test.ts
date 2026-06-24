@@ -14,6 +14,7 @@ import {
   extractPromptFacts,
   deriveSimplerLevel,
   deriveLadder,
+  composeAdvisory,
   PROMPT_FACT_WEIGHT,
   SOURCE_CASCADE,
   type GroundingFact,
@@ -131,6 +132,14 @@ describe('content-template-engine — grounding facts (stage 4 select/rank/cap)'
   it('a non-positive cap selects nothing', () => {
     expect(selectRankCapFacts(facts, 0)).toEqual([]);
   });
+
+  it('breaks a full tie (same weight + tier) by key for determinism', () => {
+    const tie: GroundingFact[] = [
+      { key: 'zeta', value: 'z', weight: 2, tier: 'capability' },
+      { key: 'alpha', value: 'a', weight: 2, tier: 'capability' },
+    ];
+    expect(selectRankCapFacts(tie, 2).map((f) => f.key)).toEqual(['alpha', 'zeta']);
+  });
 });
 
 describe('content-template-engine — option compose (stage 4)', () => {
@@ -149,6 +158,11 @@ describe('content-template-engine — option compose (stage 4)', () => {
   it('drops the anchor FIRST when over the length budget (static text never truncated)', () => {
     const out = composeOption({ cell: cell('do it'), slots: [], anchor: '(then run the whole suite)', lengthBudget: 8 });
     expect(out).toBe('do it'); // anchor dropped, base intact
+  });
+
+  it('always merges the anchor when no length budget is set', () => {
+    const out = composeOption({ cell: cell('do it'), slots: [], anchor: '(then run the whole suite)' });
+    expect(out).toBe('do it (then run the whole suite)');
   });
 });
 
@@ -263,5 +277,28 @@ describe('content-template-engine — render-path bridge (deriveSimplerLevel)', 
     const ladder = await deriveLadder(l1, fb, mockClient('throw'));
     expect(ladder.l2).toEqual(fb.l2);
     expect(ladder.l3).toEqual(fb.l3);
+  });
+});
+
+describe('content-template-engine — end-to-end orchestration (composeAdvisory)', () => {
+  it('resolves a record, resolves the column, and composes both channels', async () => {
+    const rec = record({ levelForms: { 1: { kind: 'slot-variant', cell: cell('do the thing', 'core line') } } });
+    const out = await composeAdvisory(
+      { lookup: lookupOf({ shipped: rec }), level: 1 },
+      mockClient(JSON.stringify({ whyDesc: 'woven why' })),
+    );
+    expect(out).toEqual({ source: 'shipped', level: 1, option: 'do the thing', whyDesc: 'woven why' });
+  });
+
+  it('returns null when no source yields a valid record', async () => {
+    const out = await composeAdvisory({ lookup: lookupOf({ uploaded: { bad: true } }), level: 1 }, mockClient('{}'));
+    expect(out).toBeNull();
+  });
+
+  it('resolves a lower column via the floor when the requested level is unauthored', async () => {
+    const rec = record({ levelForms: { 1: { kind: 'slot-variant', cell: cell('floor opt', 'floor why') } } });
+    const out = await composeAdvisory({ lookup: lookupOf({ shipped: rec }), level: 5 }, mockClient(JSON.stringify({ whyDesc: 'w' })));
+    expect(out?.level).toBe(1); // level-1 floor served for an unauthored level 5
+    expect(out?.option).toBe('floor opt');
   });
 });

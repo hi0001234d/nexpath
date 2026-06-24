@@ -314,3 +314,49 @@ export async function groundWhyDescLive(input: ComposeWhyDescInput, client?: Ope
     .map((f) => escapeSlotValue(f.value));
   return weaveWhyDesc({ coreLine: input.cell.whyDesc, factLines, l2Safeguard: input.l2Safeguard }, client);
 }
+
+// ── End-to-end orchestration (stages 1 → 4 for one advisory) ────────────────────
+
+export interface ComposeAdvisoryInput {
+  /** Source-cascade lookup (keyed by signalType × register × role upstream). */
+  lookup: RecordCandidateLookup;
+  /** The user's maturity level (AR-5) to resolve the column for. */
+  level: MaturityLevel;
+  ctx?: SlotContext;
+  /** Grounding facts for the why-desc weave (topic-filtered upstream). */
+  facts?: readonly GroundingFact[];
+  factCap?: number;
+  l2Safeguard?: string;
+  /** Optional action anchor for the option (droppable-first under budget). */
+  anchor?: string;
+  lengthBudget?: number;
+}
+
+export interface ComposedAdvisory {
+  source: ContentTemplateSource;
+  level: MaturityLevel;
+  option: string;
+  whyDesc: string;
+}
+
+/**
+ * Compose one advisory end-to-end: resolve the record (source cascade), resolve the
+ * maturity column, then compose the two-channel cell — the option deterministically
+ * (slots + droppable-first anchor) and the why-desc with live grounding (select/
+ * rank/cap + injection-guard + weave, safeguard preserved). Returns null when no
+ * source yields a valid record. The downstream `{R...}`→F7 runtime pass runs after,
+ * via the existing substitution pipeline (wired at the migration step).
+ */
+export async function composeAdvisory(input: ComposeAdvisoryInput, client?: OpenAI): Promise<ComposedAdvisory | null> {
+  const resolved = resolveRecord(input.lookup);
+  if (!resolved) return null;
+  const col = resolveColumn(resolved.record, input.level);
+  if (!col) return null;
+  const option = composeOption({
+    cell: col.form.cell, slots: resolved.record.slots, ctx: input.ctx, anchor: input.anchor, lengthBudget: input.lengthBudget,
+  });
+  const whyDesc = await groundWhyDescLive({
+    cell: col.form.cell, slots: resolved.record.slots, ctx: input.ctx, facts: input.facts, factCap: input.factCap, l2Safeguard: input.l2Safeguard,
+  }, client);
+  return { source: resolved.source, level: col.level, option, whyDesc };
+}
