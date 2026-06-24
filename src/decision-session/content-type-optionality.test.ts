@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import * as ts from 'typescript';
 import type { DecisionContent } from './options.js';
+import type { WhyHelpEntry } from './why-help.js';
 
 /**
  * Build-time check (lint-as-test) for the content-type forward-compat discipline:
@@ -91,5 +92,22 @@ describe('content-type forward-compat (defaults applied via narrow-check)', () =
     expect(c.descBaseEnabled ?? true).toBe(true);        // default: desc-bases active
     expect(c.l2SafeguardRequired ?? false).toBe(false);  // default: not in L2 scope
     expect(c.lengthBudget ?? 'MEDIUM').toBe('MEDIUM');    // default tier
+  });
+
+  it('WhyHelpEntry: each union variant constructs with only its required fields (forward-compat)', () => {
+    // These constructions are the enforcement: adding a NEW required field to any
+    // variant's content would break compilation here. (A new field must be `?:`.)
+    const universal: WhyHelpEntry = { structure: 'universal-triplet', content: { formal: 'f', casual: 'c', beginner: 'b' } };
+    const class7: WhyHelpEntry = { structure: 'class7-vibe-coder', content: { casual: 'c', beginner: 'b' } };
+    const class8: WhyHelpEntry = { structure: 'class8-role-cluster', content: {} }; // all register fields optional
+    const class9: WhyHelpEntry = { structure: 'class9-formal-only', content: { formal: 'f' } };
+
+    expect([universal, class7, class8, class9].map((e) => e.structure)).toEqual([
+      'universal-triplet', 'class7-vibe-coder', 'class8-role-cluster', 'class9-formal-only',
+    ]);
+    // class8's role-keyed fields are optional → omitting them type-checks and reads undefined.
+    if (class8.structure === 'class8-role-cluster') {
+      expect(class8.content.founder_casual).toBeUndefined();
+    }
   });
 });
