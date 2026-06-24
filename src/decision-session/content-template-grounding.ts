@@ -16,6 +16,7 @@
 
 import OpenAI from 'openai';
 import { logger } from '../logger.js';
+import { maskSecretsInText } from './r5-injection.js';
 import type { TwoChannelCell } from './content-template-schema.js';
 
 export const GROUNDING_MODEL       = 'gpt-4o-mini';
@@ -94,6 +95,27 @@ export interface ExtractedParam {
   value: string;
 }
 
+/** PII patterns stripped from a prompt-derived value before it can reach CA-bound content. */
+const PII_PATTERNS: readonly RegExp[] = [
+  /\b[\w.+-]+@[\w-]+\.[\w.-]+\b/gi,                 // email
+  /\b(?:\+?\d[\d ().-]{7,}\d)\b/g,                  // phone-ish digit runs
+  /\b[A-Za-z]:\\[^\s]+|\/(?:home|users|var|etc)\/[^\s]+/gi, // absolute file paths
+  /\bhttps?:\/\/[^\s]+/gi,                          // URLs
+];
+
+/**
+ * Sanitize a prompt-derived param value before it enters the CA-bound why-desc
+ * (§4.E6 leakage gate). Masks secrets (reused) + strips PII / paths / URLs. This
+ * is the deterministic defensive layer behind the extraction prompt's
+ * "abstracted, never literal" instruction. ONLY prompt-derived values are
+ * sanitized — DB-stored hard facts (AR-10 probe) are not subject to this gate.
+ */
+export function sanitizePromptDerivedValue(value: string): string {
+  let out = maskSecretsInText(value);
+  for (const re of PII_PATTERNS) out = out.replace(re, '[redacted]');
+  return out.replace(/\s+/g, ' ').trim();
+}
+
 function buildParamExtractionPrompt(prompts: readonly string[]): string {
   return `From these recent user prompts to a coding agent, extract concrete TOOLING / WORKFLOW / STACK facts the user has explicitly revealed (e.g. framework, test runner, language, deploy target, team size).
 STRICT SAFETY: never extract secrets, API keys, tokens, credentials, file paths, URLs, emails, or any personal/identifying data. Only general, non-sensitive facts. Include a fact only if explicitly evidenced — no guesses. Summarise each as a short phrase; do NOT copy raw prompt text.
@@ -121,7 +143,8 @@ export async function extractParamsFromPrompts(prompts: readonly string[], clien
     const out: ExtractedParam[] = [];
     for (const f of rawFacts as Array<Record<string, unknown>>) {
       if (f && typeof f.key === 'string' && typeof f.value === 'string' && f.key.trim() !== '' && f.value.trim() !== '') {
-        out.push({ key: f.key, value: f.value });
+        const value = sanitizePromptDerivedValue(f.value); // §4.E6 leakage gate
+        if (value !== '') out.push({ key: f.key, value });
       }
     }
     return out;

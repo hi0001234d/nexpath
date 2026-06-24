@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type OpenAI from 'openai';
-import { deriveSimplerCell, weaveWhyDesc, extractParamsFromPrompts } from './content-template-grounding.js';
+import { deriveSimplerCell, weaveWhyDesc, extractParamsFromPrompts, sanitizePromptDerivedValue } from './content-template-grounding.js';
 
 /** A fake OpenAI whose chat.completions.create returns `reply` (or throws if a thunk that throws). */
 function mockClient(reply: string | (() => never)): OpenAI {
@@ -160,5 +160,20 @@ describe('content-template-grounding — prompt-derived param extraction', () =>
     await extractParamsFromPrompts(['p'], spy);
     expect(seen).toMatch(/never extract secrets/i);
     expect(seen).toMatch(/do NOT copy raw prompt text/i);
+  });
+
+  it('sanitizes extracted values (leakage gate) — PII/paths/URLs redacted', async () => {
+    const client = mockClient(JSON.stringify({ facts: [{ key: 'contact', value: 'email me at dev@acme.com' }, { key: 'repo', value: 'see https://secret.example/x' }] }));
+    const facts = await extractParamsFromPrompts(['p'], client);
+    expect(facts.find((f) => f.key === 'contact')?.value).not.toMatch(/dev@acme\.com/);
+    expect(facts.find((f) => f.key === 'repo')?.value).not.toMatch(/https?:\/\//);
+  });
+});
+
+describe('content-template-grounding — sanitize gate (leakage)', () => {
+  it('redacts email, URL, and absolute file paths; keeps clean text', () => {
+    expect(sanitizePromptDerivedValue('ping a@b.com now')).not.toMatch(/a@b\.com/);
+    expect(sanitizePromptDerivedValue('at https://x.io/y')).not.toMatch(/https?:\/\//);
+    expect(sanitizePromptDerivedValue('uses Vitest and a small team')).toBe('uses Vitest and a small team');
   });
 });
