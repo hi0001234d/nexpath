@@ -31,8 +31,20 @@ describe('content-authoring-rules — de-jargon', () => {
     expect(findJargonViolations('use a canary', { level: 5 })).toEqual([]);
   });
 
+  it('allows the rest of the genuine-concept set (blue-green, min-permission DB) bare ONLY at the top', () => {
+    expect(findJargonViolations('use blue-green deploys', { level: 5 })).toEqual([]);
+    expect(findJargonViolations('use blue-green deploys', { level: 3 }).map((v) => v.term)).toEqual(['blue-green']);
+    expect(findJargonViolations('give it a min-permission DB', { level: 5 })).toEqual([]);
+    expect(findJargonViolations('give it a min-permission DB', { level: 3 }).map((v) => v.term)).toEqual(['min-permission DB']);
+  });
+
   it('still flags a non-genuine-concept term even at the heaviest column', () => {
     expect(findJargonViolations('set up observability', { level: 5 }).map((v) => v.term)).toEqual(['observability']);
+  });
+
+  it('flags every distinct jargon term present in one string', () => {
+    expect(findJargonViolations('add observability and a secrets manager').map((v) => v.term))
+      .toEqual(['observability', 'secrets manager']);
   });
 
   it('passes plain instruction text', () => {
@@ -50,6 +62,11 @@ describe('content-authoring-rules — keyword retention', () => {
     const r = rec({ 1: form('plan the next task'), 3: form('just start coding'), 5: form('plan with acceptance criteria') });
     expect(checkKeywordRetention(r, 'plan').missingLevels).toEqual([3]);
   });
+
+  it('matches case-insensitively (capitalised option / upper-case keyword)', () => {
+    const r = rec({ 1: form('Plan the next task'), 3: form('write a PLAN first') });
+    expect(checkKeywordRetention(r, 'PLAN').ok).toBe(true);
+  });
 });
 
 describe('content-authoring-rules — escalation monotonicity', () => {
@@ -58,6 +75,10 @@ describe('content-authoring-rules — escalation monotonicity', () => {
   });
   it('flags the first drop', () => {
     expect(checkEscalation([1, 2, 1])).toEqual({ ok: false, firstDropIndex: 2 });
+  });
+  it('treats an empty or single-column sequence as trivially monotonic', () => {
+    expect(checkEscalation([])).toEqual({ ok: true, firstDropIndex: -1 });
+    expect(checkEscalation([3])).toEqual({ ok: true, firstDropIndex: -1 });
   });
 });
 
@@ -93,5 +114,19 @@ describe('content-authoring-rules — aggregate review', () => {
     expect(review.ok).toBe(false);
     expect(review.jargonByLevel[1]?.map((v) => v.term)).toEqual(['observability']);
     expect(review.keywordRetention.missingLevels).toContain(1);
+  });
+
+  it('surfaces a coverage failure (unreachable low columns, no floor)', () => {
+    const review = reviewRecord(rec({ 5: form('plan at the top') }), 'plan');
+    expect(review.ok).toBe(false);
+    expect(review.coverage.ok).toBe(false);
+    expect(review.coverage.unreachableLevels).toEqual([1, 2, 3]);
+  });
+
+  it('surfaces a headline-only failure (smuggled strength rows)', () => {
+    const bad = rec({ 1: { kind: 'slot-variant', cell: { option: 'plan it', whyDesc: 'w', L2: ['x'] } as never } });
+    const review = reviewRecord(bad, 'plan');
+    expect(review.ok).toBe(false);
+    expect(review.headlineOnly.offendingLevels).toEqual([1]);
   });
 });
