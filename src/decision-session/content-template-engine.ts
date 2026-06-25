@@ -221,7 +221,9 @@ export function composeWhyDesc(input: ComposeWhyDescInput): string {
   if (input.facts && input.factCap !== undefined) {
     for (const f of selectRankCapFacts(input.facts, input.factCap)) lines.push(escapeSlotValue(f.value));
   }
-  if (input.l2Safeguard) lines.push(input.l2Safeguard); // survives in every sibling — never dropped
+  // Safeguard is the last line — but never duplicate it if a line already carries it
+  // (matches weaveWhyDesc's dedup, so the two compose paths behave identically).
+  if (input.l2Safeguard && !lines.some((l) => l.includes(input.l2Safeguard!))) lines.push(input.l2Safeguard);
   return composePhase1(lines.join('\n'), input.slots, input.ctx);
 }
 

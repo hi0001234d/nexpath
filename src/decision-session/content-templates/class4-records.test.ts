@@ -8,7 +8,9 @@ import {
 import {
   runBuildGate, checkTopicKeyword, checkOptionLengthBudget, coverageMetric, SHIPPED_CONTENT_TEMPLATES,
 } from '../content-template-tooling.js';
-import { reviewRecord, checkVoice, checkEscalation, checkL2Safeguard } from '../content-authoring-rules.js';
+import {
+  reviewRecord, checkVoice, checkEscalation, checkL2Safeguard, findVoiceViolations, findJargonViolations,
+} from '../content-authoring-rules.js';
 import { composeWhyDesc } from '../content-template-engine.js';
 import {
   ABSENCE_OBSERVABILITY, ABSENCE_ROLLBACK_PLANNING, ABSENCE_DEPLOYMENT_PLANNING, ABSENCE_DEPENDENCY_MGMT,
@@ -160,6 +162,13 @@ describe('class-4 — sensitive-action safeguard (every record is intrinsically 
 
       it('the safeguard gate finds the record fully guarded (record-level line covers all columns)', () => {
         expect(checkL2Safeguard(r).unguardedLevels).toEqual([]);
+      });
+
+      it('the l2SafeguardLine is itself CA-bound-clean: voice-clean, de-jargon-clean, no runtime placeholders', () => {
+        const line = r.l2SafeguardLine!;
+        expect(findVoiceViolations(line)).toEqual([]);   // it gets appended to the why-desc → same voice rule
+        expect(findJargonViolations(line)).toEqual([]);
+        expect(line).not.toMatch(/\{[R{]/);              // no {R...} / {{ — it must not carry runtime grammar
       });
     });
   }

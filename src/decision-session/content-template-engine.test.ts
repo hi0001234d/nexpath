@@ -389,6 +389,14 @@ describe('content-template-engine — end-to-end orchestration (composeAdvisory)
     expect(out?.whyDesc).toContain('{R5_INJECT: last prompts}');
   });
 
+  it('composeWhyDesc appends the safeguard last, and never duplicates one already in the core line', () => {
+    const seek = 'Ask me for go-ahead before deploying.';
+    const appended = composeWhyDesc({ cell: cell('opt', 'core line'), slots: [], l2Safeguard: seek });
+    expect(appended.endsWith(seek)).toBe(true);
+    const alreadyThere = composeWhyDesc({ cell: cell('opt', `core line. ${seek}`), slots: [], l2Safeguard: seek });
+    expect((alreadyThere.match(/Ask me for go-ahead before deploying\./g) ?? []).length).toBe(1); // not duplicated
+  });
+
   it('auto-applies the record l2SafeguardLine to the why-desc when the caller passes none', async () => {
     const rec = record({
       levelForms: { 1: { kind: 'slot-variant', cell: cell('opt', 'core line') } },

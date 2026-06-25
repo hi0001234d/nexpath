@@ -207,9 +207,15 @@ export interface VoiceReview {
   ok: boolean;
   /** Per authored level: voice violations found in the option + whyDesc. */
   byLevel: Partial<Record<MaturityLevel, VoicePattern[]>>;
+  /** Voice violations in the record-level safeguard line (also CA-bound). */
+  safeguardLine?: VoicePattern[];
 }
 
-/** Layer-1 voice gate over a record (every authored form, both channels). */
+/**
+ * Layer-1 voice gate over a record (every authored form, both channels) AND the
+ * record-level `l2SafeguardLine` — which the engine appends to the why-desc, so it
+ * is just as CA-bound and must obey the same voice rule.
+ */
 export function checkVoice(record: ContentTemplateRecord): VoiceReview {
   const byLevel: Partial<Record<MaturityLevel, VoicePattern[]>> = {};
   for (const level of MATURITY_LEVELS) {
@@ -218,7 +224,12 @@ export function checkVoice(record: ContentTemplateRecord): VoiceReview {
     const v = [...findVoiceViolations(form.cell.option), ...findVoiceViolations(form.cell.whyDesc)];
     if (v.length) byLevel[level] = v;
   }
-  return { ok: Object.keys(byLevel).length === 0, byLevel };
+  const safeguardLine = record.l2SafeguardLine ? findVoiceViolations(record.l2SafeguardLine) : [];
+  return {
+    ok: Object.keys(byLevel).length === 0 && safeguardLine.length === 0,
+    byLevel,
+    ...(safeguardLine.length ? { safeguardLine } : {}),
+  };
 }
 
 // ── Layer-2 SAFEGUARD gate (a sensitive action must carry the confirm-seek) ────
