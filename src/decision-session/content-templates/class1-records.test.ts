@@ -97,6 +97,10 @@ describe('class-1 records — per-record review gates', () => {
       it('is voice-clean', () => {
         expect(checkVoice(r).ok).toBe(true);
       });
+
+      it('F2 — the heaviest column (col-5) yields a file/artifact (all class-1 families are artifact or mixed)', () => {
+        expect(r.levelForms[5]!.cell.option).toMatch(/\b(file|runbook|note|doc|plan)\b/i);
+      });
     });
   }
 });
