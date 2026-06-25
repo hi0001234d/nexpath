@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { CLASS2_RECORDS_BATCH_A } from './class2-records.js';
+import { CLASS2_RECORDS_BATCH_A, CLASS2_RECORDS } from './class2-records.js';
 import { runBuildGate, checkTopicKeyword, checkOptionLengthBudget } from '../content-template-tooling.js';
-import { reviewRecord, checkVoice, checkEscalation } from '../content-authoring-rules.js';
+import { reviewRecord, checkVoice, checkEscalation, checkL2Safeguard } from '../content-authoring-rules.js';
 import {
   BEHAVIOUR_TESTING, ABSENCE_TEST_CREATION, ABSENCE_REGRESSION_CHECK, ABSENCE_SECURITY_CHECK,
   ABSENCE_ERROR_HANDLING, ABSENCE_DOCUMENTATION, ABSENCE_REFACTORING, ABSENCE_CORRECTION_SEEKING,
@@ -89,4 +89,29 @@ describe('class-2 batch A — per-record full-depth gates', () => {
       });
     });
   }
+});
+
+describe('class-2 — L2 sensitive-action safeguard (whole-class review, batch A + B)', () => {
+  // Class 2 is verification-quality: every form proposes a REVIEW / CHECK /
+  // WRITE-A-NOTE action — none proposes a genuinely sensitive ACTION (a deploy,
+  // a destructive fs op, a schema migration, a secret write, a force-push). The
+  // L2 keyword-proxy over-flags stage NOUNS; the substantive requirement is that
+  // ONLY a genuinely-sensitive form carries the confirm-seek — here, none do, so
+  // the one proxy hit must be a false-positive, not a missing safeguard.
+  const flagged = CLASS2_RECORDS
+    .map((r) => ({ signalType: r.signalType, review: checkL2Safeguard(r) }))
+    .filter((x) => !x.review.ok);
+
+  it('the proxy flags only the single stage-noun false-positive in the class', () => {
+    expect(flagged.map((x) => x.signalType)).toEqual(['ABSENCE_CORRECTION_SEEKING']);
+    expect(flagged[0]!.review.unguardedLevels).toEqual([5]);
+  });
+
+  it('that flagged form is a note-writing action — the stage noun is analytical, no confirm-seek owed', () => {
+    const rec = CLASS2_RECORDS.find((r) => r.signalType === 'ABSENCE_CORRECTION_SEEKING')!;
+    const col5 = rec.levelForms[5]!.cell.option;
+    expect(col5).toMatch(/write a failure-analysis note/i);                          // the ACTION is "write a note"
+    expect(col5).toMatch(/production failure modes/i);                               // the trigger noun is analytical
+    expect(col5).not.toMatch(/\b(deploy|roll ?out|ship to production|push to production)\b/i); // not a prod ACTION
+  });
 });
