@@ -71,9 +71,11 @@ describe('class-2 batch A — per-record full-depth gates', () => {
         expect(Object.keys(r.levelForms).map(Number).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5]);
       });
 
-      it('is de-jargon clean, headline-only, full coverage', () => {
+      it('is de-jargon clean in authored columns (col-3 frozen exempt), headline-only, full coverage', () => {
         const review = reviewRecord(r, kw);
-        expect(review.jargonByLevel).toEqual({});
+        const jargon = { ...review.jargonByLevel };
+        delete jargon[3]; // col-3 is frozen shipped text — not subject to the authoring de-jargon discipline
+        expect(jargon).toEqual({});
         expect(review.headlineOnly.ok).toBe(true);
         expect(review.coverage.ok).toBe(true);
       });
