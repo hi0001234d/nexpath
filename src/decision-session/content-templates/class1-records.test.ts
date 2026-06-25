@@ -124,20 +124,33 @@ describe('class-1 records — spine (stored annotation)', () => {
   }
 });
 
-describe('class-1 records — sensitive-action safeguard (substantive)', () => {
-  // The safeguard gate is a keyword-proxy review aid (a stage keyword like
-  // "release"/"production" trips it even on a pre-release CHECK). The substantive
-  // requirement is that a form which genuinely proposes a sensitive ACTION carries
-  // the confirm-seek — here, only REVIEW_TO_RELEASE col-5 (production rollout).
-  const release = CLASS1_RECORDS.find((r) => r.signalType === 'REVIEW_TO_RELEASE');
+describe('class-1 records — sensitive-action safeguard', () => {
+  // The two production signals here — releasing to production, and changing
+  // production monitoring — are intrinsically sensitive: they are flagged and carry
+  // a confirm-seek in EVERY authored why-desc (col-3 frozen exempt). The other five
+  // stage transitions (planning / spec / verification) propose no sensitive action,
+  // so they are not flagged.
+  const SENSITIVE = new Set(['REVIEW_TO_RELEASE', 'RELEASE_TO_FEEDBACK']);
+  const SAFEGUARD_RE = /\b(ask me|go-ahead|go ahead|confirm)\b/i;
 
-  it('the production-rollout form (col-5) carries an explicit confirm-seek', () => {
-    const cell = release?.levelForms[5]?.cell;
-    expect(cell?.option).toMatch(/ask me for go-ahead/i);
-    expect(cell?.whyDesc).toMatch(/confirm with me/i);
-  });
+  for (const r of CLASS1_RECORDS) {
+    it(`${r.signalType} is flagged sensitive iff it concerns a production action`, () => {
+      expect(r.l2SafeguardRequired ?? false).toBe(SENSITIVE.has(r.signalType));
+    });
+  }
 
-  it('the gate surfaces that rollout form as a sensitive candidate', () => {
-    expect(checkL2Safeguard(release!).unguardedLevels).not.toContain(5); // col-5 IS guarded
+  for (const sig of SENSITIVE) {
+    const rec = CLASS1_RECORDS.find((r) => r.signalType === sig)!;
+    it(`${sig} carries a confirm-seek in every authored why-desc (1/2/4/5); col-3 frozen exempt`, () => {
+      for (const lvl of [1, 2, 4, 5] as const) {
+        expect(rec.levelForms[lvl]!.cell.whyDesc).toMatch(SAFEGUARD_RE);
+      }
+      expect(checkL2Safeguard(rec).unguardedLevels.filter((l) => l !== 3)).toEqual([]);
+    });
+  }
+
+  it('the production-rollout form (REVIEW_TO_RELEASE col-5) carries the action-level confirm-seek in the option itself', () => {
+    const cell = CLASS1_RECORDS.find((r) => r.signalType === 'REVIEW_TO_RELEASE')!.levelForms[5]!.cell;
+    expect(cell.option).toMatch(/ask me for go-ahead/i); // the heaviest form proposes the deploy → safeguard in the option too
   });
 });

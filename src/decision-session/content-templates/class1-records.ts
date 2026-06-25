@@ -204,21 +204,22 @@ export const IMPLEMENTATION_TO_REVIEW_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** REVIEW → RELEASE — ops/ship family, keyword "release"; col-5 is sensitive (production rollout). */
+/** REVIEW → RELEASE — ops/ship family, keyword "release"; intrinsically sensitive (production release). */
 export const REVIEW_TO_RELEASE_RECORD: ContentTemplateRecord = {
   signalType: 'REVIEW_TO_RELEASE',
   source: 'shipped',
   schemaVersion: 1,
   slots: [],
   paramAxes: STAGE_TRANSITION_PARAM_AXES,
+  l2SafeguardRequired: true,
   levelForms: {
     1: form(
       'Before you release, do a quick smoke check that the main flow still works.',
-      'Review is wrapping up; a quick smoke check is the lightest gate before release.',
+      'Review is wrapping up; a quick smoke check is the lightest gate before release. Confirm with me before releasing to production.',
     ),
     2: form(
       'Before release, run the critical-path tests and confirm no secrets were committed.',
-      'A light release check: the critical path plus a secrets sweep.',
+      'A light release check: the critical path plus a secrets sweep. Confirm with me before releasing to production.',
     ),
     3: form(
       'Run all tests one final time before release: unit, integration, and regression. Confirm everything passes or tell me what is still failing.',
@@ -226,7 +227,7 @@ export const REVIEW_TO_RELEASE_RECORD: ContentTemplateRecord = {
     ),
     4: form(
       'Before release, run the full suite, confirm secrets live in environment variables, and check it against a staging environment with error tracking on.',
-      'Beyond the final test pass: a staging check with secrets handled and error tracking before release.',
+      'Beyond the final test pass: a staging check with secrets handled and error tracking before release. Confirm with me before releasing to production.',
     ),
     5: form(
       'Write a release runbook: a final test pass, a scan for committed secrets, a staged rollout to a small slice of users first while you watch, monitoring and alerts, and a rollback path. Still, before you release to production, you must ask me for go-ahead confirmation.',
@@ -235,21 +236,22 @@ export const REVIEW_TO_RELEASE_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** RELEASE → FEEDBACK — ops/monitoring family, keyword "monitoring". */
+/** RELEASE → FEEDBACK — ops/monitoring family, keyword "monitoring"; intrinsically sensitive (production monitoring). */
 export const RELEASE_TO_FEEDBACK_RECORD: ContentTemplateRecord = {
   signalType: 'RELEASE_TO_FEEDBACK',
   source: 'shipped',
   schemaVersion: 1,
   slots: [],
   paramAxes: STAGE_TRANSITION_PARAM_AXES,
+  l2SafeguardRequired: true,
   levelForms: {
     1: form(
       'Confirm error tracking is on for what just shipped — the lightest monitoring check.',
-      'The feature just shipped; confirming error tracking is the lightest monitoring step.',
+      'The feature just shipped; confirming error tracking is the lightest monitoring step. Ask me for go-ahead before changing production monitoring or alerting.',
     ),
     2: form(
       'Check that monitoring covers the main flow and that you would be alerted if it broke.',
-      'A light monitoring check: the main flow plus a break-alert.',
+      'A light monitoring check: the main flow plus a break-alert. Ask me for go-ahead before changing production monitoring or alerting.',
     ),
     3: form(
       'Verify the production monitoring setup for what was just built: confirm error tracking is active, alert thresholds are configured, and dashboards show live metrics — list what is collecting and what still needs to be set up.',
@@ -257,11 +259,11 @@ export const RELEASE_TO_FEEDBACK_RECORD: ContentTemplateRecord = {
     ),
     4: form(
       'Audit the monitoring across error tracking, alert thresholds, and the signals that tell you the feature works (analytics events, error rates, user reports) — list what is in place and what is missing.',
-      'Beyond the standard monitoring check: the full signal set that tells you the feature is actually working.',
+      'Beyond the standard monitoring check: the full signal set that confirms the feature is actually working. Ask me for go-ahead before changing production monitoring or alerting.',
     ),
     5: form(
       'Write a monitoring note: the signals that prove the feature works, alert thresholds, dashboards, and what to do when an alert fires.',
-      'The heaviest feedback gate: a durable monitoring note of signals, alerts, and the response when something fires.',
+      'The heaviest feedback gate: a durable monitoring note of signals, alerts, and the response when something fires. Ask me for go-ahead before changing production monitoring or alerting.',
     ),
   },
 };

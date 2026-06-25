@@ -7,10 +7,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // The per-set DecisionContent now lives in the per-class content-template files.
+// Scan ONLY those frozen DecisionContent files — exclude the §4.E2 content-template
+// `classN-records.ts` companions (which carry their own l2SafeguardRequired flags,
+// tested in their own suites) and any test files, so this inventory stays scoped to
+// the frozen sets per dev-plan §9.2.
 const CONTENT_DIR = join(__dirname, 'content-templates');
 function readContentSources(): string {
   return readdirSync(CONTENT_DIR)
-    .filter((f) => f.endsWith('.ts'))
+    .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts') && !f.includes('-records'))
     .map((f) => readFileSync(join(CONTENT_DIR, f), 'utf-8'))
     .join('\n');
 }

@@ -78,6 +78,14 @@ export interface ContentTemplateRecord {
    * additive (§3.C optionality / §6.1 S9). Omitted when the family has no spine.
    */
   spine?: string[];
+  /**
+   * Marks a record whose topic is an intrinsically sensitive action (deploys,
+   * secrets/credentials, dependency installs, production touches, destructive or
+   * multi-file changes). When set, every authored column carries a confirm-seek in
+   * its why-desc, and the runtime safeguard path treats the record as sensitive.
+   * Optional + additive; omitted (defaults false) for non-sensitive records.
+   */
+  l2SafeguardRequired?: boolean;
 }
 
 // ── Validation (the single schema gate) ───────────────────────────────────────
@@ -153,6 +161,11 @@ export function validateContentTemplateRecord(record: unknown): ValidationResult
     if (!Array.isArray(r.spine) || r.spine.some((s) => typeof s !== 'string' || s === '')) {
       errors.push('spine must be an array of non-empty strings when present');
     }
+  }
+
+  // l2SafeguardRequired — optional; when present, a boolean.
+  if (r.l2SafeguardRequired !== undefined && typeof r.l2SafeguardRequired !== 'boolean') {
+    errors.push('l2SafeguardRequired must be a boolean when present');
   }
 
   return { ok: errors.length === 0, errors };

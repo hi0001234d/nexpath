@@ -147,6 +147,10 @@ describe('class-3 — sensitive-action safeguard (whole-class review)', () => {
     .map((r) => ({ signalType: r.signalType, review: checkL2Safeguard(r) }))
     .filter((x) => !x.review.ok);
 
+  it('no class-3 record is flagged intrinsically sensitive (spec/design is review/define/note)', () => {
+    expect(CLASS3_RECORDS.filter((r) => r.l2SafeguardRequired).map((r) => r.signalType)).toEqual([]);
+  });
+
   it('no class-3 form trips the sensitive-action proxy (no genuinely-sensitive action in the class)', () => {
     expect(flagged.map((x) => x.signalType)).toEqual([]);
   });

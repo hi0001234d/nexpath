@@ -71,6 +71,15 @@ describe('content-template-schema — validation (the single gate)', () => {
     expect(validateContentTemplateRecord(validRecord({ spine: 'review' as never })).ok).toBe(false);
     expect(validateContentTemplateRecord(validRecord({ spine: [''] as never })).ok).toBe(false);
   });
+
+  it('validates the optional l2SafeguardRequired field (boolean when present)', () => {
+    expect(validateContentTemplateRecord(validRecord({ l2SafeguardRequired: true })).ok).toBe(true);
+    expect(validateContentTemplateRecord(validRecord({ l2SafeguardRequired: false })).ok).toBe(true);
+    expect(validateContentTemplateRecord(validRecord())).toEqual({ ok: true, errors: [] }); // omitted is fine (defaults false)
+    const bad = validateContentTemplateRecord(validRecord({ l2SafeguardRequired: 'yes' as never }));
+    expect(bad.ok).toBe(false);
+    expect(bad.errors.join(' ')).toMatch(/l2SafeguardRequired/);
+  });
 });
 
 describe('content-template-schema — two-phase compose (Phase-1 preserves {R...})', () => {

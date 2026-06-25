@@ -132,6 +132,10 @@ describe('class-2 — sensitive-action safeguard (whole-class review, batch A + 
     .map((r) => ({ signalType: r.signalType, review: checkL2Safeguard(r) }))
     .filter((x) => !x.review.ok);
 
+  it('no class-2 record is flagged intrinsically sensitive (verification is read-only review)', () => {
+    expect(CLASS2_RECORDS.filter((r) => r.l2SafeguardRequired).map((r) => r.signalType)).toEqual([]);
+  });
+
   it('the proxy flags only the single stage-noun false-positive in the class', () => {
     expect(flagged.map((x) => x.signalType)).toEqual(['ABSENCE_CORRECTION_SEEKING']);
     expect(flagged[0]!.review.unguardedLevels).toEqual([5]);
