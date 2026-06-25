@@ -24,13 +24,15 @@ import {
   type ContentTemplateRecord,
   type MaturityLevel,
 } from './content-template-schema.js';
+import { CLASS1_RECORDS } from './content-templates/class1-records.js';
 
 /**
  * The in-source shipped-preset records the engine resolves at the `shipped` tier.
- * EMPTY until the USER-owned content is authored; the build gate + harness operate
- * over whatever is registered here.
+ * Authored per class (§4.E2 CTA-D1); the build gate + harness operate over the set.
  */
-export const SHIPPED_CONTENT_TEMPLATES: readonly ContentTemplateRecord[] = [];
+export const SHIPPED_CONTENT_TEMPLATES: readonly ContentTemplateRecord[] = [
+  ...CLASS1_RECORDS,
+];
 
 // ── Set schema validation (one gate over the whole registry) ───────────────────
 

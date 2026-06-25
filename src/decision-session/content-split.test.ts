@@ -48,7 +48,11 @@ function constsIn(src: string): { name: string; signalType: string }[] {
   return out;
 }
 
-const classFiles = readdirSync(CONTENT_DIR).filter((f) => f.endsWith('.ts') && /^class\d+-/.test(f));
+// The 9 DecisionContent per-class split files only — exclude the §4.E2
+// content-template *record* companions (`classN-records.ts`) and any test files.
+const classFiles = readdirSync(CONTENT_DIR).filter(
+  (f) => /^class\d+-/.test(f) && f.endsWith('.ts') && !f.endsWith('.test.ts') && !f.includes('-records'),
+);
 const perFile = classFiles.map((f) => ({ file: f, cls: classOfFile(f), consts: constsIn(readFileSync(join(CONTENT_DIR, f), 'utf-8')) }));
 const allConsts = perFile.flatMap((p) => p.consts);
 

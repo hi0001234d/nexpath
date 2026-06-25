@@ -98,9 +98,14 @@ export function contentTemplateValidateAction(filePath: string, opts: { keyword?
       gateFailures.push(`voice (level ${lvl}): ${viols.map((v) => v.pattern).join(', ')}`);
     }
   }
+  // L2 is a REVIEW WARNING, not a hard gate: the trigger detection is a keyword
+  // proxy (a stage keyword like "release" matches even when the action is a check,
+  // not a deploy), so it surfaces candidates for the author to confirm. Hard L2
+  // enforcement is static-authoring + runtime F7 (per §4.E6 placement).
   if (l2 && !l2.ok) {
+    console.warn('L2 review (confirm each is genuinely sensitive; add a confirm-seek if so):');
     for (const lvl of l2.unguardedLevels) {
-      gateFailures.push(`L2 safeguard (level ${lvl}): sensitive action [${(l2.triggersByLevel[lvl] ?? []).join(', ')}] without a confirm-seek in the why-desc`);
+      console.warn(`  - level ${lvl}: possible sensitive action [${(l2.triggersByLevel[lvl] ?? []).join(', ')}] — no confirm-seek in the why-desc`);
     }
   }
   if (gateFailures.length > 0) {

@@ -18,8 +18,8 @@ function rec(signalType: string, levelForms: Partial<Record<MaturityLevel, Level
 }
 
 describe('content-template-tooling — shipped registry + build gate', () => {
-  it('the shipped registry is empty until content is authored, and the gate passes trivially', () => {
-    expect(SHIPPED_CONTENT_TEMPLATES).toEqual([]);
+  it('the shipped registry holds the authored records and passes the build gate', () => {
+    expect(SHIPPED_CONTENT_TEMPLATES.length).toBeGreaterThan(0); // class-1 onward authored
     expect(runBuildGate(SHIPPED_CONTENT_TEMPLATES).ok).toBe(true);
   });
 
