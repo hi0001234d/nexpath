@@ -17,11 +17,28 @@
  * separate follow-up, not folded into these base records.
  */
 
-import type { ContentTemplateRecord, LevelForm } from '../content-template-schema.js';
+import type { ContentTemplateRecord, LevelForm, ParamAxisTag } from '../content-template-schema.js';
 
 function form(option: string, whyDesc: string): LevelForm {
   return { kind: 'slot-variant', cell: { option, whyDesc } };
 }
+
+/**
+ * The param axes a stage-transition why-desc grounds (the §5.10.5.6 multi-value
+ * grounding sources), each with its AR-1 Option-C representation tag (§5.6.5):
+ *  - workflow-pattern → closed-nominal-extensible → `extensible`;
+ *  - the three AR-3 work-style traits → `closed-ordinal`;
+ *  - the dev-env framework identity → open-nominal → `open`.
+ * The grounded categories are common across stage transitions (per-signalType
+ * relevance is the runtime select/rank/cap, not a per-record axis difference).
+ */
+const STAGE_TRANSITION_PARAM_AXES: Readonly<Record<string, ParamAxisTag>> = {
+  workflow_pattern: 'extensible',
+  decision_making_rhythm: 'closed-ordinal',
+  explanation_learning_depth: 'closed-ordinal',
+  abstraction_level_orientation: 'closed-ordinal',
+  project_framework: 'open',
+};
 
 /** IDEA → PRD — family A2 (spec/design), keyword "PRD". */
 export const IDEA_TO_PRD_RECORD: ContentTemplateRecord = {
@@ -29,6 +46,7 @@ export const IDEA_TO_PRD_RECORD: ContentTemplateRecord = {
   source: 'shipped',
   schemaVersion: 1,
   slots: [],
+  paramAxes: STAGE_TRANSITION_PARAM_AXES,
   levelForms: {
     1: form(
       "Name in one line what this PRD must capture — what 'done' looks like for the project.",
@@ -59,6 +77,7 @@ export const PRD_TO_ARCHITECTURE_RECORD: ContentTemplateRecord = {
   source: 'shipped',
   schemaVersion: 1,
   slots: [],
+  paramAxes: STAGE_TRANSITION_PARAM_AXES,
   levelForms: {
     1: form(
       'Name in one line the architecture approach you are leaning toward for this project.',
@@ -89,6 +108,7 @@ export const ARCHITECTURE_TO_TASKS_RECORD: ContentTemplateRecord = {
   source: 'shipped',
   schemaVersion: 1,
   slots: [],
+  paramAxes: STAGE_TRANSITION_PARAM_AXES,
   levelForms: {
     1: form(
       'Name the single next task to start with before you begin coding.',
@@ -119,6 +139,7 @@ export const TASK_REVIEW_RECORD: ContentTemplateRecord = {
   source: 'shipped',
   schemaVersion: 1,
   slots: [],
+  paramAxes: STAGE_TRANSITION_PARAM_AXES,
   levelForms: {
     1: form(
       'Quickly review what was just built — does it do what the task asked?',
@@ -149,6 +170,7 @@ export const IMPLEMENTATION_TO_REVIEW_RECORD: ContentTemplateRecord = {
   source: 'shipped',
   schemaVersion: 1,
   slots: [],
+  paramAxes: STAGE_TRANSITION_PARAM_AXES,
   levelForms: {
     1: form(
       'Smoke-test what was built this phase before moving on.',
@@ -179,6 +201,7 @@ export const REVIEW_TO_RELEASE_RECORD: ContentTemplateRecord = {
   source: 'shipped',
   schemaVersion: 1,
   slots: [],
+  paramAxes: STAGE_TRANSITION_PARAM_AXES,
   levelForms: {
     1: form(
       'Before you release, do a quick smoke check that the main flow still works.',
@@ -209,6 +232,7 @@ export const RELEASE_TO_FEEDBACK_RECORD: ContentTemplateRecord = {
   source: 'shipped',
   schemaVersion: 1,
   slots: [],
+  paramAxes: STAGE_TRANSITION_PARAM_AXES,
   levelForms: {
     1: form(
       'Confirm error tracking is on for what just shipped — the lightest monitoring check.',

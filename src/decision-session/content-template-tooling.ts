@@ -121,6 +121,30 @@ export function coverageMetric(records: readonly ContentTemplateRecord[]): Cover
   };
 }
 
+// ── Copy-paste / option length budget (§5.10.5.7) ──────────────────────────────
+
+/**
+ * Char budget for a stored option (the copy-pasteable prompt). The runtime anchor
+ * is droppable-first on top of this; this caps the AUTHORED option so it stays a
+ * sendable single message. An authoring discipline value, not a runtime limit.
+ */
+export const OPTION_MAX_CHARS = 400;
+
+export interface OptionBudgetResult {
+  ok: boolean;
+  /** Authored levels whose option exceeds the char budget. */
+  overLevels: MaturityLevel[];
+}
+
+/** Every authored option must fit the copy-paste char budget. */
+export function checkOptionLengthBudget(record: ContentTemplateRecord, max: number = OPTION_MAX_CHARS): OptionBudgetResult {
+  const over = MATURITY_LEVELS.filter((l) => {
+    const f = record.levelForms[l];
+    return f !== undefined && f.cell.option.length > max;
+  });
+  return { ok: over.length === 0, overLevels: over };
+}
+
 // ── Build gate (aggregate: schema + HARD floor) ────────────────────────────────
 
 export interface BuildGateResult {

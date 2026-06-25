@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { CLASS1_RECORDS } from './class1-records.js';
-import { runBuildGate, checkTopicKeyword } from '../content-template-tooling.js';
+import { runBuildGate, checkTopicKeyword, checkOptionLengthBudget, OPTION_MAX_CHARS } from '../content-template-tooling.js';
 import { reviewRecord, checkVoice, checkL2Safeguard, checkEscalation } from '../content-authoring-rules.js';
 import {
   IDEA_TO_PRD, PRD_TO_ARCHITECTURE, ARCHITECTURE_TO_TASKS, TASK_REVIEW,
@@ -79,6 +79,19 @@ describe('class-1 records — per-record review gates', () => {
 
       it('I2 — practice richness is monotonic across columns 1→5', () => {
         expect(checkEscalation(PRACTICE_WEIGHTS[r.signalType]).ok).toBe(true);
+      });
+
+      it('declares the grounded param axes with valid AR-1 tags', () => {
+        expect(r.paramAxes).toBeDefined();
+        const tags = Object.values(r.paramAxes ?? {});
+        expect(tags.length).toBeGreaterThan(0);
+        for (const t of tags) expect(['closed-ordinal', 'nominal', 'extensible', 'open']).toContain(t);
+      });
+
+      it('every option fits the copy-paste length budget, and col-1 ≤ col-5 (extremes strain)', () => {
+        expect(checkOptionLengthBudget(r).overLevels).toEqual([]);
+        expect(r.levelForms[1]!.cell.option.length).toBeLessThanOrEqual(r.levelForms[5]!.cell.option.length);
+        expect(OPTION_MAX_CHARS).toBe(400);
       });
 
       it('is voice-clean', () => {
