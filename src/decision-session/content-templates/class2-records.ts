@@ -1,17 +1,17 @@
 /**
- * Class-2 (verification-quality) content-template records — BATCH A: the 11
- * formal-base signalTypes. Authored per §4.E3 / §5.10.12: col-3 = the frozen
- * existing headline; cols 1/2/4/5 radiate per family — A3 Verification (run/check:
- * spot-check → light pass → standard review → PR-grade audit → review file + pre-merge
- * checks) and A6 Maintainability (note → commit+README → standard → PR-style+project
- * doc → maintained doc file). Keyword-retained, de-jargoned, voice-clean; col-5 yields
- * a file/artifact (F2). These are corrective (ABSENCE_*) signals — content authored
- * here at §4.E2; §3.F later routes them to the AbsenceSignalEngine.
+ * Verification-quality content-template records (class 2) — BATCH A: the 11
+ * signals with a formal headline. Column 3 is the existing shipped headline kept
+ * verbatim; columns 1/2/4/5 escalate the same practice — verification signals
+ * (spot-check → light pass → standard review → thorough audit → review file +
+ * pre-merge checks) and maintainability signals (note → note + commit → standard
+ * → reviewed write-up → maintained doc file). Keyword-retained, plain-language,
+ * voice-clean; the heaviest column yields a file. These are corrective signals.
  *
- * F8 spine: A3 records thread the review + commit cadence; A6 records thread
- * commit-intent. Register (casual) = Pass-1 vocab; `_BEGINNER` overrides await §6.1.
+ * Spine: the verification records thread the review + commit cadence; the
+ * maintainability records thread commit-intent. Register vocabulary is adapted at
+ * runtime; the structurally-divergent beginner overrides are a separate follow-up.
  *
- * BATCH B (10 casual-only signalTypes) is authored separately.
+ * BATCH B (10 casual-only signals) is authored below.
  */
 
 import type { ContentTemplateRecord, LevelForm, ParamAxisTag } from '../content-template-schema.js';
@@ -32,7 +32,7 @@ export const VERIFICATION_PARAM_AXES: Readonly<Record<string, ParamAxisTag>> = {
 export const A3_SPINE = ['review-cadence', 'commit-cadence'];
 export const A6_SPINE = ['commit-intent'];
 
-/** BEHAVIOUR_TESTING — A3, keyword "test". */
+/** BEHAVIOUR_TESTING — verification family, keyword "test". */
 export const BEHAVIOUR_TESTING_RECORD: ContentTemplateRecord = {
   signalType: 'BEHAVIOUR_TESTING', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
@@ -45,7 +45,7 @@ export const BEHAVIOUR_TESTING_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_TEST_CREATION — A3, keyword "test". */
+/** ABSENCE_TEST_CREATION — verification family, keyword "test". */
 export const ABSENCE_TEST_CREATION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_TEST_CREATION', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
@@ -58,7 +58,7 @@ export const ABSENCE_TEST_CREATION_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_REGRESSION_CHECK — A3, keyword "regression". */
+/** ABSENCE_REGRESSION_CHECK — verification family, keyword "regression". */
 export const ABSENCE_REGRESSION_CHECK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_REGRESSION_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
@@ -71,7 +71,7 @@ export const ABSENCE_REGRESSION_CHECK_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_SECURITY_CHECK — A3 (security verification), keyword "security". */
+/** ABSENCE_SECURITY_CHECK — verification family (security), keyword "security". */
 export const ABSENCE_SECURITY_CHECK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_SECURITY_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
@@ -84,7 +84,7 @@ export const ABSENCE_SECURITY_CHECK_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_ERROR_HANDLING — A3, keyword "error". */
+/** ABSENCE_ERROR_HANDLING — verification family, keyword "error". */
 export const ABSENCE_ERROR_HANDLING_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_ERROR_HANDLING', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
@@ -97,7 +97,7 @@ export const ABSENCE_ERROR_HANDLING_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_DOCUMENTATION — A6 (maintainability), keyword "document". */
+/** ABSENCE_DOCUMENTATION — maintainability family, keyword "document". */
 export const ABSENCE_DOCUMENTATION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_DOCUMENTATION', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A6_SPINE,
@@ -110,7 +110,7 @@ export const ABSENCE_DOCUMENTATION_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_REFACTORING — A6 (maintainability), keyword "refactor". */
+/** ABSENCE_REFACTORING — maintainability family, keyword "refactor". */
 export const ABSENCE_REFACTORING_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_REFACTORING', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A6_SPINE,
@@ -123,7 +123,7 @@ export const ABSENCE_REFACTORING_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_CORRECTION_SEEKING — A3 (self-review), keyword "review". */
+/** ABSENCE_CORRECTION_SEEKING — verification family (self-review), keyword "review". */
 export const ABSENCE_CORRECTION_SEEKING_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_CORRECTION_SEEKING', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
@@ -136,7 +136,7 @@ export const ABSENCE_CORRECTION_SEEKING_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_PROBLEM_CORRECTION — A3 (fix verification), keyword "fix". */
+/** ABSENCE_PROBLEM_CORRECTION — verification family (fix), keyword "fix". */
 export const ABSENCE_PROBLEM_CORRECTION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_PROBLEM_CORRECTION', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
@@ -149,7 +149,7 @@ export const ABSENCE_PROBLEM_CORRECTION_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_ACCESSIBILITY — A3 (accessibility verification), keyword "accessible". */
+/** ABSENCE_ACCESSIBILITY — verification family (accessibility), keyword "accessible". */
 export const ABSENCE_ACCESSIBILITY_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_ACCESSIBILITY', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
@@ -162,7 +162,7 @@ export const ABSENCE_ACCESSIBILITY_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_DATA_VALIDATION — A3 (input validation), keyword "validation". */
+/** ABSENCE_DATA_VALIDATION — verification family (input validation), keyword "validation". */
 export const ABSENCE_DATA_VALIDATION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_DATA_VALIDATION', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
@@ -194,7 +194,7 @@ export const CLASS2_RECORDS_BATCH_A: readonly ContentTemplateRecord[] = [
 // These have no formal-base set, so col-3 is anchored on the frozen casual/beginner
 // L1[0] (often a principle-cited, longer line — so the length budget exempts col-3).
 
-/** ABSENCE_CODE_DOCUMENTATION_GAP — A6, keyword "comment". */
+/** ABSENCE_CODE_DOCUMENTATION_GAP — maintainability family, keyword "comment". */
 export const ABSENCE_CODE_DOCUMENTATION_GAP_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_CODE_DOCUMENTATION_GAP', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A6_SPINE,
@@ -207,7 +207,7 @@ export const ABSENCE_CODE_DOCUMENTATION_GAP_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT — A6, keyword "debt". */
+/** ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT — maintainability family, keyword "debt". */
 export const ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A6_SPINE,
@@ -220,7 +220,7 @@ export const ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_RECORD: ContentTemplateRecord
   },
 };
 
-/** ABSENCE_TEST_DEPTH_CHECK — A3, keyword "test". */
+/** ABSENCE_TEST_DEPTH_CHECK — verification family, keyword "test". */
 export const ABSENCE_TEST_DEPTH_CHECK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_TEST_DEPTH_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
@@ -233,7 +233,7 @@ export const ABSENCE_TEST_DEPTH_CHECK_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_SECURITY_REVIEW_GAP — A3, keyword "security". */
+/** ABSENCE_SECURITY_REVIEW_GAP — verification family, keyword "security". */
 export const ABSENCE_SECURITY_REVIEW_GAP_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_SECURITY_REVIEW_GAP', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
@@ -246,7 +246,7 @@ export const ABSENCE_SECURITY_REVIEW_GAP_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_ERROR_HANDLING_COVERAGE — A3, keyword "error". */
+/** ABSENCE_ERROR_HANDLING_COVERAGE — verification family, keyword "error". */
 export const ABSENCE_ERROR_HANDLING_COVERAGE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_ERROR_HANDLING_COVERAGE', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
@@ -259,7 +259,7 @@ export const ABSENCE_ERROR_HANDLING_COVERAGE_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_REFACTORING_CHECKPOINT — A6, keyword "refactor". */
+/** ABSENCE_REFACTORING_CHECKPOINT — maintainability family, keyword "refactor". */
 export const ABSENCE_REFACTORING_CHECKPOINT_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_REFACTORING_CHECKPOINT', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A6_SPINE,
@@ -272,7 +272,7 @@ export const ABSENCE_REFACTORING_CHECKPOINT_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_SELF_REVIEW_HABIT — A3, keyword "review". */
+/** ABSENCE_SELF_REVIEW_HABIT — verification family, keyword "review". */
 export const ABSENCE_SELF_REVIEW_HABIT_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_SELF_REVIEW_HABIT', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
@@ -285,7 +285,7 @@ export const ABSENCE_SELF_REVIEW_HABIT_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_PERFORMANCE_AWARENESS — A3, keyword "performance". */
+/** ABSENCE_PERFORMANCE_AWARENESS — verification family, keyword "performance". */
 export const ABSENCE_PERFORMANCE_AWARENESS_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_PERFORMANCE_AWARENESS', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
@@ -298,7 +298,7 @@ export const ABSENCE_PERFORMANCE_AWARENESS_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_DOCUMENTATION_BEFORE_ASK — A6, keyword "docs". */
+/** ABSENCE_DOCUMENTATION_BEFORE_ASK — maintainability family, keyword "docs". */
 export const ABSENCE_DOCUMENTATION_BEFORE_ASK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_DOCUMENTATION_BEFORE_ASK', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A6_SPINE,
@@ -311,7 +311,7 @@ export const ABSENCE_DOCUMENTATION_BEFORE_ASK_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_OUTPUT_VERIFICATION — A3, keyword "run". */
+/** ABSENCE_OUTPUT_VERIFICATION — verification family, keyword "run". */
 export const ABSENCE_OUTPUT_VERIFICATION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_OUTPUT_VERIFICATION', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,

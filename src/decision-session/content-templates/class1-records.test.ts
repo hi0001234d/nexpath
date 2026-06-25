@@ -8,13 +8,13 @@ import {
 } from './class1-stage-transition.js';
 import type { DecisionContent } from '../options.js';
 
-/** signalType → the frozen DecisionContent whose L1[0] is the col-3 anchor (F3). */
+/** signalType → the frozen DecisionContent whose L1[0] is the col-3 anchor. */
 const FROZEN: Record<string, DecisionContent> = {
   IDEA_TO_PRD, PRD_TO_ARCHITECTURE, ARCHITECTURE_TO_TASKS, TASK_REVIEW,
   IMPLEMENTATION_TO_REVIEW, REVIEW_TO_RELEASE, RELEASE_TO_FEEDBACK,
 };
 
-/** Per-column practice-richness weights (author-supplied; the I2 monotonicity check). */
+/** Per-column practice-richness weights (author-supplied; the escalation-monotonicity check). */
 const PRACTICE_WEIGHTS: Record<string, readonly number[]> = {
   IDEA_TO_PRD: [1, 2, 3, 4, 5],
   PRD_TO_ARCHITECTURE: [1, 2, 3, 4, 5],
@@ -62,14 +62,14 @@ describe('class-1 records — per-record review gates', () => {
         expect(review.coverage.ok).toBe(true);
       });
 
-      it('F3 — col-3 is the frozen text verbatim (option + a real frozen core line)', () => {
+      it('column 3 is the frozen text verbatim (option + a real frozen core line)', () => {
         const frozen = FROZEN[r.signalType];
         const col3 = r.levelForms[3]!.cell;
         expect(col3.option).toBe(frozen.L1[0].option);              // verbatim anchor
         expect(frozen.L1[0].descBase).toContain(col3.whyDesc);       // a real frozen core line, not invented
       });
 
-      it('T1 — keyword in every column option, and in every AUTHORED why-desc (col-3 frozen core exempt)', () => {
+      it('keeps its keyword in every column option, and in every AUTHORED why-desc (col-3 frozen core exempt)', () => {
         const res = checkTopicKeyword(r, KEYWORDS[r.signalType]);
         expect(res.missingInOption).toEqual([]);
         // The why-desc keyword must hold for the authored columns (1,2,4,5); the
@@ -77,11 +77,11 @@ describe('class-1 records — per-record review gates', () => {
         expect(res.missingInWhyDesc.filter((l) => l !== 3)).toEqual([]);
       });
 
-      it('I2 — practice richness is monotonic across columns 1→5', () => {
+      it('practice richness is monotonic across columns 1→5', () => {
         expect(checkEscalation(PRACTICE_WEIGHTS[r.signalType]).ok).toBe(true);
       });
 
-      it('declares the grounded param axes with valid AR-1 tags', () => {
+      it('declares the grounded param axes with valid representation tags', () => {
         expect(r.paramAxes).toBeDefined();
         const tags = Object.values(r.paramAxes ?? {});
         expect(tags.length).toBeGreaterThan(0);
@@ -98,16 +98,17 @@ describe('class-1 records — per-record review gates', () => {
         expect(checkVoice(r).ok).toBe(true);
       });
 
-      it('F2 — the heaviest column (col-5) yields a file/artifact (all class-1 families are artifact or mixed)', () => {
+      it('the heaviest column (col-5) yields a file/artifact (all class-1 families are artifact or mixed)', () => {
         expect(r.levelForms[5]!.cell.option).toMatch(/\b(files?|runbooks?|notes?|docs?|readme|plans?)\b/i);
       });
     });
   }
 });
 
-describe('class-1 records — F8 spine (stored annotation)', () => {
-  // Spine = the rhythm that intensifies across all columns. A1 (planning) and A3
-  // (verification) families carry one; A2/A5 do not (stage practices per column).
+describe('class-1 records — spine (stored annotation)', () => {
+  // Spine = the rhythm that intensifies across all columns. The planning and
+  // verification families carry one; spec/design and ops/ship do not (each column
+  // is its own stage practice).
   const SPINE_FAMILIES = new Set(['ARCHITECTURE_TO_TASKS', 'TASK_REVIEW', 'IMPLEMENTATION_TO_REVIEW']);
 
   for (const r of CLASS1_RECORDS) {
@@ -121,8 +122,8 @@ describe('class-1 records — F8 spine (stored annotation)', () => {
   }
 });
 
-describe('class-1 records — L2 sensitive-action safeguard (substantive)', () => {
-  // The L2 authoring gate is a keyword-proxy review aid (a stage keyword like
+describe('class-1 records — sensitive-action safeguard (substantive)', () => {
+  // The safeguard gate is a keyword-proxy review aid (a stage keyword like
   // "release"/"production" trips it even on a pre-release CHECK). The substantive
   // requirement is that a form which genuinely proposes a sensitive ACTION carries
   // the confirm-seek — here, only REVIEW_TO_RELEASE col-5 (production rollout).

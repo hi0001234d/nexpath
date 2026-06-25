@@ -1,29 +1,26 @@
 /**
- * Class-1 (stage-transition) content-template records — the maturity-column ladders
- * the engine resolves at the `shipped` tier.
+ * Stage-transition content-template records (class 1) — the maturity-column
+ * ladders the engine resolves at the shipped tier.
  *
- * Authored per the §4.E3 / §5.10.12 column-map methodology:
- *  - column 3 = today's frozen headline (the existing static text, never edited);
- *  - columns 1/2 (lighter) and 4/5 (heavier) radiate outward from it per the
- *    signalType's practice family (A1 Planning · A2 Spec/design · A3 Verification ·
- *    A5 Ops/ship), each column keeping the signalType's own keyword;
- *  - the leaf is the strength-L1 headline cell `{ option, whyDesc }`; L2/L3 strength
- *    rows are engine-produced, not stored.
+ *  - column 3 is the existing shipped headline (kept verbatim, never edited);
+ *  - columns 1/2 (lighter) and 4/5 (heavier) escalate the same practice outward
+ *    from it, by family — planning, spec/design, verification, ops/ship — each
+ *    column keeping the signal's own keyword;
+ *  - the leaf is the headline cell `{ option, whyDesc }`; the lighter on-click
+ *    strength variants are produced at runtime, not stored.
  *
- * Voice (Layer-1) and the L2 sensitive-action safeguard (Layer-2) are applied:
- * the only sensitive column here is REVIEW_TO_RELEASE col-5 (production rollout),
- * which carries the confirm-seek. Register (casual/formal) is handled by the Pass-1
- * vocab adaptation; the structurally-divergent `_BEGINNER` register-override is a
- * separate follow-up, not folded into these base records.
+ * Voice and the sensitive-action safeguard are applied: the only sensitive column
+ * here is REVIEW_TO_RELEASE col-5 (production rollout), which carries the
+ * confirm-seek. Register vocabulary is adapted at runtime.
  *
- * F8 stage-vs-spine (authoring thread, documented here — it is an authoring
- * property, not stored record data, so there is no schema field for it):
- *  - ARCHITECTURE_TO_TASKS (A1): spine = small-supervised-loops (session-sized work
- *    intensifying from "one next task" → "atomic tasks + milestones");
- *  - TASK_REVIEW + IMPLEMENTATION_TO_REVIEW (A3): spine = the review + commit cadence
- *    (V2/V3) intensifying from a quick look → PR-grade review + rollback commits;
- *  - IDEA_TO_PRD / PRD_TO_ARCHITECTURE (A2) and REVIEW_TO_RELEASE / RELEASE_TO_FEEDBACK
- *    (A5): no family spine — escalation is stage practices per column.
+ * Spine (an authoring thread that intensifies across the columns, stored in the
+ * optional `spine` field where a family has one):
+ *  - ARCHITECTURE_TO_TASKS (planning): session-sized work intensifying from
+ *    "one next task" to "atomic tasks + milestones";
+ *  - TASK_REVIEW + IMPLEMENTATION_TO_REVIEW (verification): the review + commit
+ *    cadence intensifying from a quick look to a PR-grade review + rollback commits;
+ *  - the spec/design and ops/ship signals carry no spine — each column is its own
+ *    stage practice.
  */
 
 import type { ContentTemplateRecord, LevelForm, ParamAxisTag } from '../content-template-schema.js';
@@ -33,13 +30,13 @@ function form(option: string, whyDesc: string): LevelForm {
 }
 
 /**
- * The param axes a stage-transition why-desc grounds (the §5.10.5.6 multi-value
- * grounding sources), each with its AR-1 Option-C representation tag (§5.6.5):
- *  - workflow-pattern → closed-nominal-extensible → `extensible`;
- *  - the three AR-3 work-style traits → `closed-ordinal`;
- *  - the dev-env framework identity → open-nominal → `open`.
- * The grounded categories are common across stage transitions (per-signalType
- * relevance is the runtime select/rank/cap, not a per-record axis difference).
+ * The param axes a stage-transition why-desc grounds, each tagged with how its
+ * values are drawn:
+ *  - workflow pattern → a closed but extensible set → `extensible`;
+ *  - the three work-style traits → ordered scales → `closed-ordinal`;
+ *  - the project framework identity → an open set → `open`.
+ * The categories are common across stage transitions (per-signal relevance is the
+ * runtime select/rank/cap, not a per-record axis difference).
  */
 const STAGE_TRANSITION_PARAM_AXES: Readonly<Record<string, ParamAxisTag>> = {
   workflow_pattern: 'extensible',
@@ -49,7 +46,7 @@ const STAGE_TRANSITION_PARAM_AXES: Readonly<Record<string, ParamAxisTag>> = {
   project_framework: 'open',
 };
 
-/** IDEA → PRD — family A2 (spec/design), keyword "PRD". */
+/** IDEA → PRD — spec/design family, keyword "PRD". */
 export const IDEA_TO_PRD_RECORD: ContentTemplateRecord = {
   signalType: 'IDEA_TO_PRD',
   source: 'shipped',
@@ -80,7 +77,7 @@ export const IDEA_TO_PRD_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** PRD → ARCHITECTURE — family A2 (spec/design), keyword "architecture". */
+/** PRD → ARCHITECTURE — spec/design family, keyword "architecture". */
 export const PRD_TO_ARCHITECTURE_RECORD: ContentTemplateRecord = {
   signalType: 'PRD_TO_ARCHITECTURE',
   source: 'shipped',
@@ -111,7 +108,7 @@ export const PRD_TO_ARCHITECTURE_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ARCHITECTURE → TASKS — family A1 (planning), keyword "task". */
+/** ARCHITECTURE → TASKS — planning family, keyword "task". */
 export const ARCHITECTURE_TO_TASKS_RECORD: ContentTemplateRecord = {
   signalType: 'ARCHITECTURE_TO_TASKS',
   source: 'shipped',
@@ -143,7 +140,7 @@ export const ARCHITECTURE_TO_TASKS_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** TASK_REVIEW — family A3 (verification), keyword "review". */
+/** TASK_REVIEW — verification family, keyword "review". */
 export const TASK_REVIEW_RECORD: ContentTemplateRecord = {
   signalType: 'TASK_REVIEW',
   source: 'shipped',
@@ -175,7 +172,7 @@ export const TASK_REVIEW_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** IMPLEMENTATION → REVIEW — family A3 (verification), keyword "test". */
+/** IMPLEMENTATION → REVIEW — verification family, keyword "test". */
 export const IMPLEMENTATION_TO_REVIEW_RECORD: ContentTemplateRecord = {
   signalType: 'IMPLEMENTATION_TO_REVIEW',
   source: 'shipped',
@@ -207,7 +204,7 @@ export const IMPLEMENTATION_TO_REVIEW_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** REVIEW → RELEASE — family A5 (ops/ship), keyword "release"; col-5 is L2-sensitive (production rollout). */
+/** REVIEW → RELEASE — ops/ship family, keyword "release"; col-5 is sensitive (production rollout). */
 export const REVIEW_TO_RELEASE_RECORD: ContentTemplateRecord = {
   signalType: 'REVIEW_TO_RELEASE',
   source: 'shipped',
@@ -238,7 +235,7 @@ export const REVIEW_TO_RELEASE_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** RELEASE → FEEDBACK — family A5 (ops/monitoring), keyword "monitoring". */
+/** RELEASE → FEEDBACK — ops/monitoring family, keyword "monitoring". */
 export const RELEASE_TO_FEEDBACK_RECORD: ContentTemplateRecord = {
   signalType: 'RELEASE_TO_FEEDBACK',
   source: 'shipped',

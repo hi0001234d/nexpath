@@ -31,7 +31,7 @@ const KEYWORDS: Record<string, string> = {
   ABSENCE_DATA_VALIDATION: 'validation',
 };
 
-/** signalType → frozen DecisionContent (col-3 anchor, F3). */
+/** signalType → frozen DecisionContent (col-3 anchor). */
 const FROZEN: Record<string, DecisionContent> = {
   BEHAVIOUR_TESTING, ABSENCE_TEST_CREATION, ABSENCE_REGRESSION_CHECK, ABSENCE_SECURITY_CHECK,
   ABSENCE_ERROR_HANDLING, ABSENCE_DOCUMENTATION, ABSENCE_REFACTORING, ABSENCE_CORRECTION_SEEKING,
@@ -39,18 +39,18 @@ const FROZEN: Record<string, DecisionContent> = {
 };
 
 /**
- * Per-signalType author-declared practice-richness weights (the I2 monotonicity
- * input — author intent, NOT a word-count proxy, which F4 forbids). Every class-2
- * column genuinely adds a named practice (spot-check → light → standard → audit →
- * artifact), so the intended shape is a strict 1→5 climb for all. The *semantic*
- * "does each step add ≥1 named practice" judgment remains human-review (OUTSTANDING
- * item 3); this pins that the author DECLARED a monotonic shape per record.
+ * Per-signalType author-declared practice-richness weights (the escalation-
+ * monotonicity input — author intent, NOT a word-count proxy, which is disallowed).
+ * Every class-2 column genuinely adds a named practice (spot-check → light →
+ * standard → audit → artifact), so the intended shape is a strict 1→5 climb for
+ * all. The *semantic* "does each step add ≥1 named practice" judgment remains a
+ * human-review concern; this pins that the author DECLARED a monotonic shape per record.
  */
 const PRACTICE_WEIGHTS: Record<string, readonly number[]> = Object.fromEntries(
   Object.keys(KEYWORDS).map((s) => [s, [1, 2, 3, 4, 5]]),
 );
 
-/** The only two valid class-2 spines (A3 verification cadence / A6 maintainability). */
+/** The only two valid class-2 spines (verification cadence / maintainability). */
 const VALID_SPINES = [A3_SPINE, A6_SPINE];
 
 describe('class-2 batch A — set-level', () => {
@@ -78,25 +78,25 @@ describe('class-2 batch A — per-record full-depth gates', () => {
         expect(review.coverage.ok).toBe(true);
       });
 
-      it('F3 — col-3 is the frozen text verbatim (option + a real frozen core line)', () => {
+      it('column 3 is the frozen text verbatim (option + a real frozen core line)', () => {
         const frozen = FROZEN[r.signalType];
         const col3 = r.levelForms[3]!.cell;
         expect(col3.option).toBe(frozen.L1[0].option);
         expect(frozen.L1[0].descBase).toContain(col3.whyDesc);
       });
 
-      it('T1 — keyword in every option, and every AUTHORED why-desc (col-3 frozen exempt)', () => {
+      it('keeps its keyword in every option, and every AUTHORED why-desc (col-3 frozen exempt)', () => {
         const res = checkTopicKeyword(r, kw);
         expect(res.missingInOption).toEqual([]);
         expect(res.missingInWhyDesc.filter((l) => l !== 3)).toEqual([]);
       });
 
-      it('I2 — author-declared practice richness is monotonic for THIS record', () => {
+      it('author-declared practice richness is monotonic for THIS record', () => {
         expect(PRACTICE_WEIGHTS[r.signalType]).toBeDefined();                 // not vacuous: an undeclared record must fail
         expect(checkEscalation(PRACTICE_WEIGHTS[r.signalType]).ok).toBe(true);
       });
 
-      it('declares grounded param axes (defined, non-empty, valid AR-1 tags) + a valid family spine', () => {
+      it('declares grounded param axes (defined, non-empty, valid representation tags) + a valid family spine', () => {
         expect(r.paramAxes).toBeDefined();                                    // not vacuous: a missing axes block must fail
         expect(Object.keys(r.paramAxes ?? {}).length).toBeGreaterThan(0);
         expect(r.paramAxes).toEqual(VERIFICATION_PARAM_AXES);                 // the class's grounded axes, pinned
@@ -112,18 +112,18 @@ describe('class-2 batch A — per-record full-depth gates', () => {
         expect(checkVoice(r).ok).toBe(true);
       });
 
-      it('F2 — col-5 yields a file/artifact', () => {
+      it('col-5 yields a file/artifact', () => {
         expect(r.levelForms[5]!.cell.option).toMatch(/\b(files?|runbooks?|notes?|docs?|readme|plans?)\b/i);
       });
     });
   }
 });
 
-describe('class-2 — L2 sensitive-action safeguard (whole-class review, batch A + B)', () => {
+describe('class-2 — sensitive-action safeguard (whole-class review, batch A + B)', () => {
   // Class 2 is verification-quality: every form proposes a REVIEW / CHECK /
   // WRITE-A-NOTE action — none proposes a genuinely sensitive ACTION (a deploy,
   // a destructive fs op, a schema migration, a secret write, a force-push). The
-  // L2 keyword-proxy over-flags stage NOUNS; the substantive requirement is that
+  // keyword proxy over-flags stage NOUNS; the substantive requirement is that
   // ONLY a genuinely-sensitive form carries the confirm-seek — here, none do, so
   // the one proxy hit must be a false-positive, not a missing safeguard.
   const flagged = CLASS2_RECORDS
@@ -181,23 +181,24 @@ describe('class-2 — partition parity + registration (against the source of tru
     expect(recordSigs.filter((s) => !shipped.has(s))).toEqual([]);
   });
 
-  it('T3-metric (soft coverage) — the whole class is all-5-columns, zero thin', () => {
+  it('soft coverage — the whole class is all-5-columns, zero thin', () => {
     const cov = coverageMetric(CLASS2_RECORDS);
     expect(cov.total).toBe(21);
     expect(cov.allLevels).toBe(21);
     expect(cov.thin).toBe(0);
-    expect(cov.allLevelsPct).toBe(1);   // ≥ 0.60–0.70 plan floor, in fact 100%
-    expect(cov.thinPct).toBe(0);        // < 0.50 plan ceiling
+    expect(cov.allLevelsPct).toBe(1);   // well above the coverage floor, in fact 100%
+    expect(cov.thinPct).toBe(0);        // well under the thin ceiling
   });
 });
 
 describe('class-2 — record↔runtime boundary (stored cells are bare core lines)', () => {
-  // The engine adds the runtime grammar — {R4_OPEN}/{R5_INJECT}/{R4_CLOSE} + {{slots}}
-  // — at compose/runtime time; a STORED cell must not already contain it or the
-  // runtime pass would double-wrap. F3 anchors col-3's whyDesc as a SUBSTRING of a
-  // descBase that DOES contain {R...}, so a mistaken full-descBase paste would slip
-  // past F3 — this pins the boundary so that class of bug fails here.
-  const PLACEHOLDER = /\{[R{]/; // matches "{R..." (R4/R5 bookends) and "{{" (slots)
+  // The engine adds the runtime bookend + slot grammar ({R...} / {{...}}) at
+  // compose/runtime time; a STORED cell must not already contain it or the runtime
+  // pass would double-wrap. The frozen-column check anchors col-3's whyDesc as a
+  // SUBSTRING of a descBase that DOES contain {R...}, so a mistaken full-descBase
+  // paste would slip past that check — this pins the boundary so that class of bug
+  // fails here.
+  const PLACEHOLDER = /\{[R{]/; // matches "{R..." (runtime bookends) and "{{" (slots)
   for (const r of CLASS2_RECORDS) {
     it(`${r.signalType} — no {R...} / {{...}} token in any stored option or whyDesc`, () => {
       for (const lvl of [1, 2, 3, 4, 5] as const) {

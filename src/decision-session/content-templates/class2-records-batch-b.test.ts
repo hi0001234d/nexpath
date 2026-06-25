@@ -41,16 +41,16 @@ const FROZEN: Record<string, DecisionContent> = {
 };
 
 /**
- * Per-signalType author-declared practice-richness weights (the I2 monotonicity
- * input — author intent, NOT a word-count proxy, which F4 forbids). Every column
- * adds a named practice, so the intended shape is a strict 1→5 climb for all; the
- * semantic judgment stays human-review (OUTSTANDING item 3).
+ * Per-signalType author-declared practice-richness weights (the escalation-
+ * monotonicity input — author intent, NOT a word-count proxy, which is disallowed).
+ * Every column adds a named practice, so the intended shape is a strict 1→5 climb
+ * for all; the semantic judgment stays a human-review concern.
  */
 const PRACTICE_WEIGHTS: Record<string, readonly number[]> = Object.fromEntries(
   Object.keys(KEYWORDS).map((s) => [s, [1, 2, 3, 4, 5]]),
 );
 
-/** The only two valid class-2 spines (A3 verification cadence / A6 maintainability). */
+/** The only two valid class-2 spines (verification cadence / maintainability). */
 const VALID_SPINES = [A3_SPINE, A6_SPINE];
 
 describe('class-2 — set completeness', () => {
@@ -81,25 +81,25 @@ describe('class-2 batch B — per-record full-depth gates', () => {
         expect(review.coverage.ok).toBe(true);
       });
 
-      it('F3 — col-3 is the frozen casual/beginner text verbatim (option + a real frozen core line)', () => {
+      it('column 3 is the frozen casual/beginner text verbatim (option + a real frozen core line)', () => {
         const frozen = FROZEN[r.signalType];
         const col3 = r.levelForms[3]!.cell;
         expect(col3.option).toBe(frozen.L1[0].option);
         expect(frozen.L1[0].descBase).toContain(col3.whyDesc);
       });
 
-      it('T1 — keyword in every option, and every AUTHORED why-desc (col-3 frozen exempt)', () => {
+      it('keeps its keyword in every option, and every AUTHORED why-desc (col-3 frozen exempt)', () => {
         const res = checkTopicKeyword(r, kw);
         expect(res.missingInOption).toEqual([]);
         expect(res.missingInWhyDesc.filter((l) => l !== 3)).toEqual([]);
       });
 
-      it('I2 — author-declared practice richness is monotonic for THIS record', () => {
+      it('author-declared practice richness is monotonic for THIS record', () => {
         expect(PRACTICE_WEIGHTS[r.signalType]).toBeDefined();                 // not vacuous: an undeclared record must fail
         expect(checkEscalation(PRACTICE_WEIGHTS[r.signalType]).ok).toBe(true);
       });
 
-      it('declares grounded param axes (defined, non-empty, valid AR-1 tags) + a valid family spine', () => {
+      it('declares grounded param axes (defined, non-empty, valid representation tags) + a valid family spine', () => {
         expect(r.paramAxes).toBeDefined();                                    // not vacuous: a missing axes block must fail
         expect(Object.keys(r.paramAxes ?? {}).length).toBeGreaterThan(0);
         expect(r.paramAxes).toEqual(VERIFICATION_PARAM_AXES);                 // the class's grounded axes, pinned
@@ -116,7 +116,7 @@ describe('class-2 batch B — per-record full-depth gates', () => {
         expect(checkVoice(r).ok).toBe(true);
       });
 
-      it('F2 — col-5 yields a file/artifact', () => {
+      it('col-5 yields a file/artifact', () => {
         expect(r.levelForms[5]!.cell.option).toMatch(/\b(files?|runbooks?|notes?|docs?|readme|plans?)\b/i);
       });
     });
