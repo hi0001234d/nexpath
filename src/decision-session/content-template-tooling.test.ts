@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import {
   SHIPPED_CONTENT_TEMPLATES,
   validateRecordSet,
@@ -30,6 +33,47 @@ describe('content-template-tooling — shipped registry + build gate', () => {
     const res = runBuildGate(bad);
     expect(res.ok).toBe(false);
     expect(res.floor.missingFloor).toEqual(['C']);
+  });
+});
+
+describe('content-template-tooling — shipped registry completeness (all 9 classes authored)', () => {
+  // Now that every class is authored, the shipped registry must cover the WHOLE canonical
+  // partition — the union of all signalTypes the why-help map assigns across the 9 classes.
+  // The per-class tests each verify their own subset; this is the cross-cutting check that
+  // nothing across the union is missing, extra, or duplicated. Source of truth: the
+  // why-help map (same as content-split.test.ts uses for the FROZEN partition).
+  const HERE = dirname(fileURLToPath(import.meta.url));
+  function canonicalSignalTypes(): string[] {
+    const src = readFileSync(join(HERE, 'why-help-by-signal-type.ts'), 'utf-8');
+    const re = /(\w+):\s*WHY_HELP_PER_CLASS\.(\w+)/g;
+    const out: string[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src)) !== null) out.push(m[1]);
+    return out;
+  }
+
+  const canonical = canonicalSignalTypes();
+  const shipped = SHIPPED_CONTENT_TEMPLATES.map((r) => r.signalType);
+
+  it('the canonical partition has 136 distinct signalTypes (7/21/11/8/8/14/20/35/12)', () => {
+    expect(canonical.length).toBe(136);
+    expect(new Set(canonical).size).toBe(136);
+  });
+
+  it('the shipped registry covers the canonical 136 exactly — none missing, none extra, no duplicates', () => {
+    const cs = new Set(canonical);
+    const rs = new Set(shipped);
+    expect(canonical.filter((s) => !rs.has(s))).toEqual([]); // every canonical signal has a record
+    expect(shipped.filter((s) => !cs.has(s))).toEqual([]);   // no record outside the partition
+    expect(shipped.filter((s, i) => shipped.indexOf(s) !== i)).toEqual([]); // no duplicate record
+    expect(shipped.length).toBe(136);
+  });
+
+  it('the whole shipped registry is all-5-columns, zero thin', () => {
+    const cov = coverageMetric(SHIPPED_CONTENT_TEMPLATES);
+    expect(cov.total).toBe(136);
+    expect(cov.allLevels).toBe(136);
+    expect(cov.thin).toBe(0);
   });
 });
 
