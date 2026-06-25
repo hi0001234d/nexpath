@@ -184,6 +184,15 @@ describe('content-authoring-rules — Layer-1 voice gate', () => {
     expect(res.byLevel[1]?.map((v) => v.pattern)).toContain('the AI');
     expect(res.byLevel[3]).toBeUndefined();
   });
+
+  it('checkVoice also scans the record-level l2SafeguardLine (it is appended to the CA-bound why-desc)', () => {
+    const clean = { ...rec({ 1: form('do it', 'clean why') }), l2SafeguardLine: 'Ask me for go-ahead before deploying.' };
+    expect(checkVoice(clean).ok).toBe(true);
+    const dirty = { ...rec({ 1: form('do it', 'clean why') }), l2SafeguardLine: 'Have the AI confirm before deploying.' };
+    const res = checkVoice(dirty);
+    expect(res.ok).toBe(false);
+    expect(res.safeguardLine?.map((v) => v.pattern)).toContain('the AI');
+  });
 });
 
 describe('content-authoring-rules — Layer-2 safeguard gate', () => {

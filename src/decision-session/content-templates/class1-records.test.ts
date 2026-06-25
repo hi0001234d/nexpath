@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { CLASS1_RECORDS } from './class1-records.js';
 import { runBuildGate, checkTopicKeyword, checkOptionLengthBudget, OPTION_MAX_CHARS } from '../content-template-tooling.js';
-import { reviewRecord, checkVoice, checkL2Safeguard, checkEscalation } from '../content-authoring-rules.js';
+import {
+  reviewRecord, checkVoice, checkL2Safeguard, checkEscalation, findVoiceViolations, findJargonViolations,
+} from '../content-authoring-rules.js';
 import { composeWhyDesc } from '../content-template-engine.js';
 import {
   IDEA_TO_PRD, PRD_TO_ARCHITECTURE, ARCHITECTURE_TO_TASKS, TASK_REVIEW,
@@ -157,6 +159,10 @@ describe('class-1 records — sensitive-action safeguard', () => {
         expect(composed.endsWith(rec.l2SafeguardLine!)).toBe(true);
       }
       expect(checkL2Safeguard(rec).unguardedLevels).toEqual([]); // record-level line guards all columns
+      // the safeguard line is CA-bound (appended to the why-desc) → same voice/de-jargon/placeholder discipline
+      expect(findVoiceViolations(rec.l2SafeguardLine!)).toEqual([]);
+      expect(findJargonViolations(rec.l2SafeguardLine!)).toEqual([]);
+      expect(rec.l2SafeguardLine!).not.toMatch(/\{[R{]/);
     });
   }
 });
