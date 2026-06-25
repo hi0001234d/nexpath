@@ -440,7 +440,11 @@ export async function composeAdvisory(input: ComposeAdvisoryInput, client?: Open
     cell: col.form.cell, slots: resolved.record.slots, ctx: input.ctx, anchor: input.anchor, lengthBudget: input.lengthBudget,
   });
   const whyDesc = await groundWhyDescLive({
-    cell: col.form.cell, slots: resolved.record.slots, ctx: input.ctx, facts: input.facts, factCap: input.factCap, l2Safeguard: input.l2Safeguard,
+    cell: col.form.cell, slots: resolved.record.slots, ctx: input.ctx, facts: input.facts, factCap: input.factCap,
+    // Auto-source the sensitive-action safeguard from the record so the live wiring
+    // can never forget it: a flagged record's l2SafeguardLine is always applied (the
+    // explicit input wins only if a caller overrides it).
+    l2Safeguard: input.l2Safeguard ?? resolved.record.l2SafeguardLine,
   }, client);
   return { source: resolved.source, level: col.level, option, whyDesc };
 }

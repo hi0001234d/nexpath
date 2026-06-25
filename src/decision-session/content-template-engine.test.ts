@@ -388,4 +388,16 @@ describe('content-template-engine — end-to-end orchestration (composeAdvisory)
     const out = await composeAdvisory({ lookup: lookupOf({ shipped: rec }), level: 1 }, mockClient(JSON.stringify({ whyDesc: 'core only, token gone' })));
     expect(out?.whyDesc).toContain('{R5_INJECT: last prompts}');
   });
+
+  it('auto-applies the record l2SafeguardLine to the why-desc when the caller passes none', async () => {
+    const rec = record({
+      levelForms: { 1: { kind: 'slot-variant', cell: cell('opt', 'core line') } },
+      l2SafeguardRequired: true,
+      l2SafeguardLine: 'Ask me for go-ahead before deploying.',
+    });
+    // No l2Safeguard in the input — the engine must source it from the resolved record,
+    // so the live wiring can never forget the sensitive-action safeguard.
+    const out = await composeAdvisory({ lookup: lookupOf({ shipped: rec }), level: 1 }, mockClient(JSON.stringify({ whyDesc: 'woven why' })));
+    expect(out?.whyDesc).toContain('Ask me for go-ahead before deploying.');
+  });
 });
