@@ -43,11 +43,12 @@ const PRACTICE_WEIGHTS: Record<string, readonly number[]> = Object.fromEntries(
 );
 
 /**
- * The five discipline signals are mental/behavioural — their heaviest column stays a
- * behaviour (no file). The other three capture signals produce a written record.
+ * Only the two pure pacing/sequencing habits stay behavioural (no artifact at col-5).
+ * The other six produce a written record: the three session-capture signals and the
+ * three verification-of-output signals (whose heaviest form, like the verification
+ * class, is a written review/critique/comprehension note).
  */
 const BEHAVIOURAL = new Set([
-  'ABSENCE_COMPREHENSION', 'ABSENCE_NO_PUSHBACK', 'ABSENCE_DECISION_FATIGUE_PATTERN',
   'ABSENCE_WORK_RHYTHM_CHECK', 'ABSENCE_FOCUS_DRIFT_DETECTION',
 ]);
 

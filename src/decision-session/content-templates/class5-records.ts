@@ -5,11 +5,14 @@
  *
  * These are session / meta-cognitive signals — comprehension, critical pushback,
  * decision fatigue, work rhythm, focus, context recap, session checkpoint, progress
- * consolidation. Three of them (context recap, session checkpoint, progress
- * consolidation) produce a written record at the heaviest column; the other five are
- * mental or behavioural disciplines whose heaviest column stays a behaviour, not a
- * file. None concerns a sensitive action, so none carries a confirm-seek, and none
- * threads a separate intensifying spine. All eight are formal-headline signals.
+ * consolidation. Six of them produce a written record at the heaviest column: the
+ * three session-capture signals (context recap, session checkpoint, progress
+ * consolidation) and the three verification-of-output signals (comprehension,
+ * pushback, decision fatigue — like the verification class, their heaviest form is a
+ * written review/critique/comprehension note). The two pure pacing/sequencing habits
+ * (work rhythm, focus drift) have no artifact — their heaviest column stays a
+ * behaviour. None concerns a sensitive action, so none carries a confirm-seek, and
+ * none threads a separate intensifying spine. All eight are formal-headline signals.
  */
 
 import type { ContentTemplateRecord, LevelForm, ParamAxisTag } from '../content-template-schema.js';
@@ -27,7 +30,7 @@ export const SESSION_QUALITY_PARAM_AXES: Readonly<Record<string, ParamAxisTag>> 
   project_framework: 'open',
 };
 
-/** ABSENCE_COMPREHENSION — understand the generated code, keyword "comprehension". Behavioural. */
+/** ABSENCE_COMPREHENSION — understand the generated code, keyword "comprehension". Heaviest = a written comprehension note. */
 export const ABSENCE_COMPREHENSION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_COMPREHENSION', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SESSION_QUALITY_PARAM_AXES,
@@ -36,11 +39,11 @@ export const ABSENCE_COMPREHENSION_RECORD: ContentTemplateRecord = {
     2: form("Review what was just built for comprehension: trace the main path and explain what each key piece does in your own words.", "A light comprehension pass: the main path traced and explained independently."),
     3: form("Review what was just built for comprehension: trace through the main execution path and explain what each significant function, class, and data structure does — independently, without relying on comments generated alongside the code.", "Comprehension of the main execution path hasn't been verified independently — generated code may carry plausible-but-unverified logic."),
     4: form("Audit your comprehension across what was just built: flag every part you could not explain to another developer without re-reading, and close each comprehension gap.", "Beyond the main path: every low-comprehension part flagged and closed."),
-    5: form("Reach full comprehension before moving on: trace each significant component end-to-end, explain its role and why it was chosen, and resolve every part accepted without understanding — so nothing ships that you could not explain.", "The deepest comprehension pass: every component understood and explainable, nothing accepted blindly."),
+    5: form("Write a comprehension note: trace each significant component end-to-end and document its role, the decisions behind it, and how the pieces fit together — so the understanding is durable and nothing accepted blindly survives.", "A durable comprehension note of how each component works and why."),
   },
 };
 
-/** ABSENCE_NO_PUSHBACK — critically evaluate AI output, keyword "question". Behavioural. */
+/** ABSENCE_NO_PUSHBACK — critically evaluate AI output, keyword "question". Heaviest = a written pushback note. */
 export const ABSENCE_NO_PUSHBACK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_NO_PUSHBACK', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SESSION_QUALITY_PARAM_AXES,
@@ -48,8 +51,8 @@ export const ABSENCE_NO_PUSHBACK_RECORD: ContentTemplateRecord = {
     1: form("Question the one AI suggestion in what was just built you accepted most readily — was it actually right?", "The lightest pushback: question the single most-readily-accepted suggestion."),
     2: form("Question the main decisions in what was just built: for each, was the reasoning verified or just accepted because it sounded right?", "A light pushback pass: the main decisions questioned for real reasoning."),
     3: form("Review the recent generated outputs used in what was just built: identify any decisions, implementations, or suggestions you accepted without explicitly verifying the reasoning, checking for alternatives, or questioning the assumptions embedded in the response.", "The independent-verification audit of recent generated output hasn't been done."),
-    4: form("Question every significant AI output in what was just built: surface the unstated assumptions, name the alternatives it skipped, and challenge whether each is the best fit — not just plausible.", "Beyond the main calls: every significant output questioned for assumptions and alternatives."),
-    5: form("Push back hard before accepting more: for each significant decision, argue the opposing case, demand the reasoning, and confirm it beats the alternatives on the merits — treat plausible-sounding output as unproven until you have questioned it.", "The strongest pushback: every decision adversarially questioned before it stands."),
+    4: form("Question every significant AI output and verify it independently: for each, state the assumption it rests on, find one alternative it skipped, and check the claim against the docs or a quick test rather than trusting the explanation.", "Beyond identifying gaps: every output questioned and checked against an independent source, not just its explanation."),
+    5: form("Write a pushback note: per significant decision, the assumption you questioned, the skipped alternative, the independent check you ran, and your verdict to keep or change it — so nothing stands on plausibility alone.", "A durable pushback note of the assumptions questioned and the keep-or-change verdicts."),
   },
 };
 
@@ -66,7 +69,7 @@ export const ABSENCE_CONTEXT_LOSS_RECORD: ContentTemplateRecord = {
   },
 };
 
-/** ABSENCE_DECISION_FATIGUE_PATTERN — break the acceptance streak with review, keyword "review". Behavioural. */
+/** ABSENCE_DECISION_FATIGUE_PATTERN — break the acceptance streak with review, keyword "review". Heaviest = a written review note. */
 export const ABSENCE_DECISION_FATIGUE_PATTERN_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_DECISION_FATIGUE_PATTERN', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SESSION_QUALITY_PARAM_AXES,
@@ -74,8 +77,8 @@ export const ABSENCE_DECISION_FATIGUE_PATTERN_RECORD: ContentTemplateRecord = {
     1: form("Review the most recent change in what was just built with fresh eyes — the acceptance streak may have let something slip.", "The lightest review: one fresh-eyes pass on the latest change after a long streak."),
     2: form("Review the recent AI responses critically: flag any assumption or edge case that slipped through while accepting quickly.", "A light review: the recent streak checked for slipped assumptions and edge cases."),
     3: form("Apply deliberate critical review to the most recent AI responses: identify any assumptions that have not been validated, logic that could fail under edge cases, and changes made without explicit verification.", "A critical review of the recent AI-acceptance streak hasn't been done — assumptions or edge-case failures may have slipped through unchallenged."),
-    4: form("Review the whole acceptance streak as a skeptical senior engineer: re-check the assumptions, the edge-case logic, and the unverified changes accepted while fatigued — flag everything you would not approve on a fresh look.", "Beyond one change: the full streak reviewed adversarially for fatigue-driven misses."),
-    5: form("Break the streak with a deliberate full review before accepting anything more: re-examine each significant change since the last careful check, verify the assumptions and edge cases, and reset to a critical-review rhythm — do not accept on momentum.", "The deepest fatigue-break: the streak fully re-reviewed and the critical rhythm reset."),
+    4: form("Review the whole acceptance streak and re-run the checks: re-test the changed paths, re-derive the key assumptions from scratch, and diff what was accepted against what you would write fresh — flag every divergence.", "Beyond a re-read: the streak reviewed by re-testing and re-deriving, with divergences from a fresh take flagged."),
+    5: form("Write a review note from the streak: the changes re-checked, the assumptions re-derived, the edge cases re-tested, and what needs fixing — then reset to a deliberate review-each-change rhythm rather than accepting on momentum.", "A durable review note of the re-checked streak, plus the review rhythm reset."),
   },
 };
 
