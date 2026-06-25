@@ -29,8 +29,8 @@ export const VERIFICATION_PARAM_AXES: Readonly<Record<string, ParamAxisTag>> = {
   project_framework: 'open',
 };
 
-const A3_SPINE = ['review-cadence', 'commit-cadence'];
-const A6_SPINE = ['commit-intent'];
+export const A3_SPINE = ['review-cadence', 'commit-cadence'];
+export const A6_SPINE = ['commit-intent'];
 
 /** BEHAVIOUR_TESTING — A3, keyword "test". */
 export const BEHAVIOUR_TESTING_RECORD: ContentTemplateRecord = {

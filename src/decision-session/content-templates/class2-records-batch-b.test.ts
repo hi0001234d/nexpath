@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { CLASS2_RECORDS_BATCH_B, CLASS2_RECORDS, VERIFICATION_PARAM_AXES } from './class2-records.js';
+import {
+  CLASS2_RECORDS_BATCH_B, CLASS2_RECORDS, VERIFICATION_PARAM_AXES, A3_SPINE, A6_SPINE,
+} from './class2-records.js';
 import { runBuildGate, checkTopicKeyword, checkOptionLengthBudget } from '../content-template-tooling.js';
 import { reviewRecord, checkVoice, checkEscalation } from '../content-authoring-rules.js';
 import {
@@ -37,6 +39,19 @@ const FROZEN: Record<string, DecisionContent> = {
   ABSENCE_DOCUMENTATION_BEFORE_ASK: ABSENCE_DOCUMENTATION_BEFORE_ASK_BEGINNER,
   ABSENCE_OUTPUT_VERIFICATION: ABSENCE_OUTPUT_VERIFICATION_BEGINNER,
 };
+
+/**
+ * Per-signalType author-declared practice-richness weights (the I2 monotonicity
+ * input — author intent, NOT a word-count proxy, which F4 forbids). Every column
+ * adds a named practice, so the intended shape is a strict 1→5 climb for all; the
+ * semantic judgment stays human-review (OUTSTANDING item 3).
+ */
+const PRACTICE_WEIGHTS: Record<string, readonly number[]> = Object.fromEntries(
+  Object.keys(KEYWORDS).map((s) => [s, [1, 2, 3, 4, 5]]),
+);
+
+/** The only two valid class-2 spines (A3 verification cadence / A6 maintainability). */
+const VALID_SPINES = [A3_SPINE, A6_SPINE];
 
 describe('class-2 — set completeness', () => {
   it('batch A + batch B = the 21 distinct class-2 signalTypes', () => {
@@ -79,16 +94,19 @@ describe('class-2 batch B — per-record full-depth gates', () => {
         expect(res.missingInWhyDesc.filter((l) => l !== 3)).toEqual([]);
       });
 
-      it('I2 — practice richness monotonic', () => {
-        expect(checkEscalation([1, 2, 3, 4, 5]).ok).toBe(true);
+      it('I2 — author-declared practice richness is monotonic for THIS record', () => {
+        expect(PRACTICE_WEIGHTS[r.signalType]).toBeDefined();                 // not vacuous: an undeclared record must fail
+        expect(checkEscalation(PRACTICE_WEIGHTS[r.signalType]).ok).toBe(true);
       });
 
-      it('declares grounded param axes (defined, non-empty, valid AR-1 tags) + a spine', () => {
+      it('declares grounded param axes (defined, non-empty, valid AR-1 tags) + a valid family spine', () => {
         expect(r.paramAxes).toBeDefined();                                    // not vacuous: a missing axes block must fail
         expect(Object.keys(r.paramAxes ?? {}).length).toBeGreaterThan(0);
         expect(r.paramAxes).toEqual(VERIFICATION_PARAM_AXES);                 // the class's grounded axes, pinned
         expect(Object.values(r.paramAxes ?? {}).every((t) => ['closed-ordinal', 'nominal', 'extensible', 'open'].includes(t))).toBe(true);
         expect((r.spine ?? []).length).toBeGreaterThan(0);
+        // spine must be EXACTLY one of the two family spines — catches a mis-assigned/typo'd thread
+        expect(VALID_SPINES.some((s) => JSON.stringify(s) === JSON.stringify(r.spine))).toBe(true);
       });
 
       it('AUTHORED options (1/2/4/5) fit the length budget; col-3 frozen exempt; col-1 ≤ col-5; voice-clean', () => {
