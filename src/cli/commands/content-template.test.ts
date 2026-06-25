@@ -39,4 +39,15 @@ describe('content-template CLI — validateRecordObject', () => {
     expect(res.review?.keywordRetention.ok).toBe(false);
     expect(res.review?.keywordRetention.missingLevels).toContain(1);
   });
+
+  it('surfaces voice + de-jargon violations in the record-level l2SafeguardLine (CA-bound)', () => {
+    const r = scaffoldRecord('X', { shape: true });
+    r.l2SafeguardRequired = true;
+    r.l2SafeguardLine = 'Have the AI add observability before deploying.'; // voice ("the AI") + jargon ("observability")
+    const res = validateRecordObject(r);
+    expect(res.voice?.ok).toBe(false);
+    expect(res.voice?.safeguardLine?.map((v) => v.pattern)).toContain('the AI');
+    expect(res.review?.ok).toBe(false);
+    expect(res.review?.safeguardLineJargon?.map((v) => v.term)).toContain('observability');
+  });
 });
