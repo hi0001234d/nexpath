@@ -47,6 +47,23 @@ const FILE_RE = /\b(files?|runbooks?|notes?|docs?|readme|plans?)\b/i;
 /** Confirm-seek markers (mirrors the safeguard gate's accepted markers). */
 const SAFEGUARD_RE = /\b(ask me|go-ahead|go ahead|confirm|check with me)\b/i;
 
+/**
+ * The record-SPECIFIC confirm-seek action per signal. Pins that each record's
+ * safeguard names ITS OWN sensitive action — catching a copy-paste mismatch (the
+ * secrets record accidentally carrying the deploy seek, etc.), the exact risk the
+ * content-sensitivity rule warns about.
+ */
+const CONFIRM_SEEK: Record<string, RegExp> = {
+  ABSENCE_OBSERVABILITY: /go-ahead before adding logging across the codebase/i,
+  ABSENCE_ROLLBACK_PLANNING: /go-ahead before running or scripting the rollback/i,
+  ABSENCE_DEPLOYMENT_PLANNING: /go-ahead before deploying or changing infrastructure/i,
+  ABSENCE_DEPENDENCY_MGMT: /go-ahead before installing, upgrading, or removing any dependency/i,
+  ABSENCE_ENV_AND_SECRETS: /go-ahead before moving, rotating, or deleting any credential/i,
+  ABSENCE_CI_PIPELINE: /go-ahead before changing the CI configuration or merge gates/i,
+  ABSENCE_RATE_LIMITING: /go-ahead before adding throttling to production request paths/i,
+  ABSENCE_DEPENDENCY_AUDIT_GAP: /go-ahead before installing this dependency/i,
+};
+
 describe('class-4 — set-level', () => {
   it('batch A (7 formal) + batch B (1 casual-only) = the 8 release/observability/infra signals', () => {
     expect(CLASS4_RECORDS_BATCH_A.length).toBe(7);
@@ -126,9 +143,13 @@ describe('class-4 — sensitive-action safeguard (every record is intrinsically 
         expect(r.l2SafeguardRequired).toBe(true);
       });
 
-      it('carries a confirm-seek in every authored why-desc (1/2/4/5); col-3 frozen exempt', () => {
+      it('carries the record-SPECIFIC confirm-seek in every authored why-desc (1/2/4/5); col-3 frozen exempt', () => {
+        const seek = CONFIRM_SEEK[r.signalType];
+        expect(seek).toBeDefined();
         for (const lvl of [1, 2, 4, 5] as const) {
-          expect(r.levelForms[lvl]!.cell.whyDesc).toMatch(SAFEGUARD_RE);
+          const whyDesc = r.levelForms[lvl]!.cell.whyDesc;
+          expect(whyDesc).toMatch(SAFEGUARD_RE);  // a confirm-seek marker is present
+          expect(whyDesc).toMatch(seek);          // and it names THIS record's action — no cross-record mismatch
         }
       });
 

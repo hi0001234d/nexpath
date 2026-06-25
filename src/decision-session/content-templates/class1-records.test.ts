@@ -132,6 +132,12 @@ describe('class-1 records — sensitive-action safeguard', () => {
   // so they are not flagged.
   const SENSITIVE = new Set(['REVIEW_TO_RELEASE', 'RELEASE_TO_FEEDBACK']);
   const SAFEGUARD_RE = /\b(ask me|go-ahead|go ahead|confirm)\b/i;
+  // The record-SPECIFIC confirm-seek action — pins that each safeguard names ITS OWN
+  // production action (no cross-record mismatch).
+  const CONFIRM_SEEK: Record<string, RegExp> = {
+    REVIEW_TO_RELEASE: /confirm with me before (any )?releas\w* to production/i,
+    RELEASE_TO_FEEDBACK: /ask me for go-ahead before changing production monitoring or alerting/i,
+  };
 
   for (const r of CLASS1_RECORDS) {
     it(`${r.signalType} is flagged sensitive iff it concerns a production action`, () => {
@@ -141,9 +147,11 @@ describe('class-1 records — sensitive-action safeguard', () => {
 
   for (const sig of SENSITIVE) {
     const rec = CLASS1_RECORDS.find((r) => r.signalType === sig)!;
-    it(`${sig} carries a confirm-seek in every authored why-desc (1/2/4/5); col-3 frozen exempt`, () => {
+    it(`${sig} carries its record-specific confirm-seek in every authored why-desc (1/2/4/5); col-3 frozen exempt`, () => {
+      const seek = CONFIRM_SEEK[sig];
       for (const lvl of [1, 2, 4, 5] as const) {
         expect(rec.levelForms[lvl]!.cell.whyDesc).toMatch(SAFEGUARD_RE);
+        expect(rec.levelForms[lvl]!.cell.whyDesc).toMatch(seek); // names THIS record's action
       }
       expect(checkL2Safeguard(rec).unguardedLevels.filter((l) => l !== 3)).toEqual([]);
     });
