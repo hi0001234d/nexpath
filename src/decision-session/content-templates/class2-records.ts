@@ -21,7 +21,7 @@ function form(option: string, whyDesc: string): LevelForm {
 }
 
 /** The param axes a verification why-desc grounds (same generic sources as class 1). */
-const VERIFICATION_PARAM_AXES: Readonly<Record<string, ParamAxisTag>> = {
+export const VERIFICATION_PARAM_AXES: Readonly<Record<string, ParamAxisTag>> = {
   workflow_pattern: 'extensible',
   decision_making_rhythm: 'closed-ordinal',
   explanation_learning_depth: 'closed-ordinal',

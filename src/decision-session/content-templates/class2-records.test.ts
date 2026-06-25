@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { CLASS2_RECORDS_BATCH_A, CLASS2_RECORDS } from './class2-records.js';
+import { CLASS2_RECORDS_BATCH_A, CLASS2_RECORDS, VERIFICATION_PARAM_AXES } from './class2-records.js';
 import {
   runBuildGate, checkTopicKeyword, checkOptionLengthBudget, coverageMetric, SHIPPED_CONTENT_TEMPLATES,
 } from '../content-template-tooling.js';
@@ -78,7 +78,10 @@ describe('class-2 batch A — per-record full-depth gates', () => {
         expect(checkEscalation([1, 2, 3, 4, 5]).ok).toBe(true);
       });
 
-      it('declares grounded param axes (valid AR-1 tags) + a spine', () => {
+      it('declares grounded param axes (defined, non-empty, valid AR-1 tags) + a spine', () => {
+        expect(r.paramAxes).toBeDefined();                                    // not vacuous: a missing axes block must fail
+        expect(Object.keys(r.paramAxes ?? {}).length).toBeGreaterThan(0);
+        expect(r.paramAxes).toEqual(VERIFICATION_PARAM_AXES);                 // the class's grounded axes, pinned
         expect(Object.values(r.paramAxes ?? {}).every((t) => ['closed-ordinal', 'nominal', 'extensible', 'open'].includes(t))).toBe(true);
         expect((r.spine ?? []).length).toBeGreaterThan(0);
       });
