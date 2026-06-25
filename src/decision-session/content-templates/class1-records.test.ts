@@ -101,6 +101,22 @@ describe('class-1 records — per-record review gates', () => {
   }
 });
 
+describe('class-1 records — F8 spine (stored annotation)', () => {
+  // Spine = the rhythm that intensifies across all columns. A1 (planning) and A3
+  // (verification) families carry one; A2/A5 do not (stage practices per column).
+  const SPINE_FAMILIES = new Set(['ARCHITECTURE_TO_TASKS', 'TASK_REVIEW', 'IMPLEMENTATION_TO_REVIEW']);
+
+  for (const r of CLASS1_RECORDS) {
+    it(`${r.signalType} declares a spine iff its family has one`, () => {
+      if (SPINE_FAMILIES.has(r.signalType)) {
+        expect(r.spine && r.spine.length).toBeGreaterThan(0);
+      } else {
+        expect(r.spine).toBeUndefined();
+      }
+    });
+  }
+});
+
 describe('class-1 records — L2 sensitive-action safeguard (substantive)', () => {
   // The L2 authoring gate is a keyword-proxy review aid (a stage keyword like
   // "release"/"production" trips it even on a pre-release CHECK). The substantive

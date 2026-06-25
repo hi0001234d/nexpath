@@ -64,6 +64,13 @@ describe('content-template-schema — validation (the single gate)', () => {
     expect(bad.ok).toBe(false);
     expect(bad.errors.join(' ')).toMatch(/paramAxes\.framework/);
   });
+
+  it('validates the optional F8 spine field (array of non-empty strings)', () => {
+    expect(validateContentTemplateRecord(validRecord({ spine: ['review-cadence'] })).ok).toBe(true);
+    expect(validateContentTemplateRecord(validRecord())).toEqual({ ok: true, errors: [] }); // omitted is fine
+    expect(validateContentTemplateRecord(validRecord({ spine: 'review' as never })).ok).toBe(false);
+    expect(validateContentTemplateRecord(validRecord({ spine: [''] as never })).ok).toBe(false);
+  });
 });
 
 describe('content-template-schema — two-phase compose (Phase-1 preserves {R...})', () => {

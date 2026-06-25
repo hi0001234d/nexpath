@@ -118,6 +118,7 @@ export const ARCHITECTURE_TO_TASKS_RECORD: ContentTemplateRecord = {
   schemaVersion: 1,
   slots: [],
   paramAxes: STAGE_TRANSITION_PARAM_AXES,
+  spine: ['small-supervised-loops'],
   levelForms: {
     1: form(
       'Name the single next task to start with before you begin coding.',
@@ -149,6 +150,7 @@ export const TASK_REVIEW_RECORD: ContentTemplateRecord = {
   schemaVersion: 1,
   slots: [],
   paramAxes: STAGE_TRANSITION_PARAM_AXES,
+  spine: ['review-cadence', 'commit-cadence'],
   levelForms: {
     1: form(
       'Quickly review what was just built — does it do what the task asked?',
@@ -180,6 +182,7 @@ export const IMPLEMENTATION_TO_REVIEW_RECORD: ContentTemplateRecord = {
   schemaVersion: 1,
   slots: [],
   paramAxes: STAGE_TRANSITION_PARAM_AXES,
+  spine: ['review-cadence', 'commit-cadence'],
   levelForms: {
     1: form(
       'Smoke-test what was built this phase before moving on.',

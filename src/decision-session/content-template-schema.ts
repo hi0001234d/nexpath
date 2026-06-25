@@ -71,6 +71,13 @@ export interface ContentTemplateRecord {
   slots: Slot[];
   /** AR-1 param-axis tags, keyed by axis name (each value is a closed AR-1 tag). */
   paramAxes?: Record<string, ParamAxisTag>;
+  /**
+   * F8 spine practices — the named rhythms that intensify across ALL maturity
+   * columns (a strengthening thread, not slotted to one cell), e.g. review/commit
+   * cadence. An authoring annotation (the engine does not consume it); optional +
+   * additive (§3.C optionality / §6.1 S9). Omitted when the family has no spine.
+   */
+  spine?: string[];
 }
 
 // ── Validation (the single schema gate) ───────────────────────────────────────
@@ -138,6 +145,13 @@ export function validateContentTemplateRecord(record: unknown): ValidationResult
           errors.push(`paramAxes.${axis}: tag must be one of ${PARAM_AXIS_TAGS.join('|')}`);
         }
       }
+    }
+  }
+
+  // spine — optional; when present, a non-empty array of named-practice strings.
+  if (r.spine !== undefined) {
+    if (!Array.isArray(r.spine) || r.spine.some((s) => typeof s !== 'string' || s === '')) {
+      errors.push('spine must be an array of non-empty strings when present');
     }
   }
 
