@@ -164,7 +164,7 @@ export const IMPLEMENTATION_TO_REVIEW_RECORD: ContentTemplateRecord = {
     ),
     4: form(
       'Run the full test suite for this phase, review the changes like a junior-dev pull request, and commit an atomic rollback checkpoint.',
-      'Beyond the standard run: a PR-grade review alongside the full suite and a rollback-point commit.',
+      'Beyond the standard run: a PR-grade review alongside the full test suite and a rollback-point commit.',
     ),
     5: form(
       'Run the full test suite backed by a written test file for this phase, add a check of dependencies and obvious security issues, and make the checks run before merging.',
@@ -224,11 +224,11 @@ export const RELEASE_TO_FEEDBACK_RECORD: ContentTemplateRecord = {
     ),
     4: form(
       'Audit the monitoring across error tracking, alert thresholds, and the signals that tell you the feature works (analytics events, error rates, user reports) — list what is in place and what is missing.',
-      'Beyond the standard check: the full signal set that tells you the feature is actually working.',
+      'Beyond the standard monitoring check: the full signal set that tells you the feature is actually working.',
     ),
     5: form(
       'Write a monitoring note: the signals that prove the feature works, alert thresholds, dashboards, and what to do when an alert fires.',
-      'The heaviest feedback gate: a durable note of signals, alerts, and the response when something fires.',
+      'The heaviest feedback gate: a durable monitoring note of signals, alerts, and the response when something fires.',
     ),
   },
 };
