@@ -146,6 +146,8 @@ export interface RecordReview {
   headlineOnly: ReturnType<typeof checkHeadlineOnly>;
   /** Per authored level: any de-jargon violations in the option + whyDesc. */
   jargonByLevel: Partial<Record<MaturityLevel, JargonViolation[]>>;
+  /** De-jargon violations in the record-level safeguard line (also CA-bound). */
+  safeguardLineJargon?: JargonViolation[];
 }
 
 /** Run all content-agnostic record checks. (Escalation needs caller-supplied weights.) */
@@ -161,12 +163,17 @@ export function reviewRecord(record: ContentTemplateRecord, keyword: string): Re
     const v = [...findJargonViolations(form.cell.option, { level }), ...findJargonViolations(form.cell.whyDesc, { level })];
     if (v.length) { jargonByLevel[level] = v; jargonClean = false; }
   }
+  // The record-level safeguard line is appended to the CA-bound why-desc → it must be
+  // de-jargon-clean too (no column context → no top-column concept exemption).
+  const safeguardLineJargon = record.l2SafeguardLine ? findJargonViolations(record.l2SafeguardLine) : [];
+  if (safeguardLineJargon.length) jargonClean = false;
   return {
     ok: keywordRetention.ok && coverage.ok && headlineOnly.ok && jargonClean,
     keywordRetention,
     coverage,
     headlineOnly,
     jargonByLevel,
+    ...(safeguardLineJargon.length ? { safeguardLineJargon } : {}),
   };
 }
 

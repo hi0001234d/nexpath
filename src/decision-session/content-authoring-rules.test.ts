@@ -165,6 +165,15 @@ describe('content-authoring-rules — aggregate review', () => {
     expect(review.jargonByLevel[1]?.map((v) => v.term)).toEqual(['observability']);
     expect(review.keywordRetention.ok).toBe(true); // keyword lives in the option, which is clean
   });
+
+  it('detects jargon in the record-level l2SafeguardLine (it is appended to the CA-bound why-desc)', () => {
+    const clean = { ...rec({ 1: form('plan it') }), l2SafeguardLine: 'Ask me for go-ahead before deploying.' };
+    expect(reviewRecord(clean, 'plan').ok).toBe(true);
+    const dirty = { ...rec({ 1: form('plan it') }), l2SafeguardLine: 'Ask me before you add observability.' };
+    const review = reviewRecord(dirty, 'plan');
+    expect(review.ok).toBe(false);
+    expect(review.safeguardLineJargon?.map((v) => v.term)).toEqual(['observability']);
+  });
 });
 
 describe('content-authoring-rules — Layer-1 voice gate', () => {
