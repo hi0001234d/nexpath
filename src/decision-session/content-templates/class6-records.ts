@@ -63,8 +63,8 @@ export const ABSENCE_IDEA_CONSTRAINT_CHECK_RECORD: ContentTemplateRecord = {
     1: form("Name the one thing this project will explicitly NOT do — its clearest constraint.", "The lightest constraint step: one explicit non-goal named."),
     2: form("List the main constraints and non-goals: what is out of scope and what will not be built.", "A light constraint pass: the main non-goals and limits listed."),
     3: form("Define the constraints and non-goals for this project: what is explicitly out of scope for the first version, what functionality will not be built, and what technical constraints limit the solution space?", "Non-goals and constraints for this project haven't been stated — without explicit boundaries, scope creeps during implementation."),
-    4: form("Define the constraints thoroughly: every out-of-scope item, the functionality not being built, and the technical constraints that limit the solution space.", "Beyond the main non-goals: the full constraint set including technical limits."),
-    5: form("Write a constraints note: the explicit non-goals, the out-of-scope items, and the technical constraints — the boundary the build holds to.", "A durable constraints note of non-goals and technical limits."),
+    4: form("Stress the constraints: for each non-goal and technical constraint, note what would force a revisit and check it against the defined scope for conflicts — so the boundaries hold under pressure.", "Beyond listing non-goals: each constraint's revisit-trigger and scope-conflict checked."),
+    5: form("Write a constraints note: the explicit non-goals, the out-of-scope items, the technical constraints, and for each what would force a revisit — the boundary the build holds to.", "A durable constraints note of non-goals, limits, and their revisit-triggers."),
   },
 };
 
@@ -76,8 +76,8 @@ export const ABSENCE_IDEA_USER_DEFINITION_RECORD: ContentTemplateRecord = {
     1: form("Name the primary user this project is for in one line.", "The lightest user step: the primary user named."),
     2: form("Sketch the target user: who they are, their context, and the problem this solves for them.", "A light user pass: the primary user and their core problem."),
     3: form("Define the target user for this project precisely: who is the primary user, what is their context and skill level, what problem do they have that this project solves, and what does success look like from their perspective?", "The target user for this project hasn't been defined — without a primary-user anchor, design decisions drift on assumptions."),
-    4: form("Define the target user thoroughly: the primary user, their context and skill level, the problem they have, and what success looks like from their perspective.", "Beyond a sketch: the full user definition including their success criteria."),
-    5: form("Write a target-user note: the primary user, their context and skill, the problem this solves, and success from their view — the anchor design decisions hold to.", "A durable target-user note anchoring design to a real user."),
+    4: form("Pressure-test the target-user definition: name one secondary or deliberately-excluded user, surface the riskiest assumption about the primary user, and decide how to validate it — so the user anchor is tested, not just asserted.", "Beyond defining the user: the definition pressure-tested with a riskiest assumption to validate."),
+    5: form("Write a target-user note: the primary user with context and skill, the problem and success from their view, the secondary or excluded users, and the assumptions to validate — the tested anchor design decisions hold to.", "A durable target-user note: the tested primary user, edge users, and assumptions to validate."),
   },
 };
 
@@ -89,8 +89,8 @@ export const ABSENCE_TASK_ORDERING_RECORD: ContentTemplateRecord = {
     1: form("Identify the one task that blocks the most others and order it first.", "The lightest ordering step: the top blocking task placed first."),
     2: form("Order the main tasks by dependency: what blocks what, and a rough sequence.", "A light ordering pass: the main dependencies and a rough sequence."),
     3: form("Order the tasks for this project by dependency and priority: identify which tasks block others, which can be done in parallel, and establish the sequence that minimises rework and delivers the earliest working state.", "The task list hasn't been ordered by dependency and priority — work risks proceeding on tasks that block later progress or invite rework."),
-    4: form("Order the full task list by dependency and priority: the blocking tasks, the parallel-eligible ones, and the sequence that minimises rework.", "Beyond the main dependencies: the full task list ordered to minimise rework."),
-    5: form("Write the ordered task plan: the dependency order, what can run in parallel, and the sequence to the earliest working state — the plan the build follows.", "A durable ordered task plan minimising rework toward an early working state."),
+    4: form("Beyond the dependency order, identify the critical path and the first end-to-end slice that proves the design, and order the tasks so that proving slice lands earliest.", "Beyond ordering by dependency: the critical path and earliest design-proving slice ordered first."),
+    5: form("Write the ordered task plan: the dependency order, the critical path, what can run in parallel, and the earliest end-to-end slice that proves the design — the plan the build follows.", "A durable ordered task plan with the critical path and earliest proving slice."),
   },
 };
 
@@ -115,8 +115,8 @@ export const ABSENCE_TASK_DEFINITION_OF_DONE_RECORD: ContentTemplateRecord = {
     1: form("State the completion criterion for the current task: what must be true for it to be complete?", "The lightest done-check: the current task's completion criterion stated."),
     2: form("Define completion criteria for the main tasks: what output must exist and be verified for each to be complete.", "A light pass: the main tasks' completion criteria defined."),
     3: form("Define the completion criteria for each task in this project: for every task, state what must be true for the task to be considered complete — what output exists, what has been verified, and what has not been left in an ambiguous or partially done state.", "Definition of Done hasn't been written per task — without explicit completion criteria, 'done' is ambiguous and verification cannot anchor."),
-    4: form("Define completion criteria for every task: the output that must exist, what must be verified, and that nothing is left ambiguous or partially complete.", "Beyond the main tasks: a completion definition for every task, no ambiguity."),
-    5: form("Write a definition-of-done note: per task the completion criteria — output exists, verified, nothing left partial — so a task being complete is unambiguous and verifiable.", "A durable note of per-task completion criteria, completeness made unambiguous."),
+    4: form("Make each task's completion criteria observable: for every task, state how completion is confirmed without re-reading the code — a check, output, or test anyone could verify.", "Beyond writing criteria: each task's completion made independently observable."),
+    5: form("Write a definition-of-done note: per task the completion criteria stated as observable checks — output exists, verified, nothing left partial — so completion is unambiguous and anyone can confirm it.", "A durable note of per-task observable completion criteria."),
   },
 };
 
@@ -128,8 +128,8 @@ export const ABSENCE_USER_FEEDBACK_REVIEW_RECORD: ContentTemplateRecord = {
     1: form("Pick the one piece of feedback that recurs most and note the pattern it points to.", "The lightest feedback step: the most-recurring feedback item and its pattern."),
     2: form("Review the main feedback: group it by theme and surface the top recurring complaints.", "A light feedback pass: the main themes and top recurring complaints."),
     3: form("Review the feedback received for this project systematically: collect all available feedback, categorize it by theme or feature area, and identify the recurring complaints, requests, and points of confusion that appear across multiple users.", "User feedback hasn't been reviewed systematically — recurring complaints, blockers, and pattern signals risk being missed without categorisation."),
-    4: form("Review all the feedback systematically: collect every piece, categorise by theme and feature area, and surface the recurring complaints, requests, and confusion points.", "Beyond the top items: all feedback categorised with recurring patterns surfaced."),
-    5: form("Write a feedback-review note: the categorised feedback, the recurring complaints and requests, and the patterns across users — the input the next iteration plans from.", "A durable feedback-review note of categorised patterns and requests."),
+    4: form("Go beyond categorising the feedback: weight each theme by frequency and severity, and separate the symptoms reported from the root causes behind them.", "Beyond categorising: the feedback weighted by frequency and severity, symptoms separated from root causes."),
+    5: form("Write a feedback-review note: the categorised feedback weighted by frequency and severity, the symptoms-versus-root-causes, and the recurring patterns — the input the next iteration plans from.", "A durable feedback-review note of weighted themes and root causes."),
   },
 };
 
@@ -154,8 +154,8 @@ export const ABSENCE_SCOPE_CREEP_RECORD: ContentTemplateRecord = {
     1: form("Name the one thing built that was not in the original scope, and decide: keep, defer, or cut?", "The lightest scope-creep check: one unplanned addition decided keep/defer/cut."),
     2: form("Compare what was built to the original scope: list the additions not planned and decide each keep/defer/cut.", "A light scope pass: the unplanned additions listed and decided."),
     3: form("Audit what was just built against the original scope for this iteration: list what is complete, what is still in progress, and what has been added that was not in the original plan — and decide whether each addition stays in scope, gets deferred, or gets cut.", "What was built hasn't been audited against the original scope — additions that crept in haven't been resolved keep / defer / cut."),
-    4: form("Audit the full build against the original scope: what is complete, in progress, and added-beyond-plan — and resolve every unplanned addition keep, defer, or cut.", "Beyond the obvious additions: the full build audited against scope, each addition resolved."),
-    5: form("Write a scope-audit note: the planned work done, the unplanned additions, and the keep/defer/cut decision for each — so scope stays explicit, not crept.", "A durable scope-audit note of additions and their keep/defer/cut calls."),
+    4: form("Beyond auditing the scope additions, cost each kept addition against the iteration's remaining budget, and defer or cut whatever the budget cannot absorb.", "Beyond keep/defer/cut: each kept scope addition costed against the remaining budget."),
+    5: form("Write a scope-audit note: the planned work done, the unplanned additions with a keep/defer/cut decision and a cost for each — so scope stays explicit and within budget, not crept.", "A durable scope-audit note of additions, decisions, and their cost."),
   },
 };
 
@@ -167,8 +167,8 @@ export const ABSENCE_FEATURE_SCOPE_RECORD: ContentTemplateRecord = {
     1: form("State in one line what this feature does and the one condition for calling it done.", "The lightest feature-readiness step: what the feature does and its done condition."),
     2: form("Sketch the feature's scope: what it does, the main out-of-scope items, and the acceptance conditions.", "A light feature pass: the feature's scope and acceptance conditions sketched."),
     3: form("Define the scope and acceptance criteria for this feature before implementation continues: what is the feature doing, what are the explicit out-of-scope items, and what conditions must be true for the feature to be accepted as done? This is the Definition of Ready for sprint planning.", "Definition of Ready / acceptance criteria for this feature haven't been written — implementation is proceeding without a written target."),
-    4: form("Define the feature thoroughly before continuing: what it does, the explicit out-of-scope items, and every condition that must be true for the feature to be accepted as done.", "Beyond a sketch: the full feature definition-of-ready and acceptance criteria."),
-    5: form("Write a feature-readiness note: what the feature does, the out-of-scope items, and the acceptance criteria — the written target implementation is built against.", "A durable feature-readiness note of the feature's scope and acceptance criteria."),
+    4: form("Beyond defining the feature, confirm it is ready to build: each acceptance criterion is testable, and every dependency the feature needs is already in place — a true Definition of Ready.", "Beyond the feature definition: acceptance criteria testable and dependencies confirmed ready."),
+    5: form("Write a feature-readiness note: what the feature does, the out-of-scope items, the testable acceptance criteria, and the confirmed dependencies — the written, ready target implementation is built against.", "A durable feature-readiness note of scope, testable acceptance criteria, and ready dependencies."),
   },
 };
 
