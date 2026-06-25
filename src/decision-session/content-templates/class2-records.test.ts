@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { CLASS2_RECORDS_BATCH_A, CLASS2_RECORDS } from './class2-records.js';
-import { runBuildGate, checkTopicKeyword, checkOptionLengthBudget } from '../content-template-tooling.js';
+import {
+  runBuildGate, checkTopicKeyword, checkOptionLengthBudget, coverageMetric, SHIPPED_CONTENT_TEMPLATES,
+} from '../content-template-tooling.js';
 import { reviewRecord, checkVoice, checkEscalation, checkL2Safeguard } from '../content-authoring-rules.js';
 import {
   BEHAVIOUR_TESTING, ABSENCE_TEST_CREATION, ABSENCE_REGRESSION_CHECK, ABSENCE_SECURITY_CHECK,
@@ -113,5 +118,52 @@ describe('class-2 — L2 sensitive-action safeguard (whole-class review, batch A
     expect(col5).toMatch(/write a failure-analysis note/i);                          // the ACTION is "write a note"
     expect(col5).toMatch(/production failure modes/i);                               // the trigger noun is analytical
     expect(col5).not.toMatch(/\b(deploy|roll ?out|ship to production|push to production)\b/i); // not a prod ACTION
+  });
+});
+
+describe('class-2 — partition parity + registration (against the source of truth, not self-defined keys)', () => {
+  // The canonical class-2 membership is the why-help partition map (the same
+  // source `content-split.test.ts` uses), NOT the keyword table in this file —
+  // so a missing / extra / mistyped record signalType is caught against the
+  // real partition, closing the self-referential hole in the set-level checks.
+  const HERE = dirname(fileURLToPath(import.meta.url));
+  function canonicalClass2SignalTypes(): string[] {
+    const src = readFileSync(join(HERE, '..', 'why-help-by-signal-type.ts'), 'utf-8');
+    const re = /(\w+):\s*WHY_HELP_PER_CLASS\.(\w+)/g;
+    const out: string[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src)) !== null) if (m[2] === 'class2_verification_quality') out.push(m[1]);
+    return out;
+  }
+
+  const canonical = canonicalClass2SignalTypes();
+  const recordSigs = CLASS2_RECORDS.map((r) => r.signalType);
+
+  it('the partition assigns exactly 21 signalTypes to class 2 (matches content-split EXPECTED)', () => {
+    expect(canonical.length).toBe(21);
+    expect(new Set(canonical).size).toBe(21);
+  });
+
+  it('the shipped records cover the canonical 21 exactly — none missing, none extra, no duplicates', () => {
+    const cs = new Set(canonical);
+    const rs = new Set(recordSigs);
+    expect(canonical.filter((s) => !rs.has(s))).toEqual([]);          // nothing in the partition lacks a record
+    expect(recordSigs.filter((s) => !cs.has(s))).toEqual([]);          // no record outside the partition
+    expect(recordSigs.filter((s, i) => recordSigs.indexOf(s) !== i)).toEqual([]); // no dup record
+    expect(recordSigs.length).toBe(21);
+  });
+
+  it('every class-2 record is registered in the live shipped registry', () => {
+    const shipped = new Set(SHIPPED_CONTENT_TEMPLATES.map((r) => r.signalType));
+    expect(recordSigs.filter((s) => !shipped.has(s))).toEqual([]);
+  });
+
+  it('T3-metric (soft coverage) — the whole class is all-5-columns, zero thin', () => {
+    const cov = coverageMetric(CLASS2_RECORDS);
+    expect(cov.total).toBe(21);
+    expect(cov.allLevels).toBe(21);
+    expect(cov.thin).toBe(0);
+    expect(cov.allLevelsPct).toBe(1);   // ≥ 0.60–0.70 plan floor, in fact 100%
+    expect(cov.thinPct).toBe(0);        // < 0.50 plan ceiling
   });
 });
