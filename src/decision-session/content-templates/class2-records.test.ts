@@ -190,3 +190,22 @@ describe('class-2 — partition parity + registration (against the source of tru
     expect(cov.thinPct).toBe(0);        // < 0.50 plan ceiling
   });
 });
+
+describe('class-2 — record↔runtime boundary (stored cells are bare core lines)', () => {
+  // The engine adds the runtime grammar — {R4_OPEN}/{R5_INJECT}/{R4_CLOSE} + {{slots}}
+  // — at compose/runtime time; a STORED cell must not already contain it or the
+  // runtime pass would double-wrap. F3 anchors col-3's whyDesc as a SUBSTRING of a
+  // descBase that DOES contain {R...}, so a mistaken full-descBase paste would slip
+  // past F3 — this pins the boundary so that class of bug fails here.
+  const PLACEHOLDER = /\{[R{]/; // matches "{R..." (R4/R5 bookends) and "{{" (slots)
+  for (const r of CLASS2_RECORDS) {
+    it(`${r.signalType} — no {R...} / {{...}} token in any stored option or whyDesc`, () => {
+      for (const lvl of [1, 2, 3, 4, 5] as const) {
+        const cell = r.levelForms[lvl]?.cell;
+        if (!cell) continue;
+        expect(cell.option).not.toMatch(PLACEHOLDER);
+        expect(cell.whyDesc).not.toMatch(PLACEHOLDER);
+      }
+    });
+  }
+});
