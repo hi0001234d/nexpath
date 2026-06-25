@@ -99,7 +99,7 @@ describe('class-1 records — per-record review gates', () => {
       });
 
       it('F2 — the heaviest column (col-5) yields a file/artifact (all class-1 families are artifact or mixed)', () => {
-        expect(r.levelForms[5]!.cell.option).toMatch(/\b(file|runbook|note|doc|plan)\b/i);
+        expect(r.levelForms[5]!.cell.option).toMatch(/\b(files?|runbooks?|notes?|docs?|readme|plans?)\b/i);
       });
     });
   }

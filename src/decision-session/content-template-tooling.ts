@@ -25,6 +25,7 @@ import {
   type MaturityLevel,
 } from './content-template-schema.js';
 import { CLASS1_RECORDS } from './content-templates/class1-records.js';
+import { CLASS2_RECORDS_BATCH_A } from './content-templates/class2-records.js';
 
 /**
  * The in-source shipped-preset records the engine resolves at the `shipped` tier.
@@ -32,6 +33,7 @@ import { CLASS1_RECORDS } from './content-templates/class1-records.js';
  */
 export const SHIPPED_CONTENT_TEMPLATES: readonly ContentTemplateRecord[] = [
   ...CLASS1_RECORDS,
+  ...CLASS2_RECORDS_BATCH_A,
 ];
 
 // ── Set schema validation (one gate over the whole registry) ───────────────────
