@@ -189,3 +189,157 @@ export const CLASS2_RECORDS_BATCH_A: readonly ContentTemplateRecord[] = [
   ABSENCE_ACCESSIBILITY_RECORD,
   ABSENCE_DATA_VALIDATION_RECORD,
 ];
+
+// ── BATCH B — the 10 casual-/beginner-only signalTypes ─────────────────────────
+// These have no formal-base set, so col-3 is anchored on the frozen casual/beginner
+// L1[0] (often a principle-cited, longer line — so the length budget exempts col-3).
+
+/** ABSENCE_CODE_DOCUMENTATION_GAP — A6, keyword "comment". */
+export const ABSENCE_CODE_DOCUMENTATION_GAP_RECORD: ContentTemplateRecord = {
+  signalType: 'ABSENCE_CODE_DOCUMENTATION_GAP', source: 'shipped', schemaVersion: 1, slots: [],
+  paramAxes: VERIFICATION_PARAM_AXES, spine: A6_SPINE,
+  levelForms: {
+    1: form('Add a one-line comment on the least-obvious thing just written — the WHY, not the what.', 'One WHY-comment on the least-obvious code is the lightest documentation step.'),
+    2: form('Add WHY-comments on the non-obvious logic just written — the reasoning or edge case each handles.', 'A light pass: WHY-comments capturing the reasoning on the non-obvious logic.'),
+    3: form("Clean Code principle: 'Don't use comments to explain WHAT the code is doing — use them to explain WHY you did it.' For the non-obvious logic just added — add a comment explaining the reasoning, constraint, or edge case it handles. Future maintainers (including you) will need this context.", "The WHY behind non-obvious code just written hasn't been captured in comments."),
+    4: form('Comment the non-obvious logic thoroughly: a WHY-comment per block (reasoning, constraint, edge case) plus docstrings on the public functions.', 'Beyond inline notes: a WHY-comment per non-obvious block plus docstrings on the public surface.'),
+    5: form('Write the doc comments into the code: a WHY-comment on every non-obvious block and a docstring (params, returns, edge behaviour) on each public function — kept with the code.', 'The doc comments and docstrings written into the code so the WHY survives in the file.'),
+  },
+};
+
+/** ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT — A6, keyword "debt". */
+export const ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_RECORD: ContentTemplateRecord = {
+  signalType: 'ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT', source: 'shipped', schemaVersion: 1, slots: [],
+  paramAxes: VERIFICATION_PARAM_AXES, spine: A6_SPINE,
+  levelForms: {
+    1: form('Tag the shortcut just taken with a TODO so the debt is visible.', 'One TODO on the shortcut is the lightest way to make the debt visible.'),
+    2: form('Tag the shortcut as debt: a TODO/FIXME naming what to fix and why it was deferred.', 'A light pass: the shortcut tagged as debt with what-to-fix and why-deferred.'),
+    3: form("Martin Fowler's Technical Debt Quadrant: 'Prudent Deliberate' debt — acknowledged and added to the backlog — is acceptable. 'Reckless Deliberate' — shortcuts taken without acknowledgment — compounds invisibly. Tag any shortcut with a TODO or FIXME comment before moving on.", "The just-taken shortcut hasn't been tagged as debt — invisible accumulation risk."),
+    4: form('Acknowledge the debt properly: a TODO/FIXME per shortcut (what to fix, why deferred, the risk) and a backlog item so it is tracked, not lost.', 'Beyond a bare tag: each debt item described and tracked on the backlog, not just marked.'),
+    5: form('Write a tech-debt note: each shortcut taken, what it defers, the risk, and the fix plan — tracked as backlog items so the debt stays prudent, not reckless.', 'A durable tech-debt note tracking each shortcut, its risk, and the fix plan.'),
+  },
+};
+
+/** ABSENCE_TEST_DEPTH_CHECK — A3, keyword "test". */
+export const ABSENCE_TEST_DEPTH_CHECK_RECORD: ContentTemplateRecord = {
+  signalType: 'ABSENCE_TEST_DEPTH_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
+  paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
+  levelForms: {
+    1: form('Add one test beyond the happy path — an edge case or an error case.', 'One non-happy-path test is the lightest depth check beyond what exists.'),
+    2: form('Add an edge-case test and an error-path test for what was just built.', 'A light depth pass: one edge-case and one error-path test added.'),
+    3: form("Testing pyramid (Mike Cohn, 2009): tests must cover happy paths, edge cases, and negative scenarios. 'Start with happy path tests, then add error cases that verify graceful failure handling.' Happy-path-only tests provide false confidence — everything looks green but real-world conditions break the code.", "Test coverage beyond happy-path (edge cases + negative scenarios) hasn't been added."),
+    4: form('Add tests across the depth categories: boundary values (empty, null, max, min), error paths, and negative cases (invalid input, unexpected state) — at least one each.', 'Beyond a couple cases: a test per depth category — boundary, error, negative.'),
+    5: form('Write the depth tests into the test file: boundary, error-path, and negative cases per decision branch, so coverage is real and the cases run before merging.', 'A durable test file covering boundary, error, and negative branches — real depth, not happy-path-only.'),
+  },
+};
+
+/** ABSENCE_SECURITY_REVIEW_GAP — A3, keyword "security". */
+export const ABSENCE_SECURITY_REVIEW_GAP_RECORD: ContentTemplateRecord = {
+  signalType: 'ABSENCE_SECURITY_REVIEW_GAP', source: 'shipped', schemaVersion: 1, slots: [],
+  paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
+  levelForms: {
+    1: form('Do a quick security check on the surface just touched — is the input validated?', 'A quick security spot-check is the lightest pass: the most obvious unvalidated input.'),
+    2: form('Do a light security pass on what was just touched: input validation and access checks.', 'A light security pass: input validation plus access checks on the touched surface.'),
+    3: form("OWASP Secure by Design: security must be designed in, not bolted on. For what was just implemented — what security surfaces were introduced? Input validation (are all inputs sanitized?), authorization (is access properly gated?), injection prevention (SQL, command, path traversal). These checks belong during implementation, not as a post-implementation audit. Shift-left: add the check when the surface is created.", "Security review (input validation / authorization / injection prevention) of the just-touched surfaces hasn't been done."),
+    4: form('Audit the security of the touched surfaces thoroughly: input validation, authorization gating, and injection safety (SQL, command, path) per surface, ranked by severity.', 'Beyond a spot-check: a per-surface, severity-ranked security audit of what was touched.'),
+    5: form('Write a security review note: the surfaces, the findings by severity, a dependency check, and the fixes — and make these security checks part of the pre-merge gate.', 'A durable security review note with severity-ranked findings and pre-merge gating.'),
+  },
+};
+
+/** ABSENCE_ERROR_HANDLING_COVERAGE — A3, keyword "error". */
+export const ABSENCE_ERROR_HANDLING_COVERAGE_RECORD: ContentTemplateRecord = {
+  signalType: 'ABSENCE_ERROR_HANDLING_COVERAGE', source: 'shipped', schemaVersion: 1, slots: [],
+  paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
+  levelForms: {
+    1: form('Handle the most likely error in what was just built — a failed call or bad input.', 'Handling the single most-likely error is the lightest coverage step.'),
+    2: form('Add explicit error handling for the main failure cases in what was just built.', 'A light pass: the main error cases handled rather than left to break.'),
+    3: form("McConnell's defensive programming (Code Complete): 'Defensive programming mandates covering all failure paths, not just happy paths.' For what was just implemented — what are the error states? What happens when an external call fails? What happens when input is malformed? What happens when a database write fails? Each needs explicit handling: error state, fallback behavior, user-facing message. Code that only works on the happy path is incomplete by construction standards.", "Error-path coverage (external failures / malformed input / DB / edge states) for what was just built hasn't been verified."),
+    4: form('Cover the error paths by category: external failures, input validation failures, and edge states — each with explicit handling, a fallback, and a safe message.', 'Beyond the main cases: every error category handled with a fallback and a safe message.'),
+    5: form('Write an error-coverage note plus the handling: the failure modes per category, the fallback behaviour, and tests for the critical error paths — kept with the feature.', 'A durable error-coverage note of failure modes, fallbacks, and the critical-path tests.'),
+  },
+};
+
+/** ABSENCE_REFACTORING_CHECKPOINT — A6, keyword "refactor". */
+export const ABSENCE_REFACTORING_CHECKPOINT_RECORD: ContentTemplateRecord = {
+  signalType: 'ABSENCE_REFACTORING_CHECKPOINT', source: 'shipped', schemaVersion: 1, slots: [],
+  paramAxes: VERIFICATION_PARAM_AXES, spine: A6_SPINE,
+  levelForms: {
+    1: form('Before extending the messy code, do one quick refactor — extract or rename the worst part.', 'One small refactor before extending is the lightest checkpoint against compounding mess.'),
+    2: form('Do a refactor pass on the messy code before adding to it: extract repeated logic and rename the confusing parts.', 'A light refactor checkpoint: extract and rename before the feature lands on the mess.'),
+    3: form("Boy Scout Rule (Clean Code): 'Leave the code cleaner than you found it.' Before adding a feature to code that was already acknowledged as messy or complex — do a refactoring pass first. The alternative is adding features on top of complexity, which makes the next change harder, not the same difficulty. The refactoring pass before extending is the investment that prevents compound complexity debt.", "A pre-extension refactor pass on the existing messy code hasn't been done."),
+    4: form('Refactor thoroughly before extending: extract repeated logic into named helpers, simplify the nested conditionals, and rename anything that needed a comment — then add the feature.', 'Beyond one fix: the extract / simplify / rename refactor pass done before the feature lands.'),
+    5: form('Write a refactor note for the cleanup before extending: the extractions, simplifications, and renames done — committed as a checkpoint so the feature lands on clean ground.', 'A durable refactor-checkpoint note of the cleanup committed before the feature was added.'),
+  },
+};
+
+/** ABSENCE_SELF_REVIEW_HABIT — A3, keyword "review". */
+export const ABSENCE_SELF_REVIEW_HABIT_RECORD: ContentTemplateRecord = {
+  signalType: 'ABSENCE_SELF_REVIEW_HABIT', source: 'shipped', schemaVersion: 1, slots: [],
+  paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
+  levelForms: {
+    1: form('Review the diff of what was just built before moving on.', 'One diff-readback review is the lightest catch after a long run.'),
+    2: form('Review the diff for drift and gaps: does it match intent, and is anything missing?', 'A light review: the diff read back for intent-match and obvious gaps.'),
+    3: form("Google Engineering Practices: 'The author is the first reviewer.' Before submitting or continuing, read back through the diff: does the code do what was intended? Are there naming inconsistencies? Is anything more complex than it needs to be? Are tests missing? The self-review pass catches what was obvious in the context of writing but invisible in isolation — logic errors, naming drift, gaps in coverage.", "The diff-readback self-review hasn't been done."),
+    4: form('Review the whole run end-to-end: intent match, naming and structure coherence, redundancy or conflicts between early and late decisions, and coverage gaps.', 'Beyond a quick read: a whole-run review for coherence, conflicts, and coverage gaps.'),
+    5: form('Write a self-review note: the diff findings (drift, gaps, inconsistencies), the fixes made, and a commit checkpoint — so the review is a habit, not a one-off.', 'A durable self-review note of the findings and fixes, committed as a checkpoint.'),
+  },
+};
+
+/** ABSENCE_PERFORMANCE_AWARENESS — A3, keyword "performance". */
+export const ABSENCE_PERFORMANCE_AWARENESS_RECORD: ContentTemplateRecord = {
+  signalType: 'ABSENCE_PERFORMANCE_AWARENESS', source: 'shipped', schemaVersion: 1, slots: [],
+  paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
+  levelForms: {
+    1: form('Check what was just built for one obvious performance problem — an N+1 or an unbounded fetch.', 'A quick check for one obvious performance problem is the lightest awareness step.'),
+    2: form('Do a light performance check: N+1 queries and unbounded fetches in what was just built.', 'A light performance pass: the N+1 and unbounded-fetch patterns checked.'),
+    3: form("Knuth (1974): 'We should not pass up our opportunities in that critical 3%.' The full quote is not an excuse to avoid performance — it's a prioritization rule: ignore the 97% of noncritical paths, but act on the critical 3%. For what was just built — is this in the critical 3%? A full-table fetch, N+1 in a loop, or unthrottled list render qualifies. The check here is awareness, not micro-optimization: is there an obvious performance problem worth addressing before it ships?", "Critical-3%-path awareness check (N+1 / full-table fetch / unthrottled render) hasn't been done."),
+    4: form('Audit the data-heavy paths for performance: N+1 queries, unbounded fetches, and expensive unthrottled renders, plus behaviour at 10x and 100x load.', 'Beyond one issue: the data-heavy patterns audited for performance at projected load.'),
+    5: form('Write a performance note: the data-heavy paths, the findings (N+1, unbounded fetch, expensive render), the load projections, and the fixes — kept with the feature.', 'A durable performance note of the heavy paths, findings, and fixes before ship.'),
+  },
+};
+
+/** ABSENCE_DOCUMENTATION_BEFORE_ASK — A6, keyword "docs". */
+export const ABSENCE_DOCUMENTATION_BEFORE_ASK_RECORD: ContentTemplateRecord = {
+  signalType: 'ABSENCE_DOCUMENTATION_BEFORE_ASK', source: 'shipped', schemaVersion: 1, slots: [],
+  paramAxes: VERIFICATION_PARAM_AXES, spine: A6_SPINE,
+  levelForms: {
+    1: form('Check the official docs for this before asking, and tell me what you find.', 'A quick docs check before asking is the lightest step against a guessed answer.'),
+    2: form('Look up the official docs for this, share what you find, then ask what is still unclear.', 'A light pass: the docs checked and what-was-found shared before the question.'),
+    3: form("1. Before asking me this question — check the official documentation for this library or API.\n2. Share with me: what did you find, and is the answer there?\n3. Then ask me what you still couldn't find in the docs.", "An official-docs check before asking hasn't been shared."),
+    4: form('Search the official docs thoroughly for this — the relevant guide, API reference, and examples — share what you found, and name exactly what the docs do not cover.', 'Beyond a quick look: the docs searched across guide and reference, with the gap named.'),
+    5: form('Write a short note from the docs: the relevant doc links, what they answer, and the specific gap that still needs me — so the docs are the first source, not the last.', 'A durable note of the doc sources checked and the remaining gap — docs first, ask second.'),
+  },
+};
+
+/** ABSENCE_OUTPUT_VERIFICATION — A3, keyword "run". */
+export const ABSENCE_OUTPUT_VERIFICATION_RECORD: ContentTemplateRecord = {
+  signalType: 'ABSENCE_OUTPUT_VERIFICATION', source: 'shipped', schemaVersion: 1, slots: [],
+  paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
+  levelForms: {
+    1: form('Actually run what was just built and tell me what happens.', 'Running it once is the lightest check that the generated code actually works.'),
+    2: form('Run what was just built on the main path and share whether it behaves as expected.', 'A light pass: the main path run and the actual-vs-expected behaviour shared.'),
+    3: form("1. Before moving on from what was just built — actually run it or try it.\n2. Share with me: does it behave the way you expected?\n3. If anything looks off, tell me what happened and we'll look at it together.", "Whether the generated code actually works hasn't been verified."),
+    4: form('Run what was just built across the main and edge cases, compare each result to what was expected, and report anything that behaves differently.', 'Beyond one run: the main and edge cases run and compared against expectations.'),
+    5: form('Write a quick verification note: the cases you run, the expected vs actual result for each, and anything off — so "it works" is something you ran, not assumed.', 'A durable note of what was run and the expected-vs-actual results — verified, not assumed.'),
+  },
+};
+
+/** Class-2 BATCH B — the 10 casual-/beginner-only verification-quality records. */
+export const CLASS2_RECORDS_BATCH_B: readonly ContentTemplateRecord[] = [
+  ABSENCE_CODE_DOCUMENTATION_GAP_RECORD,
+  ABSENCE_TECHNICAL_DEBT_ACKNOWLEDGMENT_RECORD,
+  ABSENCE_TEST_DEPTH_CHECK_RECORD,
+  ABSENCE_SECURITY_REVIEW_GAP_RECORD,
+  ABSENCE_ERROR_HANDLING_COVERAGE_RECORD,
+  ABSENCE_REFACTORING_CHECKPOINT_RECORD,
+  ABSENCE_SELF_REVIEW_HABIT_RECORD,
+  ABSENCE_PERFORMANCE_AWARENESS_RECORD,
+  ABSENCE_DOCUMENTATION_BEFORE_ASK_RECORD,
+  ABSENCE_OUTPUT_VERIFICATION_RECORD,
+];
+
+/** All class-2 verification-quality records (batch A + batch B = the 21 signalTypes). */
+export const CLASS2_RECORDS: readonly ContentTemplateRecord[] = [
+  ...CLASS2_RECORDS_BATCH_A,
+  ...CLASS2_RECORDS_BATCH_B,
+];
