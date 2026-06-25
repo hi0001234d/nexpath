@@ -15,6 +15,15 @@
  * which carries the confirm-seek. Register (casual/formal) is handled by the Pass-1
  * vocab adaptation; the structurally-divergent `_BEGINNER` register-override is a
  * separate follow-up, not folded into these base records.
+ *
+ * F8 stage-vs-spine (authoring thread, documented here — it is an authoring
+ * property, not stored record data, so there is no schema field for it):
+ *  - ARCHITECTURE_TO_TASKS (A1): spine = small-supervised-loops (session-sized work
+ *    intensifying from "one next task" → "atomic tasks + milestones");
+ *  - TASK_REVIEW + IMPLEMENTATION_TO_REVIEW (A3): spine = the review + commit cadence
+ *    (V2/V3) intensifying from a quick look → PR-grade review + rollback commits;
+ *  - IDEA_TO_PRD / PRD_TO_ARCHITECTURE (A2) and REVIEW_TO_RELEASE / RELEASE_TO_FEEDBACK
+ *    (A5): no family spine — escalation is stage practices per column.
  */
 
 import type { ContentTemplateRecord, LevelForm, ParamAxisTag } from '../content-template-schema.js';
