@@ -160,6 +160,33 @@ describe('class-4 — sensitive-action safeguard (every record is intrinsically 
   }
 });
 
+describe('class-4 — sensitivity parity vs the frozen source of truth', () => {
+  // The frozen DecisionContent is the authoritative "intrinsically sensitive" marker
+  // (the l2SafeguardRequired flag). Every signal the frozen source flags MUST have its
+  // content-template record flagged too — catches a frozen-sensitive signal whose
+  // record was authored without the flag (a silent safeguard hole). The records may
+  // flag MORE than the frozen set (utmost-delicacy extras, e.g. dependency-audit-gap).
+  const HERE = dirname(fileURLToPath(import.meta.url));
+  function frozenFlaggedSignals(): Set<string> {
+    const src = readFileSync(join(HERE, 'class4-release-observability-infra.ts'), 'utf-8');
+    const blocks = src.split(/export const \w+: DecisionContent =/).slice(1);
+    const flagged = new Set<string>();
+    for (const b of blocks) {
+      const body = b.split('export const')[0]; // this block only, not the next
+      const m = body.match(/signalType:\s*"(\w+)"/);
+      if (m && /l2SafeguardRequired:\s*true/.test(body)) flagged.add(m[1]);
+    }
+    return flagged;
+  }
+
+  it('every frozen-flagged class-4 signal has its content-template record flagged', () => {
+    const frozenFlagged = frozenFlaggedSignals();
+    expect(frozenFlagged.size).toBeGreaterThan(0); // not vacuous: the frozen source must flag some
+    const recordFlagged = new Set(CLASS4_RECORDS.filter((r) => r.l2SafeguardRequired).map((r) => r.signalType));
+    expect([...frozenFlagged].filter((s) => !recordFlagged.has(s))).toEqual([]);
+  });
+});
+
 describe('class-4 — record↔runtime boundary (stored cells are bare core lines)', () => {
   const PLACEHOLDER = /\{[R{]/; // runtime bookends "{R..." and slots "{{" — added at runtime, never stored
   for (const r of CLASS4_RECORDS) {
