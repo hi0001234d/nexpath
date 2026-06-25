@@ -102,7 +102,7 @@ export const ABSENCE_IDEA_TO_SPEC_BRIDGE_RECORD: ContentTemplateRecord = {
     1: form("Before building, write one line of spec: what does this feature do?", "The lightest spec step: a one-line spec of what the feature does before building."),
     2: form("Sketch a quick spec before building: what it does, what it doesn't, and how it fits what's there.", "A light spec pass: what it does, what it doesn't, and where it fits."),
     3: form("Spec-driven development principle: a feature idea is not a spec. Before building — write a one-paragraph description: what does this feature do? What does it NOT do? How does it fit into what already exists? The spec becomes the source of truth; code is its expression.", "The idea hasn't been spec'd before building — directed building gives way to creative wandering."),
-    4: form("Turn the idea into a real spec before building: the behaviour it must show, the explicit non-goals, and how it connects to the existing pieces — concrete enough to build against.", "Beyond a one-liner: a spec with behaviour, non-goals, and fit, concrete enough to build from."),
+    4: form("Turn the idea into a spec with acceptance criteria: the behaviour it must show, the explicit non-goals, and at least one concrete pass/fail scenario that says when it's correctly built.", "Beyond a description: a spec with at least one concrete pass/fail acceptance scenario."),
     5: form("Write the spec into a short doc: what the feature does, what it does NOT do, and how it fits the existing system — the source of truth the code is then written against.", "A durable spec doc: behaviour, non-goals, and fit as the source of truth."),
   },
 };
@@ -197,7 +197,7 @@ export const ABSENCE_ERROR_UNDERSTANDING_RECORD: ContentTemplateRecord = {
     1: form("Before asking me to fix this error, read the error message once and tell me what it says.", "The lightest step: the error message read and put in plain words before a fix."),
     2: form("Read the error message, then tell me what you think went wrong and where.", "A light pass: the error read and a first guess at the cause shared."),
     3: form("1. Before asking to fix this error — read the error message carefully.\n2. Share with me: what do you think it's saying went wrong?\n3. Then tell me: does your explanation match where the problem is in the code?", "The error message hasn't been read and explained — fixing without understanding leads to repeating the same class of error."),
-    4: form("Read the error closely: the exact message, the line it points to, and whether your explanation of it matches what the code there actually does.", "Beyond reading it: the error message matched against the actual code at the line it names."),
+    4: form("Read the whole error, not just the last line: the message, the exact file and line it points to, and what changed just before it appeared — then name which of those is the actual cause.", "Beyond a first read: the full error traced to a file, line, and recent change, and the real cause named."),
     5: form("Make read-the-error-first a habit: every time, read the error message and explain it before any fix — so fixes target the real cause, not a guess.", "A standing habit: the error read and understood before any fix is attempted."),
   },
 };
@@ -210,7 +210,7 @@ export const ABSENCE_REQUIREMENT_CLARITY_RECORD: ContentTemplateRecord = {
     1: form("Before I build this, tell me in one line what it should do when it's working.", "The lightest step: what working looks like stated in one line before building."),
     2: form("Tell me what it should do, what working looks like, and one thing it should not do.", "A light pass: the goal, the working result, and one non-goal described."),
     3: form("1. Before I build this — tell me specifically what you want it to do.\n2. Share with me: what does it look like when it's working correctly?\n3. Then tell me: what should NOT happen — is there anything it should avoid doing?", "What 'working' looks like hasn't been described — building proceeds without a target."),
-    4: form("Pin the target before building: what it does, exactly what 'working' looks like in concrete terms, and what it must avoid — specific enough that we'd both agree when it's met.", "Beyond a sketch: the working result pinned concretely enough to agree it's met."),
+    4: form("Pin the target with an example: what it does, what 'working' looks like shown as one concrete input and the result it should give, and what it must avoid — so done is checkable, not a feeling.", "Beyond a description: the working result shown as a concrete input-and-result example."),
     5: form("Write a short requirements note: what it should do, what 'working' looks like in concrete terms, and what it must avoid — the target we build and check against.", "A durable requirements note of the working target and what to avoid."),
   },
 };
@@ -223,7 +223,7 @@ export const ABSENCE_COPY_PASTE_AWARENESS_RECORD: ContentTemplateRecord = {
     1: form("Before adding the generated code, read through it once.", "The lightest step: the generated code read once before it's added."),
     2: form("Read the generated code and tell me, in plain words, what the main parts do.", "A light pass: the generated code read and its main parts explained."),
     3: form("1. Before adding the generated code to your project — read through it.\n2. Share with me: what does each part do in plain words?\n3. If there's a part you're not sure about, point it out and we'll go through it together before it goes in.", "Generated code hasn't been read for understanding — using code one can't explain creates future-debugging debt."),
-    4: form("Read every part before it goes in: what each piece does, and flag any part you can't explain so we go through it before using it.", "Beyond a skim: each part read and the unexplained pieces flagged before use."),
+    4: form("Before it goes in, read every part and actively check the one you're least sure of — confirm it does what you think by reading it closely or running it — and only then keep any of it.", "Beyond reading: the least-sure part actively confirmed, not just read."),
     5: form("Make read-before-use the rule: never add generated code you can't explain — read it, understand each part, and only then keep it.", "A standing rule: generated code is read and understood before it's ever kept."),
   },
 };
@@ -275,7 +275,7 @@ export const ABSENCE_SINGLE_RESPONSIBILITY_PROMPTING_RECORD: ContentTemplateReco
     1: form("Send just one thing in this message instead of several at once.", "The lightest step: a single ask in the message instead of many."),
     2: form("Pick the most important thing and put only that in this message; we'll do the next one after.", "A light pass: the top item sent alone in the message, the rest deferred."),
     3: form("1. When you send several things at once, the results get messy and hard to check. Try focusing on just one thing per message.\n2. What's the most important thing to do right now? Start with that — then we'll move to the next.", "Single-responsibility prompting hasn't been applied — multiple things asked in one message make responses harder to verify and harder to fix."),
-    4: form("Keep each message to one clear ask: state the single thing you want, and start a fresh message for the next — so each result is easy to check.", "Beyond picking one: each ask isolated to its own message so results stay checkable."),
+    4: form("If a task has several parts, break it into a short numbered list and send one part per message, checking each result before sending the next.", "Beyond one ask: a multi-part task split into one-per-message steps, checked between each."),
     5: form("Make one-ask-per-message the habit: send a single focused request each time and move to the next only once it's done — so nothing gets muddled or skipped.", "A standing habit: one focused request per message, taken in sequence."),
   },
 };
