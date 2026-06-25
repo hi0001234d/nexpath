@@ -151,7 +151,7 @@ export const ABSENCE_RETENTION_MECHANISM_CHECK_RECORD: ContentTemplateRecord = {
     2: form("Sketch the retention angle: why this feature pulls a user back, and how one use makes the next more likely.", "A light retention pass: the return reason and the repeat-use loop sketched."),
     3: form("Features that acquire users but don't retain them have diminishing returns forever. Every significant feature should have an answer to: why does a user return to this feature after the first use, and how does using it once make the next use more likely? Without a retention angle, you're building acquisition features, not engagement features.", "Retention mechanic for this feature hasn't been named — feature acquires users but doesn't bring them back."),
     4: form("Pick the one trigger that reliably brings users back — a notification, saved state, a streak — and design that single retention loop well, then name the return-rate it should move; one real hook beats three vague ones.", "Beyond a reason: one retention trigger chosen and tied to the return-rate it should move."),
-    5: form("Write a retention note: the return trigger, the repeat value, and the loop that compounds use — so the feature keeps users, not just attracts them once.", "A durable retention note of the return trigger and the compounding loop."),
+    5: form("Write a retention note: the return trigger, the repeat value, the loop that compounds use, and the return-rate it should move — so the feature keeps users, not just attracts them once.", "A durable retention note of the return trigger, the compounding loop, and the return-rate."),
   },
 };
 
@@ -177,7 +177,7 @@ export const ABSENCE_HYPOTHESIS_BEFORE_BUILD_RECORD: ContentTemplateRecord = {
     2: form("State the feature hypothesis: the change, the expected outcome, the user, and the signal you'd watch for.", "A light pass: the hypothesis's change, outcome, and watched signal stated."),
     3: form("Write the experiment hypothesis for this feature in the form: \"We believe [feature/change] will cause [observable outcome] for [user type]. We will know this is true when [signal] appears within [timeframe].\" If any bracket cannot be filled, propose what data or decision would resolve it before continuing.", "Falsifiable hypothesis for this feature hasn't been written — experiment outcome can't be evaluated."),
     4: form("Add the falsification condition to the hypothesis: beyond the success signal, state the result that would prove it WRONG and the threshold at which you'd kill or pivot — so the experiment can actually fail, not just confirm.", "Beyond filling brackets: the hypothesis given a falsification condition and a kill threshold."),
-    5: form("Write the hypothesis note: the believed change, the observable outcome, the user, the proof signal, and the timeframe — the testable claim the build is then evaluated against.", "A durable hypothesis note: the falsifiable claim and its proof signal."),
+    5: form("Write the hypothesis note: the believed change, the observable outcome, the user, the proof signal, the timeframe, and the result that would disprove it — the testable claim the build is then evaluated against.", "A durable hypothesis note: the falsifiable claim, its proof signal, and its disproof result."),
   },
 };
 
@@ -203,7 +203,7 @@ export const ABSENCE_NORTH_STAR_ALIGNMENT_RECORD: ContentTemplateRecord = {
     2: form("Connect this feature to the north star: state the direct move or the downstream feature it enables that moves it.", "A light pass: the feature's connection to the north star stated."),
     3: form("Trace this feature to the product's north star metric in one or two steps: state how it moves the metric directly, or how it enables a downstream feature that does. If no traceable connection exists, propose deferring or removing it.", "North-star connection for this feature hasn't been traced — risk of scope inflation untethered from the core metric."),
     4: form("Quantify the north-star link: estimate how much this feature should move the metric and over what horizon, and rank it against the other candidates by that expected movement — so traceable-but-tiny contributions are caught too.", "Beyond tracing a link: the north-star movement quantified and ranked against alternatives."),
-    5: form("Write a north-star note: the feature, the metric it moves, the path (direct or enabling), and the strength of the link — so scope stays tethered to the core metric.", "A durable north-star note tracing the feature to the core metric."),
+    5: form("Write a north-star note: the feature, the metric it moves, the path (direct or enabling), the expected movement, and how it ranks against alternatives — so scope stays tethered to the core metric.", "A durable north-star note of the feature's expected movement and its rank against alternatives."),
   },
 };
 
@@ -270,7 +270,7 @@ export const ABSENCE_LAUNCH_STRATEGY_ABSENCE_RECORD: ContentTemplateRecord = {
     2: form("Sketch a minimum launch plan: the channel, a draft announcement, and who should see it.", "A light launch pass: the channel, draft post, and audience sketched."),
     3: form("Shipping without a launch plan means launching into silence. Good products do not attract users by themselves — distribution is a discipline that must be planned and executed, not discovered. The minimum viable launch strategy: name one specific channel where you will announce this product, write the post before launch day, and identify who in your network or community should see it. That's a launch plan.", "Launch plan hasn't been drafted — shipping without distribution risks launching into silence."),
     4: form("Sequence the launch to execute: order the channels, write each post, line up the specific people to notify on launch day, and decide what happens if the first channel underperforms — an executable plan, not a list.", "Beyond a sketch: the launch sequenced across channels with a fallback if one underperforms."),
-    5: form("Write a launch note: the announcement channels, the drafted posts, the network to reach, and the launch-day sequence — the distribution plan that keeps the ship from launching into silence.", "A durable launch note of channels, drafted posts, and the launch sequence."),
+    5: form("Write a launch note: the announcement channels in order, the drafted posts, the network to reach, the launch-day sequence, and the fallback if a channel underperforms — the distribution plan that keeps the ship from launching into silence.", "A durable launch note of ordered channels, drafted posts, the launch sequence, and a fallback."),
   },
 };
 
@@ -322,7 +322,7 @@ export const ABSENCE_MONETIZATION_PATH_CLARITY_RECORD: ContentTemplateRecord = {
     2: form("State this feature's monetization link: direct revenue, or a retention/LTV path — not just 'makes it better'.", "A light pass: the feature's monetization link stated, not assumed."),
     3: form("Building features without monetization awareness builds a free product by default — regardless of intent. Every significant feature should have an articulated answer to \"how does this connect to the revenue model?\" It doesn't need to be direct: \"this is a retention feature that reduces churn, which improves LTV\" is a valid connection. \"This makes the product better\" is not — it's the answer that leads to technically excellent, commercially unsustainable products.", "Monetization connection for this feature hasn't been articulated — risk of building free product by default."),
     4: form("Trace the monetization to a specific lever: name which revenue lever this feature moves (new conversions, retention, expansion) and roughly how much, and if it moves none, decide build-now versus defer.", "Beyond a link: the monetization tied to a specific revenue lever and a build-or-defer call."),
-    5: form("Write a monetization note: the feature, its path to revenue (direct or via retention/LTV), and the strength of that link — so the product earns by design, not free by default.", "A durable monetization note tracing the feature to revenue."),
+    5: form("Write a monetization note: the feature, the specific revenue lever it moves (direct or via retention/LTV), the rough magnitude, and the build-or-defer call — so the product earns by design, not free by default.", "A durable monetization note of the revenue lever, magnitude, and build-or-defer call."),
   },
 };
 
@@ -365,7 +365,7 @@ export const ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_RECORD: ContentTemplateRecor
     2: form("Draft the main acceptance criteria for this story as checkable conditions before any implementation prompt.", "A light pass: the main acceptance criteria drafted as checkable conditions."),
     3: form("Write the acceptance criteria for this story before any implementation prompt: state each criterion as an independently verifiable condition, in Given/When/Then or \"this is done when [X]\" form. List at least three covering the primary scenario and the most likely edge case.", "Acceptance criteria for this story haven't been defined — risk of building the wrong thing correctly."),
     4: form("Pair each acceptance criterion with how it's checked — the test or manual step that proves it — and add at least one negative criterion (what must NOT happen), so the criteria drive verification, not just description.", "Beyond verifiable wording: each acceptance criterion paired with a check and a negative case."),
-    5: form("Write the acceptance-criteria note onto the story: each criterion as a verifiable condition across primary and edge scenarios — the target implementation is built and checked against.", "A durable acceptance-criteria note: verifiable conditions across primary and edge cases."),
+    5: form("Write the acceptance-criteria note onto the story: each criterion as a verifiable condition with the check that proves it, plus at least one negative case, across primary and edge scenarios — the target implementation is built and checked against.", "A durable acceptance-criteria note: verifiable conditions, their checks, and a negative case."),
   },
 };
 
@@ -380,7 +380,7 @@ export const ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_RECORD: ContentTemplateRecord =
     2: form("List the stakeholders with a stake in this feature and the alignment each needs — sign-off, review, consult.", "A light pass: the stakeholders and the alignment touchpoint each needs listed."),
     3: form("Identify every stakeholder with a legitimate opinion on this feature, name the alignment touchpoint required for each (sign-off, design review, security review, eng-lead consult), and confirm each is completed or scheduled before implementation begins. Document the date and outcome.", "Stakeholder alignment for this feature hasn't been confirmed — risk of rework on rejection at demo."),
     4: form("Order the alignment by risk: identify the stakeholder most likely to block or reject, align that one before sinking build time, and surface any conflicting stakeholder positions to resolve before implementation.", "Beyond a touchpoint list: stakeholder alignment ordered by who's likeliest to block, conflicts surfaced."),
-    5: form("Write a stakeholder-alignment note: each stakeholder, their required touchpoint, the date, and the outcome — so implementation starts on confirmed alignment, not assumed agreement.", "A durable stakeholder-alignment note of touchpoints, dates, and outcomes."),
+    5: form("Write a stakeholder-alignment note: each stakeholder in risk order, their required touchpoint, the date, the outcome, and any conflicts to resolve — so implementation starts on confirmed alignment, not assumed agreement.", "A durable stakeholder-alignment note of risk-ordered touchpoints, dates, outcomes, and conflicts."),
   },
 };
 
@@ -393,7 +393,7 @@ export const ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_RECORD: ContentTemplateRecord =
     2: form("Scan the requirements for ambiguous quality words and replace each with a measurable target.", "A light pass: the ambiguous quality words found and made measurable."),
     3: form("Audit this feature's requirements for ambiguity: identify every quality-attribute placeholder (\"better\", \"faster\", \"improved\", \"user-friendly\") and replace each with a measurable target — name the metric, the measurement method, and the success threshold.", "Ambiguous quality attributes haven't been converted to measurable targets — risk of unevaluable requirement satisfaction."),
     4: form("Pin each de-ambiguated target to a source and an owner: name where the metric is measured and who agrees the threshold is right, so the once-ambiguous requirement can't be quietly reinterpreted later.", "Beyond a number: each de-ambiguated target tied to a measurement source and an owner."),
-    5: form("Write a requirements note: each previously-ambiguous attribute with its metric, measurement method, and success threshold — so requirement satisfaction is evaluable, not arguable.", "A durable requirements note converting ambiguity to measurable targets."),
+    5: form("Write a requirements note: each previously-ambiguous attribute with its metric, measurement method, success threshold, measurement source, and the owner who agreed it — so requirement satisfaction is evaluable, not arguable.", "A durable requirements note converting ambiguity to measurable targets with a source and owner."),
   },
 };
 
@@ -406,7 +406,7 @@ export const ABSENCE_DEPENDENCY_MAPPING_RECORD: ContentTemplateRecord = {
     2: form("Sketch this work's dependencies: what it waits on upstream and what waits on it downstream.", "A light pass: the upstream and downstream dependencies sketched."),
     3: form("Dependency identification is a foundational project management discipline (WBS, critical path method). Before any work begins: what does this work depend on (upstream), and what depends on this work completing (downstream)? Unmapped upstream dependencies create blocked work discovered mid-sprint; unmapped downstream dependencies create integration surprises at the worst time — when another team has built against an unstated assumption.", "Upstream/downstream dependencies for this work haven't been mapped — risk of mid-sprint blocked work or integration surprises."),
     4: form("Turn the dependency map into an order: clear the upstream blocker on the critical path first, and tell each downstream consumer the assumption it's relying on before it builds against it.", "Beyond mapping: the dependency order set by critical path and downstream consumers warned."),
-    5: form("Write a dependency note: the upstream blockers and downstream consumers for this work, and the assumptions each side relies on — so blocked work and integration surprises are seen early.", "A durable dependency note of upstream blockers and downstream consumers."),
+    5: form("Write a dependency note: the upstream blockers in critical-path order and the downstream consumers told of the assumptions they rely on — so blocked work and integration surprises are seen early.", "A durable dependency note of critical-path-ordered blockers and notified downstream consumers."),
   },
 };
 
@@ -447,7 +447,7 @@ export const ABSENCE_SUCCESS_METRIC_DEFINITION_RECORD: ContentTemplateRecord = {
     2: form("Define the success metric for this feature: the measure, where it's tracked, and the rough target.", "A light pass: the success metric, its source, and target defined."),
     3: form("Define the success metric for this feature before development: name the metric, the measurement method, the success threshold, and the measurement timeline — e.g. \"feature adoption rate, tracked via feature_used analytics event, threshold 30% of active users within 30 days.\" Add to the sprint item.", "Success metric for this feature hasn't been defined — risk of unevaluable post-ship outcome."),
     4: form("Add a baseline and a guardrail to the metric: record the current value the threshold is measured from, and name one metric that must NOT get worse — so success is a real change, not a number with no reference.", "Beyond specifying the metric: a baseline and a guardrail metric added."),
-    5: form("Write a success-metric note onto the item: the metric, how it's measured, the threshold, and the timeline — the yardstick the feature's post-ship outcome is judged by.", "A durable success-metric note of measure, threshold, and timeline."),
+    5: form("Write a success-metric note onto the item: the metric, how it's measured, the baseline, the threshold, the timeline, and the guardrail that must not regress — the yardstick the feature's post-ship outcome is judged by.", "A durable success-metric note of baseline, measure, threshold, timeline, and guardrail."),
   },
 };
 
@@ -460,7 +460,7 @@ export const ABSENCE_PRIORITY_JUSTIFICATION_RECORD: ContentTemplateRecord = {
     2: form("Give this item's priority rationale: the value, the urgency, and what it's chosen over.", "A light pass: the priority rationale's value, urgency, and trade-off stated."),
     3: form("State the priority justification for this sprint item in one sentence before development begins: name the user or business value, the urgency or time criticality, the risk reduction or strategic alignment — and the next-highest-priority alternative being deferred to make room for this item.", "Priority rationale for this item hasn't been articulated — risk of silent drift toward easiest work."),
     4: form("Make the priority comparative: score this item and the top deferred alternative on the same axes — value, urgency, risk — and state the cost of NOT doing this now, so it's a defended trade-off.", "Beyond a rationale: the priority scored against the deferred alternative with a cost-of-delay."),
-    5: form("Write a priority-justification note onto the item: the value, urgency, risk reduction, and the alternative deferred — so sprint order follows reasoning, not the path of least resistance.", "A durable priority-justification note of value, urgency, and the deferred alternative."),
+    5: form("Write a priority-justification note onto the item: the value, urgency, and risk reduction scored against the deferred alternative, plus the cost of not doing it now — so sprint order follows reasoning, not the path of least resistance.", "A durable priority-justification note scoring value and urgency against the deferred alternative."),
   },
 };
 
@@ -473,7 +473,7 @@ export const ABSENCE_USER_STORY_COMPLETENESS_RECORD: ContentTemplateRecord = {
     2: form("Draft the user story for this item — the user, the capability, the outcome — and check the 'so that' holds.", "A light pass: the user story drafted with a real 'so that' outcome."),
     3: form("Rewrite this work item in Connextra format before implementation: \"As a [specific user type], I want [the capability this feature enables], so that [the value or outcome delivered].\" If the \"so that\" cannot be completed, that is the most important thing to resolve — propose what stakeholder conversation closes it.", "User story who/what/why hasn't been completed — risk of technically-correct artifact missing the outcome."),
     4: form("Sharpen the user story: check the user is a specific type not 'the user', split it if it carries more than one 'so that', and attach the one acceptance check that proves the outcome was delivered.", "Beyond who/what/why: the user story made specific, single-outcome, and acceptance-checked."),
-    5: form("Write the user-story note onto the item: the specific user, the capability, and the outcome it delivers — so the build targets the value, not just a technically-correct artifact.", "A durable user-story note of the user, capability, and outcome."),
+    5: form("Write the user-story note onto the item: the specific user, the capability, the outcome it delivers, and the acceptance check that proves it — so the build targets the value, not just a technically-correct artifact.", "A durable user-story note of the user, capability, outcome, and its acceptance check."),
   },
 };
 
@@ -486,7 +486,7 @@ export const ABSENCE_RISK_FLAG_RECORD: ContentTemplateRecord = {
     2: form("List the main risks for this decision by category and rate each on likelihood and impact.", "A light pass: the main risks listed and rated by likelihood and impact."),
     3: form("Identify the risks for this decision before proceeding: for each risk category (technical, scope, stakeholder, dependency, timeline), name the specific risk, estimate likelihood (H/M/L) and impact (H/M/L), and state the mitigation or acceptance decision. Document each in the sprint item.", "Risks for this decision haven't been identified — assumptions remain unmonitored uncertainties."),
     4: form("Rank and own the top risks: order them by likelihood times impact, and for the top few name who watches each and the early-warning sign that it's materialising — so the worst risks are monitored, not just listed.", "Beyond a rated list: the top risks ranked, owned, and given early-warning signs."),
-    5: form("Write a risk note onto the item: each risk by category, its likelihood and impact, and the mitigation or acceptance — so assumptions become monitored risks, not silent uncertainties.", "A durable risk note of categorised risks and their mitigation decisions."),
+    5: form("Write a risk note onto the item: each risk by category with its likelihood and impact, ranked by the product of the two, an owner and early-warning sign for the top ones, and the mitigation or acceptance — so assumptions become monitored risks, not silent uncertainties.", "A durable risk note of ranked, owned risks with early-warning signs and mitigation decisions."),
   },
 };
 
@@ -499,7 +499,7 @@ export const ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_RECORD: ContentTemplateRecor
     2: form("Assess the scope change's impact: what it displaces and whether the sprint end date moves.", "A light impact pass: the displacement and date effect assessed."),
     3: form("Before accepting this mid-sprint scope change, complete the four-point impact assessment: (1) what existing in-progress item is displaced, (2) does the sprint end date shift, (3) which downstream teams have a date dependency on what this change affects, (4) what is explicitly removed or deferred to make room. Document all four answers in the sprint item before the change enters scope.", "Sprint-impact assessment for this scope change hasn't been completed — risk of sprint failure from un-traded-off expansion."),
     4: form("Turn the impact assessment into a decision: present the trade-off — take it and slip the date, or hold scope and defer it — to whoever owns the sprint, and record their call, so the change is explicit, not absorbed.", "Beyond the four points: the scope-change impact turned into a recorded owner decision."),
-    5: form("Write a scope-change impact note onto the item: the displaced work, the date effect, the downstream dependencies, and the trade-off made — so mid-sprint changes are traded off, not absorbed silently.", "A durable scope-change impact note of displacement, dates, and trade-offs."),
+    5: form("Write a scope-change impact note onto the item: the displaced work, the date effect, the downstream dependencies, the trade-off made, and the sprint-owner's recorded decision — so mid-sprint changes are traded off, not absorbed silently.", "A durable scope-change impact note of displacement, dates, trade-offs, and the owner's decision."),
   },
 };
 
@@ -512,7 +512,7 @@ export const ABSENCE_RETROSPECTIVE_HABIT_RECORD: ContentTemplateRecord = {
     2: form("Hold a short retrospective: what went well, what didn't, and one change to try next sprint.", "A light retro pass: the went-well, went-wrong, and one change named."),
     3: form("Run the sprint retrospective now before the next sprint begins: list what went well (preserve and reinforce), what did not go well (process problems without blame), and one or two specific, actionable process changes to try in the next sprint. Document the chosen action items.", "Sprint retrospective hasn't been run before the next cycle — process problems repeat without action items."),
     4: form("Close the loop on retro actions: assign an owner and a date to each change, and start by checking whether last retro's actions actually happened — so improvements compound instead of resetting each sprint.", "Beyond listing changes: each retro action owned and dated, and the previous retro's actions reviewed."),
-    5: form("Write a retrospective note: what went well, what didn't, and the chosen action items for the next sprint — so process problems get fixed instead of repeating.", "A durable retrospective note of what to change and the action items."),
+    5: form("Write a retrospective note: what went well, what didn't, and the chosen action items for the next sprint, each with an owner and a date — so process problems get fixed instead of repeating.", "A durable retrospective note of what to change and the owned, dated action items."),
   },
 };
 
