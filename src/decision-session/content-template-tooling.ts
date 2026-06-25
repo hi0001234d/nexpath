@@ -31,6 +31,7 @@ import { CLASS4_RECORDS } from './content-templates/class4-records.js';
 import { CLASS5_RECORDS } from './content-templates/class5-records.js';
 import { CLASS6_RECORDS } from './content-templates/class6-records.js';
 import { CLASS7_RECORDS } from './content-templates/class7-records.js';
+import { CLASS8_RECORDS } from './content-templates/class8-records.js';
 
 /**
  * The in-source shipped-preset records the engine resolves at the `shipped` tier.
@@ -44,6 +45,7 @@ export const SHIPPED_CONTENT_TEMPLATES: readonly ContentTemplateRecord[] = [
   ...CLASS5_RECORDS,
   ...CLASS6_RECORDS,
   ...CLASS7_RECORDS,
+  ...CLASS8_RECORDS,
 ];
 
 // ── Set schema validation (one gate over the whole registry) ───────────────────
