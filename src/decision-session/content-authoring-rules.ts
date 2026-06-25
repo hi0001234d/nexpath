@@ -236,17 +236,21 @@ export interface L2SafeguardReview {
 
 /**
  * Layer-2 gate: when an authored form's option proposes a sensitive action (an L2
- * trigger), its why-desc MUST carry a confirm-before-acting safeguard sentence.
+ * trigger), the safeguard must cover it. The safeguard is satisfied either by a
+ * confirm-before-acting marker in the form's own why-desc OR by a record-level
+ * `l2SafeguardLine` — which the engine appends as the last line of EVERY served
+ * column (incl. the frozen col-3 anchor), so it guards all columns uniformly.
  */
 export function checkL2Safeguard(record: ContentTemplateRecord): L2SafeguardReview {
   const unguardedLevels: MaturityLevel[] = [];
   const triggersByLevel: Partial<Record<MaturityLevel, string[]>> = {};
+  const recordLevelGuard = typeof record.l2SafeguardLine === 'string' && record.l2SafeguardLine !== '';
   for (const level of MATURITY_LEVELS) {
     const form = record.levelForms[level];
     if (!form) continue;
     const triggers = detectL2TriggersInText(form.cell.option);
     if (triggers.length === 0) continue;
-    if (!SAFEGUARD_MARKERS.test(form.cell.whyDesc)) {
+    if (!recordLevelGuard && !SAFEGUARD_MARKERS.test(form.cell.whyDesc)) {
       unguardedLevels.push(level);
       triggersByLevel[level] = triggers.map((t) => t.name);
     }

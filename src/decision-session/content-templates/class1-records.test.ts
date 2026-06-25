@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { CLASS1_RECORDS } from './class1-records.js';
 import { runBuildGate, checkTopicKeyword, checkOptionLengthBudget, OPTION_MAX_CHARS } from '../content-template-tooling.js';
 import { reviewRecord, checkVoice, checkL2Safeguard, checkEscalation } from '../content-authoring-rules.js';
+import { composeWhyDesc } from '../content-template-engine.js';
 import {
   IDEA_TO_PRD, PRD_TO_ARCHITECTURE, ARCHITECTURE_TO_TASKS, TASK_REVIEW,
   IMPLEMENTATION_TO_REVIEW, REVIEW_TO_RELEASE, RELEASE_TO_FEEDBACK,
@@ -126,10 +127,10 @@ describe('class-1 records — spine (stored annotation)', () => {
 
 describe('class-1 records — sensitive-action safeguard', () => {
   // The two production signals here — releasing to production, and changing
-  // production monitoring — are intrinsically sensitive: they are flagged and carry
-  // a confirm-seek in EVERY authored why-desc (col-3 frozen exempt). The other five
-  // stage transitions (planning / spec / verification) propose no sensitive action,
-  // so they are not flagged.
+  // production monitoring — are intrinsically sensitive: they are flagged and carry a
+  // record-level l2SafeguardLine the engine appends as the LAST line of every served
+  // column (incl. frozen col-3). The other five stage transitions (planning / spec /
+  // verification) propose no sensitive action, so they are not flagged.
   const SENSITIVE = new Set(['REVIEW_TO_RELEASE', 'RELEASE_TO_FEEDBACK']);
   const SAFEGUARD_RE = /\b(ask me|go-ahead|go ahead|confirm)\b/i;
   // The record-SPECIFIC confirm-seek action — pins that each safeguard names ITS OWN
@@ -147,18 +148,15 @@ describe('class-1 records — sensitive-action safeguard', () => {
 
   for (const sig of SENSITIVE) {
     const rec = CLASS1_RECORDS.find((r) => r.signalType === sig)!;
-    it(`${sig} carries its record-specific confirm-seek in every authored why-desc (1/2/4/5); col-3 frozen exempt`, () => {
-      const seek = CONFIRM_SEEK[sig];
-      for (const lvl of [1, 2, 4, 5] as const) {
-        expect(rec.levelForms[lvl]!.cell.whyDesc).toMatch(SAFEGUARD_RE);
-        expect(rec.levelForms[lvl]!.cell.whyDesc).toMatch(seek); // names THIS record's action
+    it(`${sig} carries a record-specific l2SafeguardLine the engine appends to every served column (incl col-3)`, () => {
+      expect(typeof rec.l2SafeguardLine).toBe('string');
+      expect(rec.l2SafeguardLine).toMatch(SAFEGUARD_RE);
+      expect(rec.l2SafeguardLine).toMatch(CONFIRM_SEEK[sig]); // names THIS record's action
+      for (const lvl of [1, 2, 3, 4, 5] as const) {
+        const composed = composeWhyDesc({ cell: rec.levelForms[lvl]!.cell, slots: rec.slots, l2Safeguard: rec.l2SafeguardLine });
+        expect(composed.endsWith(rec.l2SafeguardLine!)).toBe(true);
       }
-      expect(checkL2Safeguard(rec).unguardedLevels.filter((l) => l !== 3)).toEqual([]);
+      expect(checkL2Safeguard(rec).unguardedLevels).toEqual([]); // record-level line guards all columns
     });
   }
-
-  it('the production-rollout form (REVIEW_TO_RELEASE col-5) carries the action-level confirm-seek in the option itself', () => {
-    const cell = CLASS1_RECORDS.find((r) => r.signalType === 'REVIEW_TO_RELEASE')!.levelForms[5]!.cell;
-    expect(cell.option).toMatch(/ask me for go-ahead/i); // the heaviest form proposes the deploy → safeguard in the option too
-  });
 });

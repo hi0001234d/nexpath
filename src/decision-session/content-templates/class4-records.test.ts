@@ -9,6 +9,7 @@ import {
   runBuildGate, checkTopicKeyword, checkOptionLengthBudget, coverageMetric, SHIPPED_CONTENT_TEMPLATES,
 } from '../content-template-tooling.js';
 import { reviewRecord, checkVoice, checkEscalation, checkL2Safeguard } from '../content-authoring-rules.js';
+import { composeWhyDesc } from '../content-template-engine.js';
 import {
   ABSENCE_OBSERVABILITY, ABSENCE_ROLLBACK_PLANNING, ABSENCE_DEPLOYMENT_PLANNING, ABSENCE_DEPENDENCY_MGMT,
   ABSENCE_ENV_AND_SECRETS, ABSENCE_CI_PIPELINE, ABSENCE_RATE_LIMITING,
@@ -134,27 +135,31 @@ describe('class-4 — per-record full-depth gates', () => {
 describe('class-4 — sensitive-action safeguard (every record is intrinsically sensitive)', () => {
   // Class 4 is release/ops/infra: every signal concerns a CLAUDE.md sensitive action
   // (deploy, secrets, dependency install, production touch, multi-file change). Per the
-  // utmost-delicacy decision, EVERY record is flagged and EVERY authored column carries
-  // a confirm-seek in its why-desc. Column 3 (frozen shipped text) is exempt — its
-  // safeguard is carried by the record-level flag + the runtime safeguard path.
+  // utmost-delicacy decision, EVERY record is flagged AND carries a record-level
+  // l2SafeguardLine. The engine appends that line as the LAST line of whichever column
+  // is served (after grounding facts), so the confirm-seek covers EVERY column
+  // uniformly — including the frozen col-3 anchor, whose stored why-desc cannot carry it.
   for (const r of CLASS4_RECORDS) {
     describe(r.signalType, () => {
       it('is flagged l2SafeguardRequired', () => {
         expect(r.l2SafeguardRequired).toBe(true);
       });
 
-      it('carries the record-SPECIFIC confirm-seek in every authored why-desc (1/2/4/5); col-3 frozen exempt', () => {
-        const seek = CONFIRM_SEEK[r.signalType];
-        expect(seek).toBeDefined();
-        for (const lvl of [1, 2, 4, 5] as const) {
-          const whyDesc = r.levelForms[lvl]!.cell.whyDesc;
-          expect(whyDesc).toMatch(SAFEGUARD_RE);  // a confirm-seek marker is present
-          expect(whyDesc).toMatch(seek);          // and it names THIS record's action — no cross-record mismatch
+      it('carries a record-specific l2SafeguardLine that names THIS record\'s action', () => {
+        expect(typeof r.l2SafeguardLine).toBe('string');
+        expect(r.l2SafeguardLine).toMatch(SAFEGUARD_RE);          // a confirm-seek marker
+        expect(r.l2SafeguardLine).toMatch(CONFIRM_SEEK[r.signalType]); // its OWN action — no cross-record mismatch
+      });
+
+      it('the engine appends the safeguard as the LAST line of EVERY served column, incl. frozen col-3', () => {
+        for (const lvl of [1, 2, 3, 4, 5] as const) {
+          const composed = composeWhyDesc({ cell: r.levelForms[lvl]!.cell, slots: r.slots, l2Safeguard: r.l2SafeguardLine });
+          expect(composed.endsWith(r.l2SafeguardLine!)).toBe(true);
         }
       });
 
-      it('the safeguard gate finds no unguarded authored column (col-3 frozen exempt)', () => {
-        expect(checkL2Safeguard(r).unguardedLevels.filter((l) => l !== 3)).toEqual([]);
+      it('the safeguard gate finds the record fully guarded (record-level line covers all columns)', () => {
+        expect(checkL2Safeguard(r).unguardedLevels).toEqual([]);
       });
     });
   }

@@ -80,6 +80,15 @@ describe('content-template-schema — validation (the single gate)', () => {
     expect(bad.ok).toBe(false);
     expect(bad.errors.join(' ')).toMatch(/l2SafeguardRequired/);
   });
+
+  it('validates the optional l2SafeguardLine field (non-empty string when present)', () => {
+    expect(validateContentTemplateRecord(validRecord({ l2SafeguardLine: 'Ask me for go-ahead before X.' })).ok).toBe(true);
+    expect(validateContentTemplateRecord(validRecord())).toEqual({ ok: true, errors: [] }); // omitted is fine
+    expect(validateContentTemplateRecord(validRecord({ l2SafeguardLine: '' })).ok).toBe(false); // empty rejected
+    const bad = validateContentTemplateRecord(validRecord({ l2SafeguardLine: 42 as never }));
+    expect(bad.ok).toBe(false);
+    expect(bad.errors.join(' ')).toMatch(/l2SafeguardLine/);
+  });
 });
 
 describe('content-template-schema — two-phase compose (Phase-1 preserves {R...})', () => {

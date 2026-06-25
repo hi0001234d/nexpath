@@ -86,6 +86,14 @@ export interface ContentTemplateRecord {
    * Optional + additive; omitted (defaults false) for non-sensitive records.
    */
   l2SafeguardRequired?: boolean;
+  /**
+   * The action-specific confirm-seek sentence for a sensitive record. The engine
+   * appends it as the LAST line of whichever maturity column is served (after the
+   * grounding facts) — so it covers every column uniformly, including the frozen
+   * col-3 anchor whose stored why-desc cannot carry it. Present iff the record is
+   * sensitive; names that record's own action (no cross-record mismatch).
+   */
+  l2SafeguardLine?: string;
 }
 
 // ── Validation (the single schema gate) ───────────────────────────────────────
@@ -166,6 +174,11 @@ export function validateContentTemplateRecord(record: unknown): ValidationResult
   // l2SafeguardRequired — optional; when present, a boolean.
   if (r.l2SafeguardRequired !== undefined && typeof r.l2SafeguardRequired !== 'boolean') {
     errors.push('l2SafeguardRequired must be a boolean when present');
+  }
+
+  // l2SafeguardLine — optional; when present, a non-empty string.
+  if (r.l2SafeguardLine !== undefined && (typeof r.l2SafeguardLine !== 'string' || r.l2SafeguardLine === '')) {
+    errors.push('l2SafeguardLine must be a non-empty string when present');
   }
 
   return { ok: errors.length === 0, errors };
