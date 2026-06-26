@@ -409,3 +409,46 @@ describe('content-template-engine — end-to-end orchestration (composeAdvisory)
     expect(out?.whyDesc).toContain('Ask me for go-ahead before deploying.');
   });
 });
+
+describe('content-template-engine — T1-RUNTIME: keyword survives the (b)-derive', () => {
+  // CTA-D3 §5.10.18 T1-RUNTIME: the one-notch-simpler (b)-derive output preserves the
+  // signalType keyword. The derive is the LLM seam (prompt instructs "without ... dropping
+  // its key topic word"); these tests pin that the ENGINE carries the keyword through the
+  // derived cell AND that the always-available static fallback guarantees a keyword-bearing
+  // form on any derive failure — so a served strength ladder is never keyword-less.
+  const KW = 'review';
+  const keepsKeyword = mockClient(JSON.stringify({ option: 'take a quick review pass', whyDesc: 'a light review' }));
+
+  it('the derived simpler cell carries the keyword through (b) on success', async () => {
+    const res = await stepSimplerLive(cell('Do a thorough review of the change', 'review the diff'), cell('a quick review', 'review it'), keepsKeyword);
+    expect(res.source).toBe('derived');
+    expect(res.cell.option.toLowerCase()).toContain(KW);
+    expect(res.cell.whyDesc.toLowerCase()).toContain(KW);
+  });
+
+  it('the fallback path preserves the keyword (the static next-tier form carries it)', async () => {
+    const res = await stepSimplerLive(cell('review now', 'review'), cell('a quick review', 'review it'), mockClient('throw'));
+    expect(res.source).toBe('fallback');
+    expect(res.cell.option.toLowerCase()).toContain(KW);
+    expect(res.cell.whyDesc.toLowerCase()).toContain(KW);
+  });
+
+  it('deriveLadder carries the keyword across L1 → L2 → L3', async () => {
+    const l1: OptionEntry[] = [{ option: 'Carefully review the diff', descBase: 'review the change' }];
+    const ladder = await deriveLadder(l1, {}, keepsKeyword);
+    for (const tier of [ladder.l1, ladder.l2, ladder.l3]) {
+      expect(tier[0].option.toLowerCase()).toContain(KW);
+    }
+  });
+
+  it('keyword retention on a SUCCESSFUL derive is the LLM contract (T1-proxy-limit); the fallback is the guarantee', async () => {
+    // A derive that returns keyword-less text "succeeds" — the engine does not silently
+    // re-inject the keyword (retention is the prompt's instruction to the model, a human-
+    // reviewed proxy limit). The guarantee is the static fallback, which always carries it.
+    const dropsKeyword = mockClient(JSON.stringify({ option: 'simpler', whyDesc: 'simpler' }));
+    const onDrop = await deriveSimplerLevel([{ option: 'review it', descBase: 'review' }], [{ option: 'a quick review', descBase: 'review' }], dropsKeyword);
+    expect(onDrop[0].option.toLowerCase()).not.toContain(KW); // documents: engine doesn't enforce on success
+    const onFail = await deriveSimplerLevel([{ option: 'review it', descBase: 'review' }], [{ option: 'a quick review', descBase: 'review' }], mockClient('throw'));
+    expect(onFail[0].option.toLowerCase()).toContain(KW); // fallback guarantees it
+  });
+});
