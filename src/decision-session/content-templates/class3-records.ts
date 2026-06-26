@@ -15,6 +15,11 @@
  */
 
 import type { ContentTemplateRecord, LevelForm, ParamAxisTag } from '../content-template-schema.js';
+import {
+  ALTERNATIVES_BEGINNER_OVERRIDE, API_DESIGN_REVIEW_BEGINNER_OVERRIDE, ARCH_CONFLICT_BEGINNER_OVERRIDE,
+  CROSS_CONFIRMING_BEGINNER_OVERRIDE, PROMPT_CONTEXT_BEGINNER_OVERRIDE, SPEC_ACCEPTANCE_BEGINNER_OVERRIDE,
+  SPEC_CROSS_CONFIRM_BEGINNER_OVERRIDE, SPEC_REVISION_BEGINNER_OVERRIDE,
+} from './class3-records-beginner.js';
 
 function form(option: string, whyDesc: string): LevelForm {
   return { kind: 'slot-variant', cell: { option, whyDesc } };
@@ -37,7 +42,9 @@ export const NOTE_SPINE = ['rationale-capture'];
 
 /** ABSENCE_SPEC_ACCEPTANCE — spec/design, keyword "spec". */
 export const ABSENCE_SPEC_ACCEPTANCE_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_SPEC_ACCEPTANCE', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_SPEC_ACCEPTANCE',
+  registerOverrides: { beginner: SPEC_ACCEPTANCE_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES,
   levelForms: {
     1: form("Spot-check what was just built against the single most important spec requirement.", "The lightest spec check: confirm the one core requirement is met."),
@@ -50,7 +57,9 @@ export const ABSENCE_SPEC_ACCEPTANCE_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_CROSS_CONFIRMING — verification of generated output, keyword "verif". */
 export const ABSENCE_CROSS_CONFIRMING_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_CROSS_CONFIRMING', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_CROSS_CONFIRMING',
+  registerOverrides: { beginner: CROSS_CONFIRMING_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES, spine: VERIFY_SPINE,
   levelForms: {
     1: form("Verify the one part of what was just built most likely to be wrong — a generated call or assumption.", "The lightest verification: check the single most-likely-wrong generated part."),
@@ -63,7 +72,9 @@ export const ABSENCE_CROSS_CONFIRMING_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_ALTERNATIVES — design tradeoffs, keyword "alternative". */
 export const ABSENCE_ALTERNATIVES_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_ALTERNATIVES', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_ALTERNATIVES',
+  registerOverrides: { beginner: ALTERNATIVES_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES,
   levelForms: {
     1: form("Name one alternative to the main decision in what was just built, and why it was not chosen.", "The lightest check: surface one unchosen alternative and the reason."),
@@ -76,7 +87,9 @@ export const ABSENCE_ALTERNATIVES_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_ARCH_CONFLICT — architectural consistency, keyword "architect". */
 export const ABSENCE_ARCH_CONFLICT_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_ARCH_CONFLICT', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_ARCH_CONFLICT',
+  registerOverrides: { beginner: ARCH_CONFLICT_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES,
   levelForms: {
     1: form("Check whether what was just built follows the existing architectural patterns, or introduces a new one.", "The lightest architecture check: does it match the established patterns?"),
@@ -89,7 +102,9 @@ export const ABSENCE_ARCH_CONFLICT_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_PROMPT_CONTEXT — prompting habit (pure behaviour, no file), keyword "context". */
 export const ABSENCE_PROMPT_CONTEXT_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_PROMPT_CONTEXT', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_PROMPT_CONTEXT',
+  registerOverrides: { beginner: PROMPT_CONTEXT_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES,
   levelForms: {
     1: form("Check whether the last prompt carried the spec and architecture context, or ran on assumptions.", "The lightest context check: did the last prompt carry the planning context?"),
@@ -102,7 +117,9 @@ export const ABSENCE_PROMPT_CONTEXT_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_SPEC_CROSS_CONFIRM — spec vs requirements, keyword "spec". */
 export const ABSENCE_SPEC_CROSS_CONFIRM_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_SPEC_CROSS_CONFIRM', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_SPEC_CROSS_CONFIRM',
+  registerOverrides: { beginner: SPEC_CROSS_CONFIRM_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES,
   levelForms: {
     1: form("Spot-check one spec requirement: does it trace back to a real user need?", "The lightest spec check: one requirement traced to a stated need."),
@@ -115,7 +132,9 @@ export const ABSENCE_SPEC_CROSS_CONFIRM_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_SPEC_REVISION — keep the spec current, keyword "spec". */
 export const ABSENCE_SPEC_REVISION_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_SPEC_REVISION', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_SPEC_REVISION',
+  registerOverrides: { beginner: SPEC_REVISION_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES,
   levelForms: {
     1: form("Check whether the spec still matches one thing that changed during implementation.", "The lightest spec-drift check: one implementation change reflected in the spec?"),
@@ -128,7 +147,9 @@ export const ABSENCE_SPEC_REVISION_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_API_DESIGN_REVIEW — API surface/design, keyword "api". */
 export const ABSENCE_API_DESIGN_REVIEW_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_API_DESIGN_REVIEW', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_API_DESIGN_REVIEW',
+  registerOverrides: { beginner: API_DESIGN_REVIEW_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES,
   levelForms: {
     1: form("Check whether what was just built changes the API in a way that could break an existing caller.", "The lightest API check: any change that could surprise existing callers?"),
