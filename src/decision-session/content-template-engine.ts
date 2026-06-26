@@ -334,6 +334,51 @@ export async function retrieveGroundingFacts(sources: GroundingSources, client?:
   return facts;
 }
 
+// ── paramAxes consumer: axis-filtered grounding (§6.1 live-activation item 6) ───
+
+/**
+ * Grounding-fact key → the AR-1 param-axis key it grounds. The fact SOURCES name
+ * their keys differently from the record's declared axis keys (the AR-3 work-style
+ * traits are camelCase; the axes are snake_case), so this aligns them onto the same
+ * axis. A key already equal to an axis key (e.g. `project_framework`) needs no entry.
+ */
+export const FACT_KEY_TO_AXIS: Readonly<Record<string, string>> = {
+  decisionRhythm: 'decision_making_rhythm',
+  explanationDepth: 'explanation_learning_depth',
+  abstractionLevel: 'abstraction_level_orientation',
+};
+
+/**
+ * The axis a grounding fact is attributable to: the key itself when it IS one of the
+ * record's declared axes, else the aligned axis from `FACT_KEY_TO_AXIS`, else
+ * `undefined` (the fact maps to no known axis — e.g. an env capability or a
+ * prompt-derived tooling fact).
+ */
+export function factAxis(key: string, paramAxes: Readonly<Record<string, unknown>>): string | undefined {
+  if (key in paramAxes) return key;
+  return FACT_KEY_TO_AXIS[key];
+}
+
+/**
+ * Filter grounding facts by a record's declared param axes. A fact attributable to an
+ * axis is kept ONLY if the record declares that axis; a fact attributable to NO known
+ * axis is kept (the filter NARROWS to declared axes — it does not drop unattributable
+ * grounding). With no `paramAxes` declared, every fact passes (today's source-agnostic
+ * behaviour). Records that declare all axes therefore see no change; a record that
+ * declares a SUBSET grounds its why-desc only with facts on those axes.
+ */
+export function filterFactsByAxes(
+  facts: readonly GroundingFact[],
+  paramAxes?: Readonly<Record<string, unknown>>,
+): GroundingFact[] {
+  if (!paramAxes) return [...facts];
+  const declared = new Set(Object.keys(paramAxes));
+  return facts.filter((f) => {
+    const axis = factAxis(f.key, paramAxes);
+    return axis === undefined || declared.has(axis);
+  });
+}
+
 // ── Render-path bridge: the (a)+(b) hybrid over a strength tier's OptionEntry[] ──
 
 /**
@@ -441,8 +486,12 @@ export async function composeAdvisory(input: ComposeAdvisoryInput, client?: Open
   const option = composeOption({
     cell: col.form.cell, slots: resolved.record.slots, ctx: input.ctx, anchor: input.anchor, lengthBudget: input.lengthBudget,
   });
+  // Axis-filtered grounding (§6.1 item 6): ground the why-desc only with facts on the
+  // axes this record declares (a no-op when the record declares all axes; narrows when
+  // it declares a subset). Unattributable facts pass through.
+  const facts = filterFactsByAxes(input.facts ?? [], resolved.record.paramAxes);
   const whyDesc = await groundWhyDescLive({
-    cell: col.form.cell, slots: resolved.record.slots, ctx: input.ctx, facts: input.facts, factCap: input.factCap,
+    cell: col.form.cell, slots: resolved.record.slots, ctx: input.ctx, facts, factCap: input.factCap,
     // Auto-source the sensitive-action safeguard from the record so the live wiring
     // can never forget it: a flagged record's l2SafeguardLine is always applied (the
     // explicit input wins only if a caller overrides it).

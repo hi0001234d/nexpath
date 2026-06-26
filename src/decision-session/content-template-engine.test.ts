@@ -19,6 +19,9 @@ import {
   rightGoodToGrounding,
   workStyleToGrounding,
   retrieveGroundingFacts,
+  factAxis,
+  filterFactsByAxes,
+  FACT_KEY_TO_AXIS,
   PROMPT_FACT_WEIGHT,
   SOURCE_CASCADE,
   type GroundingFact,
@@ -407,6 +410,63 @@ describe('content-template-engine — end-to-end orchestration (composeAdvisory)
     // so the live wiring can never forget the sensitive-action safeguard.
     const out = await composeAdvisory({ lookup: lookupOf({ shipped: rec }), level: 1 }, mockClient(JSON.stringify({ whyDesc: 'woven why' })));
     expect(out?.whyDesc).toContain('Ask me for go-ahead before deploying.');
+  });
+});
+
+describe('content-template-engine — paramAxes consumer: axis-filtered grounding', () => {
+  // §6.1 item 6: ground a record's why-desc only with facts on the axes it declares,
+  // aligning the differently-named fact keys (work-style camelCase) to the snake_case
+  // axis keys. A no-op when a record declares all axes; narrows on a subset.
+  const AXES_SUBSET = { decision_making_rhythm: 'closed-ordinal' as const };
+
+  it('factAxis aligns work-style camelCase keys to their snake_case axis', () => {
+    expect(FACT_KEY_TO_AXIS.decisionRhythm).toBe('decision_making_rhythm');
+    expect(factAxis('decisionRhythm', AXES_SUBSET)).toBe('decision_making_rhythm'); // aligned
+    expect(factAxis('decision_making_rhythm', AXES_SUBSET)).toBe('decision_making_rhythm'); // identity (already an axis key)
+    expect(factAxis('has_test_runner', AXES_SUBSET)).toBeUndefined(); // unattributable
+  });
+
+  it('filterFactsByAxes keeps declared-axis facts, drops non-declared-axis facts, keeps unattributable', () => {
+    const facts: GroundingFact[] = [
+      { key: 'decisionRhythm', value: 'decisive', weight: 1, tier: 'capability' },     // → declared axis: keep
+      { key: 'abstractionLevel', value: 'high-level', weight: 1, tier: 'capability' }, // → abstraction axis (not declared): drop
+      { key: 'has_test_runner', value: 'vitest', weight: 1, tier: 'capability' },      // unattributable: keep
+    ];
+    expect(filterFactsByAxes(facts, AXES_SUBSET).map((f) => f.key)).toEqual(['decisionRhythm', 'has_test_runner']);
+  });
+
+  it('with no declared paramAxes every fact passes (source-agnostic default)', () => {
+    const facts: GroundingFact[] = [{ key: 'abstractionLevel', value: 'x', weight: 1, tier: 'capability' }];
+    expect(filterFactsByAxes(facts, undefined).map((f) => f.key)).toEqual(['abstractionLevel']);
+  });
+
+  it('a record declaring all axes keeps every fact (no-op for current content)', () => {
+    const allAxes = {
+      workflow_pattern: 'extensible' as const, decision_making_rhythm: 'closed-ordinal' as const,
+      explanation_learning_depth: 'closed-ordinal' as const, abstraction_level_orientation: 'closed-ordinal' as const,
+      project_framework: 'open' as const,
+    };
+    const facts: GroundingFact[] = [
+      { key: 'decisionRhythm', value: 'd', weight: 1, tier: 'capability' },
+      { key: 'abstractionLevel', value: 'a', weight: 1, tier: 'capability' },
+      { key: 'project_framework', value: 'next', weight: 1, tier: 'capability' },
+    ];
+    expect(filterFactsByAxes(facts, allAxes)).toHaveLength(3);
+  });
+
+  it('composeAdvisory grounds only with facts on the record’s declared axes', async () => {
+    const rec = record({
+      levelForms: { 1: { kind: 'slot-variant', cell: cell('opt', 'core line') } },
+      paramAxes: AXES_SUBSET,
+    });
+    const facts: GroundingFact[] = [
+      { key: 'decisionRhythm', value: 'decisive', weight: 2, tier: 'capability' },
+      { key: 'abstractionLevel', value: 'high-level', weight: 2, tier: 'capability' },
+    ];
+    // Force the deterministic weave (throw) so the kept facts are visible in the why-desc.
+    const out = await composeAdvisory({ lookup: lookupOf({ shipped: rec }), level: 1, facts, factCap: 5 }, mockClient('throw'));
+    expect(out?.whyDesc).toContain('decisive');       // decision_making_rhythm declared → kept
+    expect(out?.whyDesc).not.toContain('high-level'); // abstraction axis not declared → dropped
   });
 });
 
