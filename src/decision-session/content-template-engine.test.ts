@@ -481,3 +481,41 @@ describe('content-template-engine — T1-RUNTIME: keyword survives the (b)-deriv
     expect(onFail[0].option.toLowerCase()).toContain(KW); // fallback guarantees it
   });
 });
+
+describe('content-template-engine — L2-RUNTIME: record safeguard auto-sourced into the live compose', () => {
+  // §6.1 item 9 (engine side): composeAdvisory auto-sources record.l2SafeguardLine so the
+  // live caller can never forget it. The col-1 auto-apply is covered above; these pin that
+  // it covers WHATEVER column is served (not just col-3/floor), that an explicit caller
+  // safeguard overrides the record line (?? precedence), and that an unflagged record gets
+  // nothing. (The LIVE-CALLER half — the render path passing it — is the §6.1 migration.)
+  const flagged = (over: Partial<ContentTemplateRecord> = {}) => record({
+    levelForms: {
+      1: { kind: 'slot-variant', cell: cell('opt1', 'core1') },
+      4: { kind: 'slot-variant', cell: cell('opt4', 'core4') },
+    },
+    l2SafeguardRequired: true,
+    l2SafeguardLine: 'Ask me for go-ahead before deploying.',
+    ...over,
+  });
+
+  it('auto-sources the record safeguard at whatever column is served (here level 4, not the floor)', async () => {
+    const out = await composeAdvisory({ lookup: lookupOf({ shipped: flagged() }), level: 4 }, mockClient(JSON.stringify({ whyDesc: 'woven' })));
+    expect(out?.level).toBe(4);
+    expect(out?.whyDesc).toContain('Ask me for go-ahead before deploying.');
+  });
+
+  it('an explicit caller l2Safeguard overrides the record line (?? precedence)', async () => {
+    const out = await composeAdvisory(
+      { lookup: lookupOf({ shipped: flagged() }), level: 1, l2Safeguard: 'Confirm with me first, explicitly.' },
+      mockClient(JSON.stringify({ whyDesc: 'woven' })),
+    );
+    expect(out?.whyDesc).toContain('Confirm with me first, explicitly.');
+    expect(out?.whyDesc).not.toContain('Ask me for go-ahead before deploying.');
+  });
+
+  it('an unflagged record has no safeguard auto-applied', async () => {
+    const plain = record({ levelForms: { 1: { kind: 'slot-variant', cell: cell('opt', 'core') } } });
+    const out = await composeAdvisory({ lookup: lookupOf({ shipped: plain }), level: 1 }, mockClient(JSON.stringify({ whyDesc: 'woven' })));
+    expect(out?.whyDesc).toBe('woven');
+  });
+});
