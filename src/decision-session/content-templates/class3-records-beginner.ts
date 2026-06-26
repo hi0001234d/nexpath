@@ -61,7 +61,7 @@ export const PROMPT_CONTEXT_BEGINNER_OVERRIDE: RegisterOverride = structural({
   2: form('Paste the plan into the chat and check what was built so far lines up with it.', 'A light pass: the plan in view and the build checked against it.'),
   3: form("1. Think about what you've been building in this session.\n2. Share with me: have you seen the original plan for what we're building, or have you just been following each instruction without knowing the bigger picture?\n3. Then paste the plan or the task description into the conversation and check that what was just built matches what was planned.", "The full-plan-vs-individual-instructions check hasn't been done."),
   4: form("Read the whole plan against the build and name where they've drifted apart — so later steps follow the plan, not just the last prompt.", 'Beyond a glance: plan-vs-build drift named so later steps stay on plan.'),
-  5: form('Write a short context note: the plan, where the build matches or has drifted, and the next steps it implies — so the work follows the bigger picture, not one instruction at a time.', 'A durable context note of the plan and where the build has drifted.'),
+  5: form('Make plan-checking a habit: before each step, look back at the plan and confirm the work still follows it — not just the last instruction — so the bigger picture never drops out of view.', 'A standing habit of checking the plan before each step so the build never drifts from it.'),
 });
 
 /** SPEC_ACCEPTANCE (beginner) — keyword "plan". */

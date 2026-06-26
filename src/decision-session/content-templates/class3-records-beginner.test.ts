@@ -47,6 +47,16 @@ function asOverrideRecord(r: ContentTemplateRecord): ContentTemplateRecord {
   return { ...r, levelForms: resolveRegisterForms(r, 'beginner') };
 }
 
+/**
+ * Whether a heaviest-column option is a BEHAVIOURAL standing practice (vs producing a
+ * written record). Detected by the habit/cadence/standing markers — robust against the
+ * PROMPT_CONTEXT keyword "plan" (itself a file noun) that confounds a file-noun check,
+ * and against file records that use varied authoring verbs (write/revise/update).
+ */
+function isBehavioural(option: string): boolean {
+  return /\b(habit|cadence|standing)\b/i.test(option);
+}
+
 describe('class-3 beginner overrides — set level', () => {
   it('exactly the 8 signals with a frozen beginner variant carry a structurally-divergent override', () => {
     const withOverride = CLASS3_RECORDS.filter((r) => r.registerOverrides?.beginner?.divergence === 'structurally-divergent').map((r) => r.signalType);
@@ -97,6 +107,12 @@ describe('class-3 beginner overrides — per-variant T1-variant gates', () => {
 
       it('the override forms trip no sensitive-action proxy (class 3 has no sensitive signal)', () => {
         expect(checkL2Safeguard(synth).ok).toBe(true);
+      });
+
+      it("the heaviest column matches the base record's nature (behavioural vs produces-a-record) — F2 parity", () => {
+        // PROMPT_CONTEXT is pure-behavioural in the base; its beginner override must stay a
+        // habit too (not a written note), and the file signals must stay file.
+        expect(isBehavioural(synth.levelForms[5]!.cell.option)).toBe(isBehavioural(r.levelForms[5]!.cell.option));
       });
 
       it('practice richness is monotonic; fits the copy-paste budget (col-3 exempt), col-1 ≤ col-5', () => {
