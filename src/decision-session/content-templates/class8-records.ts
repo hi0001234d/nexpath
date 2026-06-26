@@ -35,6 +35,25 @@
  */
 
 import type { ContentTemplateRecord, LevelForm, ParamAxisTag } from '../content-template-schema.js';
+import {
+  USER_VALUE_CHECK_BEGINNER_OVERRIDE, OUTCOME_DEFINITION_BEGINNER_OVERRIDE, FEATURE_PRIORITIZATION_BEGINNER_OVERRIDE,
+  USER_PERSONA_CLARITY_BEGINNER_OVERRIDE, COMPETITIVE_AWARENESS_BEGINNER_OVERRIDE, MVP_BOUNDARY_DISCIPLINE_BEGINNER_OVERRIDE,
+  USER_ACQUISITION_CONSIDERATION_BEGINNER_OVERRIDE, RETENTION_MECHANISM_CHECK_BEGINNER_OVERRIDE,
+  FEEDBACK_LOOP_ESTABLISHMENT_BEGINNER_OVERRIDE, HYPOTHESIS_BEFORE_BUILD_BEGINNER_OVERRIDE,
+  TECHNICAL_VS_PRODUCT_TIME_BALANCE_BEGINNER_OVERRIDE, NORTH_STAR_ALIGNMENT_BEGINNER_OVERRIDE,
+  TIME_TO_VALUE_CHECK_BEGINNER_OVERRIDE, SHIP_READINESS_DEFINITION_BEGINNER_OVERRIDE,
+  MANUAL_BEFORE_AUTOMATE_BEGINNER_OVERRIDE, TECH_STACK_COMPLEXITY_CHECK_BEGINNER_OVERRIDE,
+  LAUNCH_STRATEGY_ABSENCE_BEGINNER_OVERRIDE, EARLY_USER_FEEDBACK_BEGINNER_OVERRIDE,
+  SOLO_MAINTAINABILITY_BEGINNER_OVERRIDE, DISTRIBUTION_THINKING_BEGINNER_OVERRIDE,
+  MONETIZATION_PATH_CLARITY_BEGINNER_OVERRIDE, BUILD_IN_PUBLIC_OPPORTUNITY_BEGINNER_OVERRIDE,
+  SCOPE_VS_TIME_CHECK_BEGINNER_OVERRIDE, ACCEPTANCE_CRITERIA_BEFORE_DEV_BEGINNER_OVERRIDE,
+  STAKEHOLDER_ALIGNMENT_CHECK_BEGINNER_OVERRIDE, REQUIREMENTS_AMBIGUITY_FLAG_BEGINNER_OVERRIDE,
+  DEPENDENCY_MAPPING_BEGINNER_OVERRIDE, DEFINITION_OF_DONE_BEGINNER_OVERRIDE,
+  CROSS_TEAM_IMPACT_CHECK_BEGINNER_OVERRIDE, SUCCESS_METRIC_DEFINITION_BEGINNER_OVERRIDE,
+  PRIORITY_JUSTIFICATION_BEGINNER_OVERRIDE, USER_STORY_COMPLETENESS_BEGINNER_OVERRIDE,
+  RISK_FLAG_BEGINNER_OVERRIDE, SCOPE_CHANGE_IMPACT_ASSESSMENT_BEGINNER_OVERRIDE,
+  RETROSPECTIVE_HABIT_BEGINNER_OVERRIDE,
+} from './class8-records-beginner.js';
 
 function form(option: string, whyDesc: string): LevelForm {
   return { kind: 'slot-variant', cell: { option, whyDesc } };
@@ -54,6 +73,7 @@ export const CLASS8_PARAM_AXES: Readonly<Record<string, ParamAxisTag>> = {
 /** ABSENCE_USER_VALUE_CHECK — validate a user signal before building, keyword "signal". Produces a written note. */
 export const ABSENCE_USER_VALUE_CHECK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_USER_VALUE_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: USER_VALUE_CHECK_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before building this feature, name one user signal that says the problem is real — a request, a complaint, an observed behaviour.", "The lightest check: one user signal that the problem is real before building."),
@@ -67,6 +87,7 @@ export const ABSENCE_USER_VALUE_CHECK_RECORD: ContentTemplateRecord = {
 /** ABSENCE_OUTCOME_DEFINITION — define the success outcome before building, keyword "outcome". Produces a written note. */
 export const ABSENCE_OUTCOME_DEFINITION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_OUTCOME_DEFINITION', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: OUTCOME_DEFINITION_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before building, write the one-sentence outcome: 'This feature is successful if [user behaviour] changes.'", "The lightest step: the success outcome stated in one sentence before building."),
@@ -80,6 +101,7 @@ export const ABSENCE_OUTCOME_DEFINITION_RECORD: ContentTemplateRecord = {
 /** ABSENCE_FEATURE_PRIORITIZATION — justify build priority by impact, keyword "priorit". Produces a written note. */
 export const ABSENCE_FEATURE_PRIORITIZATION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_FEATURE_PRIORITIZATION', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: FEATURE_PRIORITIZATION_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before building this, name one reason its priority beats the next thing you could build instead.", "The lightest priority check: one reason this beats the alternative."),
@@ -93,6 +115,7 @@ export const ABSENCE_FEATURE_PRIORITIZATION_RECORD: ContentTemplateRecord = {
 /** ABSENCE_USER_PERSONA_CLARITY — name the specific user, keyword "user". Produces a written note. */
 export const ABSENCE_USER_PERSONA_CLARITY_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_USER_PERSONA_CLARITY', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: USER_PERSONA_CLARITY_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Name the specific user this feature serves in one line — who they are and what they're trying to do.", "The lightest step: the specific user named instead of 'users in general'."),
@@ -106,6 +129,7 @@ export const ABSENCE_USER_PERSONA_CLARITY_RECORD: ContentTemplateRecord = {
 /** ABSENCE_COMPETITIVE_AWARENESS — check the competitive landscape, keyword "competit". Produces a written note. */
 export const ABSENCE_COMPETITIVE_AWARENESS_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_COMPETITIVE_AWARENESS', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: COMPETITIVE_AWARENESS_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before building this feature, check one thing: does a competitor already do it, and how?", "The lightest competitive check: whether a competitor already solves this."),
@@ -119,6 +143,7 @@ export const ABSENCE_COMPETITIVE_AWARENESS_RECORD: ContentTemplateRecord = {
 /** ABSENCE_MVP_BOUNDARY_DISCIPLINE — gate additions against the MVP hypothesis, keyword "mvp". Produces a written note. */
 export const ABSENCE_MVP_BOUNDARY_DISCIPLINE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_MVP_BOUNDARY_DISCIPLINE', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: MVP_BOUNDARY_DISCIPLINE_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before adding this, ask: does it reduce uncertainty about the riskiest MVP hypothesis, or is it extra?", "The lightest MVP gate: the addition checked against the riskiest hypothesis."),
@@ -132,6 +157,7 @@ export const ABSENCE_MVP_BOUNDARY_DISCIPLINE_RECORD: ContentTemplateRecord = {
 /** ABSENCE_USER_ACQUISITION_CONSIDERATION — design how users find the feature, keyword "user". Produces a written note. */
 export const ABSENCE_USER_ACQUISITION_CONSIDERATION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_USER_ACQUISITION_CONSIDERATION', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: USER_ACQUISITION_CONSIDERATION_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before building this feature, name one way a target user actually finds and starts using it — its acquisition path.", "The lightest step: one path by which a user discovers the feature."),
@@ -145,6 +171,7 @@ export const ABSENCE_USER_ACQUISITION_CONSIDERATION_RECORD: ContentTemplateRecor
 /** ABSENCE_RETENTION_MECHANISM_CHECK — name why users return, keyword "retention". Produces a written note. */
 export const ABSENCE_RETENTION_MECHANISM_CHECK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_RETENTION_MECHANISM_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: RETENTION_MECHANISM_CHECK_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before building this feature, name one reason a user comes back to it after the first use — its retention hook.", "The lightest retention check: one reason users return after first use."),
@@ -158,6 +185,7 @@ export const ABSENCE_RETENTION_MECHANISM_CHECK_RECORD: ContentTemplateRecord = {
 /** ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT — set post-ship measurement, keyword "measure". Produces a written note. */
 export const ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: FEEDBACK_LOOP_ESTABLISHMENT_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before shipping, name one thing you'll measure to know whether this feature worked.", "The lightest step: one measure of whether the feature worked, set before ship."),
@@ -171,6 +199,7 @@ export const ABSENCE_FEEDBACK_LOOP_ESTABLISHMENT_RECORD: ContentTemplateRecord =
 /** ABSENCE_HYPOTHESIS_BEFORE_BUILD — write a falsifiable hypothesis, keyword "hypothesis". Produces a written note. */
 export const ABSENCE_HYPOTHESIS_BEFORE_BUILD_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_HYPOTHESIS_BEFORE_BUILD', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: HYPOTHESIS_BEFORE_BUILD_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before building, write the one-line hypothesis: '[change] will cause [outcome] for [user].'", "The lightest step: a one-line hypothesis stated before building."),
@@ -184,6 +213,7 @@ export const ABSENCE_HYPOTHESIS_BEFORE_BUILD_RECORD: ContentTemplateRecord = {
 /** ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE — periodic product-direction check, keyword "direction". Behavioural cadence. */
 export const ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: TECHNICAL_VS_PRODUCT_TIME_BALANCE_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Pause and run a quick product-direction check: is this still the right feature for the right user?", "The lightest direction check: a quick is-this-still-right pause."),
@@ -197,6 +227,7 @@ export const ABSENCE_TECHNICAL_VS_PRODUCT_TIME_BALANCE_RECORD: ContentTemplateRe
 /** ABSENCE_NORTH_STAR_ALIGNMENT — trace the feature to the north star metric, keyword "north". Produces a written note. */
 export const ABSENCE_NORTH_STAR_ALIGNMENT_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_NORTH_STAR_ALIGNMENT', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: NORTH_STAR_ALIGNMENT_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before building this, trace it to the north star metric in one step — how does it move the metric?", "The lightest step: the feature traced to the north star metric in one step."),
@@ -210,6 +241,7 @@ export const ABSENCE_NORTH_STAR_ALIGNMENT_RECORD: ContentTemplateRecord = {
 /** ABSENCE_TIME_TO_VALUE_CHECK — right-size for current scale, keyword "scale". Produces a written note. */
 export const ABSENCE_TIME_TO_VALUE_CHECK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_TIME_TO_VALUE_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: TIME_TO_VALUE_CHECK_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before building, right-size for current scale: what's the simplest tech that solves this at today's user count?", "The lightest step: the simplest tech for today's scale considered first."),
@@ -223,6 +255,7 @@ export const ABSENCE_TIME_TO_VALUE_CHECK_RECORD: ContentTemplateRecord = {
 /** ABSENCE_SHIP_READINESS_DEFINITION — write binary ship criteria, keyword "ship". Produces a written note. */
 export const ABSENCE_SHIP_READINESS_DEFINITION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_SHIP_READINESS_DEFINITION', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: SHIP_READINESS_DEFINITION_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before adding more, write one binary ship condition that must be true to ship this.", "The lightest step: one binary ship condition written down."),
@@ -236,6 +269,7 @@ export const ABSENCE_SHIP_READINESS_DEFINITION_RECORD: ContentTemplateRecord = {
 /** ABSENCE_MANUAL_BEFORE_AUTOMATE — validate by hand before automating, keyword "manual". Behavioural habit. */
 export const ABSENCE_MANUAL_BEFORE_AUTOMATE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_MANUAL_BEFORE_AUTOMATE', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: MANUAL_BEFORE_AUTOMATE_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before automating this, do it manually once and see what actually happens.", "The lightest step: the workflow run manually once before automating."),
@@ -249,6 +283,7 @@ export const ABSENCE_MANUAL_BEFORE_AUTOMATE_RECORD: ContentTemplateRecord = {
 /** ABSENCE_TECH_STACK_COMPLEXITY_CHECK — choose a solo-maintainable stack, keyword "stack". Produces a written note. */
 export const ABSENCE_TECH_STACK_COMPLEXITY_CHECK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_TECH_STACK_COMPLEXITY_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: TECH_STACK_COMPLEXITY_CHECK_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before adding to the stack, ask: can I maintain this alone, or is it just impressive?", "The lightest stack check: can this be maintained solo, or just impressive."),
@@ -262,6 +297,7 @@ export const ABSENCE_TECH_STACK_COMPLEXITY_CHECK_RECORD: ContentTemplateRecord =
 /** ABSENCE_LAUNCH_STRATEGY_ABSENCE — draft a launch plan, keyword "launch". Produces a written note. SENSITIVE (publish). */
 export const ABSENCE_LAUNCH_STRATEGY_ABSENCE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_LAUNCH_STRATEGY_ABSENCE', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: LAUNCH_STRATEGY_ABSENCE_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   l2SafeguardRequired: true,
   l2SafeguardLine: "Before you publish or announce this launch publicly, ask me for go-ahead confirmation first.",
@@ -277,6 +313,7 @@ export const ABSENCE_LAUNCH_STRATEGY_ABSENCE_RECORD: ContentTemplateRecord = {
 /** ABSENCE_EARLY_USER_FEEDBACK — show the build to a real user, keyword "user". Behavioural cadence. */
 export const ABSENCE_EARLY_USER_FEEDBACK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_EARLY_USER_FEEDBACK', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: EARLY_USER_FEEDBACK_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before building more, show the current build to one real user and watch their reaction.", "The lightest step: the build shown to one real user before more is built."),
@@ -290,6 +327,7 @@ export const ABSENCE_EARLY_USER_FEEDBACK_RECORD: ContentTemplateRecord = {
 /** ABSENCE_SOLO_MAINTAINABILITY — gate additions on solo-ownability, keyword "solo". Behavioural gate. */
 export const ABSENCE_SOLO_MAINTAINABILITY_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_SOLO_MAINTAINABILITY', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: SOLO_MAINTAINABILITY_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before adding this, ask: can I own the whole thing alone when it breaks? Keep it solo-ownable.", "The lightest solo check: can this be owned alone when it breaks."),
@@ -303,6 +341,7 @@ export const ABSENCE_SOLO_MAINTAINABILITY_RECORD: ContentTemplateRecord = {
 /** ABSENCE_DISTRIBUTION_THINKING — design the discovery path, keyword "distribution". Produces a written note. */
 export const ABSENCE_DISTRIBUTION_THINKING_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_DISTRIBUTION_THINKING', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: DISTRIBUTION_THINKING_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before building this feature, name how a new user discovers it exists — the distribution path.", "The lightest step: one distribution path by which users discover the feature."),
@@ -316,6 +355,7 @@ export const ABSENCE_DISTRIBUTION_THINKING_RECORD: ContentTemplateRecord = {
 /** ABSENCE_MONETIZATION_PATH_CLARITY — articulate the revenue link, keyword "monetization". Produces a written note. */
 export const ABSENCE_MONETIZATION_PATH_CLARITY_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_MONETIZATION_PATH_CLARITY', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: MONETIZATION_PATH_CLARITY_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before building this feature, name how it connects to the revenue model — its monetization link, even indirectly.", "The lightest step: the feature's monetization connection named."),
@@ -329,6 +369,7 @@ export const ABSENCE_MONETIZATION_PATH_CLARITY_RECORD: ContentTemplateRecord = {
 /** ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY — share milestones publicly, keyword "public". Behavioural cadence. SENSITIVE (publish). */
 export const ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: BUILD_IN_PUBLIC_OPPORTUNITY_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   l2SafeguardRequired: true,
   l2SafeguardLine: "Before you publish this post to any public channel, ask me for go-ahead confirmation first.",
@@ -344,6 +385,7 @@ export const ABSENCE_BUILD_IN_PUBLIC_OPPORTUNITY_RECORD: ContentTemplateRecord =
 /** ABSENCE_SCOPE_VS_TIME_CHECK — trade scope against the timeline, keyword "scope". Produces a written note. */
 export const ABSENCE_SCOPE_VS_TIME_CHECK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_SCOPE_VS_TIME_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: SCOPE_VS_TIME_CHECK_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before adding more, check scope against the deadline: is the ship date still realistic at this scope?", "The lightest step: scope checked against the ship date before adding more."),
@@ -359,6 +401,7 @@ export const ABSENCE_SCOPE_VS_TIME_CHECK_RECORD: ContentTemplateRecord = {
 /** ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV — verifiable acceptance criteria, keyword "acceptance". Produces a written note. */
 export const ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: ACCEPTANCE_CRITERIA_BEFORE_DEV_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before implementing, write one acceptance criterion: a verifiable condition that says this story is done.", "The lightest step: one verifiable acceptance criterion written before implementing."),
@@ -372,6 +415,7 @@ export const ABSENCE_ACCEPTANCE_CRITERIA_BEFORE_DEV_RECORD: ContentTemplateRecor
 /** ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK — confirm stakeholder alignment, keyword "stakeholder". Produces a written note. SENSITIVE (contact). */
 export const ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: STAKEHOLDER_ALIGNMENT_CHECK_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   l2SafeguardRequired: true,
   l2SafeguardLine: "Before you contact any stakeholder for sign-off, ask me for go-ahead confirmation first.",
@@ -387,6 +431,7 @@ export const ABSENCE_STAKEHOLDER_ALIGNMENT_CHECK_RECORD: ContentTemplateRecord =
 /** ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG — convert ambiguity to measurable targets, keyword "ambig". Produces a written note. */
 export const ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: REQUIREMENTS_AMBIGUITY_FLAG_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before building, flag one ambiguous word in the requirements ('better', 'fast') and pin a number to it.", "The lightest step: one ambiguous requirement word pinned to a number."),
@@ -400,6 +445,7 @@ export const ABSENCE_REQUIREMENTS_AMBIGUITY_FLAG_RECORD: ContentTemplateRecord =
 /** ABSENCE_DEPENDENCY_MAPPING — map upstream/downstream dependencies, keyword "dependenc". Produces a written note. */
 export const ABSENCE_DEPENDENCY_MAPPING_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_DEPENDENCY_MAPPING', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: DEPENDENCY_MAPPING_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before starting, name one dependency: one thing this work depends on, and one thing that depends on it.", "The lightest step: one upstream and one downstream dependency named."),
@@ -413,6 +459,7 @@ export const ABSENCE_DEPENDENCY_MAPPING_RECORD: ContentTemplateRecord = {
 /** ABSENCE_DEFINITION_OF_DONE — write the Definition of Done, keyword "done". Produces a written note. */
 export const ABSENCE_DEFINITION_OF_DONE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_DEFINITION_OF_DONE', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: DEFINITION_OF_DONE_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before starting, write one condition that must be true for this item to count as done.", "The lightest step: one done condition written before work starts."),
@@ -426,6 +473,7 @@ export const ABSENCE_DEFINITION_OF_DONE_RECORD: ContentTemplateRecord = {
 /** ABSENCE_CROSS_TEAM_IMPACT_CHECK — notify affected teams, keyword "team". Produces a written note. SENSITIVE (notify). */
 export const ABSENCE_CROSS_TEAM_IMPACT_CHECK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_CROSS_TEAM_IMPACT_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: CROSS_TEAM_IMPACT_CHECK_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   l2SafeguardRequired: true,
   l2SafeguardLine: "Before you send this change notification to any team, ask me for go-ahead confirmation first.",
@@ -441,6 +489,7 @@ export const ABSENCE_CROSS_TEAM_IMPACT_CHECK_RECORD: ContentTemplateRecord = {
 /** ABSENCE_SUCCESS_METRIC_DEFINITION — define the success metric, keyword "metric". Produces a written note. */
 export const ABSENCE_SUCCESS_METRIC_DEFINITION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_SUCCESS_METRIC_DEFINITION', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: SUCCESS_METRIC_DEFINITION_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before development, name the one metric that will say whether this feature succeeded.", "The lightest step: the one success metric for the feature named."),
@@ -454,6 +503,7 @@ export const ABSENCE_SUCCESS_METRIC_DEFINITION_RECORD: ContentTemplateRecord = {
 /** ABSENCE_PRIORITY_JUSTIFICATION — justify the sprint-item priority, keyword "priorit". Produces a written note. */
 export const ABSENCE_PRIORITY_JUSTIFICATION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_PRIORITY_JUSTIFICATION', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: PRIORITY_JUSTIFICATION_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before development, state in one line why this item is the priority over the next-best alternative.", "The lightest step: the item's priority justified against the alternative in one line."),
@@ -467,6 +517,7 @@ export const ABSENCE_PRIORITY_JUSTIFICATION_RECORD: ContentTemplateRecord = {
 /** ABSENCE_USER_STORY_COMPLETENESS — complete the user story who/what/why, keyword "user". Produces a written note. */
 export const ABSENCE_USER_STORY_COMPLETENESS_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_USER_STORY_COMPLETENESS', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: USER_STORY_COMPLETENESS_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before implementing, write this item as 'As a [user], I want [capability], so that [outcome].'", "The lightest step: the item written as a user story before implementing."),
@@ -480,6 +531,7 @@ export const ABSENCE_USER_STORY_COMPLETENESS_RECORD: ContentTemplateRecord = {
 /** ABSENCE_RISK_FLAG — identify and rate risks, keyword "risk". Produces a written note. */
 export const ABSENCE_RISK_FLAG_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_RISK_FLAG', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: RISK_FLAG_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before proceeding, name the single biggest risk in this decision and how likely it is.", "The lightest step: the biggest risk in the decision named."),
@@ -493,6 +545,7 @@ export const ABSENCE_RISK_FLAG_RECORD: ContentTemplateRecord = {
 /** ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT — assess a mid-sprint scope change, keyword "impact". Produces a written note. */
 export const ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: SCOPE_CHANGE_IMPACT_ASSESSMENT_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Before accepting this scope change, name the one in-progress item it displaces — its first impact.", "The lightest impact check: the item this scope change displaces named."),
@@ -506,6 +559,7 @@ export const ABSENCE_SCOPE_CHANGE_IMPACT_ASSESSMENT_RECORD: ContentTemplateRecor
 /** ABSENCE_RETROSPECTIVE_HABIT — run the sprint retrospective, keyword "retro". Produces a written note. */
 export const ABSENCE_RETROSPECTIVE_HABIT_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_RETROSPECTIVE_HABIT', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: RETROSPECTIVE_HABIT_BEGINNER_OVERRIDE },
   paramAxes: CLASS8_PARAM_AXES,
   levelForms: {
     1: form("Run a quick retro before the next sprint: name one thing that went well and one that didn't.", "The lightest retro step: one went-well and one went-wrong named."),
