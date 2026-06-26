@@ -17,6 +17,11 @@
  */
 
 import type { ContentTemplateRecord, LevelForm, ParamAxisTag } from '../content-template-schema.js';
+import {
+  OBSERVABILITY_BEGINNER_OVERRIDE, ROLLBACK_PLANNING_BEGINNER_OVERRIDE, DEPLOYMENT_PLANNING_BEGINNER_OVERRIDE,
+  DEPENDENCY_MGMT_BEGINNER_OVERRIDE, ENV_AND_SECRETS_BEGINNER_OVERRIDE, CI_PIPELINE_BEGINNER_OVERRIDE,
+  RATE_LIMITING_BEGINNER_OVERRIDE,
+} from './class4-records-beginner.js';
 
 function form(option: string, whyDesc: string): LevelForm {
   return { kind: 'slot-variant', cell: { option, whyDesc } };
@@ -36,6 +41,7 @@ export const OPS_PARAM_AXES: Readonly<Record<string, ParamAxisTag>> = {
 /** ABSENCE_OBSERVABILITY — ops, keyword "logging". Sensitive. */
 export const ABSENCE_OBSERVABILITY_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_OBSERVABILITY', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: OBSERVABILITY_BEGINNER_OVERRIDE },
   paramAxes: OPS_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before adding logging across the codebase.',
   levelForms: {
@@ -50,6 +56,7 @@ export const ABSENCE_OBSERVABILITY_RECORD: ContentTemplateRecord = {
 /** ABSENCE_ROLLBACK_PLANNING — ops, keyword "rollback". Sensitive. */
 export const ABSENCE_ROLLBACK_PLANNING_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_ROLLBACK_PLANNING', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: ROLLBACK_PLANNING_BEGINNER_OVERRIDE },
   paramAxes: OPS_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before running or scripting the rollback.',
   levelForms: {
@@ -64,6 +71,7 @@ export const ABSENCE_ROLLBACK_PLANNING_RECORD: ContentTemplateRecord = {
 /** ABSENCE_DEPLOYMENT_PLANNING — ops, keyword "deploy". Sensitive. */
 export const ABSENCE_DEPLOYMENT_PLANNING_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_DEPLOYMENT_PLANNING', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: DEPLOYMENT_PLANNING_BEGINNER_OVERRIDE },
   paramAxes: OPS_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before deploying or changing infrastructure.',
   levelForms: {
@@ -78,6 +86,7 @@ export const ABSENCE_DEPLOYMENT_PLANNING_RECORD: ContentTemplateRecord = {
 /** ABSENCE_DEPENDENCY_MGMT — ops, keyword "dependenc". Sensitive. */
 export const ABSENCE_DEPENDENCY_MGMT_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_DEPENDENCY_MGMT', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: DEPENDENCY_MGMT_BEGINNER_OVERRIDE },
   paramAxes: OPS_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before installing, upgrading, or removing any dependency.',
   levelForms: {
@@ -92,6 +101,7 @@ export const ABSENCE_DEPENDENCY_MGMT_RECORD: ContentTemplateRecord = {
 /** ABSENCE_ENV_AND_SECRETS — ops, keyword "secret". Sensitive. */
 export const ABSENCE_ENV_AND_SECRETS_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_ENV_AND_SECRETS', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: ENV_AND_SECRETS_BEGINNER_OVERRIDE },
   paramAxes: OPS_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before moving, rotating, or deleting any credential.',
   levelForms: {
@@ -106,6 +116,7 @@ export const ABSENCE_ENV_AND_SECRETS_RECORD: ContentTemplateRecord = {
 /** ABSENCE_CI_PIPELINE — ops, keyword "test". Sensitive. */
 export const ABSENCE_CI_PIPELINE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_CI_PIPELINE', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: CI_PIPELINE_BEGINNER_OVERRIDE },
   paramAxes: OPS_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before changing the CI configuration or merge gates.',
   levelForms: {
@@ -120,6 +131,7 @@ export const ABSENCE_CI_PIPELINE_RECORD: ContentTemplateRecord = {
 /** ABSENCE_RATE_LIMITING — ops, keyword "limit". Sensitive. */
 export const ABSENCE_RATE_LIMITING_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_RATE_LIMITING', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: RATE_LIMITING_BEGINNER_OVERRIDE },
   paramAxes: OPS_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before adding throttling to production request paths.',
   levelForms: {
