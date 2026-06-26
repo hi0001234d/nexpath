@@ -15,6 +15,12 @@
  */
 
 import type { ContentTemplateRecord, LevelForm, ParamAxisTag } from '../content-template-schema.js';
+import {
+  TEST_CREATION_BEGINNER_OVERRIDE, REGRESSION_CHECK_BEGINNER_OVERRIDE, BEHAVIOUR_TESTING_BEGINNER_OVERRIDE,
+  SECURITY_CHECK_BEGINNER_OVERRIDE, ERROR_HANDLING_BEGINNER_OVERRIDE, DOCUMENTATION_BEGINNER_OVERRIDE,
+  REFACTORING_BEGINNER_OVERRIDE, CORRECTION_SEEKING_BEGINNER_OVERRIDE, PROBLEM_CORRECTION_BEGINNER_OVERRIDE,
+  ACCESSIBILITY_BEGINNER_OVERRIDE, DATA_VALIDATION_BEGINNER_OVERRIDE,
+} from './class2-records-beginner.js';
 
 function form(option: string, whyDesc: string): LevelForm {
   return { kind: 'slot-variant', cell: { option, whyDesc } };
@@ -34,7 +40,9 @@ export const A6_SPINE = ['commit-intent'];
 
 /** BEHAVIOUR_TESTING — verification family, keyword "test". */
 export const BEHAVIOUR_TESTING_RECORD: ContentTemplateRecord = {
-  signalType: 'BEHAVIOUR_TESTING', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'BEHAVIOUR_TESTING',
+  registerOverrides: { beginner: BEHAVIOUR_TESTING_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
   levelForms: {
     1: form('Manually test the one main user journey before moving on.', 'Automated tests miss the user-facing path; one manual run is the lightest scenario test.'),
@@ -47,7 +55,9 @@ export const BEHAVIOUR_TESTING_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_TEST_CREATION — verification family, keyword "test". */
 export const ABSENCE_TEST_CREATION_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_TEST_CREATION', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_TEST_CREATION',
+  registerOverrides: { beginner: TEST_CREATION_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
   levelForms: {
     1: form('Write one test for the most important behaviour in what was just built.', 'No tests yet; one test on the most important behaviour is the lightest floor.'),
@@ -60,7 +70,9 @@ export const ABSENCE_TEST_CREATION_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_REGRESSION_CHECK — verification family, keyword "regression". */
 export const ABSENCE_REGRESSION_CHECK_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_REGRESSION_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_REGRESSION_CHECK',
+  registerOverrides: { beginner: REGRESSION_CHECK_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
   levelForms: {
     1: form('Run the existing tests and report any regression — anything passing before that now fails.', 'A regression on existing behaviour is the lightest thing to catch: run what exists, report new failures.'),
@@ -73,7 +85,9 @@ export const ABSENCE_REGRESSION_CHECK_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_SECURITY_CHECK — verification family (security), keyword "security". */
 export const ABSENCE_SECURITY_CHECK_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_SECURITY_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_SECURITY_CHECK',
+  registerOverrides: { beginner: SECURITY_CHECK_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
   levelForms: {
     1: form('Check what was just built for the one most obvious security issue — unvalidated input or a missing access check.', 'A quick security spot-check is the lightest pass: the most obvious unvalidated-input or access gap.'),
@@ -86,7 +100,9 @@ export const ABSENCE_SECURITY_CHECK_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_ERROR_HANDLING — verification family, keyword "error". */
 export const ABSENCE_ERROR_HANDLING_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_ERROR_HANDLING', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_ERROR_HANDLING',
+  registerOverrides: { beginner: ERROR_HANDLING_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
   levelForms: {
     1: form('Check what happens in what was just built when the most likely error occurs — a failed call or invalid input.', 'A quick error-path check is the lightest pass: the single most-likely failure handled or not.'),
@@ -99,7 +115,9 @@ export const ABSENCE_ERROR_HANDLING_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_DOCUMENTATION — maintainability family, keyword "document". */
 export const ABSENCE_DOCUMENTATION_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_DOCUMENTATION', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_DOCUMENTATION',
+  registerOverrides: { beginner: DOCUMENTATION_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A6_SPINE,
   levelForms: {
     1: form('Add a one-line note documenting the WHY behind the least-obvious part of what was just built.', 'The lightest documentation: one line on the why behind the least-obvious piece.'),
@@ -112,7 +130,9 @@ export const ABSENCE_DOCUMENTATION_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_REFACTORING — maintainability family, keyword "refactor". */
 export const ABSENCE_REFACTORING_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_REFACTORING', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_REFACTORING',
+  registerOverrides: { beginner: REFACTORING_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A6_SPINE,
   levelForms: {
     1: form('Name the one thing in what was just built most worth refactoring before moving on.', 'The lightest code-health step: name the single highest-value refactoring.'),
@@ -125,7 +145,9 @@ export const ABSENCE_REFACTORING_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_CORRECTION_SEEKING — verification family (self-review), keyword "review". */
 export const ABSENCE_CORRECTION_SEEKING_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_CORRECTION_SEEKING', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_CORRECTION_SEEKING',
+  registerOverrides: { beginner: CORRECTION_SEEKING_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
   levelForms: {
     1: form('Review the one part of what was just built you are least confident is correct.', 'The lightest self-review: surface the single least-confident part.'),
@@ -138,7 +160,9 @@ export const ABSENCE_CORRECTION_SEEKING_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_PROBLEM_CORRECTION — verification family (fix), keyword "fix". */
 export const ABSENCE_PROBLEM_CORRECTION_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_PROBLEM_CORRECTION', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_PROBLEM_CORRECTION',
+  registerOverrides: { beginner: PROBLEM_CORRECTION_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
   levelForms: {
     1: form('Confirm the bug noticed this session was actually fixed, not just acknowledged.', 'The lightest correction check: confirm the noticed bug was really fixed.'),
@@ -151,7 +175,9 @@ export const ABSENCE_PROBLEM_CORRECTION_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_ACCESSIBILITY — verification family (accessibility), keyword "accessible". */
 export const ABSENCE_ACCESSIBILITY_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_ACCESSIBILITY', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_ACCESSIBILITY',
+  registerOverrides: { beginner: ACCESSIBILITY_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
   levelForms: {
     1: form('Check the most significant way what was just built is not accessible to a user with a disability.', 'The lightest check: the single biggest way the feature is not accessible to a disabled user.'),
@@ -164,7 +190,9 @@ export const ABSENCE_ACCESSIBILITY_RECORD: ContentTemplateRecord = {
 
 /** ABSENCE_DATA_VALIDATION — verification family (input validation), keyword "validation". */
 export const ABSENCE_DATA_VALIDATION_RECORD: ContentTemplateRecord = {
-  signalType: 'ABSENCE_DATA_VALIDATION', source: 'shipped', schemaVersion: 1, slots: [],
+  signalType: 'ABSENCE_DATA_VALIDATION',
+  registerOverrides: { beginner: DATA_VALIDATION_BEGINNER_OVERRIDE },
+  source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: VERIFICATION_PARAM_AXES, spine: A3_SPINE,
   levelForms: {
     1: form('Add validation for the most important untrusted input in what was just built.', 'The lightest validation step: guard the single most important untrusted input.'),
