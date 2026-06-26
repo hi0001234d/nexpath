@@ -1,8 +1,8 @@
 {
   "name": "nexpath-vscode",
   "displayName": "Nexpath",
-  "description": "Coding-agent prompt guidance for Cursor and Windsurf — between-prompt advisory that helps you stop, reconsider, and reframe before sending.",
-  "version": "0.1.3",
+  "description": "AI coding assistant for Cursor and Windsurf (Devin) — a behaviour-guidance layer that surfaces decision sessions between your prompts. Fully supported and end-to-end tested on both.",
+  "version": "0.1.31",
   "publisher": "nexpath",
   "license": "Apache-2.0",
   "private": true,
@@ -12,17 +12,31 @@
     "node": ">=18"
   },
   "categories": [
-    "Other",
+    "AI",
     "Machine Learning",
-    "Programming Languages"
+    "Chat"
   ],
   "keywords": [
+    "vscode",
     "cursor",
     "windsurf",
-    "ai",
-    "prompt",
-    "guidance",
-    "advisory",
+    "vibe-coding",
+    "ai-coding-assistant",
+    "vscode-ai-extension",
+    "cursor-extensions",
+    "windsurf-extensions",
+    "coding-productivity",
+    "developer-productivity",
+    "ai-developer-tools",
+    "ai-code-tools",
+    "cursor-workflow",
+    "windsurf-workflow",
+    "ai-pair-programmer",
+    "coding-workflow",
+    "developer-workflow",
+    "vibe-coder",
+    "coding-agent",
+    "ai-workflow",
     "nexpath"
   ],
   "homepage": "https://github.com/hi0001234d/nexpath",
