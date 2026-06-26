@@ -40,12 +40,12 @@ export const IDEA_TO_PRD_BEGINNER_OVERRIDE: RegisterOverride = structural({
     "I'm at the moment where talking about the idea turns into actually planning it; I need a shared understanding before going further.",
   ),
   4: form(
-    "Before planning, write down what it does, who it's for, and the one thing most important to figure out first — then confirm we share that understanding.",
-    'Beyond a description: the key unknown named and the understanding confirmed before planning.',
+    "Before planning, name the one assumption that, if it's wrong, would most change what you build — and check we share that understanding, not just the description.",
+    'Beyond a description: the riskiest assumption surfaced and the shared understanding confirmed.',
   ),
   5: form(
-    "Write a short plan note: what you're building, who it's for, what 'done' looks like, and the big open question — so we start from a shared, written understanding.",
-    'A durable plan note capturing the shared understanding before building.',
+    "Write a short plan note: what you're building, who it's for, what 'done' looks like, and the riskiest assumption to check — so we start from a shared, written understanding.",
+    'A durable plan note capturing the shared understanding and the riskiest assumption.',
   ),
 });
 
@@ -64,12 +64,12 @@ export const PRD_TO_ARCHITECTURE_BEGINNER_OVERRIDE: RegisterOverride = structura
     'The spec feels solid; I need to know how the pieces fit together before any code gets written.',
   ),
   4: form(
-    'List the parts and how they connect, then name the one thing we must decide before any code — and check the list covers everything.',
-    'Beyond a list: the parts, their connections, and the key decision before code.',
+    'List the parts and how they connect, then point to the part most likely to be missing or to cause trouble, and settle it before any code.',
+    'Beyond a list: the weakest or missing part singled out and settled before code.',
   ),
   5: form(
-    'Write a short structure note: the main parts, how they connect, and the key decision to make first — so we build from a clear, shared picture.',
-    'A durable structure note of the parts, their connections, and the first decision.',
+    'Write a short structure note: the main parts, how they connect, the part most likely to cause trouble, and the key decision to make first — so we build from a clear, shared picture.',
+    'A durable structure note of the parts, the riskiest part, and the first decision.',
   ),
 });
 
@@ -88,12 +88,12 @@ export const ARCHITECTURE_TO_TASKS_BEGINNER_OVERRIDE: RegisterOverride = structu
     'I see how the pieces fit; I need this broken into steps I can actually start on, in order.',
   ),
   4: form(
-    'Break the work into small ordered steps, each finishable in one session, and name the first step that shows the whole thing works.',
-    'Beyond a list: ordered session-sized steps with the proving step first.',
+    'Order the small steps so the one with the most unknowns comes early — prove that riskiest step works before building the rest.',
+    'Beyond a list: the steps ordered so the riskiest step is proven first.',
   ),
   5: form(
-    "Write a steps note: the ordered small steps, what 'done' is for each, and the first step that proves it all works — so you always know the next step.",
-    'A durable steps note of ordered, done-defined build steps.',
+    "Write a steps note: the ordered small steps, what 'done' is for each, and the risky step to prove first — so you always know the next step and tackle risk early.",
+    'A durable steps note of ordered, done-defined steps with the risky one first.',
   ),
 });
 
@@ -112,12 +112,12 @@ export const IMPLEMENTATION_TO_REVIEW_BEGINNER_OVERRIDE: RegisterOverride = stru
     'A whole phase just finished; I need to know it all works together before I start the next one.',
   ),
   4: form(
-    "Go through everything built this phase, confirm it works together, flag anything broken, and check what a real user might hit that the work doesn't cover.",
-    'Beyond a check: the whole phase work verified together with user-facing gaps named.',
+    'Actually run the main thing this phase built — don\'t just read it — and note where the work breaks or a real user could get stuck.',
+    'Beyond a read-through: the phase work actually run, with break points and user snags noted.',
   ),
   5: form(
-    "Write a short check note: what works, what's broken or incomplete, and the user cases not yet covered — so the next phase starts on solid work.",
-    'A durable check note of what works and the gaps before the next phase.',
+    "Write a short check note: what you ran and what worked, what's broken or incomplete, and the user cases not yet covered — so the next phase starts on tested work.",
+    'A durable check note of what was run, what works, and the gaps before the next phase.',
   ),
 });
 
@@ -136,12 +136,12 @@ export const REVIEW_TO_RELEASE_BEGINNER_OVERRIDE: RegisterOverride = structural(
     "Review is done; this is the last step before going live, and I need to be sure it's actually ready.",
   ),
   4: form(
-    "Before shipping, go through everything that must pass, share the results, and name anything that could go wrong once it's live that hasn't been tested.",
-    'Beyond the checks: the pre-ship results shared and the live risks named.',
+    'Before you ship, try it once in a setup close to the real one, so problems surface here instead of after going live.',
+    'Beyond the checks: a dry-run in a real-ish setup before you ship.',
   ),
   5: form(
-    'Write a short ship checklist: what must pass, the results, the live risks, and what to do if something breaks after shipping — so going live is deliberate.',
-    'A durable ship checklist of must-pass checks and the live-risk plan.',
+    'Write a short ship checklist: what must pass, the results, a dry-run in a real-ish setup, the live risks, and what to do if something breaks after shipping — so going live is deliberate.',
+    'A durable ship checklist of must-pass checks, a dry-run, and the live-risk plan.',
   ),
 });
 
@@ -160,11 +160,11 @@ export const RELEASE_TO_FEEDBACK_BEGINNER_OVERRIDE: RegisterOverride = structura
     "It just went live; I need to know it actually works in production and that I'll find out if it breaks later.",
   ),
   4: form(
-    'Check what is live actually works, share what you find, and make sure something will tell you if it breaks after you stop watching — not fail silently.',
-    'Beyond a check: the live feature verified with a break-signal in place.',
+    'Set up the one alert that would tell you if the main thing breaks, so a silent failure can\'t slip by after you stop watching.',
+    'Beyond a check: the one alert that catches a silent break put in place.',
   ),
   5: form(
-    'Write a short monitoring note: how you will know it works, what alerts you if it breaks, and what to do when one fires — so a break is caught, not silent.',
-    'A durable monitoring note of how a break gets caught and handled.',
+    'Write a short monitoring note: how you will know it works, the alert that fires if it breaks, and what to do when it does — so a break is caught, not silent.',
+    'A durable monitoring note of the break-alert and the response.',
   ),
 });

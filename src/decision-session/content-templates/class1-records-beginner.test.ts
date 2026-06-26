@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type OpenAI from 'openai';
 import { CLASS1_RECORDS } from './class1-records.js';
 import { resolveRegisterForms, composeAdvisory, type RecordCandidateLookup } from '../content-template-engine.js';
-import { reviewRecord, checkVoice, checkEscalation } from '../content-authoring-rules.js';
+import { reviewRecord, checkVoice, checkEscalation, checkL2Safeguard } from '../content-authoring-rules.js';
 import { checkTopicKeyword, checkOptionLengthBudget } from '../content-template-tooling.js';
 import { validateContentTemplateRecord, type ContentTemplateRecord } from '../content-template-schema.js';
 import {
@@ -81,13 +81,21 @@ describe('class-1 beginner overrides — per-variant T1-variant gates', () => {
         expect(res.missingInWhyDesc.filter((l) => l !== 3)).toEqual([]);
       });
 
-      it('is de-jargon clean (col-3 frozen exempt), headline-only, voice-clean', () => {
+      it('is de-jargon clean (col-3 frozen exempt), headline-only, full coverage, voice-clean', () => {
         const review = reviewRecord(synth, kw);
         const jargon = { ...review.jargonByLevel };
         delete jargon[3];
         expect(jargon).toEqual({});
         expect(review.headlineOnly.ok).toBe(true);
+        expect(review.coverage.ok).toBe(true);
         expect(checkVoice(synth).ok).toBe(true);
+      });
+
+      it('the override forms are L2-safe: unflagged variants trip no sensitive-action proxy; flagged ones are guarded', () => {
+        // synth inherits the base record's l2SafeguardRequired/l2SafeguardLine, so a flagged
+        // record's override is guarded on every column; an unflagged override must carry no
+        // un-guarded sensitive-action trigger in its beginner options.
+        expect(checkL2Safeguard(synth).ok).toBe(true);
       });
 
       it('practice richness is monotonic; fits the copy-paste budget (col-3 exempt), col-1 ≤ col-5', () => {
