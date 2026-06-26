@@ -24,6 +24,14 @@
  */
 
 import type { ContentTemplateRecord, LevelForm, ParamAxisTag } from '../content-template-schema.js';
+import {
+  IDEA_TO_PRD_BEGINNER_OVERRIDE,
+  PRD_TO_ARCHITECTURE_BEGINNER_OVERRIDE,
+  ARCHITECTURE_TO_TASKS_BEGINNER_OVERRIDE,
+  IMPLEMENTATION_TO_REVIEW_BEGINNER_OVERRIDE,
+  REVIEW_TO_RELEASE_BEGINNER_OVERRIDE,
+  RELEASE_TO_FEEDBACK_BEGINNER_OVERRIDE,
+} from './class1-records-beginner.js';
 
 function form(option: string, whyDesc: string): LevelForm {
   return { kind: 'slot-variant', cell: { option, whyDesc } };
@@ -49,6 +57,7 @@ const STAGE_TRANSITION_PARAM_AXES: Readonly<Record<string, ParamAxisTag>> = {
 /** IDEA → PRD — spec/design family, keyword "PRD". */
 export const IDEA_TO_PRD_RECORD: ContentTemplateRecord = {
   signalType: 'IDEA_TO_PRD',
+  registerOverrides: { beginner: IDEA_TO_PRD_BEGINNER_OVERRIDE },
   source: 'shipped',
   schemaVersion: 1,
   slots: [],
@@ -80,6 +89,7 @@ export const IDEA_TO_PRD_RECORD: ContentTemplateRecord = {
 /** PRD → ARCHITECTURE — spec/design family, keyword "architecture". */
 export const PRD_TO_ARCHITECTURE_RECORD: ContentTemplateRecord = {
   signalType: 'PRD_TO_ARCHITECTURE',
+  registerOverrides: { beginner: PRD_TO_ARCHITECTURE_BEGINNER_OVERRIDE },
   source: 'shipped',
   schemaVersion: 1,
   slots: [],
@@ -111,6 +121,7 @@ export const PRD_TO_ARCHITECTURE_RECORD: ContentTemplateRecord = {
 /** ARCHITECTURE → TASKS — planning family, keyword "task". */
 export const ARCHITECTURE_TO_TASKS_RECORD: ContentTemplateRecord = {
   signalType: 'ARCHITECTURE_TO_TASKS',
+  registerOverrides: { beginner: ARCHITECTURE_TO_TASKS_BEGINNER_OVERRIDE },
   source: 'shipped',
   schemaVersion: 1,
   slots: [],
@@ -175,6 +186,7 @@ export const TASK_REVIEW_RECORD: ContentTemplateRecord = {
 /** IMPLEMENTATION → REVIEW — verification family, keyword "test". */
 export const IMPLEMENTATION_TO_REVIEW_RECORD: ContentTemplateRecord = {
   signalType: 'IMPLEMENTATION_TO_REVIEW',
+  registerOverrides: { beginner: IMPLEMENTATION_TO_REVIEW_BEGINNER_OVERRIDE },
   source: 'shipped',
   schemaVersion: 1,
   slots: [],
@@ -207,6 +219,7 @@ export const IMPLEMENTATION_TO_REVIEW_RECORD: ContentTemplateRecord = {
 /** REVIEW → RELEASE — ops/ship family, keyword "release"; intrinsically sensitive (production release). */
 export const REVIEW_TO_RELEASE_RECORD: ContentTemplateRecord = {
   signalType: 'REVIEW_TO_RELEASE',
+  registerOverrides: { beginner: REVIEW_TO_RELEASE_BEGINNER_OVERRIDE },
   l2SafeguardLine: 'Confirm with me before releasing to production.',
   source: 'shipped',
   schemaVersion: 1,
@@ -240,6 +253,7 @@ export const REVIEW_TO_RELEASE_RECORD: ContentTemplateRecord = {
 /** RELEASE → FEEDBACK — ops/monitoring family, keyword "monitoring"; intrinsically sensitive (production monitoring). */
 export const RELEASE_TO_FEEDBACK_RECORD: ContentTemplateRecord = {
   signalType: 'RELEASE_TO_FEEDBACK',
+  registerOverrides: { beginner: RELEASE_TO_FEEDBACK_BEGINNER_OVERRIDE },
   l2SafeguardLine: 'Ask me for go-ahead before changing production monitoring or alerting.',
   source: 'shipped',
   schemaVersion: 1,
