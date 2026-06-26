@@ -50,6 +50,28 @@ export const SLOT_TYPES: readonly SlotType[] = ['static-ref', 'literal', 'param-
 export type ParamAxisTag = 'closed-ordinal' | 'nominal' | 'extensible' | 'open';
 export const PARAM_AXIS_TAGS: readonly ParamAxisTag[] = ['closed-ordinal', 'nominal', 'extensible', 'open'];
 
+/**
+ * Register-divergence kind (§6.1 gate 3 / S6). A register's content either:
+ *  - `vocab-adaptable` — the base content carries it via LLM Pass-1 vocabulary
+ *    adaptation, NO stored override (the default; a register simply absent from
+ *    `registerOverrides` is vocab-adaptable); or
+ *  - `structurally-divergent` — the rewrite is structural, not just vocabulary, so
+ *    it carries its OWN stored `levelForms` (e.g. the `_BEGINNER` sets).
+ */
+export type RegisterDivergence = 'vocab-adaptable' | 'structurally-divergent';
+export const REGISTER_DIVERGENCES: readonly RegisterDivergence[] = ['vocab-adaptable', 'structurally-divergent'];
+
+/**
+ * A per-register override entry. A `structurally-divergent` entry MUST carry its own
+ * `levelForms` (the stored rewrite, with the mandatory level-1 floor); a
+ * `vocab-adaptable` entry carries none (the engine LLM-adapts the base). This is the
+ * schema's explicit register-divergence MARK.
+ */
+export interface RegisterOverride {
+  divergence: RegisterDivergence;
+  levelForms?: Partial<Record<MaturityLevel, LevelForm>>;
+}
+
 export interface Slot {
   /** Referenced in a cell as `{{name}}`. */
   name: string;
@@ -94,6 +116,14 @@ export interface ContentTemplateRecord {
    * sensitive; names that record's own action (no cross-record mismatch).
    */
   l2SafeguardLine?: string;
+  /**
+   * Register-divergence overrides (§6.1 gate 3 / S6), keyed by register name (e.g.
+   * `beginner`). A register ABSENT here is vocab-adaptable — the engine LLM-adapts the
+   * base content, no branch. A `structurally-divergent` entry carries its own
+   * `levelForms` (the stored rewrite, e.g. the `_BEGINNER` sets) which the
+   * register-override branch serves verbatim for that register. Optional + additive.
+   */
+  registerOverrides?: Record<string, RegisterOverride>;
 }
 
 // ── Validation (the single schema gate) ───────────────────────────────────────
@@ -109,6 +139,19 @@ function isCell(c: unknown): c is TwoChannelCell {
     && typeof (c as TwoChannelCell).whyDesc === 'string';
 }
 
+/** Validate a sparse levelForms map (mandatory level-1 floor + well-formed forms). Shared by the base record and structurally-divergent register overrides. */
+function validateLevelFormsMap(lf: unknown, prefix: string, errors: string[]): void {
+  if (!lf || typeof lf !== 'object') { errors.push(`${prefix} must be an object`); return; }
+  const map = lf as Record<string, LevelForm>;
+  if (!map[MIN_LEVEL]) errors.push(`${prefix} is missing the mandatory level-${MIN_LEVEL} floor`);
+  for (const [k, form] of Object.entries(map)) {
+    const lvl = Number(k);
+    if (!(MATURITY_LEVELS as readonly number[]).includes(lvl)) errors.push(`${prefix} has out-of-range level ${k}`);
+    if (!form || (form.kind !== 'slot-variant' && form.kind !== 'structural-variant')) errors.push(`${prefix}[${k}].kind invalid`);
+    else if (!isCell(form.cell)) errors.push(`${prefix}[${k}].cell must be { option, whyDesc } strings`);
+  }
+}
+
 /** Validate a content-template record's shape. One gate, used at runtime + build. */
 export function validateContentTemplateRecord(record: unknown): ValidationResult {
   const errors: string[] = [];
@@ -122,18 +165,7 @@ export function validateContentTemplateRecord(record: unknown): ValidationResult
   }
 
   // levelForms — sparse, level-1 floor mandatory, each form well-formed.
-  const lf = r.levelForms;
-  if (!lf || typeof lf !== 'object') {
-    errors.push('levelForms must be an object');
-  } else {
-    if (!lf[MIN_LEVEL]) errors.push(`levelForms is missing the mandatory level-${MIN_LEVEL} floor`);
-    for (const [k, form] of Object.entries(lf)) {
-      const lvl = Number(k);
-      if (!(MATURITY_LEVELS as readonly number[]).includes(lvl)) errors.push(`levelForms has out-of-range level ${k}`);
-      if (!form || (form.kind !== 'slot-variant' && form.kind !== 'structural-variant')) errors.push(`levelForms[${k}].kind invalid`);
-      else if (!isCell(form.cell)) errors.push(`levelForms[${k}].cell must be { option, whyDesc } strings`);
-    }
-  }
+  validateLevelFormsMap(r.levelForms, 'levelForms', errors);
 
   // slots — each well-formed for its type.
   if (!Array.isArray(r.slots)) {
@@ -179,6 +211,26 @@ export function validateContentTemplateRecord(record: unknown): ValidationResult
   // l2SafeguardLine — optional; when present, a non-empty string.
   if (r.l2SafeguardLine !== undefined && (typeof r.l2SafeguardLine !== 'string' || r.l2SafeguardLine === '')) {
     errors.push('l2SafeguardLine must be a non-empty string when present');
+  }
+
+  // registerOverrides — optional; each entry's divergence valid; a structurally-divergent
+  // entry carries its own valid levelForms; a vocab-adaptable entry carries none.
+  if (r.registerOverrides !== undefined) {
+    if (typeof r.registerOverrides !== 'object' || r.registerOverrides === null) {
+      errors.push('registerOverrides must be an object when present');
+    } else {
+      for (const [register, ov] of Object.entries(r.registerOverrides)) {
+        if (!ov || typeof ov !== 'object') { errors.push(`registerOverrides.${register} must be an object`); continue; }
+        if (!REGISTER_DIVERGENCES.includes(ov.divergence)) {
+          errors.push(`registerOverrides.${register}.divergence must be one of ${REGISTER_DIVERGENCES.join('|')}`);
+        }
+        if (ov.divergence === 'structurally-divergent') {
+          validateLevelFormsMap(ov.levelForms, `registerOverrides.${register}.levelForms`, errors);
+        } else if (ov.divergence === 'vocab-adaptable' && ov.levelForms !== undefined) {
+          errors.push(`registerOverrides.${register}: vocab-adaptable carries no levelForms (the engine adapts the base)`);
+        }
+      }
+    }
   }
 
   return { ok: errors.length === 0, errors };

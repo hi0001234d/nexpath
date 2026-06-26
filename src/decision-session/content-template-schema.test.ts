@@ -130,6 +130,41 @@ describe('content-template-schema — injection guard', () => {
   });
 });
 
+describe('content-template-schema — registerOverrides (§6.1 gate 3)', () => {
+  it('accepts a structurally-divergent override with a floored levelForms', () => {
+    const r = validRecord({ registerOverrides: { beginner: { divergence: 'structurally-divergent', levelForms: { 1: form() } } } });
+    expect(validateContentTemplateRecord(r)).toEqual({ ok: true, errors: [] });
+  });
+  it('accepts a vocab-adaptable override with no levelForms', () => {
+    const r = validRecord({ registerOverrides: { beginner: { divergence: 'vocab-adaptable' } } });
+    expect(validateContentTemplateRecord(r).ok).toBe(true);
+  });
+  it('rejects a structurally-divergent override missing levelForms', () => {
+    const r = validRecord({ registerOverrides: { beginner: { divergence: 'structurally-divergent' } } });
+    const res = validateContentTemplateRecord(r);
+    expect(res.ok).toBe(false);
+    expect(res.errors.join(' ')).toMatch(/registerOverrides\.beginner\.levelForms must be an object/);
+  });
+  it('rejects a structurally-divergent override missing the level-1 floor', () => {
+    const r = validRecord({ registerOverrides: { beginner: { divergence: 'structurally-divergent', levelForms: { 3: form() } } } });
+    const res = validateContentTemplateRecord(r);
+    expect(res.ok).toBe(false);
+    expect(res.errors.join(' ')).toMatch(/registerOverrides\.beginner\.levelForms is missing the mandatory level-1 floor/);
+  });
+  it('rejects a vocab-adaptable override that carries levelForms', () => {
+    const r = validRecord({ registerOverrides: { beginner: { divergence: 'vocab-adaptable', levelForms: { 1: form() } } } });
+    const res = validateContentTemplateRecord(r);
+    expect(res.ok).toBe(false);
+    expect(res.errors.join(' ')).toMatch(/vocab-adaptable carries no levelForms/);
+  });
+  it('rejects an invalid divergence value', () => {
+    const r = validRecord({ registerOverrides: { beginner: { divergence: 'whatever' } } } as unknown as Partial<ContentTemplateRecord>);
+    const res = validateContentTemplateRecord(r);
+    expect(res.ok).toBe(false);
+    expect(res.errors.join(' ')).toMatch(/divergence must be one of/);
+  });
+});
+
 describe('content-template-schema — levelForms resolution (closest-level, floor, clamp)', () => {
   const lf = { 1: form('structural-variant'), 3: form(), 5: form() };
 

@@ -3,6 +3,7 @@ import type OpenAI from 'openai';
 import {
   resolveRecord,
   resolveColumn,
+  resolveRegisterForms,
   stepSimpler,
   withTimeout,
   selectRankCapFacts,
@@ -410,6 +411,34 @@ describe('content-template-engine — end-to-end orchestration (composeAdvisory)
     // so the live wiring can never forget the sensitive-action safeguard.
     const out = await composeAdvisory({ lookup: lookupOf({ shipped: rec }), level: 1 }, mockClient(JSON.stringify({ whyDesc: 'woven why' })));
     expect(out?.whyDesc).toContain('Ask me for go-ahead before deploying.');
+  });
+});
+
+describe('content-template-engine — register-override branch (resolveRegisterForms)', () => {
+  // §6.1 gate 3 / S6: serve a structurally-divergent register's own forms (e.g. _BEGINNER);
+  // a register with no override — or a vocab-adaptable one — uses the base (LLM-adapted).
+  const base = { 1: { kind: 'slot-variant', cell: cell('base1') } } as ContentTemplateRecord['levelForms'];
+  const beg = { 1: { kind: 'slot-variant', cell: cell('beginner1') } } as ContentTemplateRecord['levelForms'];
+  const rec = record({ levelForms: base, registerOverrides: { beginner: { divergence: 'structurally-divergent', levelForms: beg } } });
+
+  it('serves the structurally-divergent override forms for the matching register', () => {
+    expect(resolveRegisterForms(rec, 'beginner')).toBe(beg);
+  });
+  it('serves the base forms when no register is given', () => {
+    expect(resolveRegisterForms(rec, undefined)).toBe(base);
+  });
+  it('serves the base forms for a register with no override', () => {
+    expect(resolveRegisterForms(rec, 'founder')).toBe(base);
+  });
+  it('serves the base forms for a vocab-adaptable register (the engine adapts the base)', () => {
+    const r = record({ levelForms: base, registerOverrides: { beginner: { divergence: 'vocab-adaptable' } } });
+    expect(resolveRegisterForms(r, 'beginner')).toBe(base);
+  });
+  it('composeAdvisory serves the override option for the target register, base otherwise', async () => {
+    const out = await composeAdvisory({ lookup: lookupOf({ shipped: rec }), level: 1, register: 'beginner' }, mockClient(JSON.stringify({ whyDesc: 'w' })));
+    expect(out?.option).toBe('beginner1');
+    const baseOut = await composeAdvisory({ lookup: lookupOf({ shipped: rec }), level: 1 }, mockClient(JSON.stringify({ whyDesc: 'w' })));
+    expect(baseOut?.option).toBe('base1');
   });
 });
 

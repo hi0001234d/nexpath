@@ -106,6 +106,24 @@ export function resolveColumn(record: ContentTemplateRecord, level: MaturityLeve
   return resolveLevelForm(record.levelForms, level);
 }
 
+// ── Register-override branch (§6.1 gate 3 / S6) ─────────────────────────────────
+
+/**
+ * The register-override BRANCH: return the effective levelForms for a target register.
+ * A `structurally-divergent` override (e.g. the `_BEGINNER` rewrite) serves its OWN
+ * stored forms; a register with no override — or a `vocab-adaptable` one — uses the
+ * base forms (the engine adapts vocabulary downstream, no branch). No register → base.
+ * Single dispatch: one lookup, base fallback, no boolean-flag accumulation.
+ */
+export function resolveRegisterForms(
+  record: ContentTemplateRecord,
+  register?: string,
+): ContentTemplateRecord['levelForms'] {
+  const override = register ? record.registerOverrides?.[register] : undefined;
+  if (override?.divergence === 'structurally-divergent' && override.levelForms) return override.levelForms;
+  return record.levelForms;
+}
+
 // ── Stage 3: strength step — always-run derive, bounded-timeout → fallback ──────
 
 /** The injected "one-notch-simpler" derive. May reject or hang; the engine bounds it. */
@@ -461,6 +479,8 @@ export interface ComposeAdvisoryInput {
   /** Optional action anchor for the option (droppable-first under budget). */
   anchor?: string;
   lengthBudget?: number;
+  /** Target register — selects a structurally-divergent override's forms when present (else base). */
+  register?: string;
 }
 
 export interface ComposedAdvisory {
@@ -481,7 +501,9 @@ export interface ComposedAdvisory {
 export async function composeAdvisory(input: ComposeAdvisoryInput, client?: OpenAI): Promise<ComposedAdvisory | null> {
   const resolved = resolveRecord(input.lookup);
   if (!resolved) return null;
-  const col = resolveColumn(resolved.record, input.level);
+  // Register-override branch first: serve a structurally-divergent register's own forms
+  // (e.g. _BEGINNER) when present, else the base forms.
+  const col = resolveLevelForm(resolveRegisterForms(resolved.record, input.register), input.level);
   if (!col) return null;
   const option = composeOption({
     cell: col.form.cell, slots: resolved.record.slots, ctx: input.ctx, anchor: input.anchor, lengthBudget: input.lengthBudget,
