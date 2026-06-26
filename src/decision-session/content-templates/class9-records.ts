@@ -33,6 +33,14 @@
  */
 
 import type { ContentTemplateRecord, LevelForm, ParamAxisTag } from '../content-template-schema.js';
+import {
+  DECISION_RECORD_ABSENCE_BEGINNER_OVERRIDE, OVER_ENGINEERING_CHECK_BEGINNER_OVERRIDE,
+  PAIR_REVIEW_ABSENCE_BEGINNER_OVERRIDE, OBSERVABILITY_FIRST_BEGINNER_OVERRIDE,
+  FAILURE_MODE_ANALYSIS_BEGINNER_OVERRIDE, CONTRACT_TESTING_GAP_BEGINNER_OVERRIDE,
+  CAPACITY_PLANNING_GAP_BEGINNER_OVERRIDE, SECURITY_THREAT_MODELING_BEGINNER_OVERRIDE,
+  DATABASE_MIGRATION_SAFETY_BEGINNER_OVERRIDE, DEPLOYMENT_STRATEGY_ABSENCE_BEGINNER_OVERRIDE,
+  OPERATIONAL_RUNBOOK_GAP_BEGINNER_OVERRIDE, SLO_DEFINITION_GAP_BEGINNER_OVERRIDE,
+} from './class9-records-beginner.js';
 
 function form(option: string, whyDesc: string): LevelForm {
   return { kind: 'slot-variant', cell: { option, whyDesc } };
@@ -50,6 +58,7 @@ export const CLASS9_PARAM_AXES: Readonly<Record<string, ParamAxisTag>> = {
 /** ABSENCE_DECISION_RECORD_ABSENCE — record the design decision + rationale, keyword "decision". Produces a written doc. */
 export const ABSENCE_DECISION_RECORD_ABSENCE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_DECISION_RECORD_ABSENCE', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: DECISION_RECORD_ABSENCE_BEGINNER_OVERRIDE },
   paramAxes: CLASS9_PARAM_AXES,
   levelForms: {
     1: form("Note the one key design decision made here and why you chose it over the alternative.", "The lightest step: the key decision and its reason noted."),
@@ -63,6 +72,7 @@ export const ABSENCE_DECISION_RECORD_ABSENCE_RECORD: ContentTemplateRecord = {
 /** ABSENCE_OVER_ENGINEERING_CHECK — apply YAGNI, remove speculative code, keyword "speculativ". Behavioural gate. SENSITIVE (delete/restructure). */
 export const ABSENCE_OVER_ENGINEERING_CHECK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_OVER_ENGINEERING_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: OVER_ENGINEERING_CHECK_BEGINNER_OVERRIDE },
   paramAxes: CLASS9_PARAM_AXES,
   l2SafeguardRequired: true,
   l2SafeguardLine: "Before you delete or restructure any code, ask me for go-ahead confirmation first.",
@@ -78,6 +88,7 @@ export const ABSENCE_OVER_ENGINEERING_CHECK_RECORD: ContentTemplateRecord = {
 /** ABSENCE_PAIR_REVIEW_ABSENCE — establish a review plan before merge, keyword "review". Produces a written plan. */
 export const ABSENCE_PAIR_REVIEW_ABSENCE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_PAIR_REVIEW_ABSENCE', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: PAIR_REVIEW_ABSENCE_BEGINNER_OVERRIDE },
   paramAxes: CLASS9_PARAM_AXES,
   levelForms: {
     1: form("Name who will review this change and the one thing the review must catch before merge.", "The lightest step: the reviewer and the key review focus named."),
@@ -91,6 +102,7 @@ export const ABSENCE_PAIR_REVIEW_ABSENCE_RECORD: ContentTemplateRecord = {
 /** ABSENCE_OBSERVABILITY_FIRST — make production behaviour visible, keyword "visib". Produces a written plan. SENSITIVE (instrument across files). */
 export const ABSENCE_OBSERVABILITY_FIRST_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_OBSERVABILITY_FIRST', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: OBSERVABILITY_FIRST_BEGINNER_OVERRIDE },
   paramAxes: CLASS9_PARAM_AXES,
   l2SafeguardRequired: true,
   l2SafeguardLine: "Before you add instrumentation across multiple files, ask me for go-ahead confirmation first.",
@@ -106,6 +118,7 @@ export const ABSENCE_OBSERVABILITY_FIRST_RECORD: ContentTemplateRecord = {
 /** ABSENCE_FAILURE_MODE_ANALYSIS — enumerate dependency failure modes, keyword "failure". Produces a written note. SENSITIVE (patterns across files). */
 export const ABSENCE_FAILURE_MODE_ANALYSIS_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_FAILURE_MODE_ANALYSIS', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: FAILURE_MODE_ANALYSIS_BEGINNER_OVERRIDE },
   paramAxes: CLASS9_PARAM_AXES,
   l2SafeguardRequired: true,
   l2SafeguardLine: "Before you implement any stability pattern across multiple files, ask me for go-ahead confirmation first.",
@@ -121,6 +134,7 @@ export const ABSENCE_FAILURE_MODE_ANALYSIS_RECORD: ContentTemplateRecord = {
 /** ABSENCE_CONTRACT_TESTING_GAP — consumer-driven contract tests, keyword "contract". Produces a written test file. */
 export const ABSENCE_CONTRACT_TESTING_GAP_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_CONTRACT_TESTING_GAP', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: CONTRACT_TESTING_GAP_BEGINNER_OVERRIDE },
   paramAxes: CLASS9_PARAM_AXES,
   levelForms: {
     1: form("Write one contract test for this service boundary from the consumer's view before they ship separately.", "The lightest step: one consumer-view contract test written."),
@@ -134,6 +148,7 @@ export const ABSENCE_CONTRACT_TESTING_GAP_RECORD: ContentTemplateRecord = {
 /** ABSENCE_CAPACITY_PLANNING_GAP — estimate capacity before ship, keyword "capacity". Produces a written note. */
 export const ABSENCE_CAPACITY_PLANNING_GAP_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_CAPACITY_PLANNING_GAP', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: CAPACITY_PLANNING_GAP_BEGINNER_OVERRIDE },
   paramAxes: CLASS9_PARAM_AXES,
   levelForms: {
     1: form("Estimate the peak load this feature must handle and check current capacity covers it.", "The lightest step: the peak load estimated against current capacity."),
@@ -147,6 +162,7 @@ export const ABSENCE_CAPACITY_PLANNING_GAP_RECORD: ContentTemplateRecord = {
 /** ABSENCE_SECURITY_THREAT_MODELING — STRIDE threats + controls, keyword "threat". Produces a written note. SENSITIVE (security control in code). */
 export const ABSENCE_SECURITY_THREAT_MODELING_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_SECURITY_THREAT_MODELING', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: SECURITY_THREAT_MODELING_BEGINNER_OVERRIDE },
   paramAxes: CLASS9_PARAM_AXES,
   l2SafeguardRequired: true,
   l2SafeguardLine: "Before you implement any security control in code, ask me for go-ahead confirmation first.",
@@ -162,6 +178,7 @@ export const ABSENCE_SECURITY_THREAT_MODELING_RECORD: ContentTemplateRecord = {
 /** ABSENCE_DATABASE_MIGRATION_SAFETY — expand-migrate-contract phasing, keyword "migrat". Produces a written plan. SENSITIVE (run migration). */
 export const ABSENCE_DATABASE_MIGRATION_SAFETY_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_DATABASE_MIGRATION_SAFETY', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: DATABASE_MIGRATION_SAFETY_BEGINNER_OVERRIDE },
   paramAxes: CLASS9_PARAM_AXES,
   l2SafeguardRequired: true,
   l2SafeguardLine: "Before you run any schema migration, ask me for go-ahead confirmation first.",
@@ -177,6 +194,7 @@ export const ABSENCE_DATABASE_MIGRATION_SAFETY_RECORD: ContentTemplateRecord = {
 /** ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE — rollout strategy + rollback, keyword "rollback". Produces a written plan. SENSITIVE (trigger deployment). */
 export const ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: DEPLOYMENT_STRATEGY_ABSENCE_BEGINNER_OVERRIDE },
   paramAxes: CLASS9_PARAM_AXES,
   l2SafeguardRequired: true,
   l2SafeguardLine: "Before you trigger any deployment, ask me for go-ahead confirmation first.",
@@ -192,6 +210,7 @@ export const ABSENCE_DEPLOYMENT_STRATEGY_ABSENCE_RECORD: ContentTemplateRecord =
 /** ABSENCE_OPERATIONAL_RUNBOOK_GAP — write the operational runbook, keyword "runbook". Produces a written runbook. */
 export const ABSENCE_OPERATIONAL_RUNBOOK_GAP_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_OPERATIONAL_RUNBOOK_GAP', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: OPERATIONAL_RUNBOOK_GAP_BEGINNER_OVERRIDE },
   paramAxes: CLASS9_PARAM_AXES,
   levelForms: {
     1: form("Start the runbook with the one thing on-call most needs — the key health signal to watch.", "The lightest step: the runbook started with the key health signal."),
@@ -205,6 +224,7 @@ export const ABSENCE_OPERATIONAL_RUNBOOK_GAP_RECORD: ContentTemplateRecord = {
 /** ABSENCE_SLO_DEFINITION_GAP — define SLOs + alerting, keyword "slo". Produces a written doc. */
 export const ABSENCE_SLO_DEFINITION_GAP_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_SLO_DEFINITION_GAP', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: SLO_DEFINITION_GAP_BEGINNER_OVERRIDE },
   paramAxes: CLASS9_PARAM_AXES,
   levelForms: {
     1: form("Name one SLO for this feature — the availability or latency target it must meet.", "The lightest step: one SLO target named for the feature."),
