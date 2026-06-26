@@ -26,6 +26,14 @@
  */
 
 import type { ContentTemplateRecord, LevelForm, ParamAxisTag } from '../content-template-schema.js';
+import {
+  FEATURE_COMPLETION_CHECK_BEGINNER_OVERRIDE, FINISHING_LINE_AWARENESS_BEGINNER_OVERRIDE,
+  POLISH_VS_FUNCTION_BEGINNER_OVERRIDE, MVP_SCOPE_DISCIPLINE_BEGINNER_OVERRIDE,
+  IDEA_TO_SPEC_BRIDGE_BEGINNER_OVERRIDE, DEMO_VS_PRODUCT_BEGINNER_OVERRIDE,
+  USER_JOURNEY_CHECK_BEGINNER_OVERRIDE, TECHNICAL_SPIKE_TREATMENT_BEGINNER_OVERRIDE,
+  DEPENDENCY_ADVENTURE_BEGINNER_OVERRIDE, RESTART_IMPULSE_CHECK_BEGINNER_OVERRIDE,
+  CREATIVE_VS_CORE_RATIO_BEGINNER_OVERRIDE,
+} from './class7-records-beginner.js';
 
 function form(option: string, whyDesc: string): LevelForm {
   return { kind: 'slot-variant', cell: { option, whyDesc } };
@@ -45,6 +53,7 @@ export const VIBE_PARAM_AXES: Readonly<Record<string, ParamAxisTag>> = {
 /** ABSENCE_FEATURE_COMPLETION_CHECK — finish before starting, keyword "feature". Behavioural cadence. */
 export const ABSENCE_FEATURE_COMPLETION_CHECK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_FEATURE_COMPLETION_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: FEATURE_COMPLETION_CHECK_BEGINNER_OVERRIDE },
   paramAxes: VIBE_PARAM_AXES,
   levelForms: {
     1: form("Quick check: is the last feature actually done and working end-to-end before starting a new feature?", "The lightest completion check: the last feature confirmed working end-to-end before the next."),
@@ -58,6 +67,7 @@ export const ABSENCE_FEATURE_COMPLETION_CHECK_RECORD: ContentTemplateRecord = {
 /** ABSENCE_FINISHING_LINE_AWARENESS — drive WIP to done, keyword "progress". Behavioural cadence. */
 export const ABSENCE_FINISHING_LINE_AWARENESS_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_FINISHING_LINE_AWARENESS', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: FINISHING_LINE_AWARENESS_BEGINNER_OVERRIDE },
   paramAxes: VIBE_PARAM_AXES,
   levelForms: {
     1: form("Count the work in progress: how many things are half-built versus finished? Push the closest one to done.", "The lightest finishing step: the work-in-progress counted and the closest one pushed to done."),
@@ -71,6 +81,7 @@ export const ABSENCE_FINISHING_LINE_AWARENESS_RECORD: ContentTemplateRecord = {
 /** ABSENCE_POLISH_VS_FUNCTION — function before polish, keyword "polish". Behavioural cadence. */
 export const ABSENCE_POLISH_VS_FUNCTION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_POLISH_VS_FUNCTION', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: POLISH_VS_FUNCTION_BEGINNER_OVERRIDE },
   paramAxes: VIBE_PARAM_AXES,
   levelForms: {
     1: form("Before more polish, check: does the core actually work end-to-end yet?", "The lightest sequencing step: the core confirmed working before any polish."),
@@ -84,6 +95,7 @@ export const ABSENCE_POLISH_VS_FUNCTION_RECORD: ContentTemplateRecord = {
 /** ABSENCE_MVP_SCOPE_DISCIPLINE — gate features against the MVP hypothesis, keyword "mvp". Produces a written note. */
 export const ABSENCE_MVP_SCOPE_DISCIPLINE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_MVP_SCOPE_DISCIPLINE', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: MVP_SCOPE_DISCIPLINE_BEGINNER_OVERRIDE },
   paramAxes: VIBE_PARAM_AXES,
   levelForms: {
     1: form("Before adding the next feature, ask one question: does this test the core MVP idea, or is it extra?", "The lightest MVP gate: the next feature checked against the core idea before it's added."),
@@ -97,6 +109,7 @@ export const ABSENCE_MVP_SCOPE_DISCIPLINE_RECORD: ContentTemplateRecord = {
 /** ABSENCE_IDEA_TO_SPEC_BRIDGE — spec before building, keyword "spec". Produces a written doc. */
 export const ABSENCE_IDEA_TO_SPEC_BRIDGE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_IDEA_TO_SPEC_BRIDGE', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: IDEA_TO_SPEC_BRIDGE_BEGINNER_OVERRIDE },
   paramAxes: VIBE_PARAM_AXES,
   levelForms: {
     1: form("Before building, write one line of spec: what does this feature do?", "The lightest spec step: a one-line spec of what the feature does before building."),
@@ -110,6 +123,7 @@ export const ABSENCE_IDEA_TO_SPEC_BRIDGE_RECORD: ContentTemplateRecord = {
 /** ABSENCE_DEMO_VS_PRODUCT — name the demo-vs-real quality standard, keyword "demo". Produces a written note. */
 export const ABSENCE_DEMO_VS_PRODUCT_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_DEMO_VS_PRODUCT', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: DEMO_VS_PRODUCT_BEGINNER_OVERRIDE },
   paramAxes: VIBE_PARAM_AXES,
   levelForms: {
     1: form("Before building more, name it: is this a throwaway demo or the real thing people will use?", "The lightest step: the demo-versus-real standard named before more is built."),
@@ -123,6 +137,7 @@ export const ABSENCE_DEMO_VS_PRODUCT_RECORD: ContentTemplateRecord = {
 /** ABSENCE_USER_JOURNEY_CHECK — map the non-happy-path states, keyword "state". Produces a written note. */
 export const ABSENCE_USER_JOURNEY_CHECK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_USER_JOURNEY_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: USER_JOURNEY_CHECK_BEGINNER_OVERRIDE },
   paramAxes: VIBE_PARAM_AXES,
   levelForms: {
     1: form("Beyond the happy path, name one missing state: what shows when there's no data?", "The lightest journey step: one missing state — the empty state — named."),
@@ -136,6 +151,7 @@ export const ABSENCE_USER_JOURNEY_CHECK_RECORD: ContentTemplateRecord = {
 /** ABSENCE_TECHNICAL_SPIKE_TREATMENT — keep spike code out of the real build, keyword "spike". Behavioural rule. */
 export const ABSENCE_TECHNICAL_SPIKE_TREATMENT_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_TECHNICAL_SPIKE_TREATMENT', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: TECHNICAL_SPIKE_TREATMENT_BEGINNER_OVERRIDE },
   paramAxes: VIBE_PARAM_AXES,
   levelForms: {
     1: form("Name what this is: a spike to learn something, or real code to keep?", "The lightest step: the work named as a spike-to-learn or real code-to-keep."),
@@ -149,6 +165,7 @@ export const ABSENCE_TECHNICAL_SPIKE_TREATMENT_RECORD: ContentTemplateRecord = {
 /** ABSENCE_DEPENDENCY_ADVENTURE — justify a dependency before adding it, keyword "dependency". SENSITIVE (install). */
 export const ABSENCE_DEPENDENCY_ADVENTURE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_DEPENDENCY_ADVENTURE', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: DEPENDENCY_ADVENTURE_BEGINNER_OVERRIDE },
   paramAxes: VIBE_PARAM_AXES,
   l2SafeguardRequired: true,
   l2SafeguardLine: "Before adding or installing this dependency, ask me for go-ahead confirmation first.",
@@ -164,6 +181,7 @@ export const ABSENCE_DEPENDENCY_ADVENTURE_RECORD: ContentTemplateRecord = {
 /** ABSENCE_RESTART_IMPULSE_CHECK — diagnose before restarting from scratch, keyword "restart". Produces a written note. */
 export const ABSENCE_RESTART_IMPULSE_CHECK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_RESTART_IMPULSE_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: RESTART_IMPULSE_CHECK_BEGINNER_OVERRIDE },
   paramAxes: VIBE_PARAM_AXES,
   levelForms: {
     1: form("Before restarting from scratch, name the one thing that actually went wrong.", "The lightest restart check: the one real problem named before throwing work away."),
@@ -177,6 +195,7 @@ export const ABSENCE_RESTART_IMPULSE_CHECK_RECORD: ContentTemplateRecord = {
 /** ABSENCE_CREATIVE_VS_CORE_RATIO — keep effort weighted to the core, keyword "creative". Produces a written note. */
 export const ABSENCE_CREATIVE_VS_CORE_RATIO_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_CREATIVE_VS_CORE_RATIO', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: CREATIVE_VS_CORE_RATIO_BEGINNER_OVERRIDE },
   paramAxes: VIBE_PARAM_AXES,
   levelForms: {
     1: form("Quick gut-check: is more effort going to creative extras than to the core product right now?", "The lightest ratio check: creative-versus-core effort sensed before the next extra."),
