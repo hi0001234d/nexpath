@@ -410,6 +410,35 @@ describe('content-template-engine — end-to-end orchestration (composeAdvisory)
   });
 });
 
+describe('content-template-engine — T2: served column never exceeds L+1', () => {
+  // CTA-D3 §5.10.18 T2 (+1-form-clamp): the engine never serves a column > requested+1;
+  // the served column ∈ [floor, L+1], and may fall BELOW L via closest-level fallback.
+  // The schema-level resolveLevelForm clamp is tested in content-template-schema.test.ts;
+  // these pin the same guarantee at the engine's resolveColumn / composeAdvisory boundary
+  // using a record with a far-upper authored level (1 and 5, nothing between).
+  const rec = record({ levelForms: {
+    1: { kind: 'slot-variant', cell: cell('lvl1', 'w1') },
+    5: { kind: 'slot-variant', cell: cell('lvl5', 'w5') },
+  } });
+
+  it('resolveColumn excludes a far-upper level beyond L+1 (serves the floor instead)', () => {
+    expect(resolveColumn(rec, 2)?.level).toBe(1); // 5 > 2+1 → excluded; floor served
+    expect(resolveColumn(rec, 3)?.level).toBe(1); // 5 > 3+1 → excluded; floor served
+    expect(resolveColumn(rec, 4)?.level).toBe(5); // 5 ≤ 4+1 → in-window
+  });
+
+  it('composeAdvisory serves a column within [floor, L+1], never the far-upper', async () => {
+    const out = await composeAdvisory({ lookup: lookupOf({ shipped: rec }), level: 2 }, mockClient(JSON.stringify({ whyDesc: 'w' })));
+    expect(out!.level).toBeLessThanOrEqual(2 + 1);
+    expect(out?.option).toBe('lvl1'); // the far-upper lvl5 is NOT served
+  });
+
+  it('T2-cap: a request at the max level serves at most the max authored', async () => {
+    const out = await composeAdvisory({ lookup: lookupOf({ shipped: rec }), level: 5 }, mockClient(JSON.stringify({ whyDesc: 'w' })));
+    expect(out?.level).toBe(5);
+  });
+});
+
 describe('content-template-engine — T1-RUNTIME: keyword survives the (b)-derive', () => {
   // CTA-D3 §5.10.18 T1-RUNTIME: the one-notch-simpler (b)-derive output preserves the
   // signalType keyword. The derive is the LLM seam (prompt instructs "without ... dropping
