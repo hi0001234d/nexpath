@@ -15,6 +15,14 @@
  */
 
 import type { ContentTemplateRecord, LevelForm, ParamAxisTag } from '../content-template-schema.js';
+import {
+  PHASE_TRANSITION_BEGINNER_OVERRIDE, IDEA_SCOPING_BEGINNER_OVERRIDE, IDEA_CONSTRAINT_CHECK_BEGINNER_OVERRIDE,
+  IDEA_USER_DEFINITION_BEGINNER_OVERRIDE, TASK_ORDERING_BEGINNER_OVERRIDE, TASK_SIZING_BEGINNER_OVERRIDE,
+  TASK_DEFINITION_OF_DONE_BEGINNER_OVERRIDE, USER_FEEDBACK_REVIEW_BEGINNER_OVERRIDE,
+  ITERATION_PLANNING_BEGINNER_OVERRIDE, SCOPE_CREEP_BEGINNER_OVERRIDE, FEATURE_SCOPE_BEGINNER_OVERRIDE,
+  IMPLEMENTATION_CHECKPOINT_BEGINNER_OVERRIDE, SPEC_BEFORE_CODE_BEGINNER_OVERRIDE,
+  INCREMENTAL_BUILD_BEGINNER_OVERRIDE,
+} from './class6-records-beginner.js';
 
 function form(option: string, whyDesc: string): LevelForm {
   return { kind: 'slot-variant', cell: { option, whyDesc } };
@@ -32,6 +40,7 @@ export const PLANNING_PARAM_AXES: Readonly<Record<string, ParamAxisTag>> = {
 /** ABSENCE_PHASE_TRANSITION — phase exit readiness, keyword "transition". Produces a written note. */
 export const ABSENCE_PHASE_TRANSITION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_PHASE_TRANSITION', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: PHASE_TRANSITION_BEGINNER_OVERRIDE },
   paramAxes: PLANNING_PARAM_AXES,
   levelForms: {
     1: form("Name the one thing that must be true before this project can move to the next phase — the key transition criterion.", "The lightest transition check: the one must-be-true exit criterion named."),
@@ -45,6 +54,7 @@ export const ABSENCE_PHASE_TRANSITION_RECORD: ContentTemplateRecord = {
 /** ABSENCE_IDEA_SCOPING — define the project scope, keyword "scope". Produces a written note. */
 export const ABSENCE_IDEA_SCOPING_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_IDEA_SCOPING', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: IDEA_SCOPING_BEGINNER_OVERRIDE },
   paramAxes: PLANNING_PARAM_AXES,
   levelForms: {
     1: form("State the core problem this project solves in one line — the seed of its scope.", "The lightest scope step: the core problem named."),
@@ -58,6 +68,7 @@ export const ABSENCE_IDEA_SCOPING_RECORD: ContentTemplateRecord = {
 /** ABSENCE_IDEA_CONSTRAINT_CHECK — non-goals and constraints, keyword "constraint". Produces a written note. */
 export const ABSENCE_IDEA_CONSTRAINT_CHECK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_IDEA_CONSTRAINT_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: IDEA_CONSTRAINT_CHECK_BEGINNER_OVERRIDE },
   paramAxes: PLANNING_PARAM_AXES,
   levelForms: {
     1: form("Name the one thing this project will explicitly NOT do — its clearest constraint.", "The lightest constraint step: one explicit non-goal named."),
@@ -71,6 +82,7 @@ export const ABSENCE_IDEA_CONSTRAINT_CHECK_RECORD: ContentTemplateRecord = {
 /** ABSENCE_IDEA_USER_DEFINITION — define the target user, keyword "user". Produces a written note. */
 export const ABSENCE_IDEA_USER_DEFINITION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_IDEA_USER_DEFINITION', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: IDEA_USER_DEFINITION_BEGINNER_OVERRIDE },
   paramAxes: PLANNING_PARAM_AXES,
   levelForms: {
     1: form("Name the primary user this project is for in one line.", "The lightest user step: the primary user named."),
@@ -84,6 +96,7 @@ export const ABSENCE_IDEA_USER_DEFINITION_RECORD: ContentTemplateRecord = {
 /** ABSENCE_TASK_ORDERING — order tasks by dependency, keyword "order". Produces a written plan. */
 export const ABSENCE_TASK_ORDERING_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_TASK_ORDERING', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: TASK_ORDERING_BEGINNER_OVERRIDE },
   paramAxes: PLANNING_PARAM_AXES,
   levelForms: {
     1: form("Identify the one task that blocks the most others and order it first.", "The lightest ordering step: the top blocking task placed first."),
@@ -97,6 +110,7 @@ export const ABSENCE_TASK_ORDERING_RECORD: ContentTemplateRecord = {
 /** ABSENCE_TASK_SIZING — single-session task sizing, keyword "siz". Produces a written plan. */
 export const ABSENCE_TASK_SIZING_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_TASK_SIZING', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: TASK_SIZING_BEGINNER_OVERRIDE },
   paramAxes: PLANNING_PARAM_AXES,
   levelForms: {
     1: form("Check the largest task for sizing: can it be finished in one focused session, or must it be split?", "The lightest sizing check: the largest task split if it can't fit one session."),
@@ -110,6 +124,7 @@ export const ABSENCE_TASK_SIZING_RECORD: ContentTemplateRecord = {
 /** ABSENCE_TASK_DEFINITION_OF_DONE — per-task completion criteria, keyword "complet". Produces a written note. */
 export const ABSENCE_TASK_DEFINITION_OF_DONE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_TASK_DEFINITION_OF_DONE', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: TASK_DEFINITION_OF_DONE_BEGINNER_OVERRIDE },
   paramAxes: PLANNING_PARAM_AXES,
   levelForms: {
     1: form("State the completion criterion for the current task: what must be true for it to be complete?", "The lightest done-check: the current task's completion criterion stated."),
@@ -123,6 +138,7 @@ export const ABSENCE_TASK_DEFINITION_OF_DONE_RECORD: ContentTemplateRecord = {
 /** ABSENCE_USER_FEEDBACK_REVIEW — systematic feedback review, keyword "feedback". Produces a written note. */
 export const ABSENCE_USER_FEEDBACK_REVIEW_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_USER_FEEDBACK_REVIEW', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: USER_FEEDBACK_REVIEW_BEGINNER_OVERRIDE },
   paramAxes: PLANNING_PARAM_AXES,
   levelForms: {
     1: form("Pick the one piece of feedback that recurs most and note the pattern it points to.", "The lightest feedback step: the most-recurring feedback item and its pattern."),
@@ -136,6 +152,7 @@ export const ABSENCE_USER_FEEDBACK_REVIEW_RECORD: ContentTemplateRecord = {
 /** ABSENCE_ITERATION_PLANNING — plan the next iteration, keyword "iteration". Produces a written plan. */
 export const ABSENCE_ITERATION_PLANNING_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_ITERATION_PLANNING', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: ITERATION_PLANNING_BEGINNER_OVERRIDE },
   paramAxes: PLANNING_PARAM_AXES,
   levelForms: {
     1: form("Name the one feedback item the next iteration must address first.", "The lightest iteration step: the top item for the next iteration named."),
@@ -149,6 +166,7 @@ export const ABSENCE_ITERATION_PLANNING_RECORD: ContentTemplateRecord = {
 /** ABSENCE_SCOPE_CREEP — audit build against original scope, keyword "scope". Produces a written note. */
 export const ABSENCE_SCOPE_CREEP_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_SCOPE_CREEP', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: SCOPE_CREEP_BEGINNER_OVERRIDE },
   paramAxes: PLANNING_PARAM_AXES,
   levelForms: {
     1: form("Name the one thing built that was not in the original scope, and decide: keep, defer, or cut?", "The lightest scope-creep check: one unplanned addition decided keep/defer/cut."),
@@ -162,6 +180,7 @@ export const ABSENCE_SCOPE_CREEP_RECORD: ContentTemplateRecord = {
 /** ABSENCE_FEATURE_SCOPE — feature definition-of-ready, keyword "feature". Produces a written note. */
 export const ABSENCE_FEATURE_SCOPE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_FEATURE_SCOPE', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: FEATURE_SCOPE_BEGINNER_OVERRIDE },
   paramAxes: PLANNING_PARAM_AXES,
   levelForms: {
     1: form("State in one line what this feature does and the one condition for calling it done.", "The lightest feature-readiness step: what the feature does and its done condition."),
@@ -175,6 +194,7 @@ export const ABSENCE_FEATURE_SCOPE_RECORD: ContentTemplateRecord = {
 /** ABSENCE_IMPLEMENTATION_CHECKPOINT — verify each unit before continuing, keyword "checkpoint". Behavioural cadence. */
 export const ABSENCE_IMPLEMENTATION_CHECKPOINT_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_IMPLEMENTATION_CHECKPOINT', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: IMPLEMENTATION_CHECKPOINT_BEGINNER_OVERRIDE },
   paramAxes: PLANNING_PARAM_AXES,
   levelForms: {
     1: form("Run a quick checkpoint: is the last unit of work passing before you continue?", "The lightest checkpoint: the last unit confirmed green before continuing."),
@@ -188,6 +208,7 @@ export const ABSENCE_IMPLEMENTATION_CHECKPOINT_RECORD: ContentTemplateRecord = {
 /** ABSENCE_SPEC_BEFORE_CODE — behaviour spec before coding, keyword "spec". Produces a written doc. */
 export const ABSENCE_SPEC_BEFORE_CODE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_SPEC_BEFORE_CODE', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: SPEC_BEFORE_CODE_BEGINNER_OVERRIDE },
   paramAxes: PLANNING_PARAM_AXES,
   levelForms: {
     1: form("Write the primary scenario spec as Given/When/Then before continuing the code.", "The lightest spec step: the primary Given/When/Then scenario specified."),
@@ -201,6 +222,7 @@ export const ABSENCE_SPEC_BEFORE_CODE_RECORD: ContentTemplateRecord = {
 /** ABSENCE_INCREMENTAL_BUILD — verify between increments, keyword "increment". Behavioural cadence. */
 export const ABSENCE_INCREMENTAL_BUILD_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_INCREMENTAL_BUILD', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: INCREMENTAL_BUILD_BEGINNER_OVERRIDE },
   paramAxes: PLANNING_PARAM_AXES,
   levelForms: {
     1: form("Verify the last increment before adding the next — confirm it works on its own.", "The lightest increment check: the last increment verified before the next."),
