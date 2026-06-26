@@ -86,10 +86,12 @@ describe('class-7 beginner overrides — per-variant T1-variant gates', () => {
         expect(beg).not.toBe(base);
       });
 
-      it('keeps its own beginner keyword in every option and every authored why-desc (col-3 frozen core exempt)', () => {
+      it('keeps its own beginner keyword in every option AND every why-desc incl col-3 (col-3 authored fresh, not frozen — no exemption)', () => {
+        // T1 same-topic: keyword in every option and every AUTHORED why-desc. Class-7 col-3 is
+        // authored (no frozen core to exempt), so its why-desc must carry the keyword too.
         const res = checkTopicKeyword(synth, kw);
         expect(res.missingInOption).toEqual([]);
-        expect(res.missingInWhyDesc.filter((l) => l !== 3)).toEqual([]);
+        expect(res.missingInWhyDesc).toEqual([]);
       });
 
       it('is de-jargon clean in EVERY column incl col-3 (authored fresh, not frozen — no exemption), headline-only, full coverage, voice-clean', () => {
