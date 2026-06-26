@@ -16,6 +16,12 @@
  */
 
 import type { ContentTemplateRecord, LevelForm, ParamAxisTag } from '../content-template-schema.js';
+import {
+  COMPREHENSION_BEGINNER_OVERRIDE, NO_PUSHBACK_BEGINNER_OVERRIDE, CONTEXT_LOSS_BEGINNER_OVERRIDE,
+  DECISION_FATIGUE_PATTERN_BEGINNER_OVERRIDE, WORK_RHYTHM_CHECK_BEGINNER_OVERRIDE,
+  FOCUS_DRIFT_DETECTION_BEGINNER_OVERRIDE, SESSION_LENGTH_CHECKPOINT_BEGINNER_OVERRIDE,
+  PROGRESS_CONSOLIDATION_GAP_BEGINNER_OVERRIDE,
+} from './class5-records-beginner.js';
 
 function form(option: string, whyDesc: string): LevelForm {
   return { kind: 'slot-variant', cell: { option, whyDesc } };
@@ -33,6 +39,7 @@ export const SESSION_QUALITY_PARAM_AXES: Readonly<Record<string, ParamAxisTag>> 
 /** ABSENCE_COMPREHENSION — understand the generated code, keyword "comprehension". Heaviest = a written comprehension note. */
 export const ABSENCE_COMPREHENSION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_COMPREHENSION', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: COMPREHENSION_BEGINNER_OVERRIDE },
   paramAxes: SESSION_QUALITY_PARAM_AXES,
   levelForms: {
     1: form("Spot-check your comprehension of what was just built: pick the one part you understand least and trace it.", "The lightest comprehension check: trace the single least-understood part."),
@@ -46,6 +53,7 @@ export const ABSENCE_COMPREHENSION_RECORD: ContentTemplateRecord = {
 /** ABSENCE_NO_PUSHBACK — critically evaluate AI output, keyword "question". Heaviest = a written pushback note. */
 export const ABSENCE_NO_PUSHBACK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_NO_PUSHBACK', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: NO_PUSHBACK_BEGINNER_OVERRIDE },
   paramAxes: SESSION_QUALITY_PARAM_AXES,
   levelForms: {
     1: form("Question the one AI suggestion in what was just built you accepted most readily — was it actually right?", "The lightest pushback: question the single most-readily-accepted suggestion."),
@@ -59,6 +67,7 @@ export const ABSENCE_NO_PUSHBACK_RECORD: ContentTemplateRecord = {
 /** ABSENCE_CONTEXT_LOSS — recap session state, keyword "state". Produces a written note. */
 export const ABSENCE_CONTEXT_LOSS_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_CONTEXT_LOSS', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: CONTEXT_LOSS_BEGINNER_OVERRIDE },
   paramAxes: SESSION_QUALITY_PARAM_AXES,
   levelForms: {
     1: form("Note the current state of what was just built in one line before continuing — what is done and what is next.", "The lightest state recap: one line on done-and-next."),
@@ -72,6 +81,7 @@ export const ABSENCE_CONTEXT_LOSS_RECORD: ContentTemplateRecord = {
 /** ABSENCE_DECISION_FATIGUE_PATTERN — break the acceptance streak with review, keyword "review". Heaviest = a written review note. */
 export const ABSENCE_DECISION_FATIGUE_PATTERN_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_DECISION_FATIGUE_PATTERN', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: DECISION_FATIGUE_PATTERN_BEGINNER_OVERRIDE },
   paramAxes: SESSION_QUALITY_PARAM_AXES,
   levelForms: {
     1: form("Review the most recent change in what was just built with fresh eyes — the acceptance streak may have let something slip.", "The lightest review: one fresh-eyes pass on the latest change after a long streak."),
@@ -85,6 +95,7 @@ export const ABSENCE_DECISION_FATIGUE_PATTERN_RECORD: ContentTemplateRecord = {
 /** ABSENCE_WORK_RHYTHM_CHECK — verify each response before the next prompt, keyword "verif". Behavioural. */
 export const ABSENCE_WORK_RHYTHM_CHECK_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_WORK_RHYTHM_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: WORK_RHYTHM_CHECK_BEGINNER_OVERRIDE },
   paramAxes: SESSION_QUALITY_PARAM_AXES,
   levelForms: {
     1: form("Verify the last AI response before sending the next prompt — read it in full and confirm it is correct.", "The lightest rhythm check: the last response verified before the next prompt."),
@@ -98,6 +109,7 @@ export const ABSENCE_WORK_RHYTHM_CHECK_RECORD: ContentTemplateRecord = {
 /** ABSENCE_FOCUS_DRIFT_DETECTION — one concern at a time, keyword "concern". Behavioural. */
 export const ABSENCE_FOCUS_DRIFT_DETECTION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_FOCUS_DRIFT_DETECTION', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: FOCUS_DRIFT_DETECTION_BEGINNER_OVERRIDE },
   paramAxes: SESSION_QUALITY_PARAM_AXES,
   levelForms: {
     1: form("Pick the single most important open concern in this session and finish it before touching another.", "The lightest focus check: one concern finished before the next is opened."),
@@ -111,6 +123,7 @@ export const ABSENCE_FOCUS_DRIFT_DETECTION_RECORD: ContentTemplateRecord = {
 /** ABSENCE_SESSION_LENGTH_CHECKPOINT — checkpoint an extended session, keyword "session". Produces a written note. */
 export const ABSENCE_SESSION_LENGTH_CHECKPOINT_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_SESSION_LENGTH_CHECKPOINT', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: SESSION_LENGTH_CHECKPOINT_BEGINNER_OVERRIDE },
   paramAxes: SESSION_QUALITY_PARAM_AXES,
   levelForms: {
     1: form("Note a quick checkpoint for this session: what is done and what the next step is.", "The lightest session checkpoint: done-and-next noted."),
@@ -124,6 +137,7 @@ export const ABSENCE_SESSION_LENGTH_CHECKPOINT_RECORD: ContentTemplateRecord = {
 /** ABSENCE_PROGRESS_CONSOLIDATION_GAP — document progress, keyword "document". Produces a written record. */
 export const ABSENCE_PROGRESS_CONSOLIDATION_GAP_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_PROGRESS_CONSOLIDATION_GAP', source: 'shipped', schemaVersion: 1, slots: [],
+  registerOverrides: { beginner: PROGRESS_CONSOLIDATION_GAP_BEGINNER_OVERRIDE },
   paramAxes: SESSION_QUALITY_PARAM_AXES,
   levelForms: {
     1: form("Document the one most important thing about what was just built before continuing.", "The lightest consolidation: the single most important point documented."),
