@@ -92,11 +92,11 @@ describe('class-7 beginner overrides — per-variant T1-variant gates', () => {
         expect(res.missingInWhyDesc.filter((l) => l !== 3)).toEqual([]);
       });
 
-      it('is de-jargon clean (col-3 exempt), headline-only, full coverage, voice-clean', () => {
+      it('is de-jargon clean in EVERY column incl col-3 (authored fresh, not frozen — no exemption), headline-only, full coverage, voice-clean', () => {
+        // Unlike classes 1-6, class-7 col-3 is authored (no frozen beginner anchor), so it is
+        // NOT exempt from the de-jargon bar — assert the whole record is jargon-clean.
         const review = reviewRecord(synth, kw);
-        const jargon = { ...review.jargonByLevel };
-        delete jargon[3];
-        expect(jargon).toEqual({});
+        expect(review.jargonByLevel).toEqual({});
         expect(review.headlineOnly.ok).toBe(true);
         expect(review.coverage.ok).toBe(true);
         expect(checkVoice(synth).ok).toBe(true);
