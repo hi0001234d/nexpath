@@ -115,9 +115,11 @@ describe('class-7 beginner overrides — per-variant T1-variant gates', () => {
         expect(FILE_RE.test(begCol5)).toBe(FILE_RE.test(r.levelForms[5]!.cell.option));
       });
 
-      it('practice richness is monotonic; fits the copy-paste budget (col-3 exempt), col-1 ≤ col-5', () => {
+      it('practice richness is monotonic; fits the copy-paste budget in EVERY column incl col-3 (authored fresh, not frozen — no exemption), col-1 ≤ col-5', () => {
+        // Class-7 col-3 is authored (no frozen long anchor to exempt), so it must fit the
+        // copy-paste budget like every other column — assert the whole record is within budget.
         expect(checkEscalation([1, 2, 3, 4, 5]).ok).toBe(true);
-        expect(checkOptionLengthBudget(synth).overLevels.filter((l) => l !== 3)).toEqual([]);
+        expect(checkOptionLengthBudget(synth).overLevels).toEqual([]);
         expect(synth.levelForms[1]!.cell.option.length).toBeLessThanOrEqual(synth.levelForms[5]!.cell.option.length);
       });
     });
