@@ -8,6 +8,7 @@
     "nexpath-serve": "./dist/server/index.js"
   },
   "scripts": {
+    "prebuild": "tsx scripts/check-build-gate.ts",
     "build": "tsc",
     "postbuild": "node -e \"['dist/cli/index.js','dist/server/index.js'].forEach(f => require('fs').chmodSync(f, 0o755))\"",
     "dev:cli": "tsx src/cli/index.ts",
