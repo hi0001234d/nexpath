@@ -58,7 +58,7 @@ export interface OptionGenContext {
 
 // ── Project grounding — completed artifact detection ──────────────────────────
 
-interface ArtifactConfidence {
+export interface ArtifactConfidence {
   spec:          number;
   unitTests:     number;
   e2eTests:      number;
@@ -106,8 +106,16 @@ function scoreArtifacts(history: PromptRecord[]): ArtifactConfidence {
   return conf;
 }
 
-function buildGroundingLines(conf: ArtifactConfidence): string {
+export function buildGroundingLines(conf: ArtifactConfidence): string {
   const lines: string[] = [];
+
+  // Early-session forward-looking band (R13 Gap-1): when NO implementation artifacts are
+  // detected at all (artifact-confidence all-zero — keyed on artifacts, NOT a generic
+  // "planning phase" guess), ground test/verification options forward-looking rather than
+  // as a review of code that may not exist yet.
+  if (conf.spec === 0 && conf.unitTests === 0 && conf.e2eTests === 0) {
+    lines.push('No implementation artifacts detected yet (early session). Phrase any option about tests or verification FORWARD-LOOKING — e.g. "as you start building this, set up tests from the start" — not as a review of existing code. Do not assume there is already a spec, code, or tests to inspect.');
+  }
 
   // Spec
   if (conf.spec < 30) {
@@ -343,7 +351,7 @@ export function buildEmbeddingPrompt(
 
 Embed the extracted feature noun into each adapted option below. Prefer replacing a standard generic phrase if present:
   "what was just built", "what was just made", "what was just created",
-  "this project", "this feature".
+  "this project", "this feature", "this phase", "this service", "this boundary".
 If none of these phrases survived adaptation, embed the feature noun at the most appropriate place with minimal rewrite — preserve the option's meaning, action, and intent. Replace one occurrence per option only.
 
 Schema examples — each shows adapted input → grounded output:
