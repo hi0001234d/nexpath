@@ -7,6 +7,7 @@ import {
   type MistakeCategory,
 } from './mistake-categories.js';
 import type { PromptRecord } from './types.js';
+import { SIGNAL_DEFINITIONS } from './signals.js';
 import { resolveEngine } from '../decision-session/engine-registry.js';
 import { absenceSignalEngine } from '../decision-session/absence-signal-engine.js';
 
@@ -139,6 +140,44 @@ describe('mistake-categories — live detectors (channels a / b / Y available no
   it('liveDetectors excludes every channel-gated entry', () => {
     expect(liveDetectors(MISTAKE_CATEGORIES).every((c) => c.requiresChannel === undefined)).toBe(true);
     expect(liveDetectors(MISTAKE_CATEGORIES).length).toBeLessThan(MISTAKE_CATEGORIES.length);
+  });
+});
+
+describe('mistake-categories — coverage-map (each absence category → existing-or-new ABSENCE_*)', () => {
+  // The ABSENCE_* signalType ↔ classifier signalKey convention is `ABSENCE_<UPPER(key)>`.
+  const existingKeys = new Set(SIGNAL_DEFINITIONS.map((s) => s.key));
+  const absence = MISTAKE_CATEGORIES.filter((c) => c.routing === 'absence');
+  const keyOf = (signal: string) => signal.replace(/^ABSENCE_/, '').toLowerCase();
+
+  it('every absence category names a well-formed ABSENCE_* signal', () => {
+    for (const c of absence) expect(c.mapToAbsenceSignal).toMatch(/^ABSENCE_[A-Z0-9_]+$/);
+  });
+
+  it('the map partitions cleanly into reused-existing and genuinely-new (none unmapped)', () => {
+    const existing = absence.filter((c) => existingKeys.has(keyOf(c.mapToAbsenceSignal!)));
+    const fresh = absence.filter((c) => !existingKeys.has(keyOf(c.mapToAbsenceSignal!)));
+    expect(existing.length + fresh.length).toBe(absence.length); // 36, no orphans
+    // The reused-existing signals must resolve to a real SignalDefinition today.
+    for (const c of existing) expect(existingKeys.has(keyOf(c.mapToAbsenceSignal!))).toBe(true);
+    // The genuinely-new ones are the §3.F population's deferred SIGNAL_DEFINITIONS (live-activation = §6.1 item 10).
+    expect(fresh.length).toBeGreaterThan(0);
+  });
+
+  it('the categories mapped onto existing signals resolve to those exact keys', () => {
+    const reused: Record<string, string> = {
+      ai_overtrust_accept_without_read: 'output_verification',
+      eval_skip: 'test_creation',
+      coverage_illusion: 'test_depth_check',
+      ai_fix_doom_loop: 'restart_impulse_check',
+      prompt_drift_inconsistency: 'architecture_conflict',
+      mega_prompt_overload: 'single_responsibility_prompting',
+      context_window_overflow: 'context_loss',
+      skip_planning_no_plan_mode: 'feature_scope_before_build',
+    };
+    for (const [cat, key] of Object.entries(reused)) {
+      expect(existingKeys.has(key)).toBe(true); // the existing signal really exists
+      expect(byName(cat).mapToAbsenceSignal).toBe(`ABSENCE_${key.toUpperCase()}`);
+    }
   });
 });
 
