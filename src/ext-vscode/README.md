@@ -1,4 +1,4 @@
-# Nexpath — AI Coding Assistant for Cursor & Windsurf
+# Nexpath Extension — Code Fast. Skip Nothing.
 
 **Stop. Think. Prompt better.**
 
@@ -54,7 +54,7 @@ because you're careless, but because momentum takes over. Nexpath is the
 - **Between-prompt advisory** — a lightweight decision session at key transition points. Non-intrusive, never enforcing.
 - **3-level easier options** — can't take the full recommendation? Nexpath offers progressively simpler alternatives before logging the skip.
 - **Behaviour-aware** — tracks the shape of your session locally; your prompt history lives in a local store on your machine.
-- **Nothing is lost** — every item you skip is logged locally, so you can revisit the ones that matter.
+- **Nothing is lost** — every item you skip is logged locally, so the context is always preserved *(full revisit interface coming in a future version)*.
 - **Adapts to your style** — calibrates its tone and depth to how you prompt.
 
 ---
@@ -94,7 +94,7 @@ because you're careless, but because momentum takes over. Nexpath is the
   **your** key — that is the only place your prompt text is sent, and only when a session fires.
 - **Telemetry is opt-in.** If you enable it, only anonymous usage events (command names,
   timings, error types) are collected — never your code, prompts, key, or file paths.
-  Change anytime: `nexpath config set telemetry.enabled true|false`.
+  You choose at setup — simply enable or disable when asked.
 
 ---
 
