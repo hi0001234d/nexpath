@@ -1101,6 +1101,44 @@ describe('createTtySelectFn — Linux new-window path', () => {
       store.db.close();
     }
   });
+
+
+  it('cleans up nested root/freq/role temp files after the Ctrl+T flow completes', async () => {
+    const store = await openStore(':memory:');
+    try {
+      let rootVisits = 0;
+      (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(
+        gnomeTerminalMock((cmd: string, args: string[]) => {
+          const kind = classifyWindow(cmd, args);
+          if (kind === 'main') {
+            writeFileSync(RESULT_FILE, '__ROOT_MENU_PENDING__', 'utf8');
+          } else if (kind === 'root') {
+            rootVisits++;
+            const f = windowResultFile('root', cmd, args);
+            const sentinel = rootVisits === 1 ? '__FREQ_FLOW__' : rootVisits === 2 ? '__ROLE_FLOW__' : '__DONE__';
+            if (f) writeFileSync(f, sentinel, 'utf8');
+          } else if (kind === 'freq') {
+            const f = windowResultFile('freq', cmd, args);
+            if (f) writeFileSync(f, '__FREQ__:optimum', 'utf8');
+          } else if (kind === 'role') {
+            const f = windowResultFile('role', cmd, args);
+            if (f) writeFileSync(f, '__ROLE__:pm', 'utf8');
+          }
+        }),
+      );
+
+      await createTtySelectFn(store, '/proj/newwin-loop-cleanup')!(makeOpts());
+
+      expect(existsSync(join(tmpdir(), `nexpath-root-sel-${UUID}.mjs`))).toBe(false);
+      expect(existsSync(join(tmpdir(), `nexpath-root-res-${UUID}.txt`))).toBe(false);
+      expect(existsSync(join(tmpdir(), `nexpath-freq-sel-${UUID}.mjs`))).toBe(false);
+      expect(existsSync(join(tmpdir(), `nexpath-freq-res-${UUID}.txt`))).toBe(false);
+      expect(existsSync(join(tmpdir(), `nexpath-role-sel-${UUID}.mjs`))).toBe(false);
+      expect(existsSync(join(tmpdir(), `nexpath-role-res-${UUID}.txt`))).toBe(false);
+    } finally {
+      store.db.close();
+    }
+  });
 });
 
 // ── macOS: new Terminal.app window via osascript ─────────────────────────────
