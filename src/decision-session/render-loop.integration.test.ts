@@ -23,9 +23,12 @@ import { TASK_REVIEW, type OptionEntry } from './options.js';
 import { WHY_HELP_PER_CLASS } from './why-help.js';
 import { applyRuntimeSubstitutionsAllLevels } from './runtime-substitutions.js';
 import {
+  computeLayout,
   optionEntriesToSelectableItems,
   renderLoop,
   type KeyEvent,
+  type LayoutState,
+  type RenderLoopOptions,
   type SelectableItem,
 } from './render-loop.js';
 import type { UserProfile } from '../classifier/types.js';
@@ -86,6 +89,19 @@ async function buildPopupInputs(
     message,
     items: optionEntriesToSelectableItems(levelEntries),
   };
+}
+
+function withLongDescBase(item: SelectableItem, prefix: string, lineCount = 6): SelectableItem {
+  const descBase = Array.from({ length: lineCount }, (_, i) => `${prefix} detail line ${i + 1}.`).join('\n');
+  return { ...item, descBase };
+}
+
+function getDescEmissions(layout: ReturnType<typeof computeLayout>, itemIndex: number) {
+  return layout.emissions.filter(
+    (emission) =>
+      emission.optionIndex === itemIndex &&
+      (emission.kind === 'desc-base-truncated' || emission.kind === 'desc-base-expanded'),
+  );
 }
 
 describe('render-loop end-to-end — buildSelectMessage + substitution + render-loop (Phase 7 D2)', () => {
@@ -213,5 +229,131 @@ describe('render-loop end-to-end — buildSelectMessage + substitution + render-
     });
     const written = Buffer.concat(chunks).toString('utf8');
     expect(written).toContain('press Space to toggle details');
+  });
+
+  it('expands only the focused option when generated items carry long desc-bases', async () => {
+    const { items } = await buildPopupInputs(1);
+    expect(items.length).toBeGreaterThan(1);
+
+    const longItems = items.map((item, index) =>
+      index < 2 ? withLongDescBase(item, `option-${index + 1}`) : item,
+    );
+
+    const layoutOpts: RenderLoopOptions = {
+      pinchLabel: 'P',
+      question:   'Q',
+      options:    longItems,
+      rows:       40,
+      cols:       100,
+    };
+    const collapsedState: LayoutState = {
+      focusedIndex:    0,
+      expandedOptions: new Set<number>(),
+      scrollOffset:    0,
+    };
+    const expandedState: LayoutState = {
+      focusedIndex:    0,
+      expandedOptions: new Set<number>([0]),
+      scrollOffset:    0,
+    };
+
+    const collapsed = computeLayout(layoutOpts, collapsedState);
+    const expanded = computeLayout(layoutOpts, expandedState);
+
+    const focusedCollapsed = getDescEmissions(collapsed, 0);
+    const focusedExpanded = getDescEmissions(expanded, 0);
+    const siblingCollapsed = getDescEmissions(collapsed, 1);
+    const siblingExpanded = getDescEmissions(expanded, 1);
+
+    expect(focusedCollapsed).toHaveLength(2);
+    expect(focusedExpanded.length).toBeGreaterThan(focusedCollapsed.length);
+    expect(focusedExpanded.every((emission) => emission.kind === 'desc-base-expanded')).toBe(true);
+    expect(focusedExpanded.map((emission) => emission.text)).not.toEqual(
+      focusedCollapsed.map((emission) => emission.text),
+    );
+
+    expect(siblingCollapsed).toHaveLength(2);
+    expect(siblingExpanded).toHaveLength(siblingCollapsed.length);
+    expect(siblingExpanded.every((emission) => emission.kind === 'desc-base-truncated')).toBe(true);
+    expect(siblingExpanded.map((emission) => emission.text)).toEqual(
+      siblingCollapsed.map((emission) => emission.text),
+    );
+  });
+
+  it('second Space collapses the same focused generated option and retains focus', async () => {
+    const { items } = await buildPopupInputs(1);
+    const longItems = items.map((item, index) =>
+      index === 0 ? withLongDescBase(item, 'focus-target') : item,
+    );
+    const out = new PassThrough();
+    const telemetry: Array<Record<string, unknown>> = [];
+
+    const result = await renderLoop({
+      layout: {
+        pinchLabel: 'P',
+        question:   'Q',
+        options:    longItems,
+        rows:       40,
+        cols:       100,
+      },
+      out,
+      keyEvents: eventsOf('space', 'space', 'enter'),
+      telemetryHook: (_event, payload) => telemetry.push(payload),
+    });
+
+    expect(result).not.toBeNull();
+    expect(result!.value).toBe(longItems[0].value);
+    expect(telemetry).toHaveLength(2);
+
+    expect(telemetry[0]).toMatchObject({
+      optionIndex:   0,
+      prevExpanded:  false,
+      nowExpanded:   true,
+      focusRetained: true,
+    });
+    expect(telemetry[1]).toMatchObject({
+      optionIndex:   0,
+      prevExpanded:  true,
+      nowExpanded:   false,
+      focusRetained: true,
+    });
+  });
+
+  it('auto-scroll keeps the expanded focused generated option visible on a short terminal', async () => {
+    const { items } = await buildPopupInputs(1);
+    const repeated = Array.from({ length: 6 }, (_, index) => {
+      const base = items[index % items.length];
+      return {
+        ...withLongDescBase(base, `option-${index + 1}`),
+        value: `${base.value}::${index}`,
+        label: index === 4 ? 'Focus target option' : `${base.label} ${index + 1}`,
+      };
+    });
+
+    const focusedIndex = 4;
+    repeated[focusedIndex] = {
+      ...withLongDescBase(repeated[focusedIndex], 'focus-target', 9),
+      label: 'Focus target option',
+    };
+
+    const layout = computeLayout(
+      {
+        pinchLabel: 'P',
+        question:   'Q',
+        options:    repeated,
+        rows:       12,
+        cols:       40,
+      },
+      {
+        focusedIndex,
+        expandedOptions: new Set<number>([focusedIndex]),
+        scrollOffset:    0,
+      },
+    );
+
+    const visible = layout.viewport.visibleStyledLines.join('\n');
+    expect(layout.viewport.appliedScrollOffset).toBeGreaterThan(0);
+    expect(visible).toContain('Focus target option');
+    expect(visible).toContain('focus-target detail line 1.');
   });
 });

@@ -29,12 +29,17 @@ import { computeChromePrefix } from './render-loop-chrome.js';
 // this the non-TTY safeguard short-circuits the styler dispatch to
 // pass-through and the styledLines vs emissions divergence collapses.
 let origIsTTY: boolean | undefined;
+let origNoColor: string | undefined;
 beforeAll(() => {
   origIsTTY = process.stdout.isTTY;
+  origNoColor = process.env['NO_COLOR'];
   process.stdout.isTTY = true;
+  delete process.env['NO_COLOR'];
 });
 afterAll(() => {
   process.stdout.isTTY = origIsTTY;
+  if (origNoColor === undefined) delete process.env['NO_COLOR'];
+  else process.env['NO_COLOR'] = origNoColor;
 });
 
 async function* eventsOf(...names: KeyEvent['name'][]): AsyncIterable<KeyEvent> {

@@ -17,12 +17,17 @@ import { captureStyledAndUnstyled } from './styler-snapshot.js';
 // this the non-TTY safeguard short-circuits the OFF path to pass-through
 // and the dual snapshots collapse to identical output.
 let origIsTTY: boolean | undefined;
+let origNoColor: string | undefined;
 beforeAll(() => {
   origIsTTY = process.stdout.isTTY;
+  origNoColor = process.env['NO_COLOR'];
   process.stdout.isTTY = true;
+  delete process.env['NO_COLOR'];
 });
 afterAll(() => {
   process.stdout.isTTY = origIsTTY;
+  if (origNoColor === undefined) delete process.env['NO_COLOR'];
+  else                           process.env['NO_COLOR'] = origNoColor;
 });
 
 // ── Fixture popup ──────────────────────────────────────────────────────────
@@ -59,6 +64,50 @@ const FIXTURE_OPTIONS: RenderLoopOptions = {
 const FIXTURE_STATE = {
   focusedIndex:    0,
   expandedOptions: new Set<number>(),
+  scrollOffset:    0,
+};
+
+const OVERFLOW_FIXTURE_OPTIONS: RenderLoopOptions = {
+  ...FIXTURE_OPTIONS,
+  options: [
+    {
+      value:    'overflow-a',
+      label:    'Review implementation plan',
+      descBase: [
+        'Overflow detail line 1.',
+        'Overflow detail line 2.',
+        'Overflow detail line 3.',
+        'Overflow detail line 4.',
+      ].join('\n'),
+    },
+    { value: 'overflow-b', label: 'Keep baseline short', descBase: 'Short body line.' },
+    { value: 'overflow-c', label: 'Skip for now', isMeta: true },
+  ],
+};
+
+const EXPANDED_FIXTURE_OPTIONS: RenderLoopOptions = {
+  ...FIXTURE_OPTIONS,
+  options: [
+    {
+      value:    'expanded-a',
+      label:    'Expand review checklist',
+      descBase: [
+        'Expanded detail line 1.',
+        'Expanded detail line 2.',
+        'Expanded detail line 3.',
+        'Expanded detail line 4.',
+        'Expanded detail line 5.',
+        'Expanded detail line 6.',
+      ].join('\n'),
+    },
+    { value: 'expanded-b', label: 'Keep second option short', descBase: 'Short second body.' },
+    { value: 'expanded-c', label: 'Skip for now', isMeta: true },
+  ],
+};
+
+const EXPANDED_FIXTURE_STATE = {
+  focusedIndex:    0,
+  expandedOptions: new Set<number>([0]),
   scrollOffset:    0,
 };
 
@@ -131,6 +180,54 @@ describe('render — full-popup snapshot (dual styled / unstyled)', () => {
     for (const out of [styled, unstyled]) {
       // The meta item's label still appears.
       expect(out).toContain('Skip for now');
+    }
+  });
+
+  it('produces a stable styled snapshot for the overflow fixture (collapsed truncation path)', () => {
+    const { styled } = captureStyledAndUnstyled(
+      () => computeLayout(OVERFLOW_FIXTURE_OPTIONS, FIXTURE_STATE).styledLines.join('\n'),
+    );
+    expect(styled).toMatchSnapshot('styled-overflow');
+  });
+
+  it('produces a stable unstyled snapshot for the overflow fixture (collapsed truncation path)', () => {
+    const { unstyled } = captureStyledAndUnstyled(
+      () => computeLayout(OVERFLOW_FIXTURE_OPTIONS, FIXTURE_STATE).styledLines.join('\n'),
+    );
+    expect(unstyled).toMatchSnapshot('unstyled-overflow');
+  });
+
+  it('overflow fixture snapshots contain the truncation marker on the focused desc-base', () => {
+    const { styled, unstyled } = captureStyledAndUnstyled(
+      () => computeLayout(OVERFLOW_FIXTURE_OPTIONS, FIXTURE_STATE).styledLines.join('\n'),
+    );
+    for (const out of [styled, unstyled]) {
+      expect(out).toContain('Overflow detail line 1.');
+      expect(out).toContain('...');
+    }
+  });
+
+  it('produces a stable styled snapshot for the expanded fixture (expanded desc-base path)', () => {
+    const { styled } = captureStyledAndUnstyled(
+      () => computeLayout(EXPANDED_FIXTURE_OPTIONS, EXPANDED_FIXTURE_STATE).styledLines.join('\n'),
+    );
+    expect(styled).toMatchSnapshot('styled-expanded');
+  });
+
+  it('produces a stable unstyled snapshot for the expanded fixture (expanded desc-base path)', () => {
+    const { unstyled } = captureStyledAndUnstyled(
+      () => computeLayout(EXPANDED_FIXTURE_OPTIONS, EXPANDED_FIXTURE_STATE).styledLines.join('\n'),
+    );
+    expect(unstyled).toMatchSnapshot('unstyled-expanded');
+  });
+
+  it('expanded fixture snapshots contain deep desc-base lines from the expanded option', () => {
+    const { styled, unstyled } = captureStyledAndUnstyled(
+      () => computeLayout(EXPANDED_FIXTURE_OPTIONS, EXPANDED_FIXTURE_STATE).styledLines.join('\n'),
+    );
+    for (const out of [styled, unstyled]) {
+      expect(out).toContain('Expanded detail line 6.');
+      expect(out).not.toContain('...');
     }
   });
 });

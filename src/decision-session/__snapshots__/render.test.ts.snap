@@ -1,5 +1,45 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`render — full-popup snapshot (dual styled / unstyled) > produces a stable styled snapshot for the expanded fixture (expanded desc-base path) > styled-expanded 1`] = `
+"Before coding.
+Before building — is the plan written?
+[2mYou're seeing this because[22m
+[2mRecent prompts indicate a transition from one development stage to the next.[22m
+[2m— review the options below to determine the next step.[22m
+[2m[22m
+Expand review checklist
+[2m[22m
+[38;5;252m↳ Expanded detail line 1.[39m
+[38;5;252m  Expanded detail line 2.[39m
+[38;5;252m  Expanded detail line 3.[39m
+[38;5;252m  Expanded detail line 4.[39m
+[38;5;252m  Expanded detail line 5.[39m
+[38;5;252m  Expanded detail line 6.[39m
+[2m[3mpress Space to toggle details[23m[22m
+[2mKeep second option short[22m
+[2m[22m
+[90m↳ Short second body.[39m
+[2mSkip for now[22m"
+`;
+
+exports[`render — full-popup snapshot (dual styled / unstyled) > produces a stable styled snapshot for the overflow fixture (collapsed truncation path) > styled-overflow 1`] = `
+"Before coding.
+Before building — is the plan written?
+[2mYou're seeing this because[22m
+[2mRecent prompts indicate a transition from one development stage to the next.[22m
+[2m— review the options below to determine the next step.[22m
+[2m[22m
+Review implementation plan
+[2m[22m
+[38;5;252m↳ Overflow detail line 1.[39m
+[38;5;252m  Overflow detail line 2....[39m
+[2m[3mpress Space to toggle details[23m[22m
+[2mKeep baseline short[22m
+[2m[22m
+[90m↳ Short body line.[39m
+[2mSkip for now[22m"
+`;
+
 exports[`render — full-popup snapshot (dual styled / unstyled) > produces a stable styled snapshot from the fixture popup > styled 1`] = `
 "Before coding.
 Before building — is the plan written?
@@ -15,6 +55,46 @@ Write a PRD
 [2m[22m
 [90m↳ Problem framing sentence.[39m
 [2mSkip for now[22m"
+`;
+
+exports[`render — full-popup snapshot (dual styled / unstyled) > produces a stable unstyled snapshot for the expanded fixture (expanded desc-base path) > unstyled-expanded 1`] = `
+"Before coding.
+Before building — is the plan written?
+You're seeing this because
+Recent prompts indicate a transition from one development stage to the next.
+— review the options below to determine the next step.
+
+Expand review checklist
+
+↳ Expanded detail line 1.
+  Expanded detail line 2.
+  Expanded detail line 3.
+  Expanded detail line 4.
+  Expanded detail line 5.
+  Expanded detail line 6.
+press Space to toggle details
+Keep second option short
+
+↳ Short second body.
+Skip for now"
+`;
+
+exports[`render — full-popup snapshot (dual styled / unstyled) > produces a stable unstyled snapshot for the overflow fixture (collapsed truncation path) > unstyled-overflow 1`] = `
+"Before coding.
+Before building — is the plan written?
+You're seeing this because
+Recent prompts indicate a transition from one development stage to the next.
+— review the options below to determine the next step.
+
+Review implementation plan
+
+↳ Overflow detail line 1.
+  Overflow detail line 2....
+press Space to toggle details
+Keep baseline short
+
+↳ Short body line.
+Skip for now"
 `;
 
 exports[`render — full-popup snapshot (dual styled / unstyled) > produces a stable unstyled snapshot from the fixture popup (NEXPATH_STYLE_PASSTHROUGH=1) > unstyled 1`] = `

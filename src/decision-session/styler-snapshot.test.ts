@@ -12,12 +12,17 @@ import { computeLayout, type RenderLoopOptions } from './render-loop.js';
 // emission in non-TTY test workers — captureStyledAndUnstyled is only
 // meaningful when the OFF path actually applies styling.
 let origIsTTY: boolean | undefined;
+let origNoColor: string | undefined;
 beforeAll(() => {
   origIsTTY = process.stdout.isTTY;
+  origNoColor = process.env['NO_COLOR'];
   process.stdout.isTTY = true;
+  delete process.env['NO_COLOR'];
 });
 afterAll(() => {
   process.stdout.isTTY = origIsTTY;
+  if (origNoColor === undefined) delete process.env['NO_COLOR'];
+  else process.env['NO_COLOR'] = origNoColor;
 });
 
 describe('styler-snapshot — withStylerEnv', () => {

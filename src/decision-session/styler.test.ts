@@ -7,12 +7,17 @@ import { ALL_LINE_KINDS, isStylePassthroughActive, STYLE_PASSTHROUGH_ENV, styler
 // dedicated S-1 safeguard tests below explicitly flip isTTY to false to
 // exercise the non-TTY return path.
 let origIsTTY: boolean | undefined;
+let origNoColor: string | undefined;
 beforeAll(() => {
   origIsTTY = process.stdout.isTTY;
+  origNoColor = process.env['NO_COLOR'];
   process.stdout.isTTY = true;
+  delete process.env['NO_COLOR'];
 });
 afterAll(() => {
   process.stdout.isTTY = origIsTTY;
+  if (origNoColor === undefined) delete process.env['NO_COLOR'];
+  else process.env['NO_COLOR'] = origNoColor;
 });
 
 describe('styler — line-kind contract', () => {
