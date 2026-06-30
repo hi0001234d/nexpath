@@ -2,7 +2,7 @@
   "name": "nexpath-vscode",
   "displayName": "Nexpath",
   "description": "AI coding assistant for Cursor and Windsurf (Devin) — a behaviour-guidance layer that surfaces decision sessions between your prompts. Fully supported and end-to-end tested on both.",
-  "version": "0.1.31",
+  "version": "0.1.32",
   "publisher": "nexpath",
   "license": "Apache-2.0",
   "private": true,
