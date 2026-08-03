@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Nexpath",
   "version": "0.1.5",
-  "description": "AI coding assistant for Replit, Bolt, and Lovable — a behaviour-guidance layer for vibe coders.",
+  "description": "AI coding assistant for Replit, Lovable, and Bolt — a behaviour-guidance layer for vibe coders.",
   "permissions": [
     "storage",
     "tabs"

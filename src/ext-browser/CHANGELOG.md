@@ -13,7 +13,7 @@ First release candidate — CLI‑parity classifier and popup.
   differential test).
 - **Natural‑language detection:** detects the language of recent prompts (tinyld) and adapts the
   suggestion wording, mirroring the CLI.
-- **Advisory popup** on Replit, Bolt, and Lovable: capture → classify → Stage‑2 → suggestion, shown
+- **Advisory popup** on Replit, Lovable, and Bolt: capture → classify → Stage‑2 → suggestion, shown
   when the agent finishes responding. Multi‑level options (L1/L2/L3), pinch/question/why‑help,
   profile‑adaptive register.
 - **Send to your agent / Copy to clipboard / Skip**, an in‑panel frequency/role chooser
@@ -35,7 +35,7 @@ First release candidate — CLI‑parity classifier and popup.
 - "Copy to clipboard" now closes the popup instead of returning to the option list (CLI
   `clipboard_only` parity).
 - **Store summary aligned to brand:** the manifest `description` (which Chrome uses as the store
-  summary) now reads "AI coding assistant for Replit, Bolt, and Lovable — a behaviour-guidance
+  summary) now reads "AI coding assistant for Replit, Lovable, and Bolt — a behaviour-guidance
   layer for vibe coders." — the same pattern the Nexpath VS Code extension uses, kept within
   Chrome's 132-char summary limit (guard-tested).
 - **Minimised permissions:** removed the unused `scripting` permission from both manifests —
