@@ -58,7 +58,7 @@
   "options_page": "options/options.html",
   "browser_specific_settings": {
     "gecko": {
-      "id": "{1c62eba0-51eb-4052-a4b2-30c66e5aa995}",
+      "id": "{80f4c1c7-1fb2-41d9-a4a1-7c2f4981d286}",
       "strict_min_version": "112.0",
       "data_collection_permissions": {
         "required": ["authenticationInfo", "websiteContent"]
