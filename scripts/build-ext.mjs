@@ -48,7 +48,11 @@ const browserLoggerPlugin = {
 const commonOpts = {
   bundle:    true,
   target:    'es2022',
-  sourcemap: 'inline',
+  // No source maps in the store build. Inline source maps pushed the service
+  // worker to ~5.3 MB and Firefox AMO's linter hard-fails any file it can't
+  // parse ("File is too large to parse"). Store builds must not ship maps
+  // anyway. Opt in for local debugging with NEXPATH_EXT_SOURCEMAP=1.
+  sourcemap: process.env.NEXPATH_EXT_SOURCEMAP === '1' ? 'inline' : false,
   minify:    false,
 };
 
