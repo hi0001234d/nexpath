@@ -59,6 +59,22 @@ describe('content-template-grounding — simpler derive (b)', () => {
     expect(seen).toMatch(/KEEPING the topic\/keyword/i);
   });
 
+  it('the derive prompt keeps the whyDesc in agent voice (Phase 16.2)', async () => {
+    let seen = '';
+    const spy = {
+      chat: { completions: { create: async (args: { messages: { content: string }[] }) => {
+        seen = args.messages[0].content;
+        return { choices: [{ message: { content: '{"option":"o","whyDesc":"w"}' } }] };
+      } } },
+    } as unknown as import('openai').default;
+    await deriveSimplerCell({ option: 'o', whyDesc: 'w' }, spy);
+    // The simplified whyDesc must stay agent-voice — a direct instruction to the coding agent.
+    expect(seen).toMatch(/agent voice/i);
+    expect(seen).toMatch(/direct instruction to the coding agent/i);
+    // The option channel is still framed as the message the user sends to the agent.
+    expect(seen).toMatch(/message the user sends to their coding agent/i);
+  });
+
   it('re-appends the L2 safeguard if the simplified why-desc dropped it', async () => {
     const safeguard = 'still, confirm with me before deleting anything';
     const client = mockClient(JSON.stringify({ option: 'simpler', whyDesc: 'simpler why (no safeguard)' }));
@@ -207,6 +223,24 @@ describe('content-template-grounding — why-desc weave', () => {
     expect(seen).toMatch(/Preserve any placeholder tokens/i);
     expect(seen).toMatch(/established practice/i);   // corroborated → practice wording
     expect(seen).toMatch(/available capability/i);   // capability → capability wording
+  });
+
+  it('the weave prompt directs agent voice and grounds facts as project context (not "you already")', async () => {
+    let seen = '';
+    const spy = {
+      chat: { completions: { create: async (args: { messages: { content: string }[] }) => {
+        seen = args.messages[0].content;
+        return { choices: [{ message: { content: '{"whyDesc":"x"}' } }] };
+      } } },
+    } as unknown as import('openai').default;
+    await weaveWhyDesc({ coreLine: 'c', facts: [{ text: 'reliably writes tests', tier: 'corroborated' }] }, spy);
+    // Phase 16.1: the woven why-desc must stay agent-voice — a direct instruction to the coding agent.
+    expect(seen).toMatch(/agent voice/i);
+    expect(seen).toMatch(/instruction addressed to the coding agent/i);
+    // Facts are grounded as project/environment context, not "you already…" (which the agent reads as itself).
+    expect(seen).toMatch(/the project already/i);
+    expect(seen).not.toMatch(/you already/i);
+    expect(seen).not.toMatch(/your setup has/i);
   });
 });
 

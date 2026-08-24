@@ -9,15 +9,31 @@ function facts(obj: Record<string, boolean>): FactMap {
   for (const [k, value] of Object.entries(obj)) out[k] = { value, tier: 'C', confidence: 'high', detectedAt: 0 };
   return out;
 }
-function profile(states: Record<string, RightGoodState>): RightGoodProfile {
-  const out: Record<string, { state: RightGoodState }> = {};
-  for (const [k, state] of Object.entries(states)) out[k] = { state };
+function profile(
+  states: Record<string, RightGoodState>,
+  { verified = true }: { verified?: boolean } = {},
+): RightGoodProfile {
+  const out: Record<string, { state: RightGoodState; behaviourVerified: boolean }> = {};
+  for (const [k, state] of Object.entries(states)) out[k] = { state, behaviourVerified: verified };
   return out as unknown as RightGoodProfile;
 }
 
 describe('promoteEnvFactsToTierP', () => {
   it('promotes a present capability fact to tier P when its corroborator reads RIGHT&GOOD', () => {
     const out = promoteEnvFactsToTierP(facts({ has_test_runner: true }), profile({ test_creation: 'right_good' }));
+    expect(out.has_test_runner!.tier).toBe('P');
+  });
+
+  it('a claim-only RIGHT&GOOD (not behaviour-verified) never promotes — practice claims need observed behaviour', () => {
+    const out = promoteEnvFactsToTierP(
+      facts({ has_test_runner: true }),
+      profile({ test_creation: 'right_good' }, { verified: false }),
+    );
+    expect(out.has_test_runner!.tier).toBe('C');
+  });
+
+  it('verified test RUNS corroborate the test-runner practice (any mapped signal suffices)', () => {
+    const out = promoteEnvFactsToTierP(facts({ has_test_runner: true }), profile({ regression_check: 'right_good' }));
     expect(out.has_test_runner!.tier).toBe('P');
   });
 

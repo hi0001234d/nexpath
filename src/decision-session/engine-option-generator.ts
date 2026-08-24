@@ -38,13 +38,13 @@ import { promoteEnvFactsToTierP } from '../env/env-tier-promotion.js';
 export interface EngineGenerateInput {
   /** Source-cascade record lookup for the migrated signalType (dual-source). */
   lookup: RecordCandidateLookup;
-  /** The user's maturity level (AR-5) to resolve the column for. */
+  /** The user's maturity level to resolve the column for. */
   level: MaturityLevel;
   /** Target register (structurally-divergent override selection; else base). */
   register?: string;
   /** Target role (founder / indie_hacker / pm) — selects a role override (role → register → base). */
   role?: string;
-  /** Grounding facts for the why-desc weave (AR-10 dev-env / AR-9 workflow / AR-3 work-style / prompt-derived). */
+  /** Grounding facts for the why-desc weave (dev-env / workflow / work-style / prompt-derived). */
   facts?: readonly GroundingFact[];
   /** Grounding-line budget for the why-desc. */
   factCap?: number;
@@ -116,8 +116,8 @@ export function composeDeterministicOptions(
 
 /**
  * §6.1 item 4 — assemble grounding facts from the AR param SOURCES at fire time, via the
- * live store: AR-10 dev-env (`probeProject`), AR-9 workflow (`loadRightGoodProfile`),
- * AR-3 work-style (`loadWorkStyleProfile`), and the recent prompts (prompt-derived, LLM).
+ * live store: dev-env (`probeProject`), workflow (`loadRightGoodProfile`),
+ * work-style (`loadWorkStyleProfile`), and the recent prompts (prompt-derived, LLM).
  * The engine maps + ranks/caps them; this is the store-load wiring.
  */
 export async function buildEngineGrounding(

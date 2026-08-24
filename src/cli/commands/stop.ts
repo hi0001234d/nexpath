@@ -30,6 +30,9 @@ import { autogenAwareLookup, pinchSignalTypeForFlag } from '../../decision-sessi
 import { runAutogenForFire } from '../../decision-session/auto-template-generator.js';
 import { loadRightGoodProfile } from '../../classifier/right-good-aggregator.js';
 import { generateFromEngine, buildEngineGrounding, composeDeterministicOptions } from '../../decision-session/engine-option-generator.js';
+import { resolveRecord } from '../../decision-session/content-template-engine.js';
+import { appendVariantServedEvent } from '../../telemetry/param-events.js';
+import { activePinFor, applyPinToLookup, applyPinToLevel, type ActivePin } from '../../decision-session/experiment-config.js';
 import { resolvePinchFields } from '../../decision-session/signal-pinch-fields.js';
 import { getWhyHelpForSignalType } from '../../decision-session/why-help-by-signal-type.js';
 import type { WhyHelpEntry } from '../../decision-session/why-help.js';
@@ -212,8 +215,15 @@ export async function runStop(
   let whyHelpOverride: WhyHelpEntry | null | undefined;
   const register = selectionRegister(mgr.current.profile?.nature);
   if (recordSignalType && resolveContentSource(recordSignalType) === 'content-template') {
-    const lookup = autogenAwareLookup(store, payload.cwd, recordSignalType);
-    const level  = (getUserDepthLevel(store, payload.cwd)?.currentLevel ?? 2) as MaturityLevel;
+    // An active experiment pin makes the served variant deterministic for this
+    // installation: it can force the record source and/or the maturity level.
+    // Fail-open — a missing/malformed config means no pinning.
+    let activePin: ActivePin | null = null;
+    try { activePin = activePinFor(store, recordSignalType); } catch { activePin = null; }
+    const baseLookup = autogenAwareLookup(store, payload.cwd, recordSignalType);
+    const lookup = activePin ? applyPinToLookup(baseLookup, activePin.pin) : baseLookup;
+    const baseLevel = (getUserDepthLevel(store, payload.cwd)?.currentLevel ?? 2) as MaturityLevel;
+    const level = activePin ? applyPinToLevel(baseLevel, activePin.pin) : baseLevel;
     const role   = mgr.current.profile?.role ?? undefined;
     // Popup question + per-class why-help are static (no LLM). The question comes from the
     // register-keyed pinch-fields map (the migrated question/pinchFallback layer), not the record.
@@ -229,11 +239,36 @@ export async function runStop(
       logger.debug('stop_engine_option_gen_error', { error: String(err) });
       generatedOptions = null;
     }
+    let composePath: 'llm' | 'deterministic' = 'llm';
     if (!generatedOptions) {
       // The grounded engine failed (missing key / API error). Serve a DETERMINISTIC engine composition
       // from the record — no LLM, register/role-aware, safeguard-carrying — so the fallback needs no
       // static content. (Records are the whole content layer after the B11 cutover.)
       generatedOptions = composeDeterministicOptions({ lookup, level, register, role });
+      composePath = 'deterministic';
+    }
+    // Record WHICH content variant was served (identity only — level / register /
+    // role / record source / compose path; never any option text) so downstream
+    // measurement can compare served variants against outcomes. Best-effort —
+    // never blocks the popup.
+    if (generatedOptions) {
+      try {
+        const served = resolveRecord(lookup);
+        if (served) {
+          appendVariantServedEvent(store, {
+            projectRoot:     payload.cwd,
+            sessionId:       mgr.current.sessionId,
+            promptIndex:     Math.max(0, mgr.current.promptCount - 1),
+            signalKey:       recordSignalType,
+            stage:           mgr.current.currentStage,
+            stageConfidence: mgr.current.stageConfidence,
+            variant: {
+              level, register, role, source: served.source, path: composePath,
+              ...(activePin ? { experiment: activePin.experimentId } : {}),
+            },
+          });
+        }
+      } catch { /* variant logging is non-fatal */ }
     }
   }
 

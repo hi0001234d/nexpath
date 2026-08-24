@@ -8,7 +8,9 @@
  * `uploaded` / `autogen` / `default` tiers return undefined — per-user and
  * closest-default records are later phases (upload / auto-gen). When no shipped
  * record exists for a signalType, every tier is undefined → the engine resolves
- * `null` → the live caller falls back to the static set (safe, no blank advisory).
+ * `null`. The static content layer no longer exists, so an unmapped signalType would
+ * surface an advisory with no options; `recordSignalTypeForFlag` therefore resolves
+ * every fireable signal to an existing record (see `SIGNAL_RECORD_ALIASES`).
  */
 
 import { SHIPPED_CONTENT_TEMPLATES } from './content-template-tooling.js';
@@ -31,14 +33,36 @@ export function hasShippedRecord(signalType: string): boolean {
 }
 
 /**
- * The content-template record signalType for a fired flagType, via the
- * `ABSENCE_<UPPER(key)>` convention (the coverage-map convention). Returns undefined for a
- * non-absence flagType (stage transitions etc. have no content-template mapping today).
+ * Signal keys whose `ABSENCE_<UPPER(key)>` name does not match the record that ships their content
+ * (the record uses a shorter name). Each target is a live shipped, migrated record carrying its own
+ * question + why-help. Without the alias the key resolves to a non-existent record, `resolveContentSource`
+ * returns 'static', and the stop hook serves no options. Keep this in sync with the signal keys.
+ */
+const SIGNAL_RECORD_ALIASES: Readonly<Record<string, string>> = {
+  alternatives_seeking:           'ABSENCE_ALTERNATIVES',
+  architecture_conflict:          'ABSENCE_ARCH_CONFLICT',
+  dependency_management:          'ABSENCE_DEPENDENCY_MGMT',
+  refactoring_review:             'ABSENCE_REFACTORING',
+  no_agent_pushback:              'ABSENCE_NO_PUSHBACK',
+  prompt_context_richness:        'ABSENCE_PROMPT_CONTEXT',
+  spec_acceptance_check:          'ABSENCE_SPEC_ACCEPTANCE',
+  behaviour_testing:              'BEHAVIOUR_TESTING',
+  environment_and_secrets:        'ABSENCE_ENV_AND_SECRETS',
+  feature_scope_before_build:     'ABSENCE_FEATURE_SCOPE',
+  requirement_clarity_before_ask: 'ABSENCE_REQUIREMENT_CLARITY',
+  debugging_observation_gap:      'ABSENCE_DEBUGGING_OBSERVATION',
+};
+
+/**
+ * The content-template record signalType for a fired flagType. An explicit alias
+ * (`SIGNAL_RECORD_ALIASES`) wins for the keys whose name drifted; otherwise the
+ * `ABSENCE_<UPPER(key)>` convention applies. Returns undefined for a non-absence flagType
+ * (stage transitions etc. have no content-template mapping today).
  */
 export function recordSignalTypeForFlag(flagType: string): string | undefined {
-  return flagType.startsWith('absence:')
-    ? `ABSENCE_${flagType.slice('absence:'.length).toUpperCase()}`
-    : undefined;
+  if (!flagType.startsWith('absence:')) return undefined;
+  const key = flagType.slice('absence:'.length);
+  return SIGNAL_RECORD_ALIASES[key] ?? `ABSENCE_${key.toUpperCase()}`;
 }
 
 /** Destination-stage → the stage-transition record's signalType. Static-content-independent. */

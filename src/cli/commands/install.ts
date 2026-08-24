@@ -573,22 +573,6 @@ export async function installAction(
       telemetryEnabled = consent.kind === 'enable';
       setConfig(store, 'telemetry.enabled',      String(telemetryEnabled));
       setConfig(store, 'telemetry_sync_enabled', String(telemetryEnabled));
-
-      // Dev-environment probe disclosure. Local-only, on by default — no
-      // separate consent prompt (nothing leaves the machine).
-      note(
-        [
-          'nexpath reads a few local facts about your machine + project',
-          '(OS, version control, test runner, framework, etc.) to give',
-          'more relevant guidance.',
-          '',
-          'These facts stay on your machine — they are NEVER transmitted.',
-          '',
-          'See them:  nexpath env',
-          'Turn off:  nexpath config set env_probe_enabled false',
-        ].join('\n'),
-        'Dev-environment facts (local-only)',
-      );
     } else {
       // --yes (non-interactive): preserve an existing telemetry choice. A re-run
       // — e.g. the VS Code extension's two-pass setup (`--for cli` interactive,
@@ -807,6 +791,26 @@ export async function installAction(
     failed.length > 0 ? `Failed:     ${failed.join(', ')}` : null,
     extrasLine,
   ].filter((l): l is string => l !== null).join('\n');
+
+  // Dev-environment + prompt-capture disclosure, shown just above the Setup
+  // Complete summary in interactive installs (skipped under --yes). Facts and
+  // prompts are stored locally; only ChatGPT API calls leave the machine.
+  if (!opts.yes) {
+    note(
+      [
+        'To time its guidance, nexpath takes a basic read of your',
+        "project and your agent's responses — only what it needs, all",
+        'on your machine.',
+        '',
+        'It reads and stores your prompts too — everything stays local',
+        'and is processed using the ChatGPT API, and is NEVER',
+        'transmitted elsewhere.',
+        '',
+        "This capture is core to nexpath — without it, nexpath won't work.",
+      ].join('\n'),
+      'Dev-environment facts - Notes',
+    );
+  }
   note(summaryLines, 'Setup Complete');
   outro('Done!');
 

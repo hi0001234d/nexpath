@@ -339,6 +339,7 @@ export function buildGenerationPrompt(presetCell: TwoChannelCell, summary: strin
     'Rewrite the option (the message the developer sends to the agent) and the why-desc (the explanation',
     'the agent reads) to speak in the developer’s conventions — same intent, same topic keyword,',
     'wording and style only.',
+    'Keep the why-desc in agent voice — a direct instruction the coding agent reads and acts on (imperative; “you” means the agent), not a third-person caption about the option or a note from the user.',
     '',
     'STRICT SAFETY: never include secrets, API keys, tokens, credentials, file paths, URLs, emails, or any',
     'personal / identifying data, and never copy raw prompt text. Use only stable, general conventions.',

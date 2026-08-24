@@ -47,11 +47,11 @@ export const ABSENCE_SPEC_ACCEPTANCE_RECORD: ContentTemplateRecord = {
   source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES,
   levelForms: {
-    1: form("Spot-check what was just built against the single most important spec requirement.", "The lightest spec check: confirm the one core requirement is met."),
-    2: form("Check what was just built against the spec: run through the main requirements and flag any that are not met.", "A light spec pass: the main requirements checked and gaps flagged."),
-    3: form("Review what was just built against the spec and acceptance criteria: go through each requirement and confirm whether it is fully implemented, partially implemented, or missing from what was just built.", "Compliance against the spec hasn't been audited for what was just built."),
-    4: form("Audit what was just built against the full spec by category: each functional requirement, the acceptance criteria, and the edge cases — mark each met, partial, or missing.", "Beyond the main pass: every spec requirement and edge case audited and marked."),
-    5: form("Write a spec-compliance report file: every requirement marked met / partial / missing, the gaps with evidence, and the acceptance criteria still open — kept with the feature.", "A durable spec-compliance report of per-requirement status and the open criteria."),
+    1: form("Spot-check what was just built against the single most important spec requirement.", "Just the single most important spec requirement — confirm that one is met before checking the rest."),
+    2: form("Check what was just built against the spec: run through the main requirements and flag any that are not met.", "Run through the main spec requirements and flag any that aren't met — the main pass, not every edge case yet."),
+    3: form("Review what was just built against the spec and acceptance criteria: go through each requirement and confirm whether it is fully implemented, partially implemented, or missing from what was just built.", "Go through each requirement and mark whether it's fully implemented, partially implemented, or missing."),
+    4: form("Audit what was just built against the full spec by category: each functional requirement, the acceptance criteria, and the edge cases — mark each met, partial, or missing.", "Go category by category over the full spec — each functional requirement, the acceptance criteria, and the edge cases — and mark each met, partial, or missing."),
+    5: form("Write a spec-compliance report file: every requirement marked met / partial / missing, the gaps with evidence, and the acceptance criteria still open — kept with the feature.", "Capture a spec-compliance report file — every requirement marked met/partial/missing, the gaps with evidence, and the acceptance criteria still open — kept with the feature."),
   },
 };
 
@@ -62,11 +62,11 @@ export const ABSENCE_CROSS_CONFIRMING_RECORD: ContentTemplateRecord = {
   source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES, spine: VERIFY_SPINE,
   levelForms: {
-    1: form("Verify the one part of what was just built most likely to be wrong — a generated call or assumption.", "The lightest verification: check the single most-likely-wrong generated part."),
-    2: form("Verify the main path of what was just built: trace it and confirm the generated logic actually does what is expected.", "A light verification pass: the main generated path traced and confirmed."),
-    3: form("Review what was just built critically: identify any hallucinated functions or APIs, logic that looks plausible but is incorrect, edge cases not handled, and any code that was generated but not verified against the actual system it will run in.", "AI-generated code in recent prompts hasn't been verified."),
-    4: form("Verify what was just built adversarially: check for hallucinated functions or APIs, plausible-but-wrong logic, and unhandled edge cases — verify each against the real system.", "Beyond the main path: a full verification for hallucinations, wrong logic, and missed edges."),
-    5: form("Write a verification note file: what was traced, the issues found (hallucinations, wrong logic, missed edges), and the fixes — committed so the verification is on record.", "A durable verification note of what was traced, found, and fixed."),
+    1: form("Verify the one part of what was just built most likely to be wrong — a generated call or assumption.", "Just the single part most likely to be wrong — a generated call or assumption — verify that one first."),
+    2: form("Verify the main path of what was just built: trace it and confirm the generated logic actually does what is expected.", "Trace the main generated path and confirm it actually does what's expected — the verification scoped to the main path."),
+    3: form("Review what was just built critically: identify any hallucinated functions or APIs, logic that looks plausible but is incorrect, edge cases not handled, and any code that was generated but not verified against the actual system it will run in.", "Look for hallucinated functions or APIs, logic that looks plausible but is wrong, unhandled edge cases, and anything generated but never checked against the real system."),
+    4: form("Verify what was just built adversarially: check for hallucinated functions or APIs, plausible-but-wrong logic, and unhandled edge cases — verify each against the real system.", "Push the verification adversarially — hallucinated functions or APIs, plausible-but-wrong logic, and unhandled edge cases, each checked against the real system."),
+    5: form("Write a verification note file: what was traced, the issues found (hallucinations, wrong logic, missed edges), and the fixes — committed so the verification is on record.", "Capture a verification note file — what was traced, the issues found (hallucinations, wrong logic, missed edges), and the fixes — committed so it's on record."),
   },
 };
 
@@ -77,11 +77,11 @@ export const ABSENCE_ALTERNATIVES_RECORD: ContentTemplateRecord = {
   source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES,
   levelForms: {
-    1: form("Name one alternative to the main decision in what was just built, and why it was not chosen.", "The lightest check: surface one unchosen alternative and the reason."),
-    2: form("Review the key decision in what was just built: name the alternatives not chosen and the tradeoff that settled it.", "A light pass: the main decision's alternatives and tradeoff named."),
-    3: form("Review the key decisions made in what was just built: name the alternatives that were not chosen, explain the tradeoffs between each approach, and confirm that the chosen solution is the best fit for the constraints of this project — not just the first viable option.", "Alternatives to the chosen approach haven't been weighed against the project's constraints."),
-    4: form("Audit each significant decision in what was just built: per choice, name at least one alternative not explored and weigh it against the project's constraints.", "Beyond one decision: every significant choice's alternatives weighed against constraints."),
-    5: form("Write a decision note file: per key decision, the chosen approach, the alternatives weighed, the tradeoffs, and why the choice wins — kept with the feature.", "A durable decision note of the alternatives weighed and the rationale."),
+    1: form("Name one alternative to the main decision in what was just built, and why it was not chosen.", "Just one alternative to the main decision and why it wasn't chosen — surface that one, not every option."),
+    2: form("Review the key decision in what was just built: name the alternatives not chosen and the tradeoff that settled it.", "For the key decision, name the alternatives not chosen and the tradeoff that settled it."),
+    3: form("Review the key decisions made in what was just built: name the alternatives that were not chosen, explain the tradeoffs between each approach, and confirm that the chosen solution is the best fit for the constraints of this project — not just the first viable option.", "Name the alternatives not chosen, explain the tradeoffs between each, and confirm the chosen solution fits this project's constraints — not just the first viable option."),
+    4: form("Audit each significant decision in what was just built: per choice, name at least one alternative not explored and weigh it against the project's constraints.", "For every significant choice, name at least one alternative not explored and weigh it against the project's constraints."),
+    5: form("Write a decision note file: per key decision, the chosen approach, the alternatives weighed, the tradeoffs, and why the choice wins — kept with the feature.", "Capture a decision note file — per key decision: the chosen approach, the alternatives weighed, the tradeoffs, and why the choice wins — kept with the feature."),
   },
 };
 
@@ -92,11 +92,11 @@ export const ABSENCE_ARCH_CONFLICT_RECORD: ContentTemplateRecord = {
   source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES,
   levelForms: {
-    1: form("Check whether what was just built follows the existing architectural patterns, or introduces a new one.", "The lightest architecture check: does it match the established patterns?"),
-    2: form("Review what was just built for architectural consistency: flag any pattern, abstraction, or convention it diverges from.", "A light architecture pass: divergences from the established patterns flagged."),
-    3: form("Review what was just built for architectural consistency: does this feature follow the same patterns, abstractions, and conventions established in the existing codebase, or does it introduce a parallel approach that will diverge over time and increase maintenance cost?", "Whether what was just built follows existing patterns and conventions hasn't been audited."),
-    4: form("Audit what was just built against the project's architecture: module boundaries crossed, inconsistent shared-state access, and conflicting new dependencies — flag each with the architectural rule it breaks.", "Beyond pattern-match: boundaries, shared state, and dependencies audited against the architecture."),
-    5: form("Write an architecture-consistency note file: the patterns followed, the violations found, and per violation the fix-or-document decision — kept with the feature.", "A durable architecture note of the violations and the fix-or-document calls."),
+    1: form("Check whether what was just built follows the existing architectural patterns, or introduces a new one.", "See whether this follows the existing architectural patterns or introduces a new one — just that, before a full review."),
+    2: form("Review what was just built for architectural consistency: flag any pattern, abstraction, or convention it diverges from.", "Flag any pattern, abstraction, or convention this diverges from — the architectural consistency pass, main divergences only."),
+    3: form("Review what was just built for architectural consistency: does this feature follow the same patterns, abstractions, and conventions established in the existing codebase, or does it introduce a parallel approach that will diverge over time and increase maintenance cost?", "Confirm this follows the same patterns, abstractions, and conventions as the existing codebase, rather than a parallel approach that'll diverge and raise maintenance cost over time."),
+    4: form("Audit what was just built against the project's architecture: module boundaries crossed, inconsistent shared-state access, and conflicting new dependencies — flag each with the architectural rule it breaks.", "Go past pattern-matching — module boundaries crossed, inconsistent shared-state access, and conflicting new dependencies — flag each with the architectural rule it breaks."),
+    5: form("Write an architecture-consistency note file: the patterns followed, the violations found, and per violation the fix-or-document decision — kept with the feature.", "Capture an architecture-consistency note file — the patterns followed, the violations found, and per violation the fix-or-document decision — kept with the feature."),
   },
 };
 
@@ -107,11 +107,11 @@ export const ABSENCE_PROMPT_CONTEXT_RECORD: ContentTemplateRecord = {
   source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES,
   levelForms: {
-    1: form("Check whether the last prompt carried the spec and architecture context, or ran on assumptions.", "The lightest context check: did the last prompt carry the planning context?"),
-    2: form("Before the next prompt, inject the missing planning context: paste the relevant spec or architecture section so the work is grounded in real context.", "A light pass: the missing planning context injected before continuing."),
-    3: form("Review the prompts used to build this feature: are they grounded in the project's spec, architecture decisions, and task breakdown, or are they ad hoc instructions that you are implementing without access to the full planning context? If context is missing, inject it now before the next prompt.", "The spec / architecture / task-breakdown context hasn't been confirmed in recent prompts."),
-    4: form("Audit the context behind what was just built and assemble the gap into one grounding block: identify which prompts ran without the spec, the architecture, or the acceptance criteria, gather those exact pieces, and paste them as a single context block before continuing.", "Beyond injecting ad hoc: the missing spec / architecture / criteria context assembled into one grounding block."),
-    5: form("Make context-rich prompting the habit: before every prompt, paste the relevant spec section, the architecture decisions, and the acceptance criteria, and state exactly what is being built against them — so no prompt runs on missing context.", "A standing prompting discipline: full planning context pasted into every prompt."),
+    1: form("Check whether the last prompt carried the spec and architecture context, or ran on assumptions.", "Just whether the last prompt carried the spec and architecture context or ran on assumptions."),
+    2: form("Before the next prompt, inject the missing planning context: paste the relevant spec or architecture section so the work is grounded in real context.", "Paste the relevant spec or architecture section so the next prompt is grounded in real context, not assumptions."),
+    3: form("Review the prompts used to build this feature: are they grounded in the project's spec, architecture decisions, and task breakdown, or are they ad hoc instructions that you are implementing without access to the full planning context? If context is missing, inject it now before the next prompt.", "Check whether the prompts are grounded in the spec, architecture decisions, and task breakdown or are ad-hoc instructions running blind — and if context is missing, inject it before the next prompt."),
+    4: form("Audit the context behind what was just built and assemble the gap into one grounding block: identify which prompts ran without the spec, the architecture, or the acceptance criteria, gather those exact pieces, and paste them as a single context block before continuing.", "Identify which prompts ran without the spec, architecture, or acceptance criteria, gather those exact pieces, and paste them as one grounding context block before continuing."),
+    5: form("Make context-rich prompting the habit: before every prompt, paste the relevant spec section, the architecture decisions, and the acceptance criteria, and state exactly what is being built against them — so no prompt runs on missing context.", "Set context-rich prompting as the habit — before every prompt, paste the relevant spec, architecture decisions, and acceptance criteria, and state what's being built against them."),
   },
 };
 
@@ -122,11 +122,11 @@ export const ABSENCE_SPEC_CROSS_CONFIRM_RECORD: ContentTemplateRecord = {
   source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES,
   levelForms: {
-    1: form("Spot-check one spec requirement: does it trace back to a real user need?", "The lightest spec check: one requirement traced to a stated need."),
-    2: form("Review the spec against its source requirements: flag any requirement that does not trace to a stated need or an agreed decision.", "A light pass: untraceable spec requirements flagged."),
-    3: form("Cross-confirm this project's spec against its source requirements: for each requirement in the spec, verify it traces back to a stated user need or stakeholder decision, covers the acceptance criteria completely, and does not contain assumptions that were not explicitly agreed upon.", "The spec itself hasn't been cross-confirmed against the original requirements."),
-    4: form("Audit the spec end-to-end: each requirement's traceability, contradictions between requirements, ambiguous or untestable criteria, and unconfirmed scope — flag each.", "Beyond traceability: contradictions, ambiguity, and unconfirmed scope in the spec flagged."),
-    5: form("Write a spec-audit note file: per requirement the traceability and feasibility verdict, the contradictions and ambiguities found, and the open scope questions — kept with the spec.", "A durable spec-audit of traceability, contradictions, and the open scope."),
+    1: form("Spot-check one spec requirement: does it trace back to a real user need?", "Just one spec requirement — does it trace back to a real user need? Check that one."),
+    2: form("Review the spec against its source requirements: flag any requirement that does not trace to a stated need or an agreed decision.", "Flag any spec requirement that doesn't trace to a stated need or an agreed decision."),
+    3: form("Cross-confirm this project's spec against its source requirements: for each requirement in the spec, verify it traces back to a stated user need or stakeholder decision, covers the acceptance criteria completely, and does not contain assumptions that were not explicitly agreed upon.", "For each requirement, verify it traces to a stated user need or stakeholder decision, covers the acceptance criteria completely, and holds no assumption that wasn't explicitly agreed."),
+    4: form("Audit the spec end-to-end: each requirement's traceability, contradictions between requirements, ambiguous or untestable criteria, and unconfirmed scope — flag each.", "Take the spec end-to-end — each requirement's traceability, contradictions between requirements, ambiguous or untestable criteria, and unconfirmed scope — flag each."),
+    5: form("Write a spec-audit note file: per requirement the traceability and feasibility verdict, the contradictions and ambiguities found, and the open scope questions — kept with the spec.", "Capture a spec-audit note file — per requirement the traceability and feasibility verdict, the contradictions and ambiguities found, and the open scope questions — kept with the spec."),
   },
 };
 
@@ -137,11 +137,11 @@ export const ABSENCE_SPEC_REVISION_RECORD: ContentTemplateRecord = {
   source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES,
   levelForms: {
-    1: form("Check whether the spec still matches one thing that changed during implementation.", "The lightest spec-drift check: one implementation change reflected in the spec?"),
-    2: form("Review the spec against the current build: flag the main places the implementation has diverged from it.", "A light pass: the main spec-vs-build divergences flagged."),
-    3: form("Revise this project's spec to reflect what has been learned since the initial draft: update any requirements that turned out to be more or less complex than anticipated, add acceptance criteria for edge cases discovered during implementation, and remove or defer any scope that has been implicitly dropped.", "The spec hasn't been updated to match what's been learned during implementation."),
-    4: form("Audit the spec for drift end-to-end: every divergence between spec and build, the implementation-time decisions not captured, and the emergent constraints — decide per case update the spec or fix the build.", "Beyond the main drifts: every spec divergence and uncaptured decision resolved per case."),
-    5: form("Revise the spec into an updated file: the corrected requirements, the new edge-case criteria, the captured decisions, and the deferred scope — so the spec is a true record of the build.", "A durable revised spec capturing the decisions, new criteria, and deferred scope."),
+    1: form("Check whether the spec still matches one thing that changed during implementation.", "Just whether the spec still matches one thing that changed during implementation."),
+    2: form("Review the spec against the current build: flag the main places the implementation has diverged from it.", "Flag the main places the implementation has diverged from the spec."),
+    3: form("Revise this project's spec to reflect what has been learned since the initial draft: update any requirements that turned out to be more or less complex than anticipated, add acceptance criteria for edge cases discovered during implementation, and remove or defer any scope that has been implicitly dropped.", "Update any requirement that turned out more or less complex than expected, add acceptance criteria for edge cases found during implementation, and remove or defer scope that was implicitly dropped."),
+    4: form("Audit the spec for drift end-to-end: every divergence between spec and build, the implementation-time decisions not captured, and the emergent constraints — decide per case update the spec or fix the build.", "Go through every spec-vs-build divergence, the implementation-time decisions not captured, and the emergent constraints — decide per case: update the spec or fix the build."),
+    5: form("Revise the spec into an updated file: the corrected requirements, the new edge-case criteria, the captured decisions, and the deferred scope — so the spec is a true record of the build.", "Capture the revised spec as an updated file — the corrected requirements, the new edge-case criteria, the captured decisions, and the deferred scope — so it's a true record of the build."),
   },
 };
 
@@ -152,11 +152,11 @@ export const ABSENCE_API_DESIGN_REVIEW_RECORD: ContentTemplateRecord = {
   source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES,
   levelForms: {
-    1: form("Check whether what was just built changes the API in a way that could break an existing caller.", "The lightest API check: any change that could surprise existing callers?"),
-    2: form("Review the API surface of what was just built: list the endpoint, parameter, or response changes and flag any that are breaking.", "A light API pass: the surface changes listed and breaking ones flagged."),
-    3: form("Review the API surface of what was just built for backwards compatibility: list any changes to existing endpoints, parameters, or response shapes, and confirm whether each change is backwards compatible or constitutes a breaking change that requires a version bump.", "The API contract for what was just built hasn't been reviewed for stability."),
-    4: form("Audit the API design end-to-end: each endpoint's inputs, response shapes, and error codes, every breaking change against existing consumers, and the versioning strategy — flag each gap.", "Beyond the surface: the API inputs, errors, breaking changes, and versioning audited."),
-    5: form("Write an API design note file: the locked contract per endpoint (inputs, responses, errors), the breaking changes with a consumer-migration plan, and the versioning strategy — kept with the API.", "A durable API design note of the locked contract, breaking changes, and versioning."),
+    1: form("Check whether what was just built changes the API in a way that could break an existing caller.", "Just whether this changes the API in a way that could break an existing caller."),
+    2: form("Review the API surface of what was just built: list the endpoint, parameter, or response changes and flag any that are breaking.", "List the API endpoint, parameter, or response changes and flag any that are breaking."),
+    3: form("Review the API surface of what was just built for backwards compatibility: list any changes to existing endpoints, parameters, or response shapes, and confirm whether each change is backwards compatible or constitutes a breaking change that requires a version bump.", "List any changes to existing endpoints, parameters, or response shapes, and mark each as backwards-compatible or a breaking change that needs a version bump."),
+    4: form("Audit the API design end-to-end: each endpoint's inputs, response shapes, and error codes, every breaking change against existing consumers, and the versioning strategy — flag each gap.", "Take the API design end-to-end — each endpoint's inputs, response shapes, and error codes, every breaking change against existing consumers, and the versioning strategy — flag each gap."),
+    5: form("Write an API design note file: the locked contract per endpoint (inputs, responses, errors), the breaking changes with a consumer-migration plan, and the versioning strategy — kept with the API.", "Capture an API design note file — the locked contract per endpoint (inputs, responses, errors), the breaking changes with a consumer-migration plan, and the versioning strategy — kept with the API."),
   },
 };
 
@@ -181,11 +181,11 @@ export const ABSENCE_ARCHITECTURE_NOTE_ABSENCE_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_ARCHITECTURE_NOTE_ABSENCE', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES, spine: NOTE_SPINE,
   levelForms: {
-    1: form("Jot a one-line note on the architectural decision just made — what was chosen and why.", "The lightest architecture note: one line on the choice and the reason."),
-    2: form("Write a short architecture note for the decision just made — context, choice, and consequences — and commit it with the code.", "A light pass: a short architecture note committed alongside the code."),
-    3: form("Architecture Decision Records (Michael Nygard, 2011): 'An ADR captures a single architectural decision and its rationale. People months or years later need to understand why the system is constructed the way that it is.' For the structural decision just made — add a short note: context, decision, consequences. A code comment block or doc entry works.", "The rationale for the architectural decision just made hasn't been recorded."),
-    4: form("Write a PR-style architecture note: the context, the decision, the alternatives considered, and the consequences — reviewed like a document, not just a code comment.", "Beyond a quick note: a reviewed architecture write-up of context, decision, and consequences."),
-    5: form("Keep a maintained architecture decision file in the repo: this decision and its rationale recorded with context, consequences, and date — so the architectural why survives in a document, not just the code.", "A durable architecture decision file recording the why for future maintainers."),
+    1: form("Jot a one-line note on the architectural decision just made — what was chosen and why.", "Just one line on the architectural decision just made — what was chosen and why."),
+    2: form("Write a short architecture note for the decision just made — context, choice, and consequences — and commit it with the code.", "Keep a short architecture note for the decision — context, choice, and consequences — committed with the code."),
+    3: form("Architecture Decision Records (Michael Nygard, 2011): 'An ADR captures a single architectural decision and its rationale. People months or years later need to understand why the system is constructed the way that it is.' For the structural decision just made — add a short note: context, decision, consequences. A code comment block or doc entry works.", "For the structural decision just made, add a short note — context, decision, consequences — as a code comment block or doc entry."),
+    4: form("Write a PR-style architecture note: the context, the decision, the alternatives considered, and the consequences — reviewed like a document, not just a code comment.", "Treat it like a PR document — the context, the decision, the alternatives considered, and the consequences — reviewed, not just a code comment; keep the architecture rationale explicit."),
+    5: form("Keep a maintained architecture decision file in the repo: this decision and its rationale recorded with context, consequences, and date — so the architectural why survives in a document, not just the code.", "Record this decision in a maintained architecture decision file in the repo — its rationale with context, consequences, and date — so the why survives in a document, not just the code."),
   },
 };
 
@@ -194,11 +194,11 @@ export const ABSENCE_API_CONTRACT_DEFINITION_RECORD: ContentTemplateRecord = {
   signalType: 'ABSENCE_API_CONTRACT_DEFINITION', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES,
   levelForms: {
-    1: form("Before coding the handler, jot what this endpoint accepts and returns — the contract in one line.", "The lightest contract step: the accept/return shape noted before the handler."),
-    2: form("Define the contract for this endpoint before implementing: the request shape, the response shape, and the error format — as a short doc comment.", "A light pass: the request/response/error contract sketched before the handler."),
-    3: form("OpenAPI contract-first principle: define the API interface before writing the handler. For the endpoint being built — what does it accept (request schema: required fields, types, validation rules)? What does it return (response schema: success shape, error shape, status codes)? What is the error response format? Defining this first prevents implicit contracts that drift between callers and implementors — and makes mock servers and tests possible before the backend exists.", "The API contract (request schema, response schema, error format) hasn't been defined before implementation."),
-    4: form("Define the full contract before the handler: the request schema with validation, the success and error response shapes, the status codes, and the conditions for each error — written above the handler.", "Beyond a sketch: the complete request/response/error contract specified before coding."),
-    5: form("Write the API contract into a schema file: request schema, response schemas, error formats, and status codes — the source of truth callers and tests build against before the backend exists.", "A durable contract schema file as the source of truth for callers and tests."),
+    1: form("Before coding the handler, jot what this endpoint accepts and returns — the contract in one line.", "Just the contract in one line before coding the handler — what this endpoint accepts and returns."),
+    2: form("Define the contract for this endpoint before implementing: the request shape, the response shape, and the error format — as a short doc comment.", "Sketch the endpoint's contract before implementing — the request shape, the response shape, and the error format — as a short doc comment."),
+    3: form("OpenAPI contract-first principle: define the API interface before writing the handler. For the endpoint being built — what does it accept (request schema: required fields, types, validation rules)? What does it return (response schema: success shape, error shape, status codes)? What is the error response format? Defining this first prevents implicit contracts that drift between callers and implementors — and makes mock servers and tests possible before the backend exists.", "Before writing the handler, define what it accepts (request schema: required fields, types, validation), what it returns (success and error shapes, status codes), and the error format — so callers and tests aren't left guessing."),
+    4: form("Define the full contract before the handler: the request schema with validation, the success and error response shapes, the status codes, and the conditions for each error — written above the handler.", "Specify the full contract before the handler — the request schema with validation, the success and error response shapes, the status codes, and the condition for each error — written above the handler."),
+    5: form("Write the API contract into a schema file: request schema, response schemas, error formats, and status codes — the source of truth callers and tests build against before the backend exists.", "Capture the API contract in a schema file — request schema, response schemas, error formats, and status codes — the source of truth callers and tests build against before the backend exists."),
   },
 };
 
@@ -207,11 +207,11 @@ export const ABSENCE_BACKWARDS_COMPATIBILITY_CHECK_RECORD: ContentTemplateRecord
   signalType: 'ABSENCE_BACKWARDS_COMPATIBILITY_CHECK', source: 'shipped', schemaVersion: 1, slots: [],
   paramAxes: SPEC_ARCH_PARAM_AXES, spine: VERIFY_SPINE,
   levelForms: {
-    1: form("Before changing the interface, grep for its callers and check whether the change stays backwards-compatible.", "The lightest compatibility check: grep the callers, confirm the change is compatible."),
-    2: form("Check backwards compatibility before the change: find the main callers of this interface and confirm the change does not break them.", "A light pass: the main callers checked for compatibility before the change."),
-    3: form("Semantic Versioning (semver.org): MAJOR version = backwards-incompatible change. The formal rule: any change to an interface used by existing callers must enumerate those callers and assess the impact before implementation. For the function signature, API contract, or interface just changed — what calls it? What are the downstream effects? Have those callers been updated or is the change backwards-compatible?", "Existing callers of the interface haven't been enumerated before the change."),
-    4: form("Audit backwards compatibility before the change: enumerate every caller of the interface, assess what each depends on, and classify the change as compatible or breaking per caller.", "Beyond the main callers: every caller enumerated and the change classified per caller for compatibility."),
-    5: form("Write a compatibility-impact note file: every caller of the interface, the compatible-or-breaking verdict per caller, and the version-or-update plan for the breaks — before the change ships.", "A durable compatibility-impact note of the per-caller verdicts and the migration plan."),
+    1: form("Before changing the interface, grep for its callers and check whether the change stays backwards-compatible.", "Just grep the callers of this interface before changing it and confirm the change stays backwards-compatible."),
+    2: form("Check backwards compatibility before the change: find the main callers of this interface and confirm the change does not break them.", "Find the main callers of this interface and confirm the change doesn't break them — the compatibility pass before the change."),
+    3: form("Semantic Versioning (semver.org): MAJOR version = backwards-incompatible change. The formal rule: any change to an interface used by existing callers must enumerate those callers and assess the impact before implementation. For the function signature, API contract, or interface just changed — what calls it? What are the downstream effects? Have those callers been updated or is the change backwards-compatible?", "For the signature, contract, or interface just changed, list what calls it, work out the downstream effects, and confirm whether those callers are updated or the change is backwards-compatible."),
+    4: form("Audit backwards compatibility before the change: enumerate every caller of the interface, assess what each depends on, and classify the change as compatible or breaking per caller.", "Enumerate every caller of the interface, assess what each depends on, and classify the change as compatible or breaking per caller."),
+    5: form("Write a compatibility-impact note file: every caller of the interface, the compatible-or-breaking verdict per caller, and the version-or-update plan for the breaks — before the change ships.", "Capture a compatibility-impact note file — every caller of the interface, the compatible-or-breaking verdict per caller, and the version-or-update plan for the breaks — before the change ships."),
   },
 };
 

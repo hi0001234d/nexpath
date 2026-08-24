@@ -16,6 +16,7 @@ import { pinchSignalTypeForFlag, shippedRecordLookup } from './content-template-
 import { resolvePinchFields } from './signal-pinch-fields.js';
 import { getWhyHelpForSignalType } from './why-help-by-signal-type.js';
 import { composeDeterministicOptions } from './engine-option-generator.js';
+import { deliverSelectedPrompt, isWhyDescDeliveryEnabled } from './whydesc-delivery.js';
 import { selectionRegister } from './selection-registry.js';
 import type { MaturityLevel } from './content-template-schema.js';
 import type { GeneratedOptions } from './OptionGenerator.js';
@@ -423,7 +424,10 @@ export async function runLevel(
   if (result === SHOW_SIMPLER) return 'next';
 
   writeTelemetry(input.projectRoot, 'option_selected', { level, selectedText: (result as string).slice(0, 120) }, store);
-  return result as string;
+  // Bug 2 delivery (gated by the whydesc_delivery_enabled config, default ON): deliver the
+  // selected option + its rendered why-desc to the agent. The telemetry above already captured
+  // the pure option, so it stays clean.
+  return deliverSelectedPrompt(result as string, descBaseByOption.get(result as string), isWhyDescDeliveryEnabled(store));
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────

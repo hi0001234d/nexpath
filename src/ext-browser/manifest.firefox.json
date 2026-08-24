@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Nexpath",
   "version": "0.1.5",
-  "description": "AI coding assistant for Replit, Bolt, and Lovable — a behaviour-guidance layer for vibe coders.",
+  "description": "AI coding assistant for Replit, Lovable, and Bolt — a behaviour-guidance layer for vibe coders.",
   "permissions": [
     "storage",
     "tabs"
@@ -58,7 +58,7 @@
   "options_page": "options/options.html",
   "browser_specific_settings": {
     "gecko": {
-      "id": "{1c62eba0-51eb-4052-a4b2-30c66e5aa995}",
+      "id": "{80f4c1c7-1fb2-41d9-a4a1-7c2f4981d286}",
       "strict_min_version": "112.0",
       "data_collection_permissions": {
         "required": ["authenticationInfo", "websiteContent"]

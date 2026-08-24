@@ -5,6 +5,7 @@ import { saveStore, type Store } from './db.js';
 export const DEFAULT_CONFIG: Record<string, string> = {
   prompt_capture_enabled: 'true',
   env_probe_enabled: 'true',
+  whydesc_delivery_enabled: 'true',
   prompt_store_max_per_project: '500',
   prompt_store_max_db_mb: '100',
   log_level: 'info',

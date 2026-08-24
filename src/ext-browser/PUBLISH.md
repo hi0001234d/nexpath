@@ -62,7 +62,7 @@ Because the extension is bundled by esbuild, AMO reviewers require the source + 
 Provide these at submission:
 
 ```
-Requirements: Node.js 24 LTS   (matches AMO's reviewer build environment)
+Requirements: Node.js 20       (matches the publish workflow that builds the uploaded package)
 Build:        npm ci && npm run build:ext
 Output:       dist/ext-firefox   (the uploaded zip's contents)
 ```
@@ -121,8 +121,9 @@ once testing is done.
 - **Name:** Nexpath · **Category:** Developer Tools.
 - **Summary:** "Behaviour guidance for vibe coders using AI coding agents."
 - **Permission justifications** (both stores ask): `storage` (save key/settings), `tabs` (show the
-  popup on the right tab), `scripting` (inject the capture/panel scripts), host access limited to
-  `*.replit.com`, `bolt.new`, `*.stackblitz.com`, `lovable.dev`.
+  popup on the right tab), host access limited to
+  `*.replit.com`, `bolt.new`, `*.stackblitz.com`, `lovable.dev`. (Injection is declarative —
+  `content_scripts` + `web_accessible_resources` — so no `scripting` permission is requested.)
 - **Privacy policy URL**, **screenshots** (1280×800), **128×128 icon** (`icons/icon128.png`).
 
 ---

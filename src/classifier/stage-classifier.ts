@@ -6,9 +6,8 @@ import {
   STAGE2_MAX_OUTPUT_TOKENS,
   STAGE2_LLM_MIN_CONFIDENCE,
   STAGE2_CONTEXT_WINDOW,
-  STAGE_LABEL,
   STAGE_FROM_LABEL,
-  buildSignalList,
+  buildFullSignalList,
 } from './Stage2Trigger.js';
 
 /**
@@ -32,7 +31,7 @@ import {
  */
 
 /** Timeout for the single classification call (ms). */
-export const STAGE_CLASSIFIER_TIMEOUT_MS = 6_000;
+export const STAGE_CLASSIFIER_TIMEOUT_MS = 12_000;
 
 /** The model behind the stage classifier (shared with the former cross-confirmation call). */
 export const STAGE_CLASSIFIER_MODEL = STAGE2_MODEL;
@@ -92,6 +91,8 @@ export const STAGE_CLASSIFIER_SYSTEM_PROMPT = [
   '  "selected_signal_key": "<one absent signal_key to raise, or empty string>",',
   '  "reason": "<one sentence>"',
   '}',
+  'FEEDBACK-LOOP BOUNDARY: classify Feedback Loop ONLY when the window contains explicit evidence the product is ALREADY deployed/live for real users (e.g. "its live", "deployed", "published", users actively using it). Building features FOR clients/users (a client portal, sending invoices to clients) is NOT live evidence — without it, bug reports and fixes during building are Implementation or Review/Testing, not Feedback Loop.',
+  'ADD-FEATURE REQUESTS: a prompt asking the agent to BUILD or ADD a specific feature now ("add a page...", "add a dashboard...", "make it do X") is Implementation activity — the agent is being asked to write code. Task Breakdown applies only when the developer is organising or splitting work into a plan/list without asking for the build itself.',
 ].join('\n');
 
 /** Input for one stage classification. */
@@ -100,9 +101,13 @@ export interface StageClassifierInput {
   promptText: string;
   /** Recent prompts to show the model (oldest first); include the current prompt as the last entry. */
   window: readonly { text: string }[];
-  /** Current session stage — scopes the signal checklist and gives the model prior context. */
+  /**
+   * Current session stage. Deliberately NOT embedded in the model prompt (stating it made
+   * the model confirm it — see buildStageClassifierUserMessage); retained for callers,
+   * logging, and any non-prompt consumer.
+   */
   sessionStage: Stage;
-  /** Current session stage confidence (context only). */
+  /** Current session stage confidence. Not embedded in the model prompt (same reason). */
   sessionConfidence: number;
   /** Developer profile for the calibration block (null if not yet computed). */
   profile: UserProfile | null;
@@ -155,22 +160,27 @@ function profileBlock(profile: UserProfile | null): string {
   ].join('\n');
 }
 
-/** Build the dynamic user message (never cached): session context + profile + window + signal checklist. */
+/**
+ * Build the dynamic user message (never cached): calibration + profile + window + the
+ * all-stages signal checklist. Deliberately does NOT state the session's current stage:
+ * asserting it made the model confirm that stage instead of classifying the prompts
+ * (sessions start at idea, the manager feeds the last output back in, and the session
+ * locked there). The stage is detected fresh from the window on every call.
+ */
 export function buildStageClassifierUserMessage(input: StageClassifierInput, contextWindow = STAGE2_CONTEXT_WINDOW): string {
   const recent = input.window.slice(-contextWindow);
   const promptLines = recent.map((p, i) => `[${i + 1}] ${p.text}`).join('\n');
   return [
     'Current session context:',
-    `- Current stage: ${STAGE_LABEL[input.sessionStage]}`,
-    `- Current stage confidence: ${input.sessionConfidence.toFixed(2)}`,
+    'Stage calibration: treat the work as having moved to a later stage only when the prompts clearly show building, verifying, or shipping activity; early exploratory, cosmetic, or scoping requests belong to Idea.',
     '',
     profileBlock(input.profile),
     '',
     `Recent developer prompts (oldest first, last ${recent.length}):`,
     promptLines,
     '',
-    'Signals to check (relevant to the current stage):',
-    buildSignalList(input.sessionStage),
+    'Signals to check (across ALL stages):',
+    buildFullSignalList(),
   ].join('\n');
 }
 

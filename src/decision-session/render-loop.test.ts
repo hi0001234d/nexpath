@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { PassThrough } from 'node:stream';
 import {
   computeLayout,
+  MIN_OPTION_BAND_ROWS,
   D1_TRUNCATED_LINE_CAP,
   D2_TRUNCATION_MARKER,
   D4_PADDING_ROW_COUNT,
@@ -699,6 +700,54 @@ describe('render-loop — visual-row-aware budget (ui-bug-fix plan §5.4 Candida
     const visibleText = r.viewport.visibleStyledLines.join('\n');
     expect(visibleText).toContain('NEXPATH CLI');                   // page-header wordmark
     expect(visibleText).toContain('Service boundary established');  // pinch label
+  });
+});
+
+describe('render-loop — min option band: never render zero selectable options', () => {
+  // Reproduces the Cursor/CLI report "popup shows up with no options, just
+  // Send to your agent": a tall header (NEXPATH page-header + pinch + question +
+  // 3-line why-help) on a short popup window used to drive avail -> 0 via the
+  // Tier-2 header fill, dropping EVERY option so nothing was selectable.
+  const tallHeader = (rows: number): RenderLoopOptions => makeOpts({
+    pageHeader:   '▲  NEXPATH CLI\n────────────\n\n',
+    pinchLabel:   'Before coding.',
+    question:     'Spec ready — is the architecture decided?',
+    whyHelpBlock:
+      "You're seeing this because\n" +
+      "Your recent prompts show a shift to a new stage; the prior stage's loose ends are not tied up yet.\n" +
+      '— pick from the options below to keep moving.',
+    options: [
+      { value: 'design', label: 'Design the system architecture: components, data model, API contracts.', descBase: 'Settle the architecture before any code is written.' },
+      { value: 'review', label: 'Review the plan before building', descBase: 'Confirm scope and acceptance.' },
+    ],
+    rows,
+  });
+
+  for (const rows of [10, 12, 14]) {
+    it(`keeps the focused option visible on a short viewport (rows=${rows}) — this returned ZERO option lines before the fix`, () => {
+      const r = computeLayout(tallHeader(rows), FRESH_STATE);
+      expect(r.viewport.visibleStyledLines.join('\n')).toContain('Design the system architecture');
+    });
+  }
+
+  it('reserves MIN_OPTION_BAND_ROWS so avail never collapses to 0 while Tier 1 fits (rows=14)', () => {
+    const r = computeLayout(tallHeader(14), FRESH_STATE);
+    expect(r.budget.avail).toBeGreaterThanOrEqual(MIN_OPTION_BAND_ROWS);
+  });
+
+  it('hard floor: the option region is never empty even at a pathological tiny viewport where the header alone overflows (rows=6)', () => {
+    const r = computeLayout(tallHeader(6), FRESH_STATE);
+    // Tier 1 alone can exceed rows=6 (avail may still be 0) — the hard-floor
+    // guard guarantees at least the focused option's first line renders anyway.
+    expect(r.viewport.visibleStyledLines.join('\n')).toContain('Design the system architecture');
+  });
+
+  it('roomy viewport is byte-unchanged: rows=40 fits every option and avail stays well above the band', () => {
+    const r = computeLayout(tallHeader(40), FRESH_STATE);
+    const text = r.viewport.visibleStyledLines.join('\n');
+    expect(text).toContain('Design the system architecture');
+    expect(text).toContain('Review the plan before building');
+    expect(r.budget.avail).toBeGreaterThan(MIN_OPTION_BAND_ROWS);
   });
 });
 

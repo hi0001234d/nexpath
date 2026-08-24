@@ -14,7 +14,7 @@
  * `mapToAbsenceSignal` is present ONLY for `routing: 'absence'`.
  *
  * Channel sequencing (`requiresChannel`): nexpath has detection channels (a) keyword,
- * (b) behavioral telemetry, and the AR-10 dev-environment probe (Channel Y, shipped).
+ * (b) behavioral telemetry, and the dev-environment probe (shipped).
  * Categories whose detection needs a channel-reader that is NOT shipped yet carry a
  * `requiresChannel` marker and a dark detector (returns 0) until that reader lands —
  * this SEQUENCES a category to its channel; it is not a permanent block. The still-gated
@@ -53,13 +53,13 @@ export interface RuntimeContext {
   consecutiveAcceptanceStreak?: number;
   /** Consecutive recent prompts carrying a 'frustrated' mood (frustration-spiral detector). */
   consecutiveFrustratedPrompts?: number;
-  /** AR-10 dev-env probe (Channel Y): is the project under version control? */
+  /** Dev-env probe: is the project under version control? */
   hasVersionControl?: boolean;
-  /** AR-10 dev-env probe (Channel Y): does a recovery/backup point exist? */
+  /** Dev-env probe: does a recovery/backup point exist? */
   hasBackups?: boolean;
-  /** AR-10 dev-env probe (Channel Y): are prod/dev/test environments separated? */
+  /** Dev-env probe: are prod/dev/test environments separated? */
   hasSeparateEnvs?: boolean;
-  /** AR-10 dev-env probe (Channel Y): is an automated security scanner present? */
+  /** Dev-env probe: is an automated security scanner present? */
   hasSecurityScanner?: boolean;
 }
 
@@ -121,7 +121,7 @@ function recent(promptHistory: readonly PromptRecord[], n: number): readonly Pro
 /**
  * The registry. The 3 cross-cutting straddle seeds (one per routing tag) plus the
  * full WR-1/WR-1.1/WR-2 mistake-category population. Detectors on channels available
- * now (a keyword / b behavioral / Y AR-10 probe) are real; channel-X/M/c detectors are
+ * now (keyword / behavioural / the dev-env probe) are real; channel-X/M/c detectors are
  * dark with a `requiresChannel` marker until their reader ships.
  */
 export const MISTAKE_CATEGORIES: readonly MistakeCategory[] = [
@@ -273,7 +273,7 @@ export const MISTAKE_CATEGORIES: readonly MistakeCategory[] = [
     severity: 'medium', requiresChannel: 'c', detect: () => 0,
     metadata: { description: 'contradictory instructions accumulate across prompts' },
   },
-  // ── Family 7 — dev-environment & tooling hygiene (Channel Y — AR-10 probe) ─────
+  // ── Family 7 — dev-environment & tooling hygiene (the dev-env probe) ─────
   {
     name: 'no_version_control', routing: 'absence', mapToAbsenceSignal: 'ABSENCE_NO_VERSION_CONTROL',
     severity: 'high',

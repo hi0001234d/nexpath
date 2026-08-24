@@ -8,6 +8,7 @@ import { deleteAllPrompts } from '../store/prompts.js';
 import {
   appendParamEvent,
   appendParamEvents,
+  appendVariantServedEvent,
   readParamEvents,
   paramEventsPathFor,
   type ParamEventInput,
@@ -66,6 +67,30 @@ describe('param-events — disk-backed store', () => {
     expect(rows[0].schemaVersion).toBe(SCHEMA_VERSION);
     expect(rows[0].ts).toBe(123);
     expect(rows[0].source).toBe('live');
+  });
+
+  it('round-trips a variant-served row carrying identity only — never content text', () => {
+    appendVariantServedEvent(store, {
+      projectRoot: '/p',
+      sessionId: 's1',
+      promptIndex: 7,
+      signalKey: 'context_loss',
+      stage: 'implementation',
+      stageConfidence: 0.8,
+      variant: { level: 3, register: 'casual', role: 'founder', source: 'shipped', path: 'deterministic' },
+    });
+    const rows = readParamEvents(store);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].channel).toBe('served');
+    expect(rows[0].signalKey).toBe('context_loss');
+    expect(rows[0].variant).toEqual({ level: 3, register: 'casual', role: 'founder', source: 'shipped', path: 'deterministic' });
+    // Identity only — the row has no field that could carry option/why-desc text.
+    expect(Object.keys(rows[0].variant ?? {}).sort()).toEqual(['level', 'path', 'register', 'role', 'source']);
+  });
+
+  it('detection rows never carry a variant field', () => {
+    appendParamEvent(store, ev());
+    expect('variant' in readParamEvents(store)[0]!).toBe(false);
   });
 
   it('appends many events in order', () => {

@@ -11,6 +11,7 @@ import {
   applyCoverageFloor,
   generatePerUserRecord,
   generateAndStoreAutogenRecord,
+  buildGenerationPrompt,
   buildPatternSummary,
   persistSelection,
   readSelection,
@@ -379,5 +380,21 @@ describe('auto-template-generator — refresh on drift + maturity change (affect
     await runAutogenForFire({ store, projectRoot: '/p', signalType: 'ABSENCE_TEST_CREATION', currentLevel: 4, rightGood: rgProfile, client: mockClient('{}') });
     expect(autogenRefreshPending(store, '/p')).toBe(true); // flag preserved → retries when budget resets
     store.db.close();
+  });
+});
+
+describe('auto-template-generator — generation prompt agent voice (Phase 16.3)', () => {
+  it('directs the why-desc to stay agent-voice while the option is the developer→agent message', () => {
+    const prompt = buildGenerationPrompt(
+      { option: 'Write one test for the main behaviour.', whyDesc: 'Just one test — the single most important behaviour.' },
+      'uses Vitest, small team',
+    );
+    // The generated why-desc must stay agent-voice — a direct instruction the coding agent reads.
+    expect(prompt).toMatch(/agent voice/i);
+    expect(prompt).toMatch(/direct instruction the coding agent reads/i);
+    // The option channel stays the message the developer sends to the agent.
+    expect(prompt).toMatch(/message the developer sends to the agent/i);
+    // Safety rules preserved (defence-in-depth behind the sanitize gate).
+    expect(prompt).toMatch(/never copy raw prompt text/i);
   });
 });

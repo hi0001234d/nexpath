@@ -45,11 +45,11 @@ export const ABSENCE_OBSERVABILITY_RECORD: ContentTemplateRecord = {
   paramAxes: OPS_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before adding logging across the codebase.',
   levelForms: {
-    1: form("Add logging for the one failure in what was just built that would otherwise be silent in production.", "The lightest logging step: one silent failure made visible."),
-    2: form("Add structured logging to what was just built for the main failure and latency paths, so a silent break is visible.", "A light logging pass: the main failure and latency paths made visible."),
-    3: form("Review what was just built for observability gaps: identify what this feature does in production that is currently invisible — requests, failures, latency, state changes — and add structured logging for the events that would allow you to diagnose a production incident without SSH access.", "Observability for what was just built hasn't been set up — silent failures in production could go undetected."),
-    4: form("Audit what was just built for monitoring coverage: structured logging on every failure path, metrics for latency and throughput, and an alert that fires on silent degradation.", "Beyond the main paths: full logging, metrics, and alerting coverage audited."),
-    5: form("Write a monitoring note file plus the logging: the events logged, the metrics emitted, the alert conditions, and how to diagnose an incident from them — kept with the feature.", "A durable monitoring note of the logging, metrics, and alerts for the feature."),
+    1: form("Add logging for the one failure in what was just built that would otherwise be silent in production.", "Just one logging line — on the single failure that would otherwise be silent in production. Don't instrument the whole thing yet."),
+    2: form("Add structured logging to what was just built for the main failure and latency paths, so a silent break is visible.", "Cover the main failure and latency paths with structured logging — enough to see a silent break, not full coverage yet."),
+    3: form("Review what was just built for observability gaps: identify what this feature does in production that is currently invisible — requests, failures, latency, state changes — and add structured logging for the events that would allow you to diagnose a production incident without SSH access.", "Focus on what's invisible in production — requests, failures, latency, state changes — and add structured logging you could diagnose an incident from without SSH access."),
+    4: form("Audit what was just built for monitoring coverage: structured logging on every failure path, metrics for latency and throughput, and an alert that fires on silent degradation.", "Go wider than the main paths — logging on every failure path, latency and throughput metrics, and an alert that fires on silent degradation."),
+    5: form("Write a monitoring note file plus the logging: the events logged, the metrics emitted, the alert conditions, and how to diagnose an incident from them — kept with the feature.", "Keep a monitoring note file alongside the logging — the events logged, metrics emitted, alert conditions, and how to diagnose an incident from them."),
   },
 };
 
@@ -60,11 +60,11 @@ export const ABSENCE_ROLLBACK_PLANNING_RECORD: ContentTemplateRecord = {
   paramAxes: OPS_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before running or scripting the rollback.',
   levelForms: {
-    1: form("Note the one rollback step needed if the release of what was just built fails.", "The lightest rollback step: one documented revert action."),
-    2: form("Document the main rollback steps for this release before shipping: how to revert and how to confirm the revert worked.", "A light rollback plan: the main revert steps documented before shipping."),
-    3: form("Define the rollback procedure for this feature before shipping: identify the steps to revert if the deployment fails, confirm the rollback can be completed within your acceptable downtime window, and verify that database migrations or data changes are reversible.", "A rollback plan for what was just built hasn't been defined."),
-    4: form("Audit rollback readiness: the revert steps, the data and migration reversibility, the downtime window, and what would be left inconsistent — document each before shipping.", "Beyond the main steps: rollback reversibility, downtime, and inconsistent-state risks audited."),
-    5: form("Write a rollback runbook file: the ordered revert steps, the reversibility of each migration, the downtime window, the owner, and the manual cleanup — executable under pressure without improvisation.", "A durable rollback runbook executable under incident pressure."),
+    1: form("Note the one rollback step needed if the release of what was just built fails.", "Just the single rollback step you'd need if this release fails — one revert action, written down."),
+    2: form("Document the main rollback steps for this release before shipping: how to revert and how to confirm the revert worked.", "Cover the main rollback steps before shipping — how to revert and how to confirm the revert actually worked."),
+    3: form("Define the rollback procedure for this feature before shipping: identify the steps to revert if the deployment fails, confirm the rollback can be completed within your acceptable downtime window, and verify that database migrations or data changes are reversible.", "Lay out the revert steps, confirm they fit the acceptable downtime window, and verify any database migrations or data changes are reversible."),
+    4: form("Audit rollback readiness: the revert steps, the data and migration reversibility, the downtime window, and what would be left inconsistent — document each before shipping.", "Go past the steps to rollback reversibility — data and migrations, the downtime window, and what state would be left inconsistent; document each before shipping."),
+    5: form("Write a rollback runbook file: the ordered revert steps, the reversibility of each migration, the downtime window, the owner, and the manual cleanup — executable under pressure without improvisation.", "Capture a rollback runbook file — ordered revert steps, per-migration reversibility, downtime window, owner, and manual cleanup — so it runs under pressure without improvising."),
   },
 };
 
@@ -75,11 +75,11 @@ export const ABSENCE_DEPLOYMENT_PLANNING_RECORD: ContentTemplateRecord = {
   paramAxes: OPS_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before deploying or changing infrastructure.',
   levelForms: {
-    1: form("Note the one thing the production environment needs before what was just built can deploy.", "The lightest deploy check: one prerequisite named."),
-    2: form("List the main deploy prerequisites for this feature — environment config, secrets, infrastructure — and confirm each before shipping.", "A light deploy-readiness pass: the main prerequisites confirmed."),
-    3: form("Define the deployment plan for this feature before shipping: confirm the target environment configuration, document any environment variables or secrets that need to be provisioned, and verify that the deployment process has been tested outside of production.", "A deployment plan hasn't been authored."),
-    4: form("Audit deploy readiness end-to-end: staging-vs-production config differences, new environment variables, required infrastructure changes, and external integrations — flag each gap.", "Beyond the main prerequisites: config drift, infra changes, and integrations audited for deploy."),
-    5: form("Write a deployment runbook file: the target config, the secrets and variables to provision, the infrastructure changes, the staging verification, and the cutover steps — kept with the release.", "A durable deployment runbook of config, secrets, infra, and cutover steps."),
+    1: form("Note the one thing the production environment needs before what was just built can deploy.", "Just name the one production prerequisite this needs before it can deploy — nothing more yet."),
+    2: form("List the main deploy prerequisites for this feature — environment config, secrets, infrastructure — and confirm each before shipping.", "Cover the main deploy prerequisites — env config, secrets, infrastructure — and confirm each before shipping."),
+    3: form("Define the deployment plan for this feature before shipping: confirm the target environment configuration, document any environment variables or secrets that need to be provisioned, and verify that the deployment process has been tested outside of production.", "Confirm the target environment config, document the env variables and secrets to provision, and verify the deploy process has been tested outside production."),
+    4: form("Audit deploy readiness end-to-end: staging-vs-production config differences, new environment variables, required infrastructure changes, and external integrations — flag each gap.", "Take deploy readiness end-to-end — staging-vs-production config drift, new env variables, infra changes, and external integrations; flag each gap."),
+    5: form("Write a deployment runbook file: the target config, the secrets and variables to provision, the infrastructure changes, the staging verification, and the cutover steps — kept with the release.", "Capture a deployment runbook file — target config, secrets and variables to provision, infra changes, staging verification, and cutover steps — kept with the release."),
   },
 };
 
@@ -90,11 +90,11 @@ export const ABSENCE_DEPENDENCY_MGMT_RECORD: ContentTemplateRecord = {
   paramAxes: OPS_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before installing, upgrading, or removing any dependency.',
   levelForms: {
-    1: form("Check the one new dependency in what was just built most likely to have a conflict or a known vulnerability.", "The lightest dependency check: the riskiest new package."),
-    2: form("Review the new dependencies in what was just built for version conflicts and known vulnerabilities before shipping.", "A light dependency pass: conflicts and known vulnerabilities flagged."),
-    3: form("Review the new dependencies introduced in what was just built: check for version conflicts with existing packages, known security vulnerabilities in the chosen version, and whether a more stable or widely-adopted alternative exists for the same purpose.", "New dependencies haven't been audited for conflicts/CVEs/alternatives."),
-    4: form("Audit the new dependencies by category: version conflicts, known vulnerabilities, licence compatibility, maintenance status, and transitive conflicts — flag each package's risks.", "Beyond the main risks: every new dependency audited for health and licence."),
-    5: form("Write a dependency note file: per new package the version, the conflict and vulnerability findings, the licence, the maintenance status, and the keep-or-replace decision — kept with the project.", "A durable dependency note of per-package risk and the keep-or-replace calls."),
+    1: form("Check the one new dependency in what was just built most likely to have a conflict or a known vulnerability.", "Just the single riskiest new dependency — the one most likely to conflict or carry a known vulnerability. Skip the rest for now."),
+    2: form("Review the new dependencies in what was just built for version conflicts and known vulnerabilities before shipping.", "Scope this to the new dependencies only — version conflicts and known vulnerabilities — before shipping."),
+    3: form("Review the new dependencies introduced in what was just built: check for version conflicts with existing packages, known security vulnerabilities in the chosen version, and whether a more stable or widely-adopted alternative exists for the same purpose.", "For each new package, check version conflicts with existing ones, known vulnerabilities in the chosen version, and whether a more stable or widely-adopted alternative fits."),
+    4: form("Audit the new dependencies by category: version conflicts, known vulnerabilities, licence compatibility, maintenance status, and transitive conflicts — flag each package's risks.", "Go category by category over the new dependencies — conflicts, vulnerabilities, licence compatibility, maintenance status, transitive conflicts — and flag each package's risks."),
+    5: form("Write a dependency note file: per new package the version, the conflict and vulnerability findings, the licence, the maintenance status, and the keep-or-replace decision — kept with the project.", "Capture a dependency note file — per package: version, conflict and vulnerability findings, licence, maintenance status, and the keep-or-replace call — kept with the project."),
   },
 };
 
@@ -105,11 +105,11 @@ export const ABSENCE_ENV_AND_SECRETS_RECORD: ContentTemplateRecord = {
   paramAxes: OPS_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before moving, rotating, or deleting any credential.',
   levelForms: {
-    1: form("Check what was just built for the one secret most likely hardcoded in source instead of an environment variable.", "The lightest secrets check: the one credential at risk in source."),
-    2: form("Review the secrets handling for this feature: confirm no credential is hardcoded and each is loaded from an environment variable.", "A light secrets pass: hardcoded credentials and env-loading checked."),
-    3: form("Audit the secrets storage pattern for what was just built: identify every credential, API key, and environment-specific value used — confirm none are hardcoded in source, all are loaded from environment variables, and the variable names are documented in a `.env.example` file.", "The secrets storage pattern hasn't been audited."),
-    4: form("Audit the secrets posture end-to-end: nothing hardcoded, every value environment-loaded, a documented `.env.example`, the `.env` git-ignored, and a rotation path for each credential.", "Beyond the basics: storage, documentation, and rotation for every secret audited."),
-    5: form("Write a secrets-handling note file: each credential, where it is stored, the `.env.example` coverage, and the rotation procedure if one is compromised — kept out of source control.", "A durable secrets-handling note of storage and rotation per secret."),
+    1: form("Check what was just built for the one secret most likely hardcoded in source instead of an environment variable.", "Just the single secret most likely hardcoded in source instead of an environment variable — find that one first."),
+    2: form("Review the secrets handling for this feature: confirm no credential is hardcoded and each is loaded from an environment variable.", "Scope this to the secrets — confirm none is hardcoded and each loads from an environment variable."),
+    3: form("Audit the secrets storage pattern for what was just built: identify every credential, API key, and environment-specific value used — confirm none are hardcoded in source, all are loaded from environment variables, and the variable names are documented in a `.env.example` file.", "Find every credential, API key, and environment-specific value, confirm none is hardcoded and all load from environment variables, and document the names in a `.env.example`."),
+    4: form("Audit the secrets posture end-to-end: nothing hardcoded, every value environment-loaded, a documented `.env.example`, the `.env` git-ignored, and a rotation path for each credential.", "Take the secrets posture end-to-end — nothing hardcoded, every value env-loaded, a documented `.env.example`, the `.env` git-ignored, and a rotation path for each."),
+    5: form("Write a secrets-handling note file: each credential, where it is stored, the `.env.example` coverage, and the rotation procedure if one is compromised — kept out of source control.", "Capture a secrets-handling note file — each credential, where it's stored, the `.env.example` coverage, and the rotation procedure if one is compromised — kept out of source control."),
   },
 };
 
@@ -120,11 +120,11 @@ export const ABSENCE_CI_PIPELINE_RECORD: ContentTemplateRecord = {
   paramAxes: OPS_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before changing the CI configuration or merge gates.',
   levelForms: {
-    1: form("Confirm the CI workflow runs the test suite on every pull request to what was just built.", "The lightest CI check: tests run automatically on each PR."),
-    2: form("Check the CI workflow for this project: the test suite runs on every pull request and a test failure blocks the merge.", "A light CI pass: tests run and failures block merges."),
-    3: form("Confirm automated test execution is configured for this project: check that a CI workflow (e.g. GitHub Actions) runs the full test suite on every pull request and push to main — verify the workflow file exists, the test command is correct, and test failures block merges.", "Automated test execution on PR/main hasn't been confirmed."),
-    4: form("Audit the CI coverage: the test suite, type-checking, linting, and security scans all run on every pull request, failures block merges, and nothing checked locally is missing from CI.", "Beyond tests: the full CI check set audited against what runs locally."),
-    5: form("Write the CI configuration into a workflow file: the test suite, the type and lint checks, the security scans, and the rule that failures block merges — versioned with the project.", "A durable CI workflow file running the test and check suite as a merge gate."),
+    1: form("Confirm the CI workflow runs the test suite on every pull request to what was just built.", "Just check the CI runs the test suite on every pull request — nothing more elaborate yet."),
+    2: form("Check the CI workflow for this project: the test suite runs on every pull request and a test failure blocks the merge.", "Make sure the test suite runs on every pull request and that a test failure actually blocks the merge."),
+    3: form("Confirm automated test execution is configured for this project: check that a CI workflow (e.g. GitHub Actions) runs the full test suite on every pull request and push to main — verify the workflow file exists, the test command is correct, and test failures block merges.", "Verify the CI workflow file exists, runs the full test suite on every PR and push to main, uses the right command, and blocks merges on failure."),
+    4: form("Audit the CI coverage: the test suite, type-checking, linting, and security scans all run on every pull request, failures block merges, and nothing checked locally is missing from CI.", "Go wider than tests — type-checking, linting, and security scans all run per pull request, failures block merges, and nothing you run locally is missing from CI."),
+    5: form("Write the CI configuration into a workflow file: the test suite, the type and lint checks, the security scans, and the rule that failures block merges — versioned with the project.", "Capture the CI config in a workflow file — the test suite, type and lint checks, security scans, and the rule that failures block merges — versioned with the project."),
   },
 };
 
@@ -135,11 +135,11 @@ export const ABSENCE_RATE_LIMITING_RECORD: ContentTemplateRecord = {
   paramAxes: OPS_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before adding throttling to production request paths.',
   levelForms: {
-    1: form("Note the per-user request limit for the endpoint in what was just built, and whether anything enforces it.", "The lightest rate-limit check: the intended limit and current enforcement."),
-    2: form("Define the basic rate limit for this endpoint: the per-user or per-key limit and what happens when a caller exceeds it.", "A light rate-limit pass: the limit and the over-limit response defined."),
-    3: form("Define the rate limiting strategy for what was just built: specify the throttle limits per user, per API key, or per IP address — confirm which identifier is used for tracking, what the limit is (requests per second or per minute), and what happens when the limit is exceeded.", "A rate limiting strategy hasn't been defined."),
-    4: form("Design the rate-limit model end-to-end: the identifier (user, key, or IP), the limit per window, the 429 response with a retry signal, and whether the window is rolling or fixed.", "Beyond the basic limit: the full quota model and throttle response designed."),
-    5: form("Write a rate-limit design note file: the per-identifier limits, the time window, the over-limit response, the abuse paths it guards, and where the throttle is enforced — kept with the API.", "A durable rate-limit design note of limits, windows, and enforcement."),
+    1: form("Note the per-user request limit for the endpoint in what was just built, and whether anything enforces it.", "Just the per-user request limit for this endpoint and whether anything currently enforces it — one number and its status."),
+    2: form("Define the basic rate limit for this endpoint: the per-user or per-key limit and what happens when a caller exceeds it.", "Set the basic rate limit — the per-user or per-key number and what happens when a caller goes over it."),
+    3: form("Define the rate limiting strategy for what was just built: specify the throttle limits per user, per API key, or per IP address — confirm which identifier is used for tracking, what the limit is (requests per second or per minute), and what happens when the limit is exceeded.", "Pick the tracking identifier (user, key, or IP), set the limit per window, and say what happens when a caller exceeds it."),
+    4: form("Design the rate-limit model end-to-end: the identifier (user, key, or IP), the limit per window, the 429 response with a retry signal, and whether the window is rolling or fixed.", "Take the rate-limit model end-to-end — the identifier, the limit per window, the over-limit response with a retry signal, and whether the window is rolling or fixed."),
+    5: form("Write a rate-limit design note file: the per-identifier limits, the time window, the over-limit response, the abuse paths it guards, and where the throttle is enforced — kept with the API.", "Capture a rate-limit design note file — per-identifier limits, the time window, the over-limit response, the abuse paths it guards, and where enforcement lives — kept with the API."),
   },
 };
 
@@ -162,11 +162,11 @@ export const ABSENCE_DEPENDENCY_AUDIT_GAP_RECORD: ContentTemplateRecord = {
   paramAxes: OPS_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before installing this dependency.',
   levelForms: {
-    1: form("Before adding the new dependency, check when it was last released and whether it is actively maintained.", "The lightest dependency check: maintenance signals before adopting."),
-    2: form("Evaluate the new dependency before committing to it: maintenance status, licence compatibility, and whether a lighter alternative exists.", "A light dependency evaluation: maintenance, licence, and alternatives weighed."),
-    3: form("NIST SSDF requires evaluating third-party components for maintenance status, license compatibility, and security properties before integration. For the dependency just added: Is it actively maintained (last release date, open issues trend)? Is the license compatible? Are there lighter-weight alternatives? A few minutes of evaluation now prevents being stuck with an abandoned or license-incompatible package later.", "The new dependency hasn't been evaluated against the third-party-component checks (maintenance, license, alternatives) before adoption."),
-    4: form("Evaluate the dependency thoroughly before adopting: last-release recency, open-issue trend, licence compatibility, bundle-size impact, and the lighter-weight alternatives compared.", "Beyond the basics: maintenance, licence, size, and alternatives compared for the dependency."),
-    5: form("Write a dependency evaluation note file: the maintenance signals, the licence, the bundle-size impact, the alternatives considered, and the adopt-or-not decision — kept with the project.", "A durable dependency evaluation note of the checks and the adopt-or-not decision."),
+    1: form("Before adding the new dependency, check when it was last released and whether it is actively maintained.", "Just the maintenance signals for this new dependency — last release date and whether it's actively maintained — before adopting it."),
+    2: form("Evaluate the new dependency before committing to it: maintenance status, licence compatibility, and whether a lighter alternative exists.", "Weigh this new dependency before committing — maintenance status, licence compatibility, and whether a simpler alternative fits."),
+    3: form("NIST SSDF requires evaluating third-party components for maintenance status, license compatibility, and security properties before integration. For the dependency just added: Is it actively maintained (last release date, open issues trend)? Is the license compatible? Are there lighter-weight alternatives? A few minutes of evaluation now prevents being stuck with an abandoned or license-incompatible package later.", "Check maintenance (last release, open-issue trend), licence compatibility, and lighter-weight alternatives before integrating — a few minutes now avoids being stuck with an abandoned or licence-incompatible package."),
+    4: form("Evaluate the dependency thoroughly before adopting: last-release recency, open-issue trend, licence compatibility, bundle-size impact, and the lighter-weight alternatives compared.", "Go thorough before adopting the dependency — last-release recency, open-issue trend, licence compatibility, bundle-size impact, and lighter-weight alternatives compared."),
+    5: form("Write a dependency evaluation note file: the maintenance signals, the licence, the bundle-size impact, the alternatives considered, and the adopt-or-not decision — kept with the project.", "Capture a dependency evaluation note file — the maintenance signals, licence, bundle-size impact, alternatives considered, and the adopt-or-not decision — kept with the project."),
   },
 };
 

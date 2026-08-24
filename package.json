@@ -24,7 +24,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
     "@clack/prompts": "^0.9",
-    "@modelcontextprotocol/sdk": "latest",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "commander": "^12",
     "cross-keychain": "^1.1.0",
     "dotenv": "^17.4.2",

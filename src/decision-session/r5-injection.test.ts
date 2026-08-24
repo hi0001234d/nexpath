@@ -451,6 +451,14 @@ describe('r5-injection — F7 L2 sensitive-action trigger detection', () => {
     expect(f7DetectL2Triggers([makePrompt('erase the snapshot', 0)])).toContain('destructive-fs');
   });
 
+  it('detects an in-place data overwrite (restore) under destructive-data', () => {
+    // A restore that overwrites current data with a backed-up copy — the data is replaced,
+    // not deleted, so it is destructive-data rather than destructive-fs.
+    expect(f7DetectL2Triggers([makePrompt('a real restore overwrites the current data', 0)])).toContain('destructive-data');
+    expect(f7DetectL2Triggers([makePrompt('this will overwrite what is there now', 0)])).toContain('destructive-data');
+    expect(f7DetectL2Triggers([makePrompt('overwriting the live config', 0)])).toContain('destructive-data');
+  });
+
   it('fires on a single occurrence — no repetition / divergence pattern required', () => {
     // Per dev-plan §10.6.1 category 8 reinterpretation: a sensitive verb
     // triggers regardless of how many prompts it appears in.

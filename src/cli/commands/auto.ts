@@ -10,11 +10,13 @@ import { detectAbsenceFlags, ABSENCE_MIN_PROMPTS } from '../../classifier/Absenc
 import { buildRuntimeContext } from '../../classifier/runtime-context.js';
 import { ACTIVE_AGENT_ID } from '../../env/agent-capabilities.js';
 import { recordEnvTrajectory } from '../../env/env-trajectory.js';
+import { recordTranscriptCorroboration } from '../../telemetry/transcript-corroboration.js';
 import { classifyStreamBPresence } from '../../classifier/StreamBPresenceClassifier.js';
 import type { StreamBPresenceResult } from '../../classifier/StreamBPresenceClassifier.js';
 import { shouldFireStage2 } from '../../classifier/Stage2Trigger.js';
 import { generatePinchLabel } from '../../decision-session/PinchGenerator.js';
 import { pinchSignalTypeForFlag } from '../../decision-session/content-template-source.js';
+import { isInjectedPromptEcho } from '../../decision-session/whydesc-delivery.js';
 import { selectionRegister } from '../../decision-session/selection-registry.js';
 import { resolvePinchFields } from '../../decision-session/signal-pinch-fields.js';
 import type { Stage } from '../../classifier/types.js';
@@ -98,28 +100,41 @@ export interface AutoInput {
    * send it). Threaded onto session state and read by the runtime context.
    */
   currentAgentMode?: string;
+  /**
+   * Path to the agent's session transcript, when the hook payload reports it.
+   * Read to corroborate practice claims against the agent's actual behaviour;
+   * undefined when unavailable (CLI-argument mode, or an agent that does not
+   * send it) — corroboration is then skipped.
+   */
+  transcriptPath?: string;
 }
 
 /** Parsed shape of the UserPromptSubmit hook stdin payload. */
 export interface AutoHookPayload {
   promptText?:      string;
   currentAgentMode?: string;
+  transcriptPath?:  string;
 }
 
 /**
  * Parse the JSON payload the coding-agent hook writes to stdin.
  *
- * Captures the prompt text and the reported permission mode. The mode vocabulary
- * evolves across agent versions, so an unrecognised value is passed through verbatim —
- * it is never checked against a fixed list here. A missing mode or malformed JSON
- * yields an empty result (the caller then treats the prompt as absent / mode unknown).
+ * Captures the prompt text, the reported permission mode, and the session
+ * transcript path. The mode vocabulary evolves across agent versions, so an
+ * unrecognised value is passed through verbatim — it is never checked against
+ * a fixed list here. A missing field or malformed JSON yields an empty result
+ * (the caller then treats that input as absent).
  */
 export function parseAutoHookPayload(raw: string): AutoHookPayload {
   try {
-    const payload = JSON.parse(raw) as { prompt?: string; permission_mode?: string };
+    const payload = JSON.parse(raw) as { prompt?: string; permission_mode?: string; transcript_path?: string };
     return {
       promptText:       payload.prompt?.trim(),
       currentAgentMode: typeof payload.permission_mode === 'string' ? payload.permission_mode : undefined,
+      transcriptPath:
+        typeof payload.transcript_path === 'string' && payload.transcript_path.length > 0
+          ? payload.transcript_path
+          : undefined,
     };
   } catch {
     return {};
@@ -161,7 +176,9 @@ export async function runAuto(
     const injectedText = guardMgr.current.lastInjectedPrompt ?? null;
     if (injectedText !== null) {
       guardMgr.clearInjectedPrompt(store);
-      if (injectedText === input.promptText) {
+      // Robust echo match (not exact ===): the delivered prompt may be option + why-desc
+      // (multi-line) and the agent can reformat it, so recognise it by normalized / option-prefix.
+      if (isInjectedPromptEcho(injectedText, input.promptText)) {
         logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'advisory_injected' });
         return { outcome: 'no_action' };
       }
@@ -282,6 +299,23 @@ export async function runAuto(
   mgr.processPrompt(store, input.promptText, classification, Date.now(),
     freqConfig.minStageChangeConfidence, streamBOverrides);
   logger.debug('after_process', { stage: mgr.current.currentStage, stageConfidence: mgr.current.stageConfidence });
+
+  // Corroborate practice claims against the agent's ACTUAL behaviour: read the
+  // transcript entries appended since the previous hook and credit verified
+  // behaviour (a test file written, the suite run) to the prompt the agent was
+  // responding to. Rides prompt-capture consent (same hook payload as the
+  // permission mode); best-effort — never blocks the pipeline. The prompt just
+  // processed has index promptCount - 1 (processPrompt increments the count).
+  if (input.transcriptPath) {
+    try {
+      recordTranscriptCorroboration(store, input.projectRoot, input.transcriptPath, {
+        sessionId:       mgr.current.sessionId,
+        promptIndex:     mgr.current.promptCount - 1,
+        stage:           mgr.current.currentStage,
+        stageConfidence: mgr.current.stageConfidence,
+      });
+    } catch { /* corroboration is non-fatal */ }
+  }
 
   // ── 3.5. Effective language — read from projects table (detection runs in nexpath stop) ──
   const langOverride  = getConfig(store.db, 'language_override');
@@ -530,6 +564,7 @@ export function registerAutoCommand(program: import('commander').Command): void 
     .action(async (promptArg: string | undefined, opts: { project: string; db: string }) => {
       let promptText = promptArg?.trim();
       let currentAgentMode: string | undefined;
+      let transcriptPath: string | undefined;
 
       if (!promptText) {
         // Hook mode: read JSON payload from stdin (Claude Code UserPromptSubmit)
@@ -538,6 +573,7 @@ export function registerAutoCommand(program: import('commander').Command): void 
           const parsed = parseAutoHookPayload(raw);
           promptText       = parsed.promptText;
           currentAgentMode = parsed.currentAgentMode;
+          transcriptPath   = parsed.transcriptPath;
         }
       }
 
@@ -582,7 +618,7 @@ export function registerAutoCommand(program: import('commander').Command): void 
 
       try {
         const result = await runAuto(
-          { promptText, projectRoot: opts.project, currentAgentMode },
+          { promptText, projectRoot: opts.project, currentAgentMode, transcriptPath },
           store,
         );
 

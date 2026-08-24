@@ -344,9 +344,9 @@ describe('content-template-engine — param-source retrieval (AR-10 / AR-9 / AR-
 
   it('rightGoodToGrounding maps only the good side, using the signal description', () => {
     const profile: RightGoodProfile = {
-      good_sig: { score: 0.8, state: 'right_good', stability: { sessions: 2, occurrences: 3, stable: true }, lastUpdated: 1 },
-      bad_sig: { score: 0.1, state: 'mistake', stability: { sessions: 1, occurrences: 1, stable: false }, lastUpdated: 1 },
-      meh_sig: { score: 0.2, state: 'neutral', stability: { sessions: 1, occurrences: 1, stable: false }, lastUpdated: 1 },
+      good_sig: { score: 0.8, state: 'right_good', stability: { sessions: 2, occurrences: 3, stable: true }, lastUpdated: 1, behaviourVerified: true },
+      bad_sig: { score: 0.1, state: 'mistake', stability: { sessions: 1, occurrences: 1, stable: false }, lastUpdated: 1, behaviourVerified: false },
+      meh_sig: { score: 0.2, state: 'neutral', stability: { sessions: 1, occurrences: 1, stable: false }, lastUpdated: 1, behaviourVerified: false },
     };
     const lookup = (k: string): SignalDefinition | undefined =>
       k === 'good_sig' ? ({ key: k, description: 'reliably cross-confirms changes' } as SignalDefinition) : undefined;
@@ -357,9 +357,20 @@ describe('content-template-engine — param-source retrieval (AR-10 / AR-9 / AR-
 
   it('rightGoodToGrounding falls back to the key when no description exists', () => {
     const profile: RightGoodProfile = {
-      k: { score: 0.6, state: 'right_good', stability: { sessions: 2, occurrences: 3, stable: true }, lastUpdated: 1 },
+      k: { score: 0.6, state: 'right_good', stability: { sessions: 2, occurrences: 3, stable: true }, lastUpdated: 1, behaviourVerified: true },
     };
     expect(rightGoodToGrounding(profile, () => undefined)).toEqual([{ key: 'k', value: 'k', weight: 0.6, tier: 'corroborated' }]);
+  });
+
+  it('a right_good state reached on claims alone grounds at capability tier, never practice-grade', () => {
+    const profile: RightGoodProfile = {
+      claimed: { score: 0.9, state: 'right_good', stability: { sessions: 3, occurrences: 5, stable: true }, lastUpdated: 1, behaviourVerified: false },
+      observed: { score: 0.6, state: 'right_good', stability: { sessions: 2, occurrences: 3, stable: true }, lastUpdated: 1, behaviourVerified: true },
+    };
+    expect(rightGoodToGrounding(profile, () => undefined)).toEqual([
+      { key: 'claimed', value: 'claimed', weight: 0.9, tier: 'capability' },
+      { key: 'observed', value: 'observed', weight: 0.6, tier: 'corroborated' },
+    ]);
   });
 
   it('workStyleToGrounding maps SET traits and skips UNSET', () => {
@@ -376,7 +387,7 @@ describe('content-template-engine — param-source retrieval (AR-10 / AR-9 / AR-
   it('retrieveGroundingFacts combines all four sources', async () => {
     const env: FactMap = { project_framework: { value: 'vite', tier: 'C', confidence: 'high', detectedAt: 0 } };
     const rightGood: RightGoodProfile = {
-      g: { score: 0.7, state: 'right_good', stability: { sessions: 2, occurrences: 3, stable: true }, lastUpdated: 1 },
+      g: { score: 0.7, state: 'right_good', stability: { sessions: 2, occurrences: 3, stable: true }, lastUpdated: 1, behaviourVerified: true },
     };
     const workStyle: WorkStyleProfile = {
       decisionRhythm: { value: 'deliberative', stable: true, observations: 5, sessions: 2, dormant: false },

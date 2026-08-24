@@ -60,9 +60,16 @@ const STYLES = `
   .np-root.np-busy .np-body-wrap { opacity:.4; pointer-events:none; }
 
   /* #2: fixed header (pinch/question/why-help) + scrolling options + fixed footer. */
-  .np-fixed-top { flex: 0 0 auto; }
+  /* On a very short viewport (max-height: calc(100vh - 40px)) the header must be
+     allowed to shrink and clip its own overflow (why-help drops from the bottom,
+     pinch + question stay) so it can never squeeze the options band to zero rows —
+     which would leave the panel showing no selectable option and let a blind Enter
+     jump straight to the send-confirm. */
+  .np-fixed-top { flex: 0 1 auto; min-height: 0; overflow: hidden; }
   .np-scroll {
-    flex: 1 1 auto; overflow-y: auto; min-height: 0;
+    /* min-height keeps >=1 option visible even when the header is at full size;
+       inert on normal windows (the options band is already far taller than this). */
+    flex: 1 1 auto; overflow-y: auto; min-height: 56px;
     scrollbar-width: thin; scrollbar-color: #5a3a52 transparent;
   }
   .np-scroll::-webkit-scrollbar { width: 8px; }

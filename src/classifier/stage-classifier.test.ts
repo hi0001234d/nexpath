@@ -134,6 +134,13 @@ describe('stage-classifier — system prompt encodes the hardening requirements'
       expect(STAGE_CLASSIFIER_SYSTEM_PROMPT).toContain(label);
     }
   });
+
+  it('carries the feedback-loop live-evidence boundary and the add-feature implementation rule', () => {
+    expect(STAGE_CLASSIFIER_SYSTEM_PROMPT).toMatch(/FEEDBACK-LOOP BOUNDARY/);
+    expect(STAGE_CLASSIFIER_SYSTEM_PROMPT).toMatch(/NOT live evidence/i);
+    expect(STAGE_CLASSIFIER_SYSTEM_PROMPT).toMatch(/ADD-FEATURE REQUESTS/);
+    expect(STAGE_CLASSIFIER_SYSTEM_PROMPT).toMatch(/without asking for the build itself/i);
+  });
 });
 
 describe('stage-classifier — deterministic release guard (scaffolding without a verification token is never a release)', () => {
@@ -171,17 +178,30 @@ describe('stage-classifier — deterministic release guard (scaffolding without 
 });
 
 describe('stage-classifier — user message', () => {
-  it('includes the recent window, current-stage context, the signal list, and a null-profile block', () => {
+  it('includes the recent window, the stage-calibration line, the all-stages signal list, and a null-profile block', () => {
     const msg = buildStageClassifierUserMessage({
       promptText: 'p3', window: [{ text: 'p1' }, { text: 'p2' }, { text: 'p3' }],
       sessionStage: 'implementation', sessionConfidence: 0.42, profile: null,
     });
     expect(msg).toContain('[1] p1');
     expect(msg).toContain('[3] p3');
-    expect(msg).toContain('Current stage: Implementation');
-    expect(msg).toContain('0.42');
+    expect(msg).toContain('Stage calibration:');
     expect(msg).toContain('not yet computed');
-    expect(msg).toContain('Signals to check');
+    expect(msg).toContain('Signals to check (across ALL stages):');
+  });
+
+  it('never asserts the session stage as current truth, and shows other stages\' signals (anchor-lock regression)', () => {
+    // Asserting "Current stage: X" made the model CONFIRM that stage instead of
+    // classifying the prompts — sessions start at idea and locked there.
+    const msg = buildStageClassifierUserMessage({
+      promptText: 'x', window: [{ text: 'x' }], sessionStage: 'idea', sessionConfidence: 0.5, profile: null,
+    });
+    expect(msg).not.toContain('- Current stage:');
+    expect(msg).not.toContain('Current stage confidence');
+    // With the session at idea, the checklist must still show build-stage signals —
+    // scoping it to the session stage starved the model of transition evidence.
+    expect(msg).toContain('test_creation:');
+    expect(msg).toContain('idea_scoping:');
   });
 
   it('renders the profile calibration block when a profile is present', () => {

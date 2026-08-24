@@ -3,7 +3,7 @@
  *
  * The registry-detected absence signals read their condition from a `RuntimeContext`:
  *  - behavioural streaks from the live `SessionState` (frustration / acceptance), and
- *  - the AR-10 dev-environment probe (Channel Y) booleans, mapped from `probeProject`.
+ *  - the dev-environment probe booleans, mapped from `probeProject`.
  *
  * A boolean fact maps straight through; a `null`/unknown fact leaves the field `undefined` so a
  * detector "stays dark on unknown" (it fires only on an explicit `false`).

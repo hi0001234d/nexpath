@@ -46,7 +46,7 @@ export interface LevelForm {
 export type SlotType = 'static-ref' | 'literal' | 'param-value' | 'choice';
 export const SLOT_TYPES: readonly SlotType[] = ['static-ref', 'literal', 'param-value', 'choice'];
 
-/** AR-1 Option-C param-axis representation tags (the closed set a record may declare). */
+/** Param-axis representation tags (the closed set a record may declare). */
 export type ParamAxisTag = 'closed-ordinal' | 'nominal' | 'extensible' | 'open';
 export const PARAM_AXIS_TAGS: readonly ParamAxisTag[] = ['closed-ordinal', 'nominal', 'extensible', 'open'];
 
@@ -117,7 +117,7 @@ export interface ContentTemplateRecord {
   /** Sparse maturity map: level → headline form. The level-1 floor is MANDATORY. */
   levelForms: Partial<Record<MaturityLevel, LevelForm>>;
   slots: Slot[];
-  /** AR-1 param-axis tags, keyed by axis name (each value is a closed AR-1 tag). */
+  /** Param-axis tags, keyed by axis name (each value is a closed tag). */
   paramAxes?: Record<string, ParamAxisTag>;
   /**
    * F8 spine practices — the named rhythms that intensify across ALL maturity
@@ -220,7 +220,7 @@ export function validateContentTemplateRecord(record: unknown): ValidationResult
     }
   }
 
-  // param-axes — optional, but when present every value must be a closed AR-1 tag.
+  // param-axes — optional, but when present every value must be a closed tag.
   if (r.paramAxes !== undefined) {
     if (typeof r.paramAxes !== 'object' || r.paramAxes === null) {
       errors.push('paramAxes must be an object when present');

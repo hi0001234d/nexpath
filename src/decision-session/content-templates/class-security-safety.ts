@@ -50,11 +50,11 @@ export const ABSENCE_SECRET_IN_PROMPT_RECORD: ContentTemplateRecord = {
   paramAxes: SECURITY_SAFETY_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before you rotate any keys or rewrite git history.',
   levelForms: {
-    1: form("Rotate the secret that was just pasted into a prompt — treat it as compromised and replace it with a fresh one before continuing.", "The lightest step: the just-exposed secret rotated."),
-    2: form("Rotate the exposed secret and clear it from the prompt and chat history — a pasted secret should be treated as leaked.", "A light pass: the secret rotated and cleared from the prompt."),
-    3: form("Rotate the secret that was pasted, clear it from the prompt and history, and confirm it was not committed to source or written to a log — treat the exposure as a real leak.", "The pasted secret hasn't been rotated and cleared."),
-    4: form("Rotate the exposed secret, scrub it from the prompt and history and anywhere else it may have landed (commits, logs), and move it into a proper store so it is never pasted again.", "Beyond rotating: the secret scrubbed from every place it may have leaked and moved out of reach."),
-    5: form("Write a short incident note for the exposed secret: what it was for, that it was rotated, where it was scrubbed from, and the one change that prevents a secret being pasted again — kept out of source.", "A durable incident note of the leaked secret, its rotation, and the fix."),
+    1: form("Rotate the secret that was just pasted into a prompt — treat it as compromised and replace it with a fresh one before continuing.", "Assume the pasted secret is already in someone else's hands — rotating it is urgent, not optional; a secret that touched a prompt can't be trusted again."),
+    2: form("Rotate the exposed secret and clear it from the prompt and chat history — a pasted secret should be treated as leaked.", "Don't stop at rotating the secret — scrub it from the prompt and history too, so the old value isn't left sitting there to be reused."),
+    3: form("Rotate the secret that was pasted, clear it from the prompt and history, and confirm it was not committed to source or written to a log — treat the exposure as a real leak.", "Check everywhere the secret could have landed — commits, logs, history — not just the prompt; a leaked secret is only handled once every copy is gone."),
+    4: form("Rotate the exposed secret, scrub it from the prompt and history and anywhere else it may have landed (commits, logs), and move it into a proper store so it is never pasted again.", "After rotating and scrubbing, move the secret into a proper store — the point is that it can't be pasted into a prompt again, not just that this one is fixed."),
+    5: form("Write a short incident note for the exposed secret: what it was for, that it was rotated, where it was scrubbed from, and the one change that prevents a secret being pasted again — kept out of source.", "Keep an incident note — what the secret was for, that it's rotated, where it was scrubbed, and the change that stops a repeat — so the fix sticks past this moment."),
   },
 };
 
@@ -74,11 +74,11 @@ export const ABSENCE_NO_VERSION_CONTROL_RECORD: ContentTemplateRecord = {
   registerOverrides: { beginner: NO_VERSION_CONTROL_BEGINNER_OVERRIDE },
   paramAxes: SECURITY_SAFETY_PARAM_AXES,
   levelForms: {
-    1: form("Set up version control for this project — initialize a git repository so the work is tracked from here on.", "The lightest step: the project put under version control."),
-    2: form("Put the project under version control and make the first commit, so a known-good version is saved and the work can be brought back to it.", "A light pass: version control started and the first version committed."),
-    3: form("Put the project under version control properly: initialize the repository, make a first commit, and add a .gitignore so generated files and local-only config stay out of the tracked version.", "The project isn't under version control with a clean ignore list yet."),
-    4: form("Put the project under version control with a working rhythm: initialize the repo, commit in small logical steps, keep a .gitignore current, and connect a remote so every version lives off this machine too.", "Beyond a local repo: a commit rhythm and an off-machine copy of every version."),
-    5: form("Write a short version-control note for the project: how to commit, the branch and commit-message convention, and what stays out of the tracked version — kept with the project so the rhythm is repeatable.", "A durable version-control note of the commit rhythm and conventions."),
+    1: form("Set up version control for this project — initialize a git repository so the work is tracked from here on.", "Getting the project under version control now makes every later change recoverable — without it, a bad edit has nothing to fall back to."),
+    2: form("Put the project under version control and make the first commit, so a known-good version is saved and the work can be brought back to it.", "Make that first commit a real known-good version to return to — an initialized repo with nothing committed still leaves the work unprotected."),
+    3: form("Put the project under version control properly: initialize the repository, make a first commit, and add a .gitignore so generated files and local-only config stay out of the tracked version.", "Add the ignore list as part of setting up version control — generated files and local config in the tracked version make every diff noisy and can leak local paths."),
+    4: form("Put the project under version control with a working rhythm: initialize the repo, commit in small logical steps, keep a .gitignore current, and connect a remote so every version lives off this machine too.", "Commit in small logical steps and push to a remote — version control only protects the work if a copy of every version lives off this machine too."),
+    5: form("Write a short version-control note for the project: how to commit, the branch and commit-message convention, and what stays out of the tracked version — kept with the project so the rhythm is repeatable.", "Keep a short version-control note with the conventions — the commit style and what stays untracked — so the rhythm holds even as the project grows or hands change."),
   },
 };
 
@@ -104,11 +104,11 @@ export const ABSENCE_NO_BACKUP_SAFETY_RECORD: ContentTemplateRecord = {
   registerOverrides: { beginner: NO_BACKUP_SAFETY_BEGINNER_OVERRIDE },
   paramAxes: SECURITY_SAFETY_PARAM_AXES,
   levelForms: {
-    1: form("Set up a backup for this project's important data, so a copy exists if the original is ever lost.", "The lightest step: a backup of the important data exists."),
-    2: form("Set up a backup and schedule it to run on its own regularly, so the saved copy stays current instead of going stale.", "A light pass: a backup that runs on a schedule."),
-    3: form("Set up a scheduled backup, then prove recovery by restoring from it — a real restore overwrites the current data with the backed-up copy, so ask me for go-ahead before you run one.", "The backup hasn't been proven by a real restore, which overwrites existing data — ask me for go-ahead before running one."),
-    4: form("Set up an automated backup with sensible retention, and prove recovery on a schedule with a periodic restore drill — a restore overwrites what's there now, so ask me for go-ahead before running it against live data.", "Beyond one backup: a scheduled restore drill. A restore overwrites the current data, so ask me for go-ahead before running it against live data."),
-    5: form("Write a short backup-and-recovery runbook and rehearse a full restore from it: what is backed up, how often, and the recovery steps — and since a real recovery overwrites the current data, ask me for go-ahead before you run the restore.", "A durable backup-and-recovery runbook proven by a rehearsed restore — and since recovery overwrites the current data, ask me for go-ahead before running the restore."),
+    1: form("Set up a backup for this project's important data, so a copy exists if the original is ever lost.", "Get one backup of the important data in place first — right now a single loss, a bad delete or a dead disk, takes everything with it."),
+    2: form("Set up a backup and schedule it to run on its own regularly, so the saved copy stays current instead of going stale.", "Put the backup on a schedule so the copy stays current — a backup taken once and never refreshed is stale the moment the data moves on."),
+    3: form("Set up a scheduled backup, then prove recovery by restoring from it — a real restore overwrites the current data with the backed-up copy, so ask me for go-ahead before you run one.", "A backup that's never been restored from isn't proven — recover from it once for real. Since a real restore overwrites the current data, ask me for go-ahead before you run one."),
+    4: form("Set up an automated backup with sensible retention, and prove recovery on a schedule with a periodic restore drill — a restore overwrites what's there now, so ask me for go-ahead before running it against live data.", "Make restore-testing a routine, not a one-off — a backup only counts if recovery works on demand. A restore overwrites what's there now, so ask me for go-ahead before running it against live data."),
+    5: form("Write a short backup-and-recovery runbook and rehearse a full restore from it: what is backed up, how often, and the recovery steps — and since a real recovery overwrites the current data, ask me for go-ahead before you run the restore.", "Keep a short backup-and-recovery runbook and rehearse the restore against it, so recovery is a known procedure, not a scramble. Since a real recovery overwrites the current data, ask me for go-ahead before you run the restore."),
   },
 };
 
@@ -130,11 +130,11 @@ export const ABSENCE_NO_SEPARATE_ENVS_RECORD: ContentTemplateRecord = {
   paramAxes: SECURITY_SAFETY_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before you touch production or move any environment credentials.',
   levelForms: {
-    1: form("Set up a separate environment for this project so changes can be tried before they reach the live one — today there is a single environment and every change goes straight to where users are.", "The lightest step: a second environment, kept apart from the live one."),
-    2: form("Stand up a staging environment separate from production, and run changes there first — so a broken change is caught in staging instead of hitting production.", "A light pass: a staging environment that changes pass through before production."),
-    3: form("Separate this project into distinct development, staging, and production environments, each with its own configuration, so work in one never disturbs another.", "Development, staging, and production aren't separated into their own environments yet."),
-    4: form("Give the project a full environment separation with a promotion path — development to staging to production — where each environment is isolated and a change is promoted forward only after it holds up.", "Beyond a staging step: isolated environments with a promotion path from development to production."),
-    5: form("Write a short environments note for the project: what development, staging, and production are each for, how a change is promoted between them, and what keeps them isolated — kept with the project.", "A durable environments note of the separation and the promotion path."),
+    1: form("Set up a separate environment for this project so changes can be tried before they reach the live one — today there is a single environment and every change goes straight to where users are.", "Stand up one environment apart from the live one so changes get tried before users see them — today a single slip goes straight to production."),
+    2: form("Stand up a staging environment separate from production, and run changes there first — so a broken change is caught in staging instead of hitting production.", "Route every change through the staging environment first — a broken change caught there is a non-event; the same change in production is an outage."),
+    3: form("Separate this project into distinct development, staging, and production environments, each with its own configuration, so work in one never disturbs another.", "Give each environment its own configuration so work in one can't reach into another — shared config is how a dev change quietly breaks production."),
+    4: form("Give the project a full environment separation with a promotion path — development to staging to production — where each environment is isolated and a change is promoted forward only after it holds up.", "Set up a promotion path so a change only moves toward production after it holds up in the environment before it — isolation without a path just blocks progress."),
+    5: form("Write a short environments note for the project: what development, staging, and production are each for, how a change is promoted between them, and what keeps them isolated — kept with the project.", "Keep a short note on the environments — what each is for and how a change is promoted between them — so the separation is understood, not just set up once."),
   },
 };
 
@@ -155,11 +155,11 @@ export const ABSENCE_NO_AUTOMATED_SECURITY_SCANNING_RECORD: ContentTemplateRecor
   paramAxes: SECURITY_SAFETY_PARAM_AXES, l2SafeguardRequired: true,
   l2SafeguardLine: 'Ask me for go-ahead before you install or upgrade dependencies or change the CI/deploy config.',
   levelForms: {
-    1: form("Set up an automatic scan that flags known security problems in this project's dependencies, so a risky package is caught early.", "The lightest step: a scan that flags known-vulnerable dependencies."),
-    2: form("Add a security scan that runs on its own and reports known problems in the dependencies, and review what the scan finds before shipping.", "A light pass: a scan of the dependencies for known security problems."),
-    3: form("Set up automatic security scanning for this project: a scan of the dependencies for known problems (a SAST or dependency-vulnerability scan), run on every change, with a plan to upgrade anything the scan flags.", "Automatic security scanning of the dependencies isn't running on each change yet."),
-    4: form("Wire security scanning into the project's automatic checks so a dependency scan and a code scan run on every change, and make a serious finding block the change until the finding is resolved.", "Beyond a manual scan: scanning wired into the automatic checks, blocking serious findings."),
-    5: form("Write a short security-scanning note for the project: what is scanned (dependencies and code), how often the scan runs, and how a serious finding is handled — kept with the project.", "A durable security-scanning note of what is scanned and how findings are handled."),
+    1: form("Set up an automatic scan that flags known security problems in this project's dependencies, so a risky package is caught early.", "Get an automatic scan watching the dependencies so a known-bad package is flagged early — most dependency risk is public and already catalogued."),
+    2: form("Add a security scan that runs on its own and reports known problems in the dependencies, and review what the scan finds before shipping.", "Have the scan run on its own and actually read what it reports before shipping — a scan whose findings nobody looks at is just noise."),
+    3: form("Set up automatic security scanning for this project: a scan of the dependencies for known problems (a SAST or dependency-vulnerability scan), run on every change, with a plan to upgrade anything the scan flags.", "Run the scan on every change, not just once, and pair it with a plan to upgrade what it flags — a scan with no follow-through leaves the risk in place."),
+    4: form("Wire security scanning into the project's automatic checks so a dependency scan and a code scan run on every change, and make a serious finding block the change until the finding is resolved.", "Let a serious finding from the scan actually block the change, wired into the automatic checks — a scan that only warns gets ignored under deadline."),
+    5: form("Write a short security-scanning note for the project: what is scanned (dependencies and code), how often the scan runs, and how a serious finding is handled — kept with the project.", "Keep a short note on the scanning — what's scanned, how often, and how a serious finding is handled — so the practice survives past whoever set it up."),
   },
 };
 

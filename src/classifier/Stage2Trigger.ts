@@ -72,6 +72,21 @@ export function buildSignalList(stage: Stage): string {
   return lines.join('\n');
 }
 
+/**
+ * The all-stages signal checklist (deduped union across every stage), computed once at
+ * module load. The stage classifier sends this instead of a single stage's list so the
+ * model can see the signals of whichever stage it determines — scoping the checklist to
+ * the session's prior stage starved it of any evidence for a forward transition.
+ */
+const FULL_SIGNAL_LIST: string = [...new Set(
+  (Object.keys(STAGE_LABEL) as Stage[]).flatMap((stage) => buildSignalList(stage).split('\n')).filter(Boolean),
+)].join('\n');
+
+/** The precomputed all-stages signal checklist for the classifier prompt. */
+export function buildFullSignalList(): string {
+  return FULL_SIGNAL_LIST;
+}
+
 // ── Fire-trigger decision ────────────────────────────────────────────────────
 
 /**

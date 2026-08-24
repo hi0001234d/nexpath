@@ -253,6 +253,18 @@ describe('A5 — ABSENCE_NO_BACKUP_SAFETY (new signal, mild — no record-level 
     expect(r.l2SafeguardLine).toBeUndefined();
     expect(checkL2Safeguard(r).ok).toBe(true);
   });
+  it('the restore columns genuinely trip an L2 trigger (destructive-data), so the per-option safeguard is enforced, not vacuous', () => {
+    // The gate only inspects a column when its option trips an L2 trigger. The restore/overwrite
+    // columns must trip one (else checkL2Safeguard would pass vacuously and a dropped confirm-seek
+    // would go unnoticed); the base setup columns must trip none (they carry no safeguard by design).
+    for (const lvl of [1, 2] as const) {
+      expect(detectL2TriggersInText(r.levelForms[lvl]!.cell.option)).toEqual([]);
+    }
+    for (const lvl of [3, 4, 5] as const) {
+      const names = detectL2TriggersInText(r.levelForms[lvl]!.cell.option).map((t) => t.name);
+      expect(names).toContain('destructive-data');
+    }
+  });
   it('serves the confirm-seek VERBATIM on restore columns, never on base columns (composeOption — the reliable channel)', () => {
     // composeOption serves the option text verbatim (slot-fill only, no LLM rewrite), so the
     // per-option safeguard survives serving — unlike the why-desc, which the weave can reword.

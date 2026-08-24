@@ -6,14 +6,14 @@ Nexpath is an AI developer tool that works as a behaviour-guidance layer for vib
 surfaces a quick **decision session** *between* your prompts so you stay aligned with specs, tests,
 and architecture decisions, without breaking your flow.
 
-**Built for:** Replit · Bolt · Lovable — fully supported & end-to-end tested.
+**Built for:** Replit · Lovable · Bolt — fully supported & end-to-end tested.
 
 ---
 
 ## What Is Nexpath?
 
 Nexpath is an **AI coding-productivity** extension for developers using in-browser AI coding agents
-like **Replit**, **Bolt**, and **Lovable**. Think of it as an **AI pair programmer** focused on
+like **Replit**, **Lovable**, and **Bolt**. Think of it as an **AI pair programmer** focused on
 *process*, not code — it watches your session and surfaces a lightweight advisory at key transition
 points in your **coding workflow**.
 
@@ -57,7 +57,7 @@ workflow without slowing it down.
 
 1. **Install** — from the **Chrome Web Store** (Chrome / Edge) or **Firefox Add-ons**.
 2. Open Nexpath's **options** page and paste your **OpenAI API key** (`sk-…`) → **Test** → **Save**.
-3. Pick your **advisory frequency** and **role**, then start prompting in Replit, Bolt, or Lovable —
+3. Pick your **advisory frequency** and **role**, then start prompting in Replit, Lovable, or Bolt —
    Nexpath surfaces sessions when they help, right after your agent finishes responding.
 
 ---

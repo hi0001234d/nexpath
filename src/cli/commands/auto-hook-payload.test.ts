@@ -23,6 +23,17 @@ describe('parseAutoHookPayload', () => {
     expect(parseAutoHookPayload(raw).currentAgentMode).toBeUndefined();
   });
 
+  it('captures the transcript path when the payload reports it', () => {
+    const raw = JSON.stringify({ prompt: 'x', transcript_path: '/home/u/.claude/projects/p/s.jsonl' });
+    expect(parseAutoHookPayload(raw).transcriptPath).toBe('/home/u/.claude/projects/p/s.jsonl');
+  });
+
+  it('leaves the transcript path undefined when missing, empty, or non-string', () => {
+    expect(parseAutoHookPayload(JSON.stringify({ prompt: 'x' })).transcriptPath).toBeUndefined();
+    expect(parseAutoHookPayload(JSON.stringify({ prompt: 'x', transcript_path: '' })).transcriptPath).toBeUndefined();
+    expect(parseAutoHookPayload(JSON.stringify({ prompt: 'x', transcript_path: 9 })).transcriptPath).toBeUndefined();
+  });
+
   it('returns an empty result for malformed JSON', () => {
     expect(parseAutoHookPayload('not json {')).toEqual({});
   });

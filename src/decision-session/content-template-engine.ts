@@ -307,13 +307,13 @@ export async function extractPromptFacts(prompts: readonly string[], client?: Op
 // ── Param-source retrieval: map the AR param SETS into grounding facts ──────────
 
 /**
- * AR-10 dev-env probe → grounding facts. Only PRESENT capabilities ground content
+ * Dev-environment probe facts → grounding facts. Only PRESENT capabilities ground content
  * (a `null` UNKNOWN or `false` absence is skipped). A string fact carries its
  * value (e.g. the framework); a boolean capability carries its key (the weave
  * phrases it). Probe tier 'C'→capability / 'P'→corroborated; confidence sets weight.
  */
 /**
- * Human phrasing for the boolean AR-10 project-fact keys — so a capability grounds as natural
+ * Human phrasing for the boolean project-fact keys — so a capability grounds as natural
  * language ("the project has backups"), never the raw snake_case key ("has_backups"), which the
  * LLM weave would otherwise echo verbatim into the CA-bound why-desc. String facts (e.g.
  * project_framework) ground with their own value; an unknown boolean key falls back to the key.
@@ -348,9 +348,14 @@ export function envFactsToGrounding(facts: FactMap): GroundingFact[] {
 }
 
 /**
- * AR-9 workflow aggregate → grounding facts. Only the GOOD side grounds the
- * content-template engine (signals the user reliably DOES → corroborated). The
- * human phrasing reuses the existing signal `description` (not new content).
+ * Workflow (RIGHT&GOOD) aggregate → grounding facts. Only the GOOD side grounds the
+ * content-template engine. The human phrasing reuses the existing signal
+ * `description` (not new content).
+ *
+ * Tier honesty: `corroborated` means the practice was behaviourally OBSERVED
+ * (transcript-verified), so only verified signals ground practice-grade. A
+ * right_good state reached on prompt claims alone still grounds — as useful
+ * context — but at the `capability` tier, never as a "reliably does" claim.
  */
 export function rightGoodToGrounding(
   profile: RightGoodProfile,
@@ -359,13 +364,18 @@ export function rightGoodToGrounding(
   const out: GroundingFact[] = [];
   for (const [key, sig] of Object.entries(profile)) {
     if (sig.state !== 'right_good') continue;
-    out.push({ key, value: lookup(key)?.description ?? key, weight: sig.score, tier: 'corroborated' });
+    out.push({
+      key,
+      value: lookup(key)?.description ?? key,
+      weight: sig.score,
+      tier: sig.behaviourVerified ? 'corroborated' : 'capability',
+    });
   }
   return out;
 }
 
 /**
- * AR-3 work-style traits → grounding facts. Each SET trait (non-UNSET) becomes a
+ * Work-style traits → grounding facts. Each SET trait (non-UNSET) becomes a
  * neutral descriptor fact carrying its pole value (the weave renders the tone);
  * UNSET traits are skipped. Neutral → capability tier (never a signed claim).
  */
@@ -379,19 +389,19 @@ export function workStyleToGrounding(profile: WorkStyleProfile): GroundingFact[]
 }
 
 export interface GroundingSources {
-  /** AR-10 dev-env probe facts. */
+  /** Dev-environment probe facts. */
   env?: FactMap;
-  /** AR-9 workflow aggregate. */
+  /** Workflow (RIGHT&GOOD) aggregate. */
   rightGood?: RightGoodProfile;
-  /** AR-3 work-style traits. */
+  /** Work-style traits. */
   workStyle?: WorkStyleProfile;
   /** Recent prompts for prompt-derived extraction. */
   prompts?: readonly string[];
 }
 
 /**
- * Retrieve the full grounding-fact set from the param SOURCES (AR-10 dev-env /
- * AR-9 workflow / AR-3 work-style / prompt-derived). The caller obtains the raw
+ * Retrieve the full grounding-fact set from the param SOURCES (dev-env /
+ * workflow / work-style / prompt-derived). The caller obtains the raw
  * profiles via the existing loaders (`loadRightGoodProfile`/`loadWorkStyleProfile`/
  * the env probe); this maps + combines them into one fact list for select/rank/cap.
  */
@@ -407,8 +417,8 @@ export async function retrieveGroundingFacts(sources: GroundingSources, client?:
 // ── paramAxes consumer: axis-filtered grounding (§6.1 live-activation item 6) ───
 
 /**
- * Grounding-fact key → the AR-1 param-axis key it grounds. The fact SOURCES name
- * their keys differently from the record's declared axis keys (the AR-3 work-style
+ * Grounding-fact key → the param-axis key it grounds. The fact SOURCES name
+ * their keys differently from the record's declared axis keys (the work-style
  * traits are camelCase; the axes are snake_case), so this aligns them onto the same
  * axis. A key already equal to an axis key (e.g. `project_framework`) needs no entry.
  */
@@ -521,7 +531,7 @@ export async function groundWhyDescLive(input: ComposeWhyDescInput, client?: Ope
 export interface ComposeAdvisoryInput {
   /** Source-cascade lookup (keyed by signalType × register × role upstream). */
   lookup: RecordCandidateLookup;
-  /** The user's maturity level (AR-5) to resolve the column for. */
+  /** The user's maturity level to resolve the column for. */
   level: MaturityLevel;
   ctx?: SlotContext;
   /** Grounding facts for the why-desc weave (topic-filtered upstream). */

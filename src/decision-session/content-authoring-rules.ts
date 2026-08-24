@@ -275,3 +275,79 @@ export function checkL2Safeguard(record: ContentTemplateRecord): L2SafeguardRevi
   }
   return { ok: unguardedLevels.length === 0, unguardedLevels, triggersByLevel };
 }
+
+// ── why-desc AGENT-VOICE rule (the why-desc is the user's words TO the agent) ────
+//
+// The why-desc is CA-bound (the agent reads it) and, once delivered alongside the option, is
+// part of the user's message to the agent. It must be written in the SAME user→agent voice as
+// the option (imperative addressed to the AI, or first-person user addressing the AI),
+// COMPLEMENT the option (add the why / scope / constraint / definition-of-done — never restate
+// it), and still read clearly for the user in the popup (dual-audience, agent primary).
+//
+// This EXTENDS the Layer-1 gate above: `BANNED_VOICE_PATTERNS` catches literal third-person AI
+// references; the patterns below catch the user-facing DRIFT those literals miss (a why-desc that
+// reads as a user caption is not a banned phrase, which is why the drift slipped through). This
+// section ENUMERATES the rule + the ladder-meta vocabulary; the detection function and tests are
+// added in the voice-lint phase.
+//
+// OUT OF SCOPE (do not re-voice): the popup question, whyHelp, and pinch-label are user-only
+// (never sent to the agent); params, keywords, maturity levels, and the l2 safeguard line are
+// preserved verbatim.
+
+/**
+ * Ladder-position META vocabulary — the strongest signal of Pattern A: a why-desc that describes
+ * the option's place in the maturity/strength ladder FOR THE USER ("the lightest floor", "beyond
+ * the standard PRD", "the durable spec artifact") instead of instructing the agent. These position
+ * the option in the ladder; the agent does not act on them.
+ */
+export const LADDER_META_TERMS: readonly string[] = [
+  'the lightest',
+  'a lighter',
+  'a light pass',
+  'lightest step',
+  'lightest floor',
+  'lightest pin',
+  'first pin',
+  'beyond the',
+  'beyond a',
+  'the durable',
+  'durable spec',
+  'durable artifact',
+  'durable note',
+  'durable test',
+  'the minimum next step',
+  // detector-tuning variants (Phase 1) — catch "a light test floor", "the minimum X":
+  'a light',
+  'the minimum',
+  'light floor',
+];
+
+export interface WhyDescVoicePattern {
+  /** Stable id for the banned why-desc voice class. */
+  id: 'A-caption' | 'B-user-narration' | 'C-human-only';
+  /** What the pattern is + why it is banned. */
+  desc: string;
+}
+
+/**
+ * The three why-desc voice drifts to ban. ENUMERATION only — the detection function
+ * (consuming `LADDER_META_TERMS` + these classes) and its tests are added in the voice-lint
+ * phase. Gold before→after exemplars: docs `why-desc-agent-voice-spec-phase0`.
+ */
+export const WHYDESC_VOICE_PATTERNS: readonly WhyDescVoicePattern[] = [
+  {
+    id: 'A-caption',
+    desc: '3rd-person caption that describes the option or narrates the situation to the reader '
+      + '(especially ladder-position meta) instead of instructing the agent',
+  },
+  {
+    id: 'B-user-narration',
+    desc: "1st-person-user self-narration (\"I'm at the moment where…\", \"I need…\") that gives "
+      + 'the agent nothing to do; first-person is allowed only when the user ADDRESSES the agent',
+  },
+  {
+    id: 'C-human-only',
+    desc: "content assuming a human performs the action (\"you can see/check/test\", \"your "
+      + "device/phone/browser\"); \"you\" addressed to the AGENT stays allowed",
+  },
+];

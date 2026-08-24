@@ -495,6 +495,24 @@ describe('createTtySelectFn — Windows — .mjs script wires renderLoop for the
     expect(script).toContain("'Send to your agent now'");
   });
 
+  it('clipboard copies the option ALONE when delivery is disabled (default)', async () => {
+    const script = await captureScript();
+    expect(script).toContain('const _deliverWhyDesc = false;');
+  });
+
+  it('clipboard combines option + why-desc when delivery is enabled', async () => {
+    const store = await openStore(':memory:');
+    setConfig(store, 'whydesc_delivery_enabled', 'true');
+    let captured = '';
+    (spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      if (existsSync(SCRIPT_FILE)) captured = readFileSync(SCRIPT_FILE, 'utf8');
+    });
+    await createTtySelectFn(store)!(makeOpts());
+    expect(captured).toContain('const _deliverWhyDesc = true;');
+    expect(captured).toContain('_clipText = picked +');   // combine present
+    expect(captured).toContain('input: _clipText');        // clipboard copies the combined text
+  });
+
   it('translates renderLoop null (cancel) to an empty result-file write', async () => {
     const script = await captureScript();
     expect(script).toContain('_rlResult === null');

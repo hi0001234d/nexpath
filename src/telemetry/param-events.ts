@@ -27,10 +27,35 @@ import type { Stage } from '../classifier/types.js';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
-/** Where a detected signal came from. Extensible (additive): `'transcript'` and `'probe'` land with their readers. */
-export type ParamEventChannel = 'keyword' | 'vibe' | 'stream_b' | 'stage2' | 'transcript' | 'probe';
+/**
+ * Where a detected signal came from. Extensible (additive): `'transcript'` and
+ * `'probe'` landed with their readers; `'served'` rows record which advisory
+ * content variant was served (provenance for measurement — never scored as
+ * behaviour presence).
+ */
+export type ParamEventChannel = 'keyword' | 'vibe' | 'stream_b' | 'stage2' | 'transcript' | 'probe' | 'served';
 
 export type ParamEventSource = 'live' | 'historical_import';
+
+/**
+ * Identity of the advisory content variant that was served — levels, register,
+ * record source, and compose path only. NEVER any option or why-desc text
+ * (what may be logged is identity, not content).
+ */
+export interface VariantIdentity {
+  /** Maturity column the top strength tier resolved at (1–5). */
+  level: number;
+  /** Register class the forms resolved for (e.g. formal/casual/beginner), when known. */
+  register?: string;
+  /** Role the forms resolved for, when known. */
+  role?: string;
+  /** Which record tier served (the source cascade winner, e.g. shipped / per-user). */
+  source: string;
+  /** How the strength ladder was composed. */
+  path: 'llm' | 'deterministic';
+  /** Present when an experiment pinned this variant — the experiment's id. */
+  experiment?: string;
+}
 
 export type ParamEvent = {
   schemaVersion: number;
@@ -44,6 +69,8 @@ export type ParamEvent = {
   stage: Stage | null;
   stageConfidence: number | null;
   source: ParamEventSource;
+  /** Present only on `channel: 'served'` rows — the served variant's identity. */
+  variant?: VariantIdentity;
 };
 
 /** Caller-supplied fields; `schemaVersion`/`ts` are stamped by the writer. */
@@ -84,7 +111,29 @@ function stamp(input: ParamEventInput): ParamEvent {
     stage: input.stage,
     stageConfidence: input.stageConfidence,
     source: input.source,
+    ...(input.variant !== undefined ? { variant: input.variant } : {}),
   };
+}
+
+/**
+ * Record which content variant an advisory served (one row per fire). Carries
+ * identity only — level/register/role/source/path — never option or why-desc
+ * text. Fail-open like every writer here.
+ */
+export function appendVariantServedEvent(
+  store: Store,
+  input: {
+    projectRoot: string;
+    sessionId: string;
+    promptIndex: number;
+    /** The served signal's key (joins the variant row to its outcome signals). */
+    signalKey: string;
+    stage: Stage | null;
+    stageConfidence: number | null;
+    variant: VariantIdentity;
+  },
+): void {
+  appendParamEvent(store, { ...input, channel: 'served', source: 'live' });
 }
 
 /** Append param-detection events (one rotate + write pass). Fail-open; no-op for in-memory stores. */
