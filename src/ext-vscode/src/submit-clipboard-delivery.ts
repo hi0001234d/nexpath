@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 
 /**
  * Clipboard-fallback delivery for the submit-time advisory (hook milestone H3, Q3).
@@ -307,6 +307,68 @@ export function isDarwinAccessibilityDenial(err: string | null): boolean {
 export const WIN32_KEYSTROKE_TIMEOUT_MS = 20_000;
 
 /**
+ * RC65: the user32 Add-Type prelude, extracted so the activation pre-warm
+ * compiles the BYTE-IDENTICAL C# source the real keystroke scripts use (the
+ * cold cost being warmed is csc/.NET/Defender machine caches keyed off this
+ * compile — a different source would warm nothing).
+ */
+export const WIN32_USER32_ADDTYPE =
+  `Add-Type '[DllImport("user32.dll")]public static extern System.IntPtr GetForegroundWindow();[DllImport("user32.dll")]public static extern int GetWindowText(System.IntPtr h,System.Text.StringBuilder s,int n);' -Name U -Namespace W;`;
+
+/**
+ * RC65 (Windows/Cursor marketplace tester, 2026-08-25): the FIRST win32
+ * keystroke of a session pays the cold Add-Type cost — RC52 measured 8025 ms
+ * cold vs 805 ms warm, and the padal round's inject stage sat ~31 s with a
+ * busy Cursor on top of it. The cost is machine-cache-shaped (csc.exe + .NET
+ * assemblies into file cache, Defender's first scan of the compiled helper),
+ * so ONE throwaway compile at activation warms every later spawn: the
+ * delivery-path paste (^v) and submit ({ENTER}) then run warm even on the
+ * session's first real popup.
+ *
+ * Fire-and-forget: activation is never blocked (async spawn, unref), every
+ * failure is logged and swallowed — the worst case is exactly today's cold
+ * first keystroke. Self-gated to win32; a no-op everywhere else.
+ */
+export function warmWin32KeystrokePath(
+  logFn: (line: string) => void,
+  deps: {
+    platform?: NodeJS.Platform;
+    now?: () => number;
+    spawnFn?: (cmd: string, args: string[]) => {
+      on: (ev: 'exit' | 'error', fn: (a?: unknown) => void) => unknown;
+      unref?: () => void;
+      kill?: () => void;
+    };
+  } = {},
+): boolean {
+  const platform = deps.platform ?? process.platform;
+  if (platform !== 'win32') return false;
+  try {
+    const now = deps.now ?? Date.now;
+    const start = now();
+    const spawnFn = deps.spawnFn ?? ((cmd: string, args: string[]) =>
+      spawn(cmd, args, { stdio: 'ignore', windowsHide: true }));
+    const child = spawnFn('powershell', ['-NoProfile', '-Command', `${WIN32_USER32_ADDTYPE}exit 0`]);
+    // Hygiene only: a hung PowerShell is inert (stdio ignored, unref'd), but
+    // don't leave one per activation lying around forever.
+    const reap = setTimeout(() => { try { child.kill?.(); } catch { /* already gone */ } }, 30_000);
+    if (typeof (reap as { unref?: () => void }).unref === 'function') (reap as unknown as { unref: () => void }).unref();
+    child.on('exit', (code) => {
+      clearTimeout(reap as Parameters<typeof clearTimeout>[0]);
+      logFn(`[nexpath] win32 keystroke pre-warm: compiler warmed in ${now() - start} ms (exit ${String(code ?? 'null')})`);
+    });
+    child.on('error', () => {
+      clearTimeout(reap as Parameters<typeof clearTimeout>[0]);
+      logFn('[nexpath] win32 keystroke pre-warm: spawn failed — the first real keystroke will pay the cold compile');
+    });
+    child.unref?.();
+    return true;
+  } catch {
+    return false; // never let warming interfere with activation
+  }
+}
+
+/**
  * RC49 — the shared win32 keystroke script: FOREGROUND-FIRST, then AppActivate.
  *
  * The Devin tester's RC47 toast proved AppActivate can fail even while the
@@ -325,7 +387,7 @@ export const WIN32_KEYSTROKE_TIMEOUT_MS = 20_000;
 export function buildWin32KeystrokeScript(titles: readonly string[], sendKeys: string): string {
   const psTitles = titles.map((t) => `'${t.replace(/'/g, "''")}'`).join(',');
   return (
-    `Add-Type '[DllImport("user32.dll")]public static extern System.IntPtr GetForegroundWindow();[DllImport("user32.dll")]public static extern int GetWindowText(System.IntPtr h,System.Text.StringBuilder s,int n);' -Name U -Namespace W;` +
+    WIN32_USER32_ADDTYPE +
     `$w=New-Object -ComObject WScript.Shell;` +
     `$b=New-Object System.Text.StringBuilder 256;[void][W.U]::GetWindowText([W.U]::GetForegroundWindow(),$b,256);$fg=$b.ToString();` +
     `$ok=$false;` +

@@ -173,9 +173,13 @@ describe('⭐ BLOCK/INJECTION RACE — proven, not assumed (H3 acceptance)', () 
   });
 
   it('does NOT deliver while the hook is still alive', async () => {
+    // RC63: the fixture's blockIssuedAt must be FRESH — the grace cap now
+    // precedes the liveness checks, so an ancient timestamp (correctly)
+    // delivers regardless of a recycled-"alive" pid. This pin's claim is
+    // about WITHIN the grace window.
     const removed: string[] = [];
     const r = await readPendingSubmitDecision('/proj', {
-      read: async () => RECORD,
+      read: async () => JSON.stringify({ ...JSON.parse(RECORD), createdAt: Date.now(), blockIssuedAt: Date.now() - 1_000 }),
       remove: async (p: string) => { removed.push(p); },
       isProcessAlive: (pid: number) => { expect(pid).toBe(4242); return true; },
     });
@@ -199,14 +203,22 @@ describe('⭐ BLOCK/INJECTION RACE — proven, not assumed (H3 acceptance)', () 
   it('a deferred record is retried and delivered on a later poll', async () => {
     // Proves the deferral is a WAIT, not a drop.
     let alive = true;
+    // NOTE: this block's RECORD is a JSON STRING (locally shadowed) — parse, patch, re-stringify ONCE (stable settle key).
+    const frozenRecord = JSON.stringify({ ...JSON.parse(RECORD), createdAt: Date.now(), blockIssuedAt: Date.now() - 1_000 });
     const deps = {
-      read: async () => RECORD,
+      // RC63: within the grace window throughout — alive defers, then death
+      // starts the RC40 settle, then delivery. The record is FROZEN once:
+      // regenerating blockIssuedAt per read would mint a fresh settle key
+      // every call and defer forever. Real 1.5 s settle waited out.
+      read: async () => frozenRecord,
       remove: async () => {},
       isProcessAlive: () => alive,
     };
-    expect(await readPendingSubmitDecision('/proj', deps)).toBeNull();
+    expect(await readPendingSubmitDecision('/proj', deps)).toBeNull();   // alive ⇒ defer
     alive = false;
-    expect((await readPendingSubmitDecision('/proj', deps))?.decisionId).toBe('sd-1');
+    expect(await readPendingSubmitDecision('/proj', deps)).toBeNull();   // dead first-seen ⇒ settle starts
+    await new Promise((r) => setTimeout(r, 1_600));
+    expect((await readPendingSubmitDecision('/proj', deps))?.decisionId).toBe('sd-1'); // settle elapsed ⇒ delivered
   });
 
   it('treats a NON-ESRCH probe error as ALIVE — the conservative direction', () => {
@@ -930,5 +942,32 @@ describe('⭐ RC35 — writeSessionEnvSnapshot', () => {
   it('extension.ts calls it at activation (structural)', () => {
     const src = readFileSync(join(__dirname, 'extension.ts'), 'utf8');
     expect(src).toMatch(/writeSessionEnvSnapshot\(\);/);
+  });
+});
+
+/**
+ * ⭐ RC63 — the grace cap must dominate EVERY liveness check. On Windows the
+ * dead hook's pid gets recycled, so `isAlive(hookPid)` can read true long
+ * after the hook exited (32 s observed live; EPERM-recycled = forever). Past
+ * the cap, delivery always proceeds.
+ */
+describe('⭐ RC63 — grace cap precedes the hookPid check', () => {
+  const rec = { hookPid: 111, hookShellPid: 222, blockIssuedAt: 100_000 };
+
+  it('⭐ hookPid "alive" past the grace window ⇒ DELIVER (the 32s stall / EPERM-forever case)', () => {
+    const alive = () => true; // pid recycled — everything reads alive
+    expect(shouldDeferForHookExit(rec, alive, 100_000 + 10_001)).toBe(false);
+  });
+
+  it('hookPid alive INSIDE the window still defers (the real teardown case)', () => {
+    expect(shouldDeferForHookExit(rec, () => true, 100_000 + 3_000)).toBe(true);
+  });
+
+  it('normal path timing unchanged: dead pids ⇒ settle then deliver', () => {
+    const dead = () => false;
+    const t0 = 200_000;
+    const r = { hookPid: 11, hookShellPid: 22, blockIssuedAt: t0 };
+    expect(shouldDeferForHookExit(r, dead, t0 + 2_000)).toBe(true);           // first sight: settle starts
+    expect(shouldDeferForHookExit(r, dead, t0 + 2_000 + 1_501)).toBe(false);  // settle elapsed: deliver
   });
 });

@@ -7,8 +7,13 @@ import {
   registerWindsurfHookCommand,
   runWindsurfHookAction,
   isReplacementEcho,
+  isDuplicateWindsurfInvocation,
   WINDSURF_BLOCK_CARD_MESSAGE,
 } from './windsurf-hook.js';
+import {
+  WINDSURF_INVOCATION_DIRNAME,
+  WINDSURF_FALLBACK_WINDOW_MS,
+} from '../../cursor-hook/invocation-guard.js';
 
 describe('handleWindsurfHookCli', () => {
   it('reads stdin and dispatches (event, raw, {cwd}) to the handler', async () => {
@@ -571,5 +576,141 @@ describe('⭐ RC46 — post_cascade_response quiet window without a sequence', (
     expect(handle).not.toHaveBeenCalled();
     expect(exits).toEqual([0]);
     await tmp.rm(proj, { recursive: true, force: true });
+  });
+});
+
+/**
+ * ⭐ RC64 — Windows Devin executes BOTH the global and the workspace
+ * hooks.json (RC21-era builds ran only the workspace file). One submit then
+ * spawned two full pipelines: two autos prepared two DIFFERENT enhancements,
+ * two popups, two blocks, two injected replacements (2026-08-25 tester
+ * screenshot: both queued). The twin must exit 0 having spawned NOTHING;
+ * the primary's exit 2 still blocks (Windsurf blocks on ANY hook's 2).
+ */
+describe('⭐ RC64 — duplicate windsurf invocations (global + workspace both execute)', () => {
+  const GATE_ENV = { NEXPATH_WINDSURF_PROMPTSUBMIT_ADVISORY: '1' };
+
+  async function tmpRoot(prefix: string) {
+    const fs = await import('node:fs/promises');
+    const os = await import('node:os');
+    const path = await import('node:path');
+    return fs.mkdtemp(path.join(os.tmpdir(), prefix));
+  }
+
+  it('key selection: execution_id → 10-min window; fallback trajectory+hash → SHORT window; neither → fail-open', () => {
+    const calls: Array<{ key: string; deps: { dirName?: string; maxAgeMs?: number } }> = [];
+    const spy = ((_r: string, _e: string, key: string, deps: never) => {
+      calls.push({ key, deps }); return false;
+    }) as never;
+    isDuplicateWindsurfInvocation('/r', 'pre_user_prompt',
+      { execution_id: 'e1', trajectory_id: 't', tool_info: { user_prompt: 'p' } }, spy);
+    isDuplicateWindsurfInvocation('/r', 'pre_user_prompt',
+      { trajectory_id: 't', tool_info: { user_prompt: 'p' } }, spy);
+    const none = isDuplicateWindsurfInvocation('/r', 'pre_user_prompt', {}, spy);
+    expect(calls[0]!.key).toBe('e1');
+    expect(calls[0]!.deps.dirName).toBe(WINDSURF_INVOCATION_DIRNAME);
+    expect(calls[0]!.deps.maxAgeMs).toBeUndefined(); // execution_id is unique per action — cursor default window
+    expect(calls[1]!.key.startsWith('t-')).toBe(true);
+    expect(calls[1]!.deps.maxAgeMs).toBe(WINDSURF_FALLBACK_WINDOW_MS);
+    expect(none).toEqual({ duplicate: false, key_kind: 'none' });
+    expect(calls).toHaveLength(2); // the keyless payload never reached the guard
+  });
+
+  it('⭐ pre leg: the twin exits 0 having spawned NOTHING (no auto, no decider)', async () => {
+    const root = await tmpRoot('rc64-pre-');
+    const PAYLOAD = JSON.stringify({
+      trajectory_id: 't-1', execution_id: 'exec-A',
+      tool_info: { user_prompt: 'hello world' },
+    });
+    const run = async () => {
+      const exits: number[] = [];
+      const handle = vi.fn(async () => ({ child: null } as never));
+      const decide = vi.fn(async () => 'allow' as const);
+      await runWindsurfHookAction('pre_user_prompt', { project: root }, {
+        env: { ...GATE_ENV },
+        readStdin: async () => PAYLOAD,
+        checkReplacementEcho: async () => false,
+        decidePromptSubmit: decide,
+        handle, waitForChild: async () => {}, raisePopup: () => {},
+        exit: (c: number) => { exits.push(c); },
+      } as never);
+      return { exits, handle, decide };
+    };
+    const first = await run();
+    expect(first.handle).toHaveBeenCalledTimes(1); // primary runs the full flow
+    expect(first.decide).toHaveBeenCalledTimes(1);
+    const twin = await run();
+    expect(twin.handle).not.toHaveBeenCalled();
+    expect(twin.decide).not.toHaveBeenCalled();
+    expect(twin.exits).toEqual([0]);
+    const fs = await import('node:fs/promises');
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  it('⭐ post leg: the twin never re-runs the continuation (no second MPS popup) nor the sweep', async () => {
+    const root = await tmpRoot('rc64-post-');
+    const PAYLOAD = JSON.stringify({
+      trajectory_id: 't-1', execution_id: 'exec-B',
+      tool_info: { response: 'done.' },
+    });
+    const run = async () => {
+      const exits: number[] = [];
+      const handle = vi.fn(async () => ({ child: null } as never));
+      const cont = vi.fn(async () => ({ ran: false }));
+      const suppress = vi.fn(async () => 0);
+      await runWindsurfHookAction('post_cascade_response', { project: root }, {
+        env: { ...GATE_ENV },
+        readStdin: async () => PAYLOAD,
+        checkReplacementEcho: async () => false,
+        suppressOldAdvisorySurface: suppress,
+        runSequenceContinuation: cont,
+        handle, waitForChild: async () => {}, raisePopup: () => {},
+        exit: (c: number) => { exits.push(c); },
+      } as never);
+      return { exits, cont, suppress };
+    };
+    const first = await run();
+    expect(first.suppress).toHaveBeenCalledTimes(1);
+    expect(first.cont).toHaveBeenCalledTimes(1);
+    const twin = await run();
+    expect(twin.cont).not.toHaveBeenCalled();
+    expect(twin.suppress).not.toHaveBeenCalled();
+    expect(twin.exits).toEqual([0]);
+    const fs = await import('node:fs/promises');
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  it('distinct execution_ids are never deduped (two REAL submits back-to-back)', async () => {
+    const root = await tmpRoot('rc64-distinct-');
+    const run = async (execId: string) => {
+      const handle = vi.fn(async () => ({ child: null } as never));
+      await runWindsurfHookAction('pre_user_prompt', { project: root }, {
+        env: { ...GATE_ENV },
+        readStdin: async () => JSON.stringify({
+          trajectory_id: 't-1', execution_id: execId, tool_info: { user_prompt: 'same text' },
+        }),
+        checkReplacementEcho: async () => false,
+        decidePromptSubmit: async () => 'allow' as const,
+        handle, waitForChild: async () => {}, raisePopup: () => {}, exit: () => {},
+      } as never);
+      return handle;
+    };
+    expect(await run('exec-1')).toHaveBeenCalledTimes(1);
+    expect(await run('exec-2')).toHaveBeenCalledTimes(1);
+    const fs = await import('node:fs/promises');
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  it('⭐ switch OFF ⇒ the guard is never consulted (old flow byte-identical)', async () => {
+    const check = vi.fn(() => ({ duplicate: true, key_kind: 'execution_id' as const }));
+    const handle = vi.fn(async () => ({ child: null } as never));
+    await runWindsurfHookAction('pre_user_prompt', { project: '/proj' }, {
+      env: {},
+      checkDuplicateInvocation: check,
+      handle, checkReplacementEcho: async () => false,
+      waitForChild: async () => {}, raisePopup: () => {}, exit: () => {},
+    } as never);
+    expect(check).not.toHaveBeenCalled();
+    expect(handle).toHaveBeenCalledTimes(1);
   });
 });

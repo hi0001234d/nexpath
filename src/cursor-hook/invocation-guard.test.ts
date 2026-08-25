@@ -4,7 +4,11 @@
  * invocation stagger made a read-modify-write registry a coin-flip.
  */
 import { describe, it, expect } from 'vitest';
-import { checkAndRecordCursorInvocation, cursorInvocationMarkerName } from './invocation-guard.js';
+import {
+  checkAndRecordCursorInvocation,
+  cursorInvocationMarkerName,
+  WINDSURF_INVOCATION_DIRNAME,
+} from './invocation-guard.js';
 
 function memFs() {
   const files = new Set<string>();
@@ -59,5 +63,47 @@ describe('⭐ RC50/RC56 — atomic duplicate-invocation claim', () => {
 
   it('marker names are fs-safe', () => {
     expect(cursorInvocationMarkerName('beforeSubmitPrompt', 'a/b:c*d')).toBe('beforeSubmitPrompt-a_b_c_d');
+  });
+});
+
+/**
+ * ⭐ RC64 — the guard is reused for WINDSURF (Windows Devin executes both the
+ * global and the workspace hooks.json — one submit, two full pipelines, two
+ * different enhancements). Markers get their own dir, and short windows are
+ * made HONEST: pruning only ever ran on winners, so a stale marker could sit
+ * forever and dedupe a legitimate repeat of a fallback (trajectory+hash) key.
+ */
+describe('⭐ RC64 — custom dir + honest claim window', () => {
+  it('dirName routes markers to the windsurf dir (cursor default untouched)', () => {
+    const paths: string[] = [];
+    const capture = {
+      mkdirFn: () => {}, readdirFn: () => [] as string[],
+      writeExclusiveFn: (p: string) => { paths.push(p); },
+    };
+    checkAndRecordCursorInvocation('/p', 'e', 'k', capture);
+    checkAndRecordCursorInvocation('/p', 'e', 'k', { ...capture, dirName: WINDSURF_INVOCATION_DIRNAME });
+    expect(paths[0]).toContain('cursor-hook-invocations');
+    expect(paths[1]).toContain('windsurf-hook-invocations');
+  });
+
+  it('⭐ a marker OLDER than the window is stale: reclaimed, NOT a duplicate', () => {
+    const fs = memFs();
+    expect(checkAndRecordCursorInvocation('/p', 'pre', 'k', { ...fs.deps(1_000), maxAgeMs: 10_000 })).toBe(false);
+    expect(checkAndRecordCursorInvocation('/p', 'pre', 'k', { ...fs.deps(12_000), maxAgeMs: 10_000 })).toBe(false);
+  });
+
+  it('⭐ inside the window the repeat IS a duplicate', () => {
+    const fs = memFs();
+    expect(checkAndRecordCursorInvocation('/p', 'pre', 'k', { ...fs.deps(1_000), maxAgeMs: 10_000 })).toBe(false);
+    expect(checkAndRecordCursorInvocation('/p', 'pre', 'k', { ...fs.deps(10_999), maxAgeMs: 10_000 })).toBe(true);
+  });
+
+  it('EEXIST again after the stale removal ⇒ a live twin re-claimed ⇒ duplicate', () => {
+    const fs = memFs();
+    checkAndRecordCursorInvocation('/p', 'pre', 'k', { ...fs.deps(1_000), maxAgeMs: 10 });
+    // removeFn is a no-op ⇒ the retry hits EEXIST again, as if a twin re-claimed.
+    expect(checkAndRecordCursorInvocation('/p', 'pre', 'k', {
+      ...fs.deps(50_000), maxAgeMs: 10, removeFn: () => {},
+    })).toBe(true);
   });
 });

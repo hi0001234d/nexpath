@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { quoteForWindowsShell } from '../shell-quote.js';
 
 /**
  * Prerequisite probes for the auto-installer.
@@ -34,9 +35,17 @@ const defaultRun: RunFn = (cmd, args) => {
   // without a shell (post CVE-2024-27980). `shell: true` lets the OS resolve
   // either the `.exe` (node) or the `.cmd` (npm) form. A short timeout keeps a
   // hung probe from blocking activation.
-  const r = spawnSync(cmd, args, {
+  //
+  // RC66: with the shell, args are CONCATENATED unquoted — the staged-CLI
+  // probe's path arg split at the space in "C:\Users\SALVI GAURAV\..." and a
+  // healthy install was reported "dependencies missing/incomplete" forever
+  // (endless re-setup + error toast on every spaced-username machine). Quote
+  // spaced tokens; space-free spawns are byte-identical. `cmd` here is always
+  // a bare name ('node'/'npm'/'nexpath') and is deliberately left untouched.
+  const useShell = process.platform === 'win32';
+  const r = spawnSync(cmd, useShell ? args.map(quoteForWindowsShell) : args, {
     encoding: 'utf8',
-    shell: process.platform === 'win32',
+    shell: useShell,
     timeout: 10_000,
     windowsHide: true,
   });

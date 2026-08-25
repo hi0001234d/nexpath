@@ -273,8 +273,19 @@ export function shouldDeferForHookExit(
   isAlive: (pid: number) => boolean,
   now: number,
 ): boolean {
+  // RC63 (marketplace smoke test, Windows/Cursor 2026-08-24): the grace cap
+  // must be the FIRST check. It used to sit after the hookPid-alive test, so
+  // it capped a lingering SHELL but not a lingering hookPid — and on Windows
+  // the dead hook's pid gets recycled to unrelated processes, which made
+  // `isAlive(hookPid)` true for as long as the pid's NEW owner lived: the
+  // smoke test observed its decision 32 s late (sinceBlockIssuedMs: 32063),
+  // and a pid recycled to a system process (EPERM ⇒ alive) would have stalled
+  // FOREVER. A real hook can never be alive 10 s after its own block — the
+  // block IS its exit — so past the grace window every "alive" answer is the
+  // recycling artifact. Latent since RC40 (probabilistic, dice per turn), not
+  // a regression of any later change.
+  if (now - record.blockIssuedAt > SHELL_EXIT_GRACE_MS) return false; // never stall — caps EVERY check below
   if (isAlive(record.hookPid)) return true;
-  if (now - record.blockIssuedAt > SHELL_EXIT_GRACE_MS) return false; // never stall
   if (record.hookShellPid !== undefined && isAlive(record.hookShellPid)) return true;
   // ── RC40 (measured LIVE on Ubuntu, 2026-08-21 12:52): the settle applies to
   // EVERY platform, not just the win32 wrapper. The host cancels the held

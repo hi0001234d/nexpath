@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import type { SpawnOptions } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { bringPopupToFront } from './popup-foreground.js';
+import { shellSafeSpawnTokens } from './shell-quote.js';
 import { readInjectedPrompt } from './advisory-store-reader.js';
 
 /**
@@ -257,8 +258,15 @@ function buildSpawnOptions(opts: IpcOptions): SpawnOptions {
   // or `node`-shebang script; Node's spawn refuses to execute a `.cmd` shim
   // without a shell (post CVE-2024-27980) → `spawnAuto failed` / capture never
   // runs. Spawning through cmd.exe lets Windows resolve the `.cmd`. POSIX is
-  // unaffected (shell stays false). Args here are simple (`auto`/`stop` +
-  // `--db <~/.nexpath path>`), so shell concatenation is safe.
+  // unaffected (shell stays false).
+  //
+  // RC66: the old note here — "args are simple, so shell concatenation is
+  // safe" — was FALSE the moment a Windows username contains a space: both the
+  // NEXPATH_BIN shim path and the `--db <~/.nexpath path>` arg live under the
+  // user's home ("C:\Users\SALVI GAURAV\.nexpath\..."), and the shell splits
+  // them unquoted. The spawn call sites now pass their tokens through
+  // `shellSafeSpawnTokens` (spaced tokens quoted on win32 only; every
+  // space-free spawn stays byte-identical).
   return {
     stdio: ['pipe', 'pipe', 'pipe'],
     cwd:   opts.cwd ?? process.cwd(),
@@ -285,7 +293,9 @@ export function spawnAuto(
   const bin = resolveBinaryPath(opts);
   const args = buildArgs('auto', opts.dbPath);
   const spawner = opts.spawnFn ?? spawn;
-  const child = spawner(bin, args, buildSpawnOptions(opts));
+  // RC66: quote spaced tokens for the win32 shell spawn (see buildSpawnOptions).
+  const safe = shellSafeSpawnTokens(bin, args);
+  const child = spawner(safe.bin, safe.args, buildSpawnOptions(opts));
 
   return new Promise<void>((resolve, reject) => {
     let stderr = '';
@@ -349,7 +359,9 @@ export function spawnStop(
   const bin = resolveBinaryPath(opts);
   const args = buildArgs('stop', opts.dbPath);
   const spawner = opts.spawnFn ?? spawn;
-  const child = spawner(bin, args, buildSpawnOptions(opts));
+  // RC66: quote spaced tokens for the win32 shell spawn (see buildSpawnOptions).
+  const safe = shellSafeSpawnTokens(bin, args);
+  const child = spawner(safe.bin, safe.args, buildSpawnOptions(opts));
 
   // Layer C's `nexpath stop` opens the advisory popup as a separate OS window.
   // macOS/Windows foreground it at launch; Linux/gnome-terminal can't, so under

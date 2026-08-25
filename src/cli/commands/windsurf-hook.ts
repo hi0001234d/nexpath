@@ -25,7 +25,13 @@
  */
 import type { Command } from 'commander';
 import type { ChildProcess } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { runWindsurfHook, parsePayload, type RunResult } from '../../windsurf-hook/handler.js';
+import {
+  checkAndRecordCursorInvocation,
+  WINDSURF_INVOCATION_DIRNAME,
+  WINDSURF_FALLBACK_WINDOW_MS,
+} from '../../cursor-hook/invocation-guard.js';
 import { decideSubmitPrompt, type DeciderOptionSet, type DeciderSelection } from './submit-prompt-decider.js';
 import { runSequenceContinuationStop, SEQUENCE_CONTINUATION_QUIET_MS } from './submit-stop-decider.js';
 import {
@@ -349,6 +355,54 @@ export const WINDSURF_BLOCK_CARD_MESSAGE = 'Nexpath held this prompt';
  * Fail-open: any failure (no store, no state) reports `false` and the normal
  * path runs — worst case is today's behaviour, never a stranded prompt.
  */
+/**
+ * RC64 — duplicate hook-invocation guard, Windsurf half (Windows Devin,
+ * 2026-08-25). Windows registers BOTH the global `~/.codeium/windsurf/hooks.json`
+ * and the workspace `.windsurf/hooks.json` (RC21: that era's Devin executed
+ * ONLY the workspace file, so the global entry was inert armor — the newer
+ * Devin build executes BOTH). One submit then spawned two full pipelines: two
+ * autos prepared two DIFFERENT enhancements, two popups, two blocks, two
+ * injected replacements (tester screenshot: both queued behind the busy
+ * session). Same class as Cursor §8.1, same cure as RC50/56: an atomic
+ * exclusive-create claim, keyed on the payload's per-action `execution_id`
+ * (Windsurf's analog of Cursor's `generation_id`). The first invocation wins
+ * and runs everything; the twin exits 0 untouched — Windsurf blocks on ANY
+ * hook's exit 2, so the twin allowing changes nothing about the cancel
+ * (empirically: with both invocations blocking today, one card renders).
+ *
+ * Fallback when a payload has no `execution_id`: trajectory + content hash,
+ * with the SHORT `WINDSURF_FALLBACK_WINDOW_MS` — that key repeats on a
+ * legitimate same-text resubmit, and duplicates arrive milliseconds apart
+ * (RC50 measured 2–100 ms). No trajectory either ⇒ fail-open, run the flow.
+ */
+export function isDuplicateWindsurfInvocation(
+  projectRoot: string,
+  event: string,
+  payload: ReturnType<typeof parsePayload>,
+  guard: typeof checkAndRecordCursorInvocation = checkAndRecordCursorInvocation,
+): { duplicate: boolean; key_kind: 'execution_id' | 'fallback' | 'none' } {
+  const execId = payload?.execution_id ?? '';
+  if (execId) {
+    return {
+      duplicate: guard(projectRoot, event, execId, { dirName: WINDSURF_INVOCATION_DIRNAME }),
+      key_kind: 'execution_id',
+    };
+  }
+  const trajectory = payload?.trajectory_id ?? '';
+  if (!trajectory) return { duplicate: false, key_kind: 'none' };
+  const content = event === 'pre_user_prompt'
+    ? payload?.tool_info?.user_prompt ?? ''
+    : payload?.tool_info?.response ?? '';
+  const key = `${trajectory}-${createHash('sha256').update(content).digest('hex').slice(0, 16)}`;
+  return {
+    duplicate: guard(projectRoot, event, key, {
+      dirName: WINDSURF_INVOCATION_DIRNAME,
+      maxAgeMs: WINDSURF_FALLBACK_WINDOW_MS,
+    }),
+    key_kind: 'fallback',
+  };
+}
+
 export async function isReplacementEcho(
   projectRoot: string | undefined,
   promptText: string,
@@ -437,6 +491,8 @@ export interface WindsurfHookActionDeps {
   suppressOldAdvisorySurface?: (projectRoot: string, sessionId: string) => Promise<number>;
   /** RC41 seam: injected in tests; defaults to the real continuation runner. */
   runSequenceContinuation?: (projectRoot: string, host: 'windsurf' | 'cursor') => Promise<{ ran: boolean; blocked?: boolean; deferred?: boolean }>;
+  /** RC64 seam: duplicate-invocation check (duplicate ⇒ exit 0, do nothing). */
+  checkDuplicateInvocation?: typeof isDuplicateWindsurfInvocation;
   /**
    * Bound on the POST-leg stdin read. Separate from `stdinTimeoutMs` (the PRE
    * leg, which holds the user's prompt and must stay tight): nothing is held on
@@ -609,6 +665,20 @@ export async function runWindsurfHookAction(
         }),
       ]));
       preReadRaw = stdinRes.value ?? '';
+      // ── RC64: duplicate-invocation guard — MUST run before anything else
+      // spawns. A twin invocation (global + workspace registration, newer
+      // Devin executes both) would otherwise run its OWN auto + popup +
+      // block + delivery for the same submit. The twin ends here with exit 0;
+      // the primary's exit 2 still blocks (Windsurf blocks on ANY hook's 2).
+      {
+        const dupCheck = (deps.checkDuplicateInvocation ?? isDuplicateWindsurfInvocation)(
+          opts.project ?? process.cwd(), event, parsePayload(preReadRaw));
+        if (dupCheck.duplicate) {
+          log('warn', 'windsurf_hook_duplicate_invocation', { event, key_kind: dupCheck.key_kind });
+          exit(0);
+          return;
+        }
+      }
       // ── ORDERING (owner ruling: option A) ────────────────────────────────
       // The decision is DEFERRED to after `handle` + the child await below.
       // The option source reads the `pending_advisory` row that `nexpath auto`
@@ -660,6 +730,19 @@ export async function runWindsurfHookAction(
         }),
       ]);
       preReadRaw = raw ?? '';
+      // ── RC64: same duplicate guard on the post leg. The suppression sweep
+      // below is idempotent, but the RC41 continuation is NOT — a twin
+      // invocation would open a SECOND MPS popup for the same response event.
+      // The primary runs everything; the twin ends here.
+      {
+        const dupCheck = (deps.checkDuplicateInvocation ?? isDuplicateWindsurfInvocation)(
+          opts.project ?? process.cwd(), event, parsePayload(preReadRaw));
+        if (dupCheck.duplicate) {
+          log('warn', 'windsurf_hook_duplicate_invocation', { event, key_kind: dupCheck.key_kind });
+          exit(0);
+          return;
+        }
+      }
       const sessionId = parsePayload(preReadRaw)?.trajectory_id ?? '';
       if (sessionId) {
         const suppress = deps.suppressOldAdvisorySurface ?? suppressOldAdvisorySurfaceForSession;

@@ -24,7 +24,7 @@ import { createInjectedRecordStore } from './injected-record.js';
 import { injectPeBody, injectPeBodyWithFallback, resolvePeVisibleSurfaceAckState } from './pe-delivery.js';
 import { createPePoller, type PePoller } from './pe-poller.js';
 import { createSubmitHookPoller, type SubmitHookPoller } from './submit-hook-poller.js';
-import { createSubmitClipboardDelivery, submitKeystroke, lastDarwinSubmitError, isDarwinAccessibilityDenial, scheduleWindsurfQueueFlush } from './submit-clipboard-delivery.js';
+import { createSubmitClipboardDelivery, submitKeystroke, lastDarwinSubmitError, isDarwinAccessibilityDenial, scheduleWindsurfQueueFlush, warmWin32KeystrokePath } from './submit-clipboard-delivery.js';
 import {
   isWindsurfSubmitAdvisoryEnabled,
   isCursorSubmitAdvisoryEnabled,
@@ -245,6 +245,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // merely carried our branch's NAME — nothing in the product could contradict
   // the prompt string. Now the first two log lines identify the build.
   log(`[nexpath] build: ${typeof __NEXPATH_BUILD__ === 'string' ? __NEXPATH_BUILD__ : 'unknown'}`);
+  // RC65: warm the win32 PowerShell/Add-Type keystroke path once per session —
+  // the first real paste/Enter otherwise pays the ~8 s cold compile (RC52's
+  // measurement; the padal Cursor round's 31.7 s inject stage sat on top of
+  // it). Fire-and-forget, self-gated to win32, all failures swallowed.
+  warmWin32KeystrokePath(log);
 
   // Expose the extension root so the chat-history watcher can load the
   // better-sqlite3 binary matching THIS host's Electron ABI from prebuilds/<abi>/
@@ -395,7 +400,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   //                                        below. See chat-input-injector-mechanism-truth.test.ts.
   const CURSOR_CHAT_FOCUS_COMMANDS = CURSOR_CHAT_FOCUS_COMMANDS_V1;
   const cursorInject = async (text: string): Promise<boolean> => {
+    // RC65: per-stage timing. The padal round's 31.7 s inject was one opaque
+    // gap between `extension_observed` and `inject_dispatched` — no way to
+    // split a cold PowerShell compile from a busy Cursor absorbing the focus
+    // command. Now every slow round names its stage in one line.
+    const t0 = Date.now();
     await vscode.env.clipboard.writeText(text);
+    const tClip = Date.now();
     raiseAppWindow('cursor');
     await new Promise((r) => setTimeout(r, 150));
     let focused = false;
@@ -415,9 +426,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         break;
       } catch { /* try next focus command */ }
     }
+    const tFocus = Date.now();
     await new Promise((r) => setTimeout(r, focused ? 400 : 250));
+    const tSettle = Date.now();
     const ok = pasteKeystroke({ win32Titles: [vscode.env.appName, 'Cursor'] });
+    const tPaste = Date.now();
     log(`[nexpath] cursor inject → ${ok ? `auto-pasted into existing chat (${focused ? focusedVia + ' → ' : ''}Ctrl+V)` : 'no keystroke tool found; left on clipboard'}`);
+    log(`[nexpath] cursor inject timing: clipboard=${tClip - t0}ms focus=${tFocus - tClip}ms(${focusedVia || 'none'}) settle=${tSettle - tFocus}ms paste=${tPaste - tSettle}ms total=${tPaste - t0}ms`);
     return ok;
   };
 

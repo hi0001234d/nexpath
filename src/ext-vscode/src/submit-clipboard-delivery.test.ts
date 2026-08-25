@@ -21,6 +21,8 @@ import {
   buildWin32KeystrokeScript,
   WIN32_KEYSTROKE_TIMEOUT_MS,
   scheduleWindsurfQueueFlush,
+  warmWin32KeystrokePath,
+  WIN32_USER32_ADDTYPE,
 } from './submit-clipboard-delivery.js';
 
 function deliveryHarness(over: Partial<SubmitClipboardDeliveryDeps> = {}) {
@@ -566,5 +568,80 @@ describe('⭐ RC61 — scheduleWindsurfQueueFlush', () => {
     scheduleWindsurfQueueFlush(() => { throw new Error('boom'); }, (l) => logs.push(l), 1, (fn) => { scheduled = fn as () => void; return 0; });
     expect(() => scheduled!()).not.toThrow();
     expect(logs.join(' ')).toContain('threw (ignored)');
+  });
+});
+
+/**
+ * ⭐ RC65 — the activation pre-warm (Windows/Cursor marketplace tester,
+ * 2026-08-25: the inject stage sat 31.7 s on the session's FIRST keystroke —
+ * RC52's cold Add-Type compile plus a busy Cursor). One throwaway compile at
+ * activation warms the machine caches; correctness rests on the warmup
+ * compiling the BYTE-IDENTICAL source the real scripts use.
+ */
+describe('⭐ RC65 — warmWin32KeystrokePath', () => {
+  function fakeChild() {
+    const handlers = new Map<string, (a?: unknown) => void>();
+    return {
+      handlers,
+      on: (ev: 'exit' | 'error', fn: (a?: unknown) => void) => { handlers.set(ev, fn); },
+      unref: vi.fn(),
+      kill: vi.fn(),
+    };
+  }
+
+  it('⭐ the real keystroke scripts START with the warmed Add-Type source (byte-identity)', () => {
+    expect(buildWin32KeystrokeScript(['Cursor'], '^v').startsWith(WIN32_USER32_ADDTYPE)).toBe(true);
+    expect(buildWin32KeystrokeScript(['Devin'], '{ENTER}').startsWith(WIN32_USER32_ADDTYPE)).toBe(true);
+  });
+
+  it('⭐ win32: spawns ONE powershell that compiles the helper and sends NO keys', () => {
+    const child = fakeChild();
+    const spawns: Array<{ cmd: string; args: string[] }> = [];
+    const ok = warmWin32KeystrokePath(() => {}, {
+      platform: 'win32',
+      spawnFn: (cmd, args) => { spawns.push({ cmd, args }); return child; },
+    });
+    expect(ok).toBe(true);
+    expect(spawns).toHaveLength(1);
+    expect(spawns[0]!.cmd).toBe('powershell');
+    const script = spawns[0]!.args.join(' ');
+    expect(script).toContain(WIN32_USER32_ADDTYPE);
+    expect(script).toContain('exit 0');
+    expect(script).not.toContain('SendKeys');
+    expect(script).not.toContain('AppActivate');
+    expect(child.unref).toHaveBeenCalledOnce();
+  });
+
+  it('non-win32: a no-op — nothing spawns', () => {
+    const spawnFn = vi.fn();
+    expect(warmWin32KeystrokePath(() => {}, { platform: 'linux', spawnFn })).toBe(false);
+    expect(warmWin32KeystrokePath(() => {}, { platform: 'darwin', spawnFn })).toBe(false);
+    expect(spawnFn).not.toHaveBeenCalled();
+  });
+
+  it('logs the warm duration on exit', () => {
+    const child = fakeChild();
+    const logs: string[] = [];
+    let t = 1_000;
+    warmWin32KeystrokePath((l) => logs.push(l), {
+      platform: 'win32', now: () => t, spawnFn: () => child,
+    });
+    t = 8_025;
+    child.handlers.get('exit')!(0);
+    expect(logs.join(' ')).toContain('pre-warm: compiler warmed in 7025 ms (exit 0)');
+  });
+
+  it('spawn error is logged and swallowed (worst case = today\'s cold first keystroke)', () => {
+    const child = fakeChild();
+    const logs: string[] = [];
+    warmWin32KeystrokePath((l) => logs.push(l), { platform: 'win32', spawnFn: () => child });
+    child.handlers.get('error')!(new Error('powershell missing'));
+    expect(logs.join(' ')).toContain('pre-warm: spawn failed');
+  });
+
+  it('a throwing spawn never breaks activation', () => {
+    expect(warmWin32KeystrokePath(() => {}, {
+      platform: 'win32', spawnFn: () => { throw new Error('EPERM'); },
+    })).toBe(false);
   });
 });
