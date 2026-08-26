@@ -34,6 +34,12 @@ import { ConsoleLogAdapter } from '../adapters/log-console.js';
 import { PersistentLogAdapter } from '../adapters/log-persistent.js';
 import { ContentScriptUIAdapter } from '../content/panel-adapter.js';
 import {
+  isPeCommandMsg,
+  isPeKeepaliveMsg,
+  isSubmitFlowStateMsg,
+  isSubmitFlowEventMsg,
+  isSubmitDecisionRequestMsg,
+  isPeTerminalNoticeMsg,
   isPromptSubmitMsg,
   isResponseStopMsg,
   isAdvisoryFooterIntentMsg,
@@ -43,6 +49,12 @@ import {
 import { resolveFrequencyConfig, type AdvisoryFrequencyLevel } from '../../config/GlobalConfig.js';
 import type { AdvisoryPayload } from '../../core/ports/ui.port.js';
 import type { Stage, UserRole, UserProfile, PromptRecord } from '../../core/classifier/types.js';
+import { PE_ENGINE_READY, isPromptEnhancementSequenceShapedTextV1 } from './pe-engine.js';
+import { prepareAndStoreBrowserPe, type BrowserPeContext } from './pe-prepare.js';
+import { getPendingPe, markPendingPeShown, upsertPendingPe } from '../adapters/pe-pending-store.js';
+import { resolvePePopupCooldown, resolvePeSequenceEnabled } from '../adapters/pe-config.js';
+import { getPendingSequence, recordPendingSequence } from '../adapters/pe-sequence-store.js';
+import { deliverPePanelCommand, runBrowserPePopup } from './pe-popup-host.js';
 
 const idb = new IdbStorageAdapter();
 const keyStore = new ChromeStorageKeyAdapter();
@@ -51,6 +63,16 @@ const clock = new BrowserClockAdapter();
 // SW console history dies with each MV3 instance; the buffer is what the options
 // page's "Recent activity" section (the browser's `nexpath log`) reads.
 const log = new PersistentLogAdapter(new ConsoleLogAdapter('[nexpath-sw]'));
+
+// ── Build identity (amendment A10) ────────────────────────────────────────────
+// Replaced by esbuild at bundle time with "<short-hash>@<branch>:<target>"; the
+// typeof guard keeps unbundled runs (vitest) safe. Logged as one of the first
+// activation lines so a stale unpacked reload is immediately visible, ending the
+// "which code is actually running" debugging class. PE_ENGINE_READY makes the
+// prompt-enhancement engine seam (pe-engine.ts) a provable part of this bundle.
+declare const __NEXPATH_BUILD_ID__: string | undefined;
+const BUILD_ID = typeof __NEXPATH_BUILD_ID__ === 'string' ? __NEXPATH_BUILD_ID__ : 'dev-unbundled';
+log.debug('build_identity', { build: BUILD_ID, peEngine: PE_ENGINE_READY });
 
 
 // ── First-install: open options page ──────────────────────────────────────────
@@ -166,6 +188,99 @@ browser.runtime.onMessage.addListener(
       return true;
     }
 
+    if (isSubmitFlowStateMsg(msg)) {
+      // HB1 read-back (A7/A9): what the PAGE world believes about the submit-flow
+      // switch — not what storage says. Diagnostic only; nothing branches on it.
+      log.debug('submit_flow_state', {
+        site: msg.site, armed: msg.armed, source: msg.source, seq: msg.seq,
+      });
+      sendResponse({ ok: true });
+      return true;
+    }
+
+    if (isSubmitDecisionRequestMsg(msg)) {
+      // The page is HOLDING the user's request while this resolves. Two rules
+      // apply to everything under here:
+      //   1. always answer — a missing answer costs the user their prompt until
+      //      their hold budget expires;
+      //   2. answer 'allow' on any failure — only a deliberate, non-empty
+      //      replacement may withhold the original.
+      log.debug('submit_decision_requested', {
+        site: msg.site, submitId: msg.submitId, projectRoot: msg.projectRoot,
+      });
+      // RC43: from here until shortly after the verdict, this project's
+      // response-stop signal is our own echo, not a real turn ending.
+      beginHoldQuietWindow(msg.projectRoot);
+      decideHeldSubmit(msg, sender.tab?.id)
+        .then((decision) => {
+          log.debug('submit_decision_answered', { submitId: msg.submitId, kind: decision.kind });
+          endHoldQuietWindow(msg.projectRoot);
+          sendResponse({ decision });
+        })
+        .catch((err: unknown) => {
+          log.warn('submit_decision_failed', { submitId: msg.submitId, error: String(err) });
+          endHoldQuietWindow(msg.projectRoot);
+          sendResponse({ decision: { kind: 'allow' } });
+        });
+      return true; // keep the channel open for the async answer
+    }
+
+    if (isSubmitFlowEventMsg(msg)) {
+      // One ring event from the page's gated submit path. The page owns the
+      // hold; this is only how its branches become readable after the fact
+      // (service-worker console lines die with the worker).
+      log.debug(msg.event, { site: msg.site, ...msg.data });
+
+      // An expired hold means the page has ALREADY sent the original. Any popup
+      // still on screen for that submit now has no consumer, so tear it down and
+      // mark the submit so a late verdict is discarded rather than acted on.
+      if (msg.event === 'submit_hold_expired') {
+        const submitId = typeof msg.data['submitId'] === 'string' ? msg.data['submitId'] : null;
+        if (submitId !== null) markSubmitAbandoned(submitId);
+        const tabId = sender.tab?.id;
+        if (tabId !== undefined) {
+          browser.tabs.sendMessage(tabId, { type: 'nexpath:pe-close', projectRoot: '' })
+            .catch(() => { /* tab gone or no panel open */ });
+        }
+      }
+
+      sendResponse({ ok: true });
+      return true;
+    }
+
+    if (isPeCommandMsg(msg)) {
+      // One PE panel action → the live popup loop's mailbox (pe-popup-host).
+      const delivered = deliverPePanelCommand(log, msg.projectRoot, msg.viewSeq, msg.command);
+      sendResponse({ ok: delivered });
+      return true;
+    }
+
+    if (isPeTerminalNoticeMsg(msg)) {
+      // One-way PE outcome record (advisory-terminal parity): consume the pending
+      // row on whichever SW instance is alive so a teardown mid-popup can never
+      // resurrect the popup on the next stop. Idempotent — the live loop's own
+      // bookkeeping has usually consumed it already.
+      log.debug('pe_terminal_notice', { projectRoot: msg.projectRoot, outcome: msg.outcome });
+      // 'use_original' arrives BEFORE the feedback step, so a held prompt is
+      // released the moment the user decides rather than when they finish
+      // answering. Idempotent: no waiter ⇒ no-op.
+      if (msg.outcome === 'use_original') signalEarlySubmitRelease(sender.tab?.id, msg.projectRoot);
+      markPendingPeShown(msg.projectRoot)
+        .then(() => sendResponse({ ok: true }))
+        .catch(() => sendResponse({ ok: false }));
+      return true;
+    }
+
+    if (isPeKeepaliveMsg(msg)) {
+      // Heartbeat while the panel is open OR a submit is held — receiving any
+      // runtime message resets the worker's idle timer. It also renews the
+      // response-stop quiet lease: the hold has no ceiling any more, so this
+      // beat is the only honest "still holding" signal we get.
+      refreshHoldQuietWindow(msg.projectRoot);
+      sendResponse({ ok: true });
+      return true;
+    }
+
     sendResponse(undefined);
     return true;
   },
@@ -184,6 +299,59 @@ const CROSS_PAGE_PROMPT_DEDUP_MS = 120_000;
 
 /** Last Stage-2 verdict (or error), persisted so it survives SW teardown. */
 const LAST_STAGE2_RESULT_KEY = 'nexpath_last_stage2_result';
+
+/**
+ * HIDDEN DEVELOPER/TESTER KEY — forces the advisory pipeline past the gates that
+ * legitimately suppress most prompts, so a popup can be exercised ON DEMAND.
+ * Value must be exactly 'enabled'; anything else (including absent) is off, and
+ * off is the shipped behaviour for every user.
+ *
+ * WHY THIS EXISTS. Whether a popup appears is decided by (a) a minimum prompt
+ * count, (b) a trigger, (c) per-event dedup, (d) a cooldown, and finally (e) an
+ * LLM verdict that is free to say "this session is fine, say nothing" — which it
+ * does often and CORRECTLY. That is right for users and unusable for testing:
+ * verifying a panel change meant submitting prompts until the model happened to
+ * agree, and a session that never fired was indistinguishable from a broken
+ * build. Both a tester and this pass burned hours on exactly that ambiguity.
+ *
+ * DELIBERATELY NOT BYPASSED: `advisory_frequency = off` and the major_only /
+ * once_per_session modes. Those are explicit user choices, not incidental gates;
+ * a test switch must not override a kill switch. Everything it does bypass logs
+ * `advisory_gate_forced`, so a forced run can never be mistaken for a natural one.
+ *
+ * Never listed in options.html or the self-check (guard-tested) — it is set by
+ * hand from the extension console and has no UI.
+ */
+const FORCE_ADVISORY_KEY = 'nexpath_force_advisory';
+
+/**
+ * Last PE prepare's WHITELISTED summary (PB5) — the debug channel's answer to
+ * "did a prompt enhancement prepare, and what did it decide?" without reading
+ * SW console lines that die with the worker. Dispositions, policies, counters
+ * and reason labels only — NEVER the request, the prompt, or any body text.
+ */
+const LAST_PE_PREPARE_KEY = 'nexpath_last_pe_prepare';
+
+function recordPeDisposition(
+  path: 'fired_trigger' | 'sequence_fallback',
+  eligibility: string,
+  promptCount: number,
+  prep: Awaited<ReturnType<typeof prepareAndStoreBrowserPe>>,
+): Promise<void> {
+  return keyStore.setKey(LAST_PE_PREPARE_KEY, JSON.stringify({
+    at: clock.now(),
+    path,
+    eligibility,
+    promptCount,
+    disposition: prep.disposition,
+    safeFallback: prep.safeFallback,
+    reasonCode: 'reasonCode' in prep ? prep.reasonCode : null,
+    sendPolicy: prep.safeFallback || !prep.result ? null : prep.result.uiView.body.sendPolicy,
+    stored: !prep.safeFallback && prep.result !== undefined
+      && prep.result.disposition !== 'no_popup_not_applicable'
+      && prep.result.uiView.body.sendPolicy !== 'no_popup',
+  })).catch(() => { /* diagnostics are best-effort — never break the pipeline */ });
+}
 
 function lastPromptKeyFor(projectRoot: string): string {
   return `nexpath_last_prompt::${projectRoot}`;
@@ -294,17 +462,380 @@ const DECISION_WAIT_POLL_MS = 500;
 const DECISION_WAIT_MAX_MS = 45_000;
 /** Marker older than this is a crashed/torn-down pipeline — don't wait on it. */
 const DECISION_INFLIGHT_STALE_MS = 60_000;
+/** Longest a pending PE may wait for its stop before it is stale (see the
+ * age gate in handleResponseStopPeFirst) — generous enough for the longest
+ * real agent runs, far below a cross-sitting resurrection. */
+const PE_PENDING_MAX_AGE_MS = 30 * 60 * 1000;
+
+/**
+ * Per-root count of pipelines currently inside the inflight marker. The marker
+ * key is one value per root, so a bare set/clear pair is last-writer-wins: a
+ * QUICK pipeline (e.g. a cooldown-blocked prompt) that starts after a slow one
+ * used to clear the marker while the slow pipeline's PE compose was still
+ * running — response-stop then saw no marker, skipped its wait, and the popup
+ * missed the turn (live-caught in the adversarial fast-stop test, 2026-08-24:
+ * prompt 6 exited at t=25s and erased prompt 5's marker; prompt 5 parked its
+ * PE at t=39s, after the stop had already given up). In-memory is sufficient:
+ * all concurrent pipelines run in one SW instance, and a torn-down instance's
+ * persisted marker is already handled by the reader's staleness cutoff.
+ */
+const decisionInflightCounts = new Map<string, number>();
+
+/**
+ * Wait until the submit pipeline for `projectRoot` has finished parking its rows.
+ *
+ * Extracted so the response-stop path and the held-submit decider cannot drift:
+ * both need "the pipeline queued the advisory AND parked the PE", and both must
+ * wait for the MARKER rather than for a row (the PE prepare runs last, so a
+ * row-based wait can read a half-finished turn). The response-stop path's
+ * behaviour is pinned by its own tests; this is a pure extraction.
+ */
+async function waitForSubmitPipelineIdle(projectRoot: string, logKey: string): Promise<void> {
+  const inflightRaw = await keyStore.getKey(decisionInflightKeyFor(projectRoot));
+  if (!inflightRaw) return;
+  let fresh = false;
+  try {
+    const inflight = JSON.parse(inflightRaw) as { at?: unknown };
+    fresh = typeof inflight.at === 'number' && clock.now() - inflight.at <= DECISION_INFLIGHT_STALE_MS;
+  } catch { /* malformed marker → treat as stale */ }
+  if (!fresh) return;
+  log.debug(logKey, { projectRoot });
+  const deadline = clock.now() + DECISION_WAIT_MAX_MS;
+  while (clock.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, DECISION_WAIT_POLL_MS));
+    if (!await keyStore.getKey(decisionInflightKeyFor(projectRoot))) break;
+  }
+}
+
+/**
+ * How long a held submit waits for its own pipeline run to APPEAR.
+ *
+ * The capture that starts the pipeline and the decision request that waits for it
+ * are two independent messages fired microseconds apart from the same event
+ * handler, and the pipeline registers itself asynchronously. Without this grace
+ * the decider can look before the pipeline has registered, conclude "no pending
+ * enhancement", and allow — so the popup would never appear, intermittently and
+ * invisibly. Correlated by prompt text rather than by a bare timer, so a pipeline
+ * that already finished costs nothing.
+ */
+const PIPELINE_START_GRACE_MS = 3_000;
+const PIPELINE_START_POLL_MS = 100;
+
+/**
+ * Wait until the submit pipeline has SEEN `prompt` for this project, then until
+ * it has finished parking its rows.
+ */
+async function waitForPipelineOnPrompt(projectRoot: string, prompt: string): Promise<void> {
+  // Bounded by POLL COUNT, not by a clock reading: a stopped or coarse clock must
+  // not be able to turn this into an unbounded wait while a user's prompt is held.
+  const maxPolls = Math.ceil(PIPELINE_START_GRACE_MS / PIPELINE_START_POLL_MS);
+  let seen = false;
+  for (let i = 0; i <= maxPolls && !seen; i++) {
+    const raw = await keyStore.getKey(lastPromptKeyFor(projectRoot));
+    if (raw) {
+      try {
+        if ((JSON.parse(raw) as { text?: unknown }).text === prompt) { seen = true; break; }
+      } catch { /* malformed record — keep waiting */ }
+    }
+    if (i < maxPolls) await new Promise((resolve) => setTimeout(resolve, PIPELINE_START_POLL_MS));
+  }
+  if (!seen) {
+    // The pipeline never picked this prompt up (capture dropped, or the worker
+    // restarted). Nothing to wait for; the caller will find no pending row and
+    // allow, which is the safe direction.
+    log.debug('submit_decision_pipeline_never_started', { projectRoot });
+    return;
+  }
+  await waitForSubmitPipelineIdle(projectRoot, 'submit_decision_waiting_for_pipeline');
+}
+
+/** The verdict shape the page's decision channel understands. */
+type HeldSubmitDecision = { kind: 'allow' } | { kind: 'block'; replacement: string };
+
+/**
+ * Submits whose hold the PAGE has already given up on.
+ *
+ * When a hold expires, the page sends the original and stops listening — but the
+ * popup this worker opened is still on screen. Leaving it there is the one thing
+ * that could produce the double-submit this milestone must make impossible: the
+ * user would click "use this" on a surface whose outcome has no consumer, and if
+ * anything injected that text the agent would receive BOTH prompts. So an
+ * expired hold is recorded here, the popup is torn down, and any verdict that
+ * arrives afterwards is discarded.
+ */
+/**
+ * RC43 — the post-hold quiet window.
+ *
+ * A site's "response finished" signal echoes our own actions within seconds: we
+ * cancel a submit, or substitute one, and the DOM churns in ways the completion
+ * observers can read as a turn ending. If `handleResponseStop` runs during that
+ * churn it consumes rows that belong to a turn still being decided, and the
+ * popup for that turn silently never appears.
+ *
+ * So while a submit is being held — and briefly after it resolves — response-stop
+ * processing for that project is suppressed. This is narrow on purpose: it is
+ * keyed per project, it is short, and it can only ever DELAY a stop, never
+ * cancel a real one, because the pending rows survive until something consumes
+ * them.
+ */
+const RESPONSE_STOP_QUIET_MS = 4_000;
+const responseStopQuietUntil = new Map<string, number>();
+
+function beginHoldQuietWindow(projectRoot: string): void {
+  responseStopQuietUntil.set(projectRoot, clock.now() + HOLD_QUIET_REFRESH_MS);
+}
+
+/**
+ * Push the quiet window forward while a hold is still open.
+ *
+ * The hold no longer has a ceiling (owner ruling: the popup waits for a human),
+ * so a fixed window would expire underneath a user who is still reading. The
+ * page heartbeats us every 10 s for exactly as long as it holds, so that
+ * heartbeat is the honest "still holding" signal — and if it stops, the window
+ * lapses on its own within one refresh.
+ */
+function refreshHoldQuietWindow(projectRoot: string): void {
+  if (!responseStopQuietUntil.has(projectRoot)) return;
+  responseStopQuietUntil.set(projectRoot, clock.now() + HOLD_QUIET_REFRESH_MS);
+}
+
+function endHoldQuietWindow(projectRoot: string): void {
+  responseStopQuietUntil.set(projectRoot, clock.now() + RESPONSE_STOP_QUIET_MS);
+}
+
+function isResponseStopQuiet(projectRoot: string): boolean {
+  const until = responseStopQuietUntil.get(projectRoot);
+  if (until === undefined) return false;
+  if (clock.now() >= until) { responseStopQuietUntil.delete(projectRoot); return false; }
+  return true;
+}
+
+/** One quiet-window lease, renewed by each hold heartbeat (10 s cadence). */
+const HOLD_QUIET_REFRESH_MS = 30_000;
+
+const abandonedSubmits = new Set<string>();
+const ABANDONED_SUBMITS_CAP = 50;
+
+function markSubmitAbandoned(submitId: string): void {
+  abandonedSubmits.add(submitId);
+  // Bounded: this is a guard set, not a log.
+  if (abandonedSubmits.size > ABANDONED_SUBMITS_CAP) {
+    const oldest = abandonedSubmits.values().next().value;
+    if (oldest !== undefined) abandonedSubmits.delete(oldest);
+  }
+}
+
+/**
+ * Held submits waiting to be released the moment a terminal choice is MADE.
+ *
+ * "Use original prompt" does not emit its command straight away — the panel
+ * shows a short satisfaction step first (CLI parity: feedback precedes the
+ * terminal action). On the response-stop path that costs nothing. On the submit
+ * path the user's prompt is held until the command lands, and the hold has no
+ * ceiling, so an abandoned survey held it forever — reported live as "the flow
+ * stucked".
+ *
+ * The panel therefore announces the decision as soon as it is made, over the
+ * teardown-proof `pe-terminal-notice` channel, and this releases the hold
+ * without touching the popup: feedback carries on, the command still arrives
+ * behind it, and the popup loop finishes exactly as before.
+ *
+ * Keyed by TAB and project root, not by project root alone. Two tabs open on the
+ * same project share a root (it is the project URL), so a root-only key would
+ * let a choice made in one tab release the prompt another tab is holding —
+ * sending a prompt its user never acted on. The tab is the popup's real owner.
+ */
+const earlyReleaseWaiters = new Map<string, () => void>();
+
+function earlyReleaseKey(tabId: number, projectRoot: string): string {
+  return `${tabId}::${projectRoot}`;
+}
+
+function signalEarlySubmitRelease(tabId: number | undefined, projectRoot: string): void {
+  if (tabId === undefined) return;   // no tab ⇒ no hold of ours to release
+  const key = earlyReleaseKey(tabId, projectRoot);
+  const release = earlyReleaseWaiters.get(key);
+  if (!release) return;              // nothing held here, or already released
+  earlyReleaseWaiters.delete(key);
+  release();
+}
+
+/**
+ * Decide a submission the page is currently HOLDING.
+ *
+ * Runs the SAME popup surface the response-stop path runs — the engine's own
+ * state machine, rendered in the dock — but at submit time, inside the hold.
+ *
+ * ── THE BLOCK CONDITION ──────────────────────────────────────────────────────
+ * Exactly one outcome may withhold the user's prompt: the popup produced an
+ * explicit, non-empty replacement (`selected_current` with body text). Skipped,
+ * dismissed, "use original", crashed, not shown, no pending row, cooldown,
+ * abandoned — every one of those allows. That is the shipped rule, kept; only
+ * its encoding differs (a return value here, a stdout line in the CLI).
+ *
+ * ── THIS PATH NEVER INJECTS ──────────────────────────────────────────────────
+ * The response-stop path delivers its result by injecting text into the composer
+ * and submitting it. This path MUST NOT: the replacement is delivered by
+ * rewriting the request the page is already holding. Doing both would send the
+ * prompt twice — the exact failure this milestone exists to prevent. There is
+ * deliberately no `nexpath:pe-inject` below.
+ *
+ * ── SUPPRESSION ──────────────────────────────────────────────────────────────
+ * A turn handled here consumes its pending rows, so the later response-stop
+ * finds nothing and renders nothing. One decider per turn.
+ */
+async function decideHeldSubmit(
+  msg: { site: string; projectRoot: string; prompt: string; submitId: string },
+  tabId: number | undefined,
+): Promise<HeldSubmitDecision> {
+  const { projectRoot, submitId } = msg;
+  if (!projectRoot || tabId === undefined) {
+    log.debug('submit_decision_no_target', { submitId, projectRoot, hasTab: tabId !== undefined });
+    return { kind: 'allow' };
+  }
+
+  // The prompt was emitted to the pipeline immediately before the hold began —
+  // wait for that run to appear AND finish before reading its rows.
+  await waitForPipelineOnPrompt(projectRoot, msg.prompt);
+
+  const state = await idb.loadSessionState(projectRoot);
+  const pe = await getPendingPe(projectRoot, state?.sessionId);
+  if (!pe) {
+    log.debug('submit_decision_no_pending_pe', { submitId, projectRoot });
+    return { kind: 'allow' };
+  }
+
+  // Same cooldown rule the stop path applies: a suppressed show CONSUMES the
+  // row, because a cooldown hit is a decision rather than a deferral.
+  const cooldown = await resolvePePopupCooldown(projectRoot);
+  const lastShownIndex = state?.lastPromptEnhancementPromptIndex;
+  const promptCount = state?.promptCount ?? pe.promptCount;
+  if (typeof lastShownIndex === 'number' && cooldown > 0 && promptCount - lastShownIndex < cooldown) {
+    await markPendingPeShown(projectRoot);
+    log.debug('submit_decision_cooldown', { submitId, projectRoot, promptCount, lastShownIndex, cooldown });
+    return { kind: 'allow' };
+  }
+
+  // The submit surface owns this turn — consume the queued advisory so the later
+  // response-stop has nothing to render (one decider per turn).
+  const advKey = pendingAdvisoryKeyFor(projectRoot);
+  if (await keyStore.getKey(advKey)) {
+    await Promise.all([
+      keyStore.setKey(advKey, ''),
+      keyStore.setKey(pendingAdvisoryOgKeyFor(projectRoot), ''),
+    ]);
+    log.debug('submit_decision_consumed_advisory', { submitId, projectRoot });
+  }
+
+  // Only NOW is a popup actually coming: a pending enhancement exists, the
+  // cooldown has passed, and the rows are consumed. Telling the user their
+  // prompt is held any earlier would promise a popup that may never appear —
+  // which is exactly what happened when the notice fired on every gated submit.
+  browser.tabs.sendMessage(tabId, { type: 'nexpath:pe-preparing', projectRoot })
+    .catch(() => { /* tab gone — the notice is advisory only */ });
+
+  const [apiKey, sequenceEnabled] = await Promise.all([
+    keyStore.getKey('openai_api_key'),
+    resolvePeSequenceEnabled(projectRoot),
+  ]);
+
+  const popup = runBrowserPePopup({
+    log,
+    projectRoot,
+    apiKey,
+    record: pe,
+    sequenceEnabled,
+    feedbackStore: keyStore,
+    sendToTab: (m) => browser.tabs.sendMessage(tabId, m),
+    onFirstRendered: async () => {
+      await markPendingPeShown(projectRoot);
+      if (state) {
+        state.lastPromptEnhancementPromptIndex = state.promptCount;
+        await idb.saveSessionState(state);
+      }
+    },
+  });
+
+  // Whichever comes first: the popup's real outcome, or word that the user has
+  // already chosen to keep their own prompt. The second only happens for
+  // "use original" — the one terminal choice that ALLOWS and needs no body text
+  // from the popup, so answering early can never change what is sent.
+  const EARLY = Symbol('early-release');
+  const waiterKey = earlyReleaseKey(tabId, projectRoot);
+  let waiter: () => void;
+  const earlyRelease = new Promise<typeof EARLY>((resolve) => {
+    waiter = () => resolve(EARLY);
+    earlyReleaseWaiters.set(waiterKey, waiter);
+  });
+  let raced: Awaited<typeof popup> | typeof EARLY;
+  try {
+    raced = await Promise.race([popup, earlyRelease]);
+  } finally {
+    // Identity-checked: if this tab somehow started a second hold, its waiter
+    // now owns the slot and must not be torn out by the first one finishing.
+    if (earlyReleaseWaiters.get(waiterKey) === waiter!) earlyReleaseWaiters.delete(waiterKey);
+  }
+
+  if (raced === EARLY) {
+    // The popup keeps running — it still owns the feedback step and its own
+    // teardown. Nothing here awaits it, so its rejection must not surface as an
+    // unhandled one.
+    popup.catch(() => { /* the popup logs its own failures */ });
+    // Same verdict either way — an allow — but an operator reading the log
+    // should see WHICH it was: a live hold released early, or a hold the page
+    // had already given up on.
+    if (abandonedSubmits.has(submitId)) {
+      abandonedSubmits.delete(submitId);
+      log.debug('submit_decision_discarded_abandoned', { submitId, state: 'early_release' });
+    } else {
+      log.debug('submit_decision_early_release', { submitId, projectRoot });
+    }
+    return { kind: 'allow' };
+  }
+  const outcome = raced.result;
+
+  // The page may have given up while the user was reading. Its request has
+  // already gone out, so a verdict now would be a second send.
+  if (abandonedSubmits.has(submitId)) {
+    abandonedSubmits.delete(submitId);
+    log.debug('submit_decision_discarded_abandoned', { submitId, state: outcome.state });
+    return { kind: 'allow' };
+  }
+
+  if (outcome.state === 'selected_current' && outcome.bodyText.length > 0) {
+    log.debug('submit_decision_block', { submitId, projectRoot, chars: outcome.bodyText.length });
+    return { kind: 'block', replacement: outcome.bodyText };
+  }
+
+  log.debug('submit_decision_allow', {
+    submitId,
+    state: outcome.state,
+    ...(outcome.state === 'not_shown' ? { reasonCodes: outcome.reasonCodes.slice(0, 6) } : {}),
+  });
+  return { kind: 'allow' };
+}
 
 async function handlePromptSubmit(
   promptText: string,
   projectRoot: string,
   agent: string,
 ): Promise<void> {
-  await keyStore.setKey(decisionInflightKeyFor(projectRoot), JSON.stringify({ at: clock.now() }));
+  const markerKey = decisionInflightKeyFor(projectRoot);
+  decisionInflightCounts.set(projectRoot, (decisionInflightCounts.get(projectRoot) ?? 0) + 1);
+  await keyStore.setKey(markerKey, JSON.stringify({ at: clock.now() }));
   try {
     await runPromptSubmitPipeline(promptText, projectRoot, agent);
   } finally {
-    await keyStore.setKey(decisionInflightKeyFor(projectRoot), '');
+    const remaining = Math.max(0, (decisionInflightCounts.get(projectRoot) ?? 1) - 1);
+    if (remaining === 0) {
+      decisionInflightCounts.delete(projectRoot);
+      await keyStore.setKey(markerKey, '');
+    } else {
+      decisionInflightCounts.set(projectRoot, remaining);
+      // Refresh `at` so the still-running sibling keeps a fresh (non-stale)
+      // marker for the full duration of its own work.
+      await keyStore.setKey(markerKey, JSON.stringify({ at: clock.now() }));
+    }
   }
 }
 
@@ -316,7 +847,7 @@ async function runPromptSubmitPipeline(
   const now = clock.now();
 
   // ── Step 1: Load persisted session state + config ───────────────────────────
-  const [loadedState, lang, apiKey, freqRaw, roleRaw, lastPromptRaw, projectFreqRaw, projectRoleRaw, langOverrideRaw] = await Promise.all([
+  const [loadedState, lang, apiKey, freqRaw, roleRaw, lastPromptRaw, projectFreqRaw, projectRoleRaw, langOverrideRaw, forceAdvisoryRaw] = await Promise.all([
     idb.loadSessionState(projectRoot),
     idb.getProjectDetectedLanguage(projectRoot),
     keyStore.getKey('openai_api_key'),
@@ -334,6 +865,9 @@ async function runPromptSubmitPipeline(
     keyStore.getKey(projectRoleKeyFor(projectRoot)),
     // language_override (CLI auto.ts step 3.5's getConfig('language_override')).
     keyStore.getKey('language_override'),
+    // Hidden test switch — see FORCE_ADVISORY_KEY. Kept last so no existing read
+    // shifts position; absent for every real user, and then this is a no-op.
+    keyStore.getKey(FORCE_ADVISORY_KEY),
   ]);
 
   // ── Step 1.2: Cross-page duplicate guard (see CROSS_PAGE_PROMPT_DEDUP_MS) ───
@@ -358,6 +892,9 @@ async function runPromptSubmitPipeline(
   // to the same 'every_event' default when unset.
   const freq = (projectFreqRaw ?? freqRaw ?? 'every_event') as AdvisoryFrequencyLevel;
   const freqConfig = resolveFrequencyConfig(freq);
+  // Exact-equality on purpose: a stray truthy value must not arm this.
+  const forceAdvisory = forceAdvisoryRaw === 'enabled';
+  if (forceAdvisory) log.debug('advisory_force_key_active', { key: FORCE_ADVISORY_KEY });
   // CLI parity (auto.ts:159): per-project role first, then global, then null.
   const configuredRole = (projectRoleRaw ?? roleRaw) as UserRole | null;
 
@@ -490,6 +1027,56 @@ async function runPromptSubmitPipeline(
   );
   log.debug('absence_flags', { new: newAbsenceFlags.length, total: mgr.current.absenceFlags.length });
 
+  // ── PE context builder + sequence-shaped fallback (mirrors auto.ts §4.6) ──────
+  // Assemble the browser PE context from what this pipeline already computed. The
+  // fallback runs ON BLOCKED EXITS for multi-intent / list-shaped prompts only, so
+  // the MPS surface is reachable without an advisory trigger — exactly the CLI's
+  // team-lead-approved behaviour. Frequency 'off' stays fully silent (the CLI
+  // exits before its fallback too), and every call is failure-shielded: PE can
+  // never break the submit pipeline (fail-open rule).
+  const buildPeCtx = (overrides: Pick<BrowserPeContext,
+    'triggerKind' | 'effectiveFlagType' | 'firedKey' | 'classifierState' | 'triggerEligibility'
+  >): BrowserPeContext => ({
+    projectRoot,
+    promptText,
+    sessionId: mgr.current.sessionId,
+    promptCount: mgr.current.promptCount,
+    currentStage: mgr.current.currentStage,
+    prevStage: prevStageBeforeUpdate,
+    triggerConfidence: classification.confidence,
+    profile: mgr.current.profile,
+    configuredRole,
+    detectedLanguage: resolveLanguage(langOverrideRaw ?? undefined, mgr.current.detectedLanguage),
+    streamBOutputs: streamBOverrides
+      ? Object.entries(streamBOverrides)
+        .filter(([, present]) => present)
+        .map(([signal]) => `stream_b:${signal}`)
+      : [],
+    recentPromptRefs: mgr.current.promptHistory.map((_, i) =>
+      `prompt:${mgr.current.promptCount - mgr.current.promptHistory.length + i}`),
+    ...overrides,
+  });
+  let sequencePeFallbackDone = false;
+  const prepareSequenceShapedPeFallback = async (
+    eligibility: BrowserPeContext['triggerEligibility'],
+  ): Promise<void> => {
+    if (sequencePeFallbackDone) return;
+    try {
+      if (!isPromptEnhancementSequenceShapedTextV1(promptText)) return;
+      sequencePeFallbackDone = true;
+      const prep = await prepareAndStoreBrowserPe(log, apiKey, buildPeCtx({
+        triggerKind: 'stage_transition',
+        effectiveFlagType: 'stage_transition',
+        firedKey: `sequence_shaped:${mgr.current.promptCount}`,
+        classifierState: 'not_applicable',
+        triggerEligibility: eligibility,
+      }), upsertPendingPe);
+      await recordPeDisposition('sequence_fallback', eligibility, mgr.current.promptCount, prep);
+    } catch (err) {
+      log.debug('pe_prepare_failed', { path: 'sequence_fallback', error: String(err) });
+    }
+  };
+
   // ── Step 5.5: Frequency off fast-exit + minimum-prompt guard — mirrors auto.ts's
   // step 4.5 exactly (same order, same gate values from freqConfig). ──────────────
   if (freq === 'off') {
@@ -497,22 +1084,40 @@ async function runPromptSubmitPipeline(
     return;
   }
   if (mgr.current.promptCount < freqConfig.minPromptsBeforeAdvisory) {
-    log.debug('advisory_min_prompts_blocked', {
+    if (!forceAdvisory) {
+      log.debug('advisory_min_prompts_blocked', {
+        promptCount: mgr.current.promptCount,
+        minRequired: freqConfig.minPromptsBeforeAdvisory,
+      });
+      await prepareSequenceShapedPeFallback('support_only_not_triggering');
+      return;
+    }
+    log.debug('advisory_gate_forced', {
+      gate: 'min_prompts',
       promptCount: mgr.current.promptCount,
       minRequired: freqConfig.minPromptsBeforeAdvisory,
     });
-    return;
   }
 
   // ── Step 6: Decide whether Stage 2 should run ───────────────────────────────
-  const trigger = shouldFireStage2(
+  let trigger = shouldFireStage2(
     mgr.current as import('../../core/classifier/types.js').SessionState,
     prevStage,
     newAbsenceFlags,
     freqConfig.stage2S1LowConfidence,
   );
 
-  if (!trigger) return;
+  if (!trigger) {
+    if (!forceAdvisory) {
+      await prepareSequenceShapedPeFallback('support_only_not_triggering');
+      return;
+    }
+    // Synthesise the simpler of the two trigger kinds: 'stage_transition' needs no
+    // qualifying flags, so the downstream flagType/selected_signal_key handling is
+    // the same path a natural stage change takes.
+    log.debug('advisory_gate_forced', { gate: 'no_trigger', synthesised: 'stage_transition' });
+    trigger = { kind: 'stage_transition' };
+  }
 
   // ── Step 6.3: Dedup — already fired this exact stage_transition/absence event
   // this session? — mirrors auto.ts's step 6 (buildFiredKey + hasFiredDecisionSession).
@@ -522,29 +1127,46 @@ async function runPromptSubmitPipeline(
     ? `stage_transition:${prevStageBeforeUpdate}→${mgr.current.currentStage}`
     : `absence:${trigger.qualifyingFlags?.[0]?.signalKey ?? 'unknown'}@${mgr.current.currentStage}`;
   if (mgr.hasFiredDecisionSession(preCheckFiredKey)) {
-    log.debug('advisory_dedup_blocked', { firedKey: preCheckFiredKey });
-    return;
+    if (!forceAdvisory) {
+      log.debug('advisory_dedup_blocked', { firedKey: preCheckFiredKey });
+      await prepareSequenceShapedPeFallback('blocked_by_dedup');
+      return;
+    }
+    // Without this, a forced run fires ONCE per session and every later attempt is
+    // silently deduped — the exact "it worked, now it doesn't" confusion the switch
+    // exists to remove.
+    log.debug('advisory_gate_forced', { gate: 'dedup', firedKey: preCheckFiredKey });
   }
 
   // ── Step 6.5: Advisory frequency gate — mirrors auto.ts's step 6.5 exactly. ───
   if (freq === 'major_only' && trigger.kind !== 'stage_transition') {
     log.debug('advisory_freq_blocked', { freq, flagType: trigger.kind });
+    await prepareSequenceShapedPeFallback('blocked_by_frequency');
     return;
   }
   if (freq === 'once_per_session' && mgr.current.firedDecisionSessions.length > 0) {
     log.debug('advisory_freq_blocked', { freq, flagType: trigger.kind });
+    await prepareSequenceShapedPeFallback('blocked_by_frequency');
     return;
   }
 
   // ── Step 6.6: Post-advisory cooldown — mirrors auto.ts's step 6.6 exactly. ────
   const lastAdvisory = mgr.current.lastAdvisoryPromptIndex ?? -1;
   if (lastAdvisory >= 0 && mgr.current.promptCount - lastAdvisory < freqConfig.postAdvisoryCooldown) {
-    log.debug('advisory_cooldown_blocked', {
+    if (!forceAdvisory) {
+      log.debug('advisory_cooldown_blocked', {
+        promptCount: mgr.current.promptCount,
+        lastAdvisoryAt: lastAdvisory,
+        cooldownRemaining: freqConfig.postAdvisoryCooldown - (mgr.current.promptCount - lastAdvisory),
+      });
+      await prepareSequenceShapedPeFallback('blocked_by_post_advisory_cooldown');
+      return;
+    }
+    log.debug('advisory_gate_forced', {
+      gate: 'post_advisory_cooldown',
       promptCount: mgr.current.promptCount,
       lastAdvisoryAt: lastAdvisory,
-      cooldownRemaining: freqConfig.postAdvisoryCooldown - (mgr.current.promptCount - lastAdvisory),
     });
-    return;
   }
 
   // ── Step 6.7: Session advisory cap — profile-aware ceiling — mirrors auto.ts's
@@ -559,6 +1181,7 @@ async function runPromptSubmitPipeline(
   const advisoryCount = mgr.current.advisoryCount ?? 0;
   if (advisoryCount >= advisoryCap) {
     log.debug('advisory_cap_blocked', { advisoryCount, advisoryCap });
+    await prepareSequenceShapedPeFallback('blocked_by_session_cap');
     return;
   }
 
@@ -662,7 +1285,18 @@ async function runPromptSubmitPipeline(
     prevStage: prevStageBeforeUpdate,
   }));
 
-  if (!stage2Out.fire_decision_session) return;
+  if (!stage2Out.fire_decision_session && forceAdvisory) {
+    // Override the VERDICT only — the stage, confidence, signal assessments and
+    // reason stay exactly as the model produced them, so the popup below is built
+    // from real pipeline output rather than a fabricated payload.
+    log.debug('advisory_gate_forced', { gate: 'stage2_verdict', modelReason: stage2Out.reason });
+    stage2Out.fire_decision_session = true;
+  }
+
+  if (!stage2Out.fire_decision_session) {
+    await prepareSequenceShapedPeFallback('too_weak_no_popup');
+    return;
+  }
 
   // ── Step 7.5: Feed Stage 2 signal assessments back into signal counters —
   // mirrors auto.ts's step 7.5 (keeps future absence detection honest about
@@ -784,17 +1418,238 @@ async function runPromptSubmitPipeline(
     keyStore.setKey(pendingAdvisoryOgKeyFor(projectRoot), JSON.stringify(ogContext)),
   ]);
   log.debug('advisory_pending', { projectRoot, advisoryId: payload.advisoryId, stage: payload.stage });
+
+  // ── Step 11: Prompt-enhancement prepare — fired-trigger path ──────────────────
+  // Runs AFTER the pending-advisory persist above (the Option-A lesson: nothing
+  // may delay that write — a fast agent response races response-stop), and still
+  // inside handlePromptSubmit's inflight marker, so response-stop waits for this
+  // too. Same split as the CLI: auto.ts prepares + parks at submit, stop.ts shows
+  // at response-stop. Failure-shielded — PE can never break the submit pipeline.
+  try {
+    const peFiredKey = trigger.kind === 'stage_transition'
+      ? `stage_transition:${prevStageBeforeUpdate}→${state.currentStage}`
+      : `${flagType}@${state.currentStage}`;
+    const peSignalKey = trigger.kind === 'absence' ? stage2Out.selected_signal_key : undefined;
+    const peDismissedBefore = typeof peSignalKey === 'string' && state.absenceFlags.some(
+      (f) => f.signalKey === peSignalKey && f.dismissedAtIndex !== undefined,
+    );
+    const peEligibility = peDismissedBefore ? 'dismissed_or_user_skipped' : 'fresh_trigger_eligible';
+    const prep = await prepareAndStoreBrowserPe(log, apiKey, buildPeCtx({
+      triggerKind: trigger.kind,
+      effectiveFlagType: flagType,
+      firedKey: peFiredKey,
+      classifierState: 'fire_recommended',
+      triggerEligibility: peEligibility,
+    }), upsertPendingPe);
+    await recordPeDisposition('fired_trigger', peEligibility, mgr.current.promptCount, prep);
+  } catch (err) {
+    log.debug('pe_prepare_failed', { path: 'fired_trigger', error: String(err) });
+  }
 }
 
 /**
- * Response-stop handler — CLI-parity popup timing. Fires when the agent finishes
- * responding (the browser equivalent of Claude Code's Stop hook). Shows the advisory
- * that handlePromptSubmit queued for this project, if any — so the popup lands AFTER
- * the response, never before/during it. Mirrors cli/commands/stop.ts (runStop):
- * pull pending → clear immediately (dedup on rapid re-fires) → re-check the freq
- * gate (honour a Ctrl+X pressed since queuing) → render.
+ * D-2 advisory-surface switch. The CLI's PE branch REMOVED the decision-session
+ * advisory popup outright (MPS-7) — a queued advisory is consumed silently and
+ * the prompt-enhancement popup is the surface the user sees. That is this
+ * extension's DEFAULT. The hidden storage.local key below, set to the exact
+ * string 'enabled' (A9: exact-equality read, never truthiness), restores the
+ * legacy advisory popup byte-for-byte — the escape hatch the plan requires to
+ * stay reversible. Never surfaced in the options UI (hidden-key guard test).
+ */
+const ADVISORY_LEGACY_SURFACE_KEY = 'nexpath_advisory_legacy_surface';
+
+/**
+ * Response-stop dispatcher — CLI-parity popup timing (the browser's Stop hook).
+ * Reads the D-2 switch and routes: default = PE-first (mirrors the CLI's PE
+ * branch of stop.ts — feedback popups don't exist in the browser, PE popup
+ * next, advisory surface removed); 'enabled' = the legacy advisory flow,
+ * unchanged, with any pending PE row consumed silently so the two surfaces
+ * can never stack.
  */
 async function handleResponseStop(projectRoot: string, tabId: number | undefined): Promise<void> {
+  // RC43: a stop arriving while this project's submit is still being decided is
+  // our own echo. Dropping it here is safe — the pending rows are untouched, so
+  // the real stop that follows still finds them.
+  if (isResponseStopQuiet(projectRoot)) {
+    log.debug('response_stop_quiet_window', { projectRoot });
+    return;
+  }
+  let legacySurface = false;
+  try {
+    legacySurface = (await keyStore.getKey(ADVISORY_LEGACY_SURFACE_KEY)) === 'enabled';
+  } catch { /* switch unreadable → CLI-parity default */ }
+  if (!legacySurface) return handleResponseStopPeFirst(projectRoot, tabId);
+  try {
+    const state = await idb.loadSessionState(projectRoot);
+    const pe = await getPendingPe(projectRoot, state?.sessionId);
+    if (pe) {
+      await markPendingPeShown(projectRoot);
+      log.debug('pe_suppressed_legacy_surface', { projectRoot });
+    }
+  } catch { /* suppression is best-effort — the legacy advisory flow must run */ }
+  return handleResponseStopLegacyAdvisory(projectRoot, tabId);
+}
+
+/**
+ * PE-first response-stop (the D-2 default) — the browser mirror of the CLI PE
+ * branch's Stop hook: wait out a still-running submit decision, consume any
+ * queued advisory SILENTLY (MPS-7 — the advisory popup no longer exists on
+ * this surface), then show the parked prompt enhancement through the engine's
+ * own popup state machine. `not_shown` leaves the row pending for the next
+ * stop (stop.ts:614–616); a cooldown hit consumes it with a ring event
+ * (stop.ts:552–561).
+ */
+async function handleResponseStopPeFirst(projectRoot: string, tabId: number | undefined): Promise<void> {
+  // The submit pipeline queues the advisory AND parks the PE before clearing
+  // its inflight marker — wait for the MARKER here (not for a row: the PE
+  // prepare runs last, so a row-based wait could read a half-finished turn).
+  await waitForSubmitPipelineIdle(projectRoot, 'response_stop_waiting_for_decision');
+
+  // MPS-7: consume the queued advisory silently — the surface is removed.
+  const advKey = pendingAdvisoryKeyFor(projectRoot);
+  if (await keyStore.getKey(advKey)) {
+    await Promise.all([
+      keyStore.setKey(advKey, ''),
+      keyStore.setKey(pendingAdvisoryOgKeyFor(projectRoot), ''),
+    ]);
+    log.debug('advisory_removed_surface', { projectRoot });
+  }
+
+  const state = await idb.loadSessionState(projectRoot);
+  const pe = await getPendingPe(projectRoot, state?.sessionId);
+  if (!pe) {
+    // PB6 fail-closed row behaviour: an active sequence row with no pending PE
+    // would be the CLI's continuation moment — the browser has no continuation
+    // runtime (deferred, R-3), so it logs and does NOTHING, exactly the CLI's
+    // planner-off default. Content-free: counts only.
+    try {
+      const seq = await getPendingSequence(projectRoot);
+      if (seq) {
+        log.debug('pe_sequence_continuation_gated', {
+          projectRoot,
+          remainingTaskCount: seq.remainingTaskCount,
+        });
+      }
+    } catch { /* diagnosability only — never affects the stop path */ }
+    return;
+  }
+
+  // Stale-pending age gate (browser-only defect class — live Firefox/Bolt
+  // 2026-08-25): the CLI's Stop fires seconds after each response, so a CLI
+  // pending can never sleep across sittings — but a browser row survives page
+  // closes and can resurrect at a stop HOURS later carrying a long-gone
+  // prompt's body, and that stale show then burns the cooldown window,
+  // suppressing the fresh popups the user actually asked for. A pending older
+  // than the longest legitimate agent run is consumed silently — WITHOUT the
+  // cooldown mark (only a real render starts the window, line ~1119).
+  const pendingAgeMs = clock.now() - pe.createdAt;
+  if (pendingAgeMs > PE_PENDING_MAX_AGE_MS) {
+    await markPendingPeShown(projectRoot);
+    log.debug('pe_pending_expired_stale', { projectRoot, ageMs: pendingAgeMs });
+    return;
+  }
+
+  // No usable tab → leave the row pending for the next stop (advisory parity —
+  // the 2026-07-10 lesson: never consume before a render is possible).
+  if (!tabId) {
+    log.warn('pe_stop_no_tab', {});
+    return;
+  }
+
+  // Honour frequency 'off' toggled since the prepare (CLI stop-gate parity).
+  const [projFreqRaw, globalFreqRaw] = await Promise.all([
+    keyStore.getKey(projectFreqKeyFor(projectRoot)),
+    keyStore.getKey('advisory_frequency'),
+  ]);
+  if ((projFreqRaw ?? globalFreqRaw ?? 'every_event') === 'off') {
+    await markPendingPeShown(projectRoot);
+    log.debug('pe_suppressed_freq_off', { projectRoot });
+    return;
+  }
+
+  // PE popup cooldown (default 7 prompts; stop.ts:552–561): suppressed shows
+  // CONSUME the row — a cooldown hit is a decision, not a deferral.
+  const cooldown = await resolvePePopupCooldown(projectRoot);
+  const lastShownIndex = state?.lastPromptEnhancementPromptIndex;
+  const promptCount = state?.promptCount ?? pe.promptCount;
+  if (typeof lastShownIndex === 'number' && cooldown > 0 && promptCount - lastShownIndex < cooldown) {
+    await markPendingPeShown(projectRoot);
+    log.debug('pe_popup_cooldown', { projectRoot, promptCount, lastShownIndex, cooldown });
+    return;
+  }
+
+  const [apiKey, sequenceEnabled] = await Promise.all([
+    keyStore.getKey('openai_api_key'),
+    resolvePeSequenceEnabled(projectRoot),
+  ]);
+  const stopOutcome = await runBrowserPePopup({
+    log,
+    projectRoot,
+    apiKey,
+    record: pe,
+    sequenceEnabled,
+    feedbackStore: keyStore, // PE-BR-11 closed: PEF events persist locally
+    sendToTab: (m) => browser.tabs.sendMessage(tabId, m),
+    onFirstRendered: async () => {
+      // First real render: consume the row + start the cooldown window — the
+      // same bookkeeping SessionStateManager.markPromptEnhancementPopupShown
+      // does on the manager-mediated path, applied to the loaded state here.
+      await markPendingPeShown(projectRoot);
+      if (state) {
+        state.lastPromptEnhancementPromptIndex = state.promptCount;
+        await idb.saveSessionState(state);
+      }
+    },
+  });
+  const outcome = stopOutcome.result;
+
+  // MPS-1 (popup-host parity): the parent records the sequence row ONLY when
+  // the first popup was SENT — ids and counts, never text. Continuations stay
+  // deferred; nothing reads this to drive behaviour yet.
+  if (stopOutcome.mpsFirstPopupSent && stopOutcome.mpsIdentity && state) {
+    try {
+      await recordPendingSequence(projectRoot, {
+        sessionId: state.sessionId,
+        createdAt: clock.now(),
+        status: 'first_sent',
+        ...stopOutcome.mpsIdentity,
+      });
+      log.debug('pe_sequence_recorded', {
+        projectRoot,
+        remainingTaskCount: stopOutcome.mpsIdentity.remainingTaskCount,
+      });
+    } catch (err) {
+      log.warn('pe_sequence_record_failed', { projectRoot, error: String(err) });
+    }
+  }
+
+  if (outcome.state === 'selected_current') {
+    try {
+      await browser.tabs.sendMessage(tabId, {
+        type: 'nexpath:pe-inject', projectRoot, text: outcome.bodyText,
+      });
+      log.debug('pe_injected', { projectRoot, chars: outcome.bodyText.length });
+    } catch (err) {
+      log.warn('pe_inject_failed', { projectRoot, error: String(err) });
+    }
+  } else if (outcome.state === 'selected_original') {
+    log.debug('pe_use_original', { projectRoot });
+  } else if (outcome.state === 'closed_no_send') {
+    log.debug('pe_closed_no_send', { projectRoot });
+  } else {
+    log.debug('pe_not_shown', { projectRoot, reasonCodes: outcome.reasonCodes.slice(0, 6) });
+  }
+}
+
+/**
+ * LEGACY response-stop handler (D-2 switch 'enabled') — the shipped advisory
+ * flow, byte-for-byte. Shows the advisory that handlePromptSubmit queued for
+ * this project, if any — so the popup lands AFTER the response, never
+ * before/during it. Mirrors cli/commands/stop.ts (runStop): pull pending →
+ * clear immediately (dedup on rapid re-fires) → re-check the freq gate
+ * (honour a Ctrl+X pressed since queuing) → render.
+ */
+async function handleResponseStopLegacyAdvisory(projectRoot: string, tabId: number | undefined): Promise<void> {
   const key   = pendingAdvisoryKeyFor(projectRoot);
   const ogKey = pendingAdvisoryOgKeyFor(projectRoot);
   let [raw, ogRaw, apiKey] = await Promise.all([

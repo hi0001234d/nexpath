@@ -16,7 +16,10 @@ import { injectViaSimulatedPaste } from './inject-kit.js';
  */
 
 const INPUT_SELECTOR = '.tiptap.ProseMirror';
+// Bolt's real send control — the Enter-didn't-submit fallback clicks it
+// (Firefox live 2026-08-25: text landed, synthetic Enter ignored).
+const SUBMIT_BUTTON_SELECTOR = 'button[aria-label="Send message"]';
 
 export async function injectPromptText(text: string): Promise<void> {
-  await injectViaSimulatedPaste(INPUT_SELECTOR, text);
+  await injectViaSimulatedPaste(INPUT_SELECTOR, text, SUBMIT_BUTTON_SELECTOR);
 }

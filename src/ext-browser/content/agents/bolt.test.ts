@@ -1,6 +1,22 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
+
+// This agent module now installs the submit-time gate, which needs storage (to
+// resolve the switch) and runtime messaging. The polyfill throws on import
+// outside a real extension, so it is stubbed exactly as the other agent tests do.
+vi.mock('webextension-polyfill', () => ({
+  default: {
+    // The site key is 'false' so the submit gate stays DISARMED here: these tests
+    // cover CAPTURE, and an armed gate would (correctly) cancel the submit before
+    // capture runs. The gate's own behaviour is covered in composer-submit-gate.test.ts.
+    storage: {
+      local: { get: vi.fn().mockResolvedValue({ 'bolt_promptsubmit_advisory': 'false' }) },
+      onChanged: { addListener: vi.fn() },
+    },
+    runtime: { sendMessage: vi.fn().mockResolvedValue(undefined) },
+  },
+}));
 import {
   observeUserMessages,
   observeComposerSubmit,
@@ -70,6 +86,21 @@ function dispatchFetchPrompt(promptText: string, agent = 'bolt', origin = window
       source: window,
     }),
   );
+}
+
+
+/**
+ * Arm a turn so the completion-label detector counts (capture-kit's `turnActive`
+ * gate — historical "Version N at" rows must not fire a response-stop). Leaves
+ * the stop button PRESENT so no generating→idle transition fires on its own.
+ */
+async function armTurnViaStopButton(observers: Array<{ disconnect(): void }>): Promise<void> {
+  const btn = document.createElement('button');
+  btn.setAttribute('aria-label', 'Stop generation');
+  document.body.appendChild(btn);
+  observers.push(observeStopButton(document.body));
+  document.body.appendChild(document.createElement('i')); // any mutation → checkAndEmit
+  await flush();
 }
 
 describe('content/agents/bolt.ts', () => {
@@ -242,6 +273,7 @@ describe('content/agents/bolt.ts', () => {
     });
 
     it('emits response-stopped when a "Version N at" card appears', async () => {
+      await armTurnViaStopButton(observers);
       observers.push(observeVersionLabel(document.body));
 
       const card = document.createElement('div');

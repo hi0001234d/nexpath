@@ -102,17 +102,12 @@ describe('options.ts', () => {
     });
   });
 
-  describe('advisory frequency + role selectors — same value sets/labels/defaults as the CLI installer', () => {
-    it('renders the 3 High/Medium/Low frequency options and 4 role options, matching the CLI picker exactly', async () => {
+  describe('project-role selector — same value set/labels/default as the CLI installer', () => {
+    it('renders the 4 role options, matching the CLI picker exactly', async () => {
       mockGet.mockResolvedValue({});
       await loadOptionsModule();
 
-      const { freqGroup, roleGroup } = els();
-      expect(freqGroup.querySelectorAll('input[type="radio"]').length).toBe(3);
-      expect(radioFor(freqGroup, 'optimum')).not.toBeNull();
-      expect(radioFor(freqGroup, 'every_event')).not.toBeNull();
-      expect(radioFor(freqGroup, 'major_only')).not.toBeNull();
-
+      const { roleGroup } = els();
       expect(roleGroup.querySelectorAll('input[type="radio"]').length).toBe(4);
       expect(radioFor(roleGroup, 'founder')).not.toBeNull();
       expect(radioFor(roleGroup, 'vibe_coder')).not.toBeNull();
@@ -120,35 +115,18 @@ describe('options.ts', () => {
       expect(radioFor(roleGroup, 'pm')).not.toBeNull();
     });
 
-    it('defaults to every_event / founder when nothing is stored — matches the CLI installer\'s DEFAULT_FREQUENCY/DEFAULT_ROLE', async () => {
+    it("defaults to founder when nothing is stored — matches the CLI installer's DEFAULT_ROLE", async () => {
       mockGet.mockResolvedValue({});
       await loadOptionsModule();
 
-      const { freqGroup, roleGroup } = els();
-      expect(radioFor(freqGroup, 'every_event').checked).toBe(true);
-      expect(radioFor(freqGroup, 'optimum').checked).toBe(false);
-      expect(radioFor(roleGroup, 'founder').checked).toBe(true);
+      expect(radioFor(els().roleGroup, 'founder').checked).toBe(true);
     });
 
-    it('pre-selects the stored frequency and role values', async () => {
-      mockGet.mockResolvedValue({ advisory_frequency: 'optimum', role: 'indie_hacker' });
+    it('pre-selects the stored role value', async () => {
+      mockGet.mockResolvedValue({ role: 'indie_hacker' });
       await loadOptionsModule();
 
-      const { freqGroup, roleGroup } = els();
-      expect(radioFor(freqGroup, 'optimum').checked).toBe(true);
-      expect(radioFor(freqGroup, 'every_event').checked).toBe(false);
-      expect(radioFor(roleGroup, 'indie_hacker').checked).toBe(true);
-    });
-
-    it('persists the chosen frequency to storage on change', async () => {
-      mockGet.mockResolvedValue({});
-      await loadOptionsModule();
-
-      const { freqGroup } = els();
-      radioFor(freqGroup, 'major_only').click();
-      await flush();
-
-      expect(mockSet).toHaveBeenCalledWith({ advisory_frequency: 'major_only' });
+      expect(radioFor(els().roleGroup, 'indie_hacker').checked).toBe(true);
     });
 
     it('persists the chosen role to storage on change', async () => {
@@ -162,13 +140,48 @@ describe('options.ts', () => {
       expect(mockSet).toHaveBeenCalledWith({ role: 'pm' });
     });
 
-    it('reflects the current frequency and role in the self-check panel', async () => {
-      mockGet.mockResolvedValue({ advisory_frequency: 'optimum', role: 'vibe_coder' });
+    it('reflects the current role in the self-check panel', async () => {
+      mockGet.mockResolvedValue({ role: 'vibe_coder' });
       await loadOptionsModule();
 
+      expect(els().selfCheck.innerHTML).toContain('vibe coder');
+    });
+  });
+
+  // Owner request 2026-08-25 (tester feedback): the Advisory Frequency control is GONE
+  // from this page — it advertised control over a surface this extension no longer
+  // shows (the advisory popup is removed by default, MPS-7 parity), so it read as
+  // broken. These pin its absence so it cannot return by accident, and pin that the
+  // page never writes the key any more.
+  describe('advisory frequency is REMOVED from the settings page', () => {
+    it('renders no frequency radios and no frequency row in the self-check', async () => {
+      mockGet.mockResolvedValue({ advisory_frequency: 'optimum', role: 'founder' });
+      await loadOptionsModule();
+
+      const freqRadios = document.querySelectorAll('input[name="frequency"]');
+      expect(freqRadios.length).toBe(0);
       const html = els().selfCheck.innerHTML;
-      expect(html).toContain('High');
-      expect(html).toContain('vibe coder');
+      expect(html).not.toContain('Advisory frequency');
+      expect(html).not.toContain('High');
+    });
+
+    it('never writes advisory_frequency, even when a stored value exists', async () => {
+      mockGet.mockResolvedValue({ advisory_frequency: 'optimum' });
+      await loadOptionsModule();
+
+      radioFor(els().roleGroup, 'pm').click();
+      await flush();
+
+      for (const call of mockSet.mock.calls) {
+        expect(Object.keys(call[0] as object)).not.toContain('advisory_frequency');
+      }
+    });
+
+    it('the shipped options.html contains no frequency control', async () => {
+      const { readFileSync } = await import('node:fs');
+      const html = readFileSync('src/ext-browser/options/options.html', 'utf8');
+      expect(html).not.toContain('frequency-group');
+      expect(html).not.toMatch(/Advisory Frequency/i);
     });
   });
 
@@ -225,11 +238,11 @@ describe('options.ts', () => {
       await loadOptionsModule();
       const listener = mockOnChanged.mock.calls.at(-1)?.[0] as (c: Record<string, unknown>, a: string) => void;
       expect(listener).toBeTypeOf('function');
-      mockGet.mockResolvedValue({ advisory_frequency: 'major_only' });
-      listener({ advisory_frequency: { newValue: 'major_only' } }, 'local');
+      mockGet.mockResolvedValue({ role: 'pm' });
+      listener({ role: { newValue: 'pm' } }, 'local');
       await flush();
-      const checked = document.querySelector('#frequency-group input[checked], #frequency-group input:checked') as HTMLInputElement | null;
-      expect(checked?.value).toBe('major_only');
+      const checked = document.querySelector('#role-group input[checked], #role-group input:checked') as HTMLInputElement | null;
+      expect(checked?.value).toBe('pm');
     });
 
     it('surfaces an error status when a live-refresh read fails (no silent unhandled rejection)', async () => {

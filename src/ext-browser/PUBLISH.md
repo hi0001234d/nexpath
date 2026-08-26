@@ -106,8 +106,12 @@ The preflight step reports exactly which stores are publishing.
 2. **Chrome Web Store:** Developer Dashboard → *Add new item* (first time) or the existing item →
    upload the chrome zip → fill Store listing + **Privacy practices** (permission justifications, data
    disclosure, privacy-policy URL) → set visibility → **Submit for review**.
-3. **Firefox AMO:** *Submit a New Add-on* → **Listed** (public) or **Unlisted** (self-distributed
-   signed `.xpi`) → upload the firefox zip → provide the source + build steps above → submit.
+3. **Firefox AMO:** for an add-on that is already listed, open it in *Manage My Submissions* and use
+   **Upload New Version** — do **not** use *Submit a New Add-on*, which creates a second, separate
+   add-on, and never change `browser_specific_settings.gecko.id` on an existing one (the listing is
+   keyed to it). Only a genuinely first submission uses *Submit a New Add-on* → **Listed** (public)
+   or **Unlisted** (self-distributed signed `.xpi`). Either way: upload the firefox zip → provide the
+   source + build steps above → submit.
 4. **(optional) Edge Add-ons:** upload the **chrome** zip to the Edge Partner Center.
 
 **Beta first:** publish **Chrome = Unlisted** and **Firefox = Unlisted (signed `.xpi`)** for the

@@ -6,29 +6,15 @@ import type {
   AdvisoryPayload as UiAdvisoryPayload,
 } from '../ui/ui-contract.js';
 import type { PanelEvent } from '../../core/ports/ui.port.js';
-// Imports from the *-inject.ts modules, NOT the capture entries (replit.ts /
-// bolt.ts) — those auto-run their capture bootstrap at import time, and esbuild
-// would inline that into this bundle too, duplicating every observer (confirmed
-// bug, fixed 2026-07-02 — see replit-inject.ts's header comment).
-import { injectPromptText as injectPromptTextReplit } from './agents/replit-inject.js';
-import { injectPromptText as injectPromptTextBolt } from './agents/bolt-inject.js';
-import { injectPromptText as injectPromptTextLovable } from './agents/lovable-inject.js';
-import { clipboardFallback, showToast } from './agents/inject-kit.js';
-import { resolveAgentFromHostname } from './agents/agent-hosts.js';
-
-// Per-agent inject-back dispatch (B4 — the per-agent split B3's comment planned).
-// A host with no injector (unknown hosts) degrades to the clipboard fallback
-// rather than silently doing nothing or using the wrong agent's editor mechanics.
-const INJECTORS: Record<string, (text: string) => Promise<void>> = {
-  replit: injectPromptTextReplit,
-  bolt: injectPromptTextBolt,
-  lovable: injectPromptTextLovable,
-};
-
-function injectPromptText(text: string): Promise<void> {
-  const injector = INJECTORS[resolveAgentFromHostname(window.location.hostname)];
-  return injector ? injector(text) : clipboardFallback(text);
-}
+import { showToast } from './agents/inject-kit.js';
+// Per-agent inject-back dispatch (B4) — extracted to inject-dispatch.ts in PB4
+// so the PE panel wiring shares it; the dispatch table + fallback rule are
+// unchanged. (It imports the *-inject.ts modules, NOT the capture entries —
+// see inject-dispatch.ts for the duplicate-observer rule.)
+import { injectPromptText } from './inject-dispatch.js';
+// PE panel wiring (PB4) — a SIBLING listener set for the prompt-enhancement
+// popup; the advisory flow in this file is untouched (PE-BR-15).
+import { setupPeListener } from './pe-inject.js';
 
 declare global {
   interface Window {
@@ -296,4 +282,5 @@ if (window.__nexpathInjectBootstrapped) {
 } else {
   window.__nexpathInjectBootstrapped = true;
   setupListener();
+  setupPeListener();
 }

@@ -166,3 +166,22 @@ describe('FetchLLMAdapter', () => {
     expect(init.signal).toBeUndefined();
   });
 });
+
+describe('timeout presentation (engine classification faithfulness)', () => {
+  it('an aborted fetch surfaces as "timed out" — the wording llm-composer.ts:116-120 classifies as a timeout, exactly like the real SDK', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((_url: string, init: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () => {
+          reject(Object.assign(new DOMException('The operation was aborted', 'AbortError')));
+        });
+      })));
+    try {
+      const adapter = new FetchLLMAdapter('sk-test');
+      await expect(adapter.chat({
+        model: 'm', messages: [], temperature: 0, timeoutMs: 10,
+      } as never)).rejects.toThrow(/timed out after 10ms/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

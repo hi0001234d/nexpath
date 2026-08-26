@@ -59,4 +59,35 @@ describe('ext-browser manifests — permission surface', () => {
     expect(firefox.version).toEqual(chrome.version);
     expect(firefox.description).toEqual(chrome.description);
   });
+
+  // Both stores reject a re-upload of a version they already hold, and reviewers read the
+  // changelog against the version they are reviewing. A bumped manifest with a changelog
+  // still headed by the previous release is the exact drift that costs a submission round.
+  it('the changelog is headed by the version the manifests ship', () => {
+    const version = load('chrome').version as string;
+    const changelog = readFileSync(new URL('./CHANGELOG.md', import.meta.url), 'utf8');
+    const firstHeading = /^## (.+)$/m.exec(changelog);
+    expect(firstHeading?.[1]).toBe(version);
+  });
+
+  // Store version ordering is per-component NUMERIC, not decimal: 0.1.51 is [0,1,51], which
+  // outranks [0,1,6]. Whatever ordering the team picks, a released version can never be
+  // re-used or gone backwards from — so the released set is pinned here and a bump must be
+  // strictly ahead of every one of them.
+  it('ships a version strictly ahead of everything already submitted to a store', () => {
+    const RELEASED = ['0.1.5'];
+    const parse = (v: string) => v.split('.').map(Number);
+    const isAhead = (a: number[], b: number[]) => {
+      for (let i = 0; i < Math.max(a.length, b.length); i++) {
+        const x = a[i] ?? 0, y = b[i] ?? 0;
+        if (x !== y) return x > y;
+      }
+      return false;   // equal is NOT ahead — both stores refuse a re-upload
+    };
+    const current = parse(load('chrome').version as string);
+    for (const released of RELEASED) {
+      expect(isAhead(current, parse(released)),
+        `manifest version must be strictly ahead of the released ${released}`).toBe(true);
+    }
+  });
 });

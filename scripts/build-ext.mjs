@@ -10,6 +10,7 @@
  */
 
 import * as esbuild from 'esbuild';
+import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,6 +18,25 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const SRC  = path.join(ROOT, 'src', 'ext-browser');
+
+/**
+ * Build-identity stamp (design amendment A10): every bundle self-reports the
+ * exact commit + branch it was built from, logged as one of the first service
+ * worker activation lines. Ends the "which code is actually running" class of
+ * live-debugging round-trip — a stale unpacked reload is immediately visible.
+ * Falls back to 'unknown' outside a git checkout (e.g. AMO source-archive
+ * rebuilds), where reproducibility is verified by byte-diff instead.
+ */
+function readBuildId() {
+  try {
+    const hash   = execSync('git rev-parse --short HEAD',        { cwd: ROOT }).toString().trim();
+    const branch = execSync('git rev-parse --abbrev-ref HEAD',   { cwd: ROOT }).toString().trim();
+    return `${hash}@${branch}`;
+  } catch {
+    return 'unknown';
+  }
+}
+const BUILD_ID = readBuildId();
 
 const watch = process.argv.includes('--watch');
 const targets = ['chrome', 'firefox'];
@@ -41,6 +61,70 @@ const browserLoggerPlugin = {
         .replace(/\.js$/, '.ts');
       return abs === ROOT_LOGGER ? { path: BROWSER_LOGGER } : null;
     });
+  },
+};
+
+/**
+ * First-party heavy-chain stubs for the prompt-enhancement engine's import
+ * graph (same remap technique as the logger plugin above — match by RESOLVED
+ * absolute path so nothing else is caught):
+ *  - config/ApiKeyResolver.ts → drags dotenv + cross-keychain + native keyring;
+ *    the facade only calls its pure `isValidApiKey` regex. Stub keeps the regex
+ *    (drift-pinned by a differential test).
+ *  - store/db.ts → the sql.js/WASM CLI store; reached via store/config.ts,
+ *    which the engine imports for the real `DEFAULT_CONFIG` DATA (deliberately
+ *    kept real). Stub throws loudly on any actual store call.
+ * Engine files themselves are never modified (owner boundary).
+ */
+const FIRST_PARTY_STUBS = new Map([
+  [path.join(ROOT, 'src', 'config', 'ApiKeyResolver.ts'), path.join(SRC, 'shims', 'api-key-resolver.ts')],
+  [path.join(ROOT, 'src', 'store', 'db.ts'),              path.join(SRC, 'shims', 'store-db.ts')],
+]);
+const firstPartyStubPlugin = {
+  name: 'nexpath-first-party-stubs',
+  setup(build) {
+    build.onResolve({ filter: /(ApiKeyResolver|db)(\.js|\.ts)?$/ }, (args) => {
+      if (args.kind === 'entry-point' || !args.importer) return null;
+      const abs = path
+        .resolve(path.dirname(args.importer), args.path)
+        .replace(/\.js$/, '.ts');
+      const stub = FIRST_PARTY_STUBS.get(abs);
+      return stub ? { path: stub } : null;
+    });
+  },
+};
+
+/**
+ * Browser shims for the three node builtins the prompt-enhancement engine's
+ * import graph reaches (source-reality → node:fs/node:path; guidance-fatigue /
+ * feedback-sink → node:crypto). The shims answer with absent-filesystem
+ * semantics (fs/path) or a vector-tested sha256 (crypto) so the ENGINE'S OWN
+ * defensive branches run — engine files are never modified. Any other node:*
+ * import stays unresolved on purpose: a new engine dependency must fail the
+ * build loudly so the shim set is extended deliberately.
+ */
+const NODE_SHIMS = {
+  'node:fs':     path.join(SRC, 'shims', 'node-fs.ts'),
+  'node:path':   path.join(SRC, 'shims', 'node-path.ts'),
+  'node:os':     path.join(SRC, 'shims', 'node-os.ts'),
+  'node:crypto': path.join(SRC, 'shims', 'node-crypto.ts'),
+  // Imported by the engine's CLI popup module for its default TTY interaction —
+  // statically unreachable in the browser (the SW always injects its own
+  // interaction); the shims exist so the import resolves and any actual call
+  // fails loudly.
+  'node:tty':      path.join(SRC, 'shims', 'node-tty.ts'),
+  'node:readline': path.join(SRC, 'shims', 'node-readline.ts'),
+  // The real Node SDK is heavy and refuses browser-like environments; the stub
+  // keeps the engine's `new OpenAI()` fallback paths working with full LLM
+  // parity through the fetch adapter (see shims/openai-sdk.ts). Root import
+  // only — an `openai/...` subpath import would be a new dependency and must
+  // fail the build loudly.
+  'openai':      path.join(SRC, 'shims', 'openai-sdk.ts'),
+};
+const nodeShimPlugin = {
+  name: 'nexpath-node-shims',
+  setup(build) {
+    build.onResolve({ filter: /^(node:(fs|path|os|crypto|tty|readline)|openai)$/ }, (args) => ({ path: NODE_SHIMS[args.path] }));
   },
 };
 
@@ -124,12 +208,27 @@ async function buildTarget(target) {
   }
 
   // ── Bundle TypeScript entry points (two format groups — see comments above) ──
-  const define = { 'globalThis.__NEXPATH_TARGET__': JSON.stringify(target) };
+  const define = {
+    'globalThis.__NEXPATH_TARGET__': JSON.stringify(target),
+    // Identifier replacement (typeof-safe): source guards with
+    // `typeof __NEXPATH_BUILD_ID__ === 'string'` so unbundled runs (vitest) fall
+    // back to 'dev-unbundled' instead of crashing.
+    '__NEXPATH_BUILD_ID__': JSON.stringify(`${BUILD_ID}:${target}`),
+  };
+
+  // The engine chain reads `process.env.*` in module-top-level positions that
+  // evaluate BEFORE pe-engine.ts's import-time bootstrap can run — in a real
+  // MV3 worker (no `process` global) that is an instant ReferenceError and the
+  // SERVICE WORKER FAILS TO REGISTER (live-caught 2026-08-24, status code 15).
+  // Node-hosted tests can never see it (process always exists there), so the
+  // shim must be installed by the BUNDLER before any module code: a banner is
+  // the only thing guaranteed to run first.
+  const processBanner = 'globalThis.process ??= { env: {} }; globalThis.process.env ??= {};';
 
   /** @type {esbuild.BuildOptions} */
-  const contentScriptOpts = { ...commonOpts, format: 'iife', entryPoints: contentScriptEntries, outdir: outDir, define, plugins: [browserLoggerPlugin] };
+  const contentScriptOpts = { ...commonOpts, format: 'iife', entryPoints: contentScriptEntries, outdir: outDir, define, banner: { js: processBanner }, plugins: [browserLoggerPlugin, firstPartyStubPlugin, nodeShimPlugin] };
   /** @type {esbuild.BuildOptions} */
-  const moduleOpts = { ...commonOpts, format: 'esm', entryPoints: moduleEntries, outdir: outDir, define, plugins: [browserLoggerPlugin] };
+  const moduleOpts = { ...commonOpts, format: 'esm', entryPoints: moduleEntries, outdir: outDir, define, banner: { js: processBanner }, plugins: [browserLoggerPlugin, firstPartyStubPlugin, nodeShimPlugin] };
 
   if (watch) {
     const [csCtx, modCtx] = await Promise.all([

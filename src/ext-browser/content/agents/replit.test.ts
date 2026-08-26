@@ -1,6 +1,23 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
+
+// replit.ts now installs the submit-time gate, which needs storage (to resolve
+// the switch) and runtime messaging. The polyfill throws on import outside a real
+// extension, so it is stubbed here exactly as the other content-script tests do.
+vi.mock('webextension-polyfill', () => ({
+  default: {
+    // The site key is 'false' so the submit gate stays DISARMED here: these tests
+    // cover CAPTURE, and an armed gate would (correctly) cancel the submit before
+    // capture runs. The gate's own behaviour is covered in composer-submit-gate.test.ts.
+    storage: {
+      local: { get: vi.fn().mockResolvedValue({ 'replit_promptsubmit_advisory': 'false' }) },
+      onChanged: { addListener: vi.fn() },
+    },
+    runtime: { sendMessage: vi.fn().mockResolvedValue(undefined) },
+  },
+}));
+
 import { observeUserMessages, observeSubmitButton, observeWorkedForLabel, observeComposerSubmit, bootstrap, __resetResponseStopDedupForTests, __resetPromptCaptureStateForTests, __teardownAutoBootstrapForTests } from './replit.js';
 
 function flush(): Promise<void> {
@@ -27,6 +44,21 @@ function makeWorkedForLabel(text = 'Worked for 13 seconds'): HTMLSpanElement {
   const span = document.createElement('span');
   span.textContent = text;
   return span;
+}
+
+
+/**
+ * Arm a turn so the completion-label detector counts (capture-kit's `turnActive`
+ * gate — historical "Worked for …" rows must not fire a response-stop). Leaves
+ * the stop button PRESENT so no generating→idle transition fires on its own.
+ */
+async function armTurnViaStopButton(observers: Array<{ disconnect(): void }>): Promise<void> {
+  const btn = document.createElement('button');
+  btn.setAttribute('data-cy', 'ai-prompt-stop');
+  document.body.appendChild(btn);
+  observers.push(observeSubmitButton(document.body));
+  document.body.appendChild(document.createElement('i')); // any mutation → checkAndEmit
+  await flush();
 }
 
 describe('content/agents/replit.ts', () => {
@@ -820,6 +852,7 @@ describe('content/agents/replit.ts', () => {
     // seconds/minutes" completion label), confirmed by direct visual evidence across
     // every live test screenshot this session.
     it('emits nexpath:response-stopped when a "Worked for X seconds" label appears', async () => {
+      await armTurnViaStopButton(observers);
       observers.push(observeWorkedForLabel(document.body));
 
       document.body.appendChild(makeWorkedForLabel('Worked for 13 seconds'));
@@ -832,6 +865,7 @@ describe('content/agents/replit.ts', () => {
     });
 
     it('matches "Worked for X minutes" too, not just seconds', async () => {
+      await armTurnViaStopButton(observers);
       observers.push(observeWorkedForLabel(document.body));
 
       document.body.appendChild(makeWorkedForLabel('Worked for 9 minutes'));
@@ -844,6 +878,7 @@ describe('content/agents/replit.ts', () => {
     });
 
     it('detects the label nested inside a larger inserted subtree', async () => {
+      await armTurnViaStopButton(observers);
       observers.push(observeWorkedForLabel(document.body));
 
       const wrapper = document.createElement('div');

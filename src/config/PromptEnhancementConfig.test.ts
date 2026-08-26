@@ -13,15 +13,15 @@ import {
 import { ConfigValidationError } from './prompt-enhancement-errors.js';
 
 describe('DEP-TEST-01-B4-01 typed PE config contract', () => {
-  it('resolves the owner default as on without an explicit row', async () => {
+  it('resolves the owner default as off without an explicit row', async () => {
     const store = await openStore(':memory:');
     try {
       const snapshot = resolvePromptEnhancementSequenceConfig(store.db, '/project/a');
-      expect(snapshot.sequenceEnabled).toBe('on');
+      expect(snapshot.sequenceEnabled).toBe('off');
       expect(snapshot.validatedEffectiveConfigState).toBe('validated_default');
       expect(snapshot.sourceScope).toBe('default');
       expect(snapshot.arbitraryConfigRowsAreAuthority).toBe(false);
-      expect(getConfig(store.db, PROMPT_ENHANCEMENT_SEQUENCE_ENABLED_KEY)).toBe('on');
+      expect(getConfig(store.db, PROMPT_ENHANCEMENT_SEQUENCE_ENABLED_KEY)).toBe('off');
     } finally {
       store.db.close();
     }

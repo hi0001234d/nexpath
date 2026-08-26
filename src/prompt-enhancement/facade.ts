@@ -25,6 +25,7 @@ import {
 import { composeStructuredComposerOutputV1 } from './llm-composer.js';
 import { decidePromptEnhancementRouteViaLlmV1, type PromptEnhancementLlmRouteDecisionV1 } from './llm-route-decision.js';
 import { isValidApiKey } from '../config/ApiKeyResolver.js';
+import { resolvePromptEnhancementSequenceConfig } from '../config/PromptEnhancementConfig.js';
 import { planPromptEnhancementSections } from './templates/section-plan.js';
 import { routePromptEnhancement, isKnownPrimaryIntent, isKnownCapabilityId, isKnownDebugEvidenceForm, describePromptEnhancementSequencePlanV1, type PromptEnhancementCapabilityId, type PromptEnhancementRouteInput } from './routing-taxonomy.js';
 import { buildPromptEnhancementGuidanceFactsV1 } from './guidance-facts.js';
@@ -469,10 +470,17 @@ async function prepare(
     }
     // else → fall through to the describe fallback (single-prompt path), exactly as today.
   }
+  // MPS-1 display gate: the first-popup sequence summary respects the SAME `prompt_enhancement.sequence.enabled`
+  // config that gates the planner + MPS-2 continuation. When deps are threaded (the auto path), read the
+  // config — 'off' suppresses the summary too, so MPS-1 and MPS-2 turn off together. Contract-typed callers
+  // (no deps) cannot read the config and keep the prior behaviour (summary shown for sequence candidates).
+  const sequenceSummaryEnabled = seqDeps === undefined
+    ? true
+    : resolvePromptEnhancementSequenceConfig(seqDeps.db, request.projectRoot).sequenceEnabled === 'on';
   const result = buildResult(request, enhancementId, route, planning, composed, safety, noPopup, {
     deterministicFallbackApplied,
     preSubstitutionAuthorityEscalationState,
-  }, plannerSummary);
+  }, plannerSummary, sequenceSummaryEnabled);
   return { result, plannerItems, plannerPromptDirectives };
 }
 
@@ -509,6 +517,10 @@ function buildResult(
   // every non-sequence prompt, on any planner failure/refusal/single-outcome, and on every caller of the
   // contract-typed `preparePromptEnhancement` (no deps) — so the describe fallback path is byte-identical.
   plannerSummary?: { remainingTaskCount: number; taskRoleLabels: readonly string[]; taskSummaryLines: readonly string[] },
+  // MPS-1 config gate: false suppresses the first-popup sequence summary (`handoffAndSequenceSummary`) so
+  // `prompt_enhancement.sequence.enabled=off` turns MPS-1 off alongside MPS-2. Defaults true so the
+  // contract-typed (no-deps) callers are byte-identical to before.
+  sequenceSummaryEnabled: boolean = true,
 ): PromptEnhancementPrepareResultV1 {
   const currentBody: PromptEnhancementCurrentBodyV1 = {
     ...composed.currentBody,
@@ -601,7 +613,7 @@ function buildResult(
   const sequencePlan = isSequenceCandidate && plannerSummary === undefined
     ? describePromptEnhancementSequencePlanV1(request.sourcePrompt.text)
     : undefined;
-  let handoffAndSequenceSummary = !noPopup && disposition === 'show_current_body' && isSequenceCandidate
+  let handoffAndSequenceSummary = !noPopup && disposition === 'show_current_body' && isSequenceCandidate && sequenceSummaryEnabled
     ? buildPromptEnhancementHandoffMetadataV1({
         handoffDecisionId: `${enhancementId}:handoff`,
         requestId: request.requestId,

@@ -10,6 +10,12 @@ import {
   isAdvisoryFooterIntentMsg,
   isPromptInjectedMsg,
   isAdvisoryTerminalMsg,
+  isPeCommandMsg,
+  isPeTerminalNoticeMsg,
+  isPeKeepaliveMsg,
+  isShowPeMsg,
+  isPeCloseMsg,
+  isPeInjectMsg,
 } from './ipc.js';
 
 describe('IPC type guards', () => {
@@ -194,9 +200,44 @@ describe('IPC type guards', () => {
       isPromptSubmitMsg, isResponseStopMsg, isShowAdvisoryMsg,
       isPanelEventMsg, isPromptCapturedMsg, isResponseStoppedMsg,
       isAdvisoryFooterIntentMsg,
+      isPeCommandMsg, isPeTerminalNoticeMsg, isPeKeepaliveMsg,
+      isShowPeMsg, isPeCloseMsg, isPeInjectMsg,
     ];
     for (const guard of guards) {
       expect(guard({})).toBe(false);
     }
+  });
+
+  describe('PE panel messages (PB4)', () => {
+    it('validates pe-command: shape, viewSeq, and a whitelisted command payload', () => {
+      const ok = {
+        type: 'nexpath:pe-command', projectRoot: 'https://bolt.new/~/p', viewSeq: 3,
+        command: { type: 'use_current', bodyText: 'b' },
+      };
+      expect(isPeCommandMsg(ok)).toBe(true);
+      expect(isPeCommandMsg({ ...ok, viewSeq: '3' })).toBe(false);
+      expect(isPeCommandMsg({ ...ok, command: { type: 'launch_missiles' } })).toBe(false);
+      expect(isPeCommandMsg({ ...ok, command: { type: 'use_current' } })).toBe(false); // bodyText required
+      expect(isPeCommandMsg({ ...ok, command: { type: 'apply_details', bodyText: 'b' } })).toBe(false); // detailsText required
+      expect(isPeCommandMsg({ ...ok, command: { type: 'close' } })).toBe(true);
+    });
+
+    it('validates pe-terminal-notice outcomes strictly', () => {
+      const base = { type: 'nexpath:pe-terminal-notice', projectRoot: 'r' };
+      for (const outcome of ['use_current', 'use_original', 'close']) {
+        expect(isPeTerminalNoticeMsg({ ...base, outcome })).toBe(true);
+      }
+      expect(isPeTerminalNoticeMsg({ ...base, outcome: 'select' })).toBe(false);
+    });
+
+    it('validates keepalive / show-pe / pe-close / pe-inject shapes', () => {
+      expect(isPeKeepaliveMsg({ type: 'nexpath:pe-keepalive', projectRoot: 'r' })).toBe(true);
+      expect(isPeKeepaliveMsg({ type: 'nexpath:pe-keepalive' })).toBe(false);
+      expect(isShowPeMsg({ type: 'nexpath:show-pe', projectRoot: 'r', payload: { schemaVersion: 1 } })).toBe(true);
+      expect(isShowPeMsg({ type: 'nexpath:show-pe', projectRoot: 'r', payload: null })).toBe(false);
+      expect(isPeCloseMsg({ type: 'nexpath:pe-close', projectRoot: 'r' })).toBe(true);
+      expect(isPeInjectMsg({ type: 'nexpath:pe-inject', projectRoot: 'r', text: 't' })).toBe(true);
+      expect(isPeInjectMsg({ type: 'nexpath:pe-inject', projectRoot: 'r' })).toBe(false);
+    });
   });
 });

@@ -332,12 +332,13 @@ describe('main-world-injector.ts', () => {
       dispatchWindowMessage({ type: 'nexpath:debug-request' });
       await new Promise((r) => setTimeout(r, 0));
 
-      expect(storageGetMock).toHaveBeenCalledWith(['nexpath_last_stage2_result', 'nexpath_recent_events']);
+      expect(storageGetMock).toHaveBeenCalledWith(['nexpath_last_stage2_result', 'nexpath_recent_events', 'nexpath_last_pe_prepare']);
       expect(postSpy).toHaveBeenCalledWith(
         {
           type: 'nexpath:debug-state',
           lastStage2Result: '{"fire":false,"reason":"testing already demonstrated"}',
           recentEvents: null,
+          lastPePrepare: null,
         },
         'https://replit.com',
       );
@@ -353,7 +354,22 @@ describe('main-world-injector.ts', () => {
       await new Promise((r) => setTimeout(r, 0));
 
       expect(postSpy).toHaveBeenCalledWith(
-        { type: 'nexpath:debug-state', lastStage2Result: null, recentEvents: null },
+        { type: 'nexpath:debug-state', lastStage2Result: null, recentEvents: null, lastPePrepare: null },
+        'https://replit.com',
+      );
+      postSpy.mockRestore();
+    });
+
+    it('carries the whitelisted last-PE-prepare summary when one is persisted (PB5)', async () => {
+      const summary = '{"disposition":"show_current_body","stored":true}';
+      storageGetMock.mockResolvedValueOnce({ nexpath_last_pe_prepare: summary });
+      const postSpy = vi.spyOn(window, 'postMessage');
+
+      dispatchWindowMessage({ type: 'nexpath:debug-request' });
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(postSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'nexpath:debug-state', lastPePrepare: summary }),
         'https://replit.com',
       );
       postSpy.mockRestore();
@@ -365,27 +381,34 @@ describe('main-world-injector.ts', () => {
     // by an empty catch — completely silent, no log, no retry. Confirmed live: prompt
     // capture vanished with zero trace during a long-running page flow. Now retries once
     // after a short delay and always logs on final failure.
-    it('retries once after the SW rejects the first send, and succeeds silently if the retry works', async () => {
+    it('retries on a schedule that outlasts a slow SW cold start (2026-08-25: the ~3MB PE bundle wakes in seconds)', async () => {
       vi.useFakeTimers();
       try {
         const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         sendMessageMock.mockClear();
-        sendMessageMock.mockRejectedValueOnce(new Error('SW not up yet')).mockResolvedValueOnce(undefined);
+        // Cold start: three failures, then the SW is finally up.
+        sendMessageMock
+          .mockRejectedValueOnce(new Error('SW not up yet'))
+          .mockRejectedValueOnce(new Error('still booting'))
+          .mockRejectedValueOnce(new Error('still booting'))
+          .mockResolvedValueOnce(undefined);
 
         setLocation('https://replit.com', 'replit.com', '/@vedansi18/Hello-World');
         dispatchWindowMessage({ type: 'nexpath:prompt-captured', promptText: 'hi', agent: 'replit' });
-        await vi.advanceTimersByTimeAsync(0); // let the first rejection's .catch() run
+        await vi.advanceTimersByTimeAsync(0);
 
         expect(warnSpy).toHaveBeenCalledWith(
-          expect.stringContaining('retrying once'),
+          expect.stringContaining('retrying in 300ms'),
           'nexpath:prompt-submit',
           expect.any(String),
         );
 
-        await vi.advanceTimersByTimeAsync(400); // fire the retry's setTimeout
-        expect(sendMessageMock).toHaveBeenCalledTimes(2);
-        expect(errorSpy).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(300); // retry 1 (fails)
+        await vi.advanceTimersByTimeAsync(600); // retry 2 (fails)
+        await vi.advanceTimersByTimeAsync(1200); // retry 3 (succeeds)
+        expect(sendMessageMock).toHaveBeenCalledTimes(4);
+        expect(errorSpy).not.toHaveBeenCalled(); // delivered — never DROPPED
 
         warnSpy.mockRestore();
         errorSpy.mockRestore();
@@ -405,8 +428,8 @@ describe('main-world-injector.ts', () => {
         setLocation('https://replit.com', 'replit.com', '/@vedansi18/Hello-World');
         dispatchWindowMessage({ type: 'nexpath:response-stopped', agent: 'replit' });
         await vi.advanceTimersByTimeAsync(0);
-        await vi.advanceTimersByTimeAsync(400);
-        await vi.advanceTimersByTimeAsync(0); // let the retry's own rejection settle
+        for (const delay of [300, 600, 1200, 2400]) await vi.advanceTimersByTimeAsync(delay);
+        await vi.advanceTimersByTimeAsync(0); // let the final rejection settle
 
         expect(errorSpy).toHaveBeenCalledWith(
           expect.stringContaining('DROPPED'),
@@ -563,5 +586,89 @@ describe('main-world-injector.ts', () => {
       expect(sendMessageMock).not.toHaveBeenCalled();
       setLocation('https://replit.com', 'replit.com', '/@vedansi18/Hello-World'); // restore
     });
+  });
+});
+
+// Captured at REGISTRATION time (module import happens in the first describe's
+// beforeAll, after this file-level implementation is installed) — the mock call
+// LOG is cleared by earlier describes' hooks, but this variable persists.
+const capturedOnMessage: { fn?: (msg: unknown) => unknown } = {};
+onMessageAddListenerMock.mockImplementation((fn: (msg: unknown) => unknown) => { capturedOnMessage.fn = fn; });
+
+describe('PE panel channels (PB4)', () => {
+  beforeEach(() => {
+    setLocation('https://bolt.new', 'bolt.new', '/~/proj-1');
+    sendMessageMock.mockClear().mockResolvedValue(undefined);
+  });
+
+  it('forwards a valid pe-command-out with the project root and re-validated command', () => {
+    window.dispatchEvent(new CustomEvent('nexpath:pe-command-out', {
+      detail: { viewSeq: 3, command: { type: 'use_current', bodyText: 'b' } },
+    }));
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: 'nexpath:pe-command',
+      projectRoot: 'https://bolt.new/~/proj-1',
+      viewSeq: 3,
+      command: { type: 'use_current', bodyText: 'b' },
+    });
+  });
+
+  it('drops a pe-command-out whose command fails the validator (page events are untrusted)', () => {
+    window.dispatchEvent(new CustomEvent('nexpath:pe-command-out', {
+      detail: { viewSeq: 3, command: { type: 'launch_missiles' } },
+    }));
+    window.dispatchEvent(new CustomEvent('nexpath:pe-command-out', {
+      detail: { viewSeq: '3', command: { type: 'close' } },
+    }));
+    expect(sendMessageMock).not.toHaveBeenCalled();
+  });
+
+  it('drops PE events on a page with no project context (landing-page rule)', () => {
+    setLocation('https://bolt.new', 'bolt.new', '/');
+    window.dispatchEvent(new CustomEvent('nexpath:pe-command-out', {
+      detail: { viewSeq: 1, command: { type: 'close' } },
+    }));
+    window.dispatchEvent(new CustomEvent('nexpath:pe-terminal-out', { detail: { outcome: 'close' } }));
+    window.dispatchEvent(new CustomEvent('nexpath:pe-keepalive-out'));
+    expect(sendMessageMock).not.toHaveBeenCalled();
+  });
+
+  it('forwards valid pe-terminal-out outcomes and drops junk ones', () => {
+    for (const outcome of ['use_current', 'use_original', 'close']) {
+      window.dispatchEvent(new CustomEvent('nexpath:pe-terminal-out', { detail: { outcome } }));
+    }
+    window.dispatchEvent(new CustomEvent('nexpath:pe-terminal-out', { detail: { outcome: 'select' } }));
+    expect(sendMessageMock).toHaveBeenCalledTimes(3);
+    expect(sendMessageMock).toHaveBeenLastCalledWith({
+      type: 'nexpath:pe-terminal-notice', projectRoot: 'https://bolt.new/~/proj-1', outcome: 'close',
+    });
+  });
+
+  it('forwards the keepalive heartbeat', () => {
+    window.dispatchEvent(new CustomEvent('nexpath:pe-keepalive-out'));
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: 'nexpath:pe-keepalive', projectRoot: 'https://bolt.new/~/proj-1',
+    });
+  });
+
+  it('show-pe returns a Promise that resolves {rendered:true} on the panel ack', async () => {
+    const listener = capturedOnMessage.fn!;
+    const result = listener({ type: 'nexpath:show-pe', projectRoot: 'r', payload: { schemaVersion: 1 } });
+    expect(result).toBeInstanceOf(Promise);
+    window.dispatchEvent(new CustomEvent('nexpath:pe-view-ack'));
+    await expect(result).resolves.toEqual({ rendered: true });
+  });
+
+  it('show-pe REJECTS after 3s with no ack — a page whose PE wiring is absent must fail the send, not silently ack', async () => {
+    vi.useFakeTimers();
+    try {
+      const listener = capturedOnMessage.fn!;
+      const result = listener({ type: 'nexpath:show-pe', projectRoot: 'r', payload: { schemaVersion: 1 } }) as Promise<unknown>;
+      const settled = result.then(() => 'resolved', () => 'rejected');
+      vi.advanceTimersByTime(3_000);
+      await expect(settled).resolves.toBe('rejected');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

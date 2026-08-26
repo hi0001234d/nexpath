@@ -1,4 +1,6 @@
 import { createCaptureKit } from './capture-kit.js';
+import { installSubmitGate } from './install-submit-gate.js';
+import { injectPromptText } from './lovable-inject.js';
 
 /**
  * Lovable capture — B5. Thin agent config over the shared capture kit.
@@ -94,6 +96,20 @@ export const __resetPromptCaptureStateForTests = kit.resetPromptCaptureStateForT
 // file auto-runs bootstrap() at import time, and content/inject.ts must be able
 // to import inject-back without esbuild inlining that auto-run into its own
 // bundle (the B3 duplicate-bundling bug).
+
+// ── Submit-time gate installation ────────────────────────────────────────────
+//
+// Cancels the composer submit, holds for the popup, then sends exactly ONE
+// prompt: the modified one if the user accepted it, otherwise the original.
+// Inert unless the switch is armed. See content/composer-submit-gate.ts for why
+// this replaced the request-body rewrite — live testing showed Bolt renders its
+// user bubble optimistically at submit AND abandons a chat after 30s, both of
+// which cancelling at the composer avoids by construction.
+installSubmitGate({
+  agent: 'lovable',
+  submitButtonSelector: SUBMIT_BUTTON_SELECTOR,
+  injectPromptText,
+});
 
 // Import-time auto-bootstrap. Capture its teardown so a test that imports this module
 // (which triggers the auto-run) can dispose the long-lived observers + 1.5s poll

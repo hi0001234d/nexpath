@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>nexpath surfaces — harness (D7)</title>
+<style>
+  body { margin: 0; font: 13px/1.5 system-ui, sans-serif; background: #11111b; color: #cdd6f4; }
+  #bar { display: flex; gap: 8px; align-items: center; padding: 8px 12px; background: #181825; border-bottom: 1px solid #313244; }
+  #bar a, #picker button { background: #1e1e2e; border: 1px solid #313244; border-radius: 6px; color: #cdd6f4; font: inherit; font-size: 12px; padding: 5px 10px; cursor: pointer; text-decoration: none; }
+  #picker { display: flex; gap: 6px; }
+  #log { position: fixed; left: 12px; bottom: 12px; width: 34%; max-height: 30vh; overflow: auto; font: 11px/1.6 ui-monospace, monospace; color: #9ba7a7; }
+  #banner { padding: 10px 12px; font-weight: 700; }
+  #banner.pass { color: #a6e3a1; }
+  #banner.fail { color: #f38ba8; }
+  #failures { padding: 0 12px 12px; font: 11px/1.7 ui-monospace, monospace; color: #f38ba8; }
+  #sweep-stage { position: absolute; left: -10000px; top: 0; }
+</style>
+</head>
+<body>
+  <div id="bar">
+    <b>nexpath surfaces harness</b>
+    <div id="picker"></div>
+    <a href="?sweep=1">Run sweep</a>
+    <a href="?">Interactive</a>
+  </div>
+  <div id="banner"></div>
+  <div id="failures"></div>
+  <div id="sweep-stage"></div>
+  <div id="log"></div>
+  <script type="module" src="./harness.bundle.js"></script>
+</body>
+</html>

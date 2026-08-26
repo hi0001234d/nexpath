@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createCaptureKit, type CaptureKitConfig } from './capture-kit.js';
+import { createCaptureKit, setComposerSubmitInterceptor, type CaptureKitConfig } from './capture-kit.js';
 
 function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
@@ -24,6 +24,21 @@ function makeConfig(overrides: Partial<CaptureKitConfig> = {}): CaptureKitConfig
     stopButtonSelector: '[data-testid="stop-btn"]',
     ...overrides,
   };
+}
+
+/**
+ * Arm a turn the way real usage does: a prompt captured through the kit's own
+ * funnel. The completion-label detector only counts labels that belong to a turn
+ * there is evidence for (see `turnActive` in capture-kit.ts).
+ */
+async function armTurn(kit: ReturnType<typeof createCaptureKit>, selector = 'chat-msg'): Promise<void> {
+  const observer = kit.observeUserMessages(document.body);
+  const el = document.createElement('div');
+  el.setAttribute('data-testid', selector);
+  el.textContent = `armed turn ${Math.random()}`;
+  document.body.appendChild(el);
+  await flush();
+  observer.disconnect();
 }
 
 describe('content/agents/capture-kit.ts', () => {
@@ -232,6 +247,9 @@ describe('content/agents/capture-kit.ts', () => {
         }),
       );
       observers.push(kit.observeCompletionLabel(document.body));
+      // A label only counts for a turn we have evidence for — arm one the way a
+      // real submit does (see the turnActive gate in capture-kit.ts).
+      await armTurn(kit);
 
       const label = document.createElement('span');
       label.textContent = 'Finished in 12 seconds';
@@ -287,6 +305,86 @@ describe('content/agents/capture-kit.ts', () => {
       { type: 'nexpath:prompt-captured', promptText: 'ship it', agent: 'bolt' },
       window.location.origin,
     );
+  });
+
+  describe('the submit-time gate hook', () => {
+    function wireComposer(intercept: (ev: Event) => boolean): HTMLElement {
+      setComposerSubmitInterceptor((ev) => intercept(ev));
+      const kit = createCaptureKit(
+        makeConfig({
+          agent: 'bolt',
+          stopButtonSelector: '[data-testid="kit-gate-stop"]',
+          composer: {
+            composerSelector: '[data-testid="kit-gate-editor"]',
+            submitButtonSelector: '[data-testid="kit-gate-send"]',
+            readComposerText: (input) => (input.textContent ?? '').trim(),
+          },
+        }),
+      );
+      observers.push(kit.observeComposerSubmit(document));
+
+      const container = document.createElement('div');
+      const editor = document.createElement('div');
+      editor.setAttribute('data-testid', 'kit-gate-editor');
+      editor.textContent = 'ship it to production';
+      const send = document.createElement('button');
+      send.setAttribute('data-testid', 'kit-gate-send');
+      container.append(editor, send);
+      document.body.appendChild(container);
+      return send;
+    }
+
+    afterEach(() => { setComposerSubmitInterceptor(() => false); });
+
+    it('CAPTURES THE PROMPT EVEN WHEN THE GATE TAKES OVER — the pipeline must never be starved', () => {
+      // The gate cancels the submission, so the site never issues its request and
+      // the composer read is the ONLY channel that will see this prompt. If capture
+      // is skipped, no enhancement is ever prepared and the popup cannot appear.
+      const send = wireComposer(() => true);
+      send.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(postMessageSpy).toHaveBeenCalledWith(
+        { type: 'nexpath:prompt-captured', promptText: 'ship it to production', agent: 'bolt' },
+        window.location.origin,
+      );
+    });
+
+    it('captures BEFORE handing the event to the gate', () => {
+      const order: string[] = [];
+      const send = wireComposer(() => { order.push('gate'); return true; });
+      postMessageSpy.mockImplementation(() => { order.push('capture'); });
+      send.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(order).toEqual(['capture', 'gate']);
+    });
+
+    it('captures on the ENTER path too, even when the gate takes over', () => {
+      const send = wireComposer(() => true);
+      const editor = document.querySelector<HTMLElement>('[data-testid="kit-gate-editor"]')!;
+      editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(postMessageSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ promptText: 'ship it to production' }),
+        window.location.origin,
+      );
+      expect(send).toBeTruthy();
+    });
+
+    it('captures normally when the gate declines', () => {
+      const send = wireComposer(() => false);
+      send.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(postMessageSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ promptText: 'ship it to production' }),
+        window.location.origin,
+      );
+    });
+
+    it('a gate that THROWS cannot stop capture', () => {
+      const send = wireComposer(() => { throw new Error('gate exploded'); });
+      expect(() => send.dispatchEvent(new MouseEvent('click', { bubbles: true }))).not.toThrow();
+      expect(postMessageSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ promptText: 'ship it to production' }),
+        window.location.origin,
+      );
+    });
   });
 
   describe('observeCaptureRejections — undelivered prompts must be re-capturable', () => {
@@ -499,5 +597,99 @@ describe('content/agents/capture-kit.ts', () => {
       logSpy.mockRestore();
       delete (window as unknown as Record<string, boolean | undefined>)[flag];
     }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phantom response-stop (live 2026-08-25/26: a PE popup opened on a freshly
+// loaded Bolt project with NO prompt sent). The completion-label detector
+// matches text that also exists throughout the transcript's history, and
+// content scripts attach at document_idle — so hydration / scroll-back /
+// virtualised re-inserts of OLD rows fired a response-stop with no turn behind
+// it. These pin the `turnActive` gate.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('completion label requires an ACTIVE turn (phantom response-stop fix)', () => {
+  let spy: ReturnType<typeof vi.spyOn>;
+  const obs: Array<{ disconnect(): void }> = [];
+
+  beforeEach(async () => {
+    document.body.innerHTML = '';
+    await flush();
+    spy = vi.spyOn(window, 'postMessage').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    obs.forEach((o) => o.disconnect());
+    obs.length = 0;
+    spy.mockRestore();
+  });
+
+  const labelConfig = {
+    agent: 'bolt',
+    completionLabel: {
+      pattern: /\bVersion \d+ at\b/,
+      maxTextLength: 50,
+      log: '[nexpath] response-stop detected (Version card appeared)',
+    },
+  } as Partial<CaptureKitConfig>;
+
+  function addLabel(text = 'Version 3 at 10:42'): void {
+    const el = document.createElement('span');
+    el.textContent = text;
+    document.body.appendChild(el);
+  }
+  const stops = (): unknown[] =>
+    spy.mock.calls.map((c) => c[0]).filter((m) => (m as { type?: string })?.type === 'nexpath:response-stopped');
+
+  it('a historical label on a freshly loaded page emits NOTHING', async () => {
+    const kit = createCaptureKit(makeConfig(labelConfig));
+    obs.push(kit.observeCompletionLabel(document.body));
+
+    addLabel();                      // transcript history rendering after document_idle
+    addLabel('Version 2 at 09:15');
+    await flush();
+
+    expect(stops()).toHaveLength(0);
+  });
+
+  it('a label AFTER a captured prompt emits the stop', async () => {
+    const kit = createCaptureKit(makeConfig(labelConfig));
+    obs.push(kit.observeCompletionLabel(document.body));
+    await armTurn(kit);
+
+    addLabel();
+    await flush();
+
+    expect(stops()).toHaveLength(1);
+  });
+
+  it('the stop button being present arms the label detector (turns whose prompt we never captured)', async () => {
+    const kit = createCaptureKit(makeConfig(labelConfig));
+    const btn = document.createElement('div');
+    btn.setAttribute('data-testid', 'stop-btn');
+    document.body.appendChild(btn);
+    obs.push(kit.observeStopButton(document.body));      // observes "generating"
+    obs.push(kit.observeCompletionLabel(document.body));
+    document.body.appendChild(document.createElement('i')); // any mutation → checkAndEmit
+    await flush();
+
+    addLabel();
+    await flush();
+
+    expect(stops().length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('after a stop is emitted, later labels do NOT re-fire until a new turn arms one', async () => {
+    const kit = createCaptureKit(makeConfig(labelConfig));
+    obs.push(kit.observeCompletionLabel(document.body));
+    await armTurn(kit);
+    addLabel();
+    await flush();
+    const afterFirst = stops().length;
+    expect(afterFirst).toBe(1);
+
+    addLabel('Version 9 at 11:11');   // e.g. the user scrolls back later
+    await flush();
+
+    expect(stops()).toHaveLength(afterFirst); // the turn is over — no new stop
   });
 });

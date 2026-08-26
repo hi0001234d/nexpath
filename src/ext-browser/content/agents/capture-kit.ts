@@ -144,6 +144,21 @@ const PENDING_EMPTY_MAX_AGE_MS = 60_000;
 const SWEEP_INTERVAL_MS = 1500;
 const POLL_INTERVAL_MS = 1500;
 
+/**
+ * Injected by the composer submit gate at wire-up time (see
+ * agents/install-submit-gate.ts). Default is a permanent "not mine", so this
+ * module behaves exactly as it always has unless an agent installs a real gate.
+ */
+let maybeInterceptComposerSubmit: (
+  ev: Event, prompt: string, input: HTMLElement, composer: ComposerCaptureConfig,
+) => boolean = () => false;
+
+export function setComposerSubmitInterceptor(
+  fn: (ev: Event, prompt: string, input: HTMLElement, composer: ComposerCaptureConfig) => boolean,
+): void {
+  maybeInterceptComposerSubmit = fn;
+}
+
 export function createCaptureKit(config: CaptureKitConfig): CaptureKit {
   // ── Per-instance state (was module-level in the original Replit file — a factory
   // instance per agent means two agents can never share dedup state) ──────────────
@@ -177,6 +192,20 @@ export function createCaptureKit(config: CaptureKitConfig): CaptureKit {
 
   let lastResponseStoppedEmittedAt = 0;
 
+  // Is a turn genuinely in flight (or just was, un-emitted)? The completion-label
+  // detector below matches TEXT that also exists throughout the historical
+  // transcript ("Version 3 at …", "Worked for 12 seconds"), and content scripts
+  // attach at document_idle — so hydration, scroll-back and virtualised
+  // re-inserts of OLD rows all looked like "the agent just finished" and fired a
+  // response-stop with no turn behind it (live: a PE popup opened on a freshly
+  // loaded project page with no prompt sent, 2026-08-25/26). The stop-BUTTON
+  // detector never had this problem because it primes `wasGenerating` from the
+  // DOM and only fires on a real generating→idle transition; the label detector
+  // had no state whatsoever. This flag gives it the same discipline: it is armed
+  // by evidence that a turn exists (our own captured prompt, or the stop button
+  // observed present) and disarmed the moment a stop is emitted.
+  let turnActive = false;
+
   // ── IPC emission ────────────────────────────────────────────────────────────────
 
   function emitPromptCaptured(promptText: string): void {
@@ -197,6 +226,8 @@ export function createCaptureKit(config: CaptureKitConfig): CaptureKit {
     const now = Date.now();
     if (now - lastResponseStoppedEmittedAt < RESPONSE_STOP_DEDUP_WINDOW_MS) return;
     lastResponseStoppedEmittedAt = now;
+    // The turn is over: a later label must not re-fire until a NEW turn arms it.
+    turnActive = false;
     emitResponseStopped();
   }
 
@@ -209,6 +240,9 @@ export function createCaptureKit(config: CaptureKitConfig): CaptureKit {
     if (!text || text === lastEmittedText) return;
     lastEmittedText = text;
     if (viaLog) console.log(viaLog);
+    // A prompt we just captured IS a turn — arm the completion-label detector
+    // even on sites/response types where the stop button is never observed.
+    turnActive = true;
     emitPromptCaptured(text);
   }
 
@@ -345,6 +379,27 @@ export function createCaptureKit(config: CaptureKitConfig): CaptureKit {
     if (!composer) {
       throw new Error(`[nexpath] observeComposerSubmit requires composer config (agent: ${config.agent})`);
     }
+    /**
+     * The submit-time gate's one hook into this file. Returns true only when the
+     * gate has TAKEN OVER the submission — it refuses unless the switch is armed,
+     * so with the switch off this is a no-op.
+     *
+     * CAPTURE MUST RUN FIRST, ALWAYS. The gate cancels the submission, so when it
+     * takes over the site never issues its request — which means the composer read
+     * is the ONLY channel that will ever see this prompt. Skipping capture here
+     * starves the pipeline: no prompt reaches the worker, no enhancement is
+     * prepared, the decision falls through to "allow", and the popup can never
+     * appear. (Found by cross-confirming the phase against its own acceptance
+     * criteria, before it reached a live run.)
+     */
+    const takenOver = (ev: Event, input: HTMLElement): boolean => {
+      try {
+        return maybeInterceptComposerSubmit(ev, composer.readComposerText(input) ?? '', input, composer);
+      } catch {
+        return false; // never let the gate break capture
+      }
+    };
+
     const onKeyDown = (ev: Event): void => {
       const ke = ev as KeyboardEvent;
       // Shift+Enter is "newline", every other Enter variant (plain/Ctrl/Cmd) submits.
@@ -353,6 +408,7 @@ export function createCaptureKit(config: CaptureKitConfig): CaptureKit {
       const cm = target?.closest<HTMLElement>(composer.composerSelector);
       if (!cm || cm !== findChatComposer(composer)) return; // Enter in a file editor is just a newline
       captureFromComposer(composer, cm);
+      takenOver(ev, cm);
     };
     const onClick = (ev: Event): void => {
       const target = ev.target instanceof Element ? ev.target : null;
@@ -360,6 +416,7 @@ export function createCaptureKit(config: CaptureKitConfig): CaptureKit {
       const cm = findChatComposer(composer);
       if (!cm) return;
       captureFromComposer(composer, cm);
+      takenOver(ev, cm);
     };
     root.addEventListener('keydown', onKeyDown, true);
     root.addEventListener('click', onClick, true);
@@ -437,6 +494,9 @@ export function createCaptureKit(config: CaptureKitConfig): CaptureKit {
 
     const checkAndEmit = (): void => {
       const isGenerating = document.querySelector(config.stopButtonSelector) !== null;
+      // Seeing the stop button IS a turn — this is what arms the completion-label
+      // detector for response types whose prompt we never captured ourselves.
+      if (isGenerating) turnActive = true;
       if (wasGenerating && !isGenerating) {
         // Visible in the page console regardless of whether the SW message that
         // follows succeeds — closes an observability gap confirmed live 2026-07-03:
@@ -497,6 +557,7 @@ export function createCaptureKit(config: CaptureKitConfig): CaptureKit {
   // (emitResponseStoppedOnce dedups).
 
   function observeCompletionLabel(root: Element): MutationObserver {
+    let suppressedLogged = false;
     const completion = config.completionLabel;
     if (!completion) {
       throw new Error(`[nexpath] observeCompletionLabel requires completionLabel config (agent: ${config.agent})`);
@@ -513,6 +574,17 @@ export function createCaptureKit(config: CaptureKitConfig): CaptureKit {
             ? [node]
             : Array.from(node.querySelectorAll('*')).filter(isCompletionLabel);
           if (matches.length === 0) continue;
+          // Only a label belonging to a turn we have evidence for counts. Without
+          // this the transcript's OWN history fires stops (see `turnActive`).
+          // Logged once per observer so a suppressed page-load storm is visible
+          // without flooding the console.
+          if (!turnActive) {
+            if (!suppressedLogged) {
+              suppressedLogged = true;
+              console.log('[nexpath] completion label ignored — no active turn (historical/re-rendered row)');
+            }
+            continue;
+          }
           console.log(completion.log);
           emitResponseStoppedOnce();
         }

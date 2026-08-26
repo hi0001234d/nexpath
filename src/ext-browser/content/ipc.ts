@@ -1,4 +1,6 @@
 import type { AdvisoryPayload, PanelEvent } from '../../core/ports/ui.port.js';
+import type { PePanelViewV1 } from '../ui/pe-contract.js';
+import { isPePanelCommandV1, type PePanelCommandV1 } from '../ui/pe-contract.js';
 
 /**
  * IPC message envelope types for all message channels:
@@ -96,12 +98,93 @@ export interface AdvisoryTerminalMsg {
   advisoryId: string;
 }
 
+/**
+ * PE panel command (content → SW, short-lived request): one user action from
+ * the prompt-enhancement panel, echoing the viewSeq of the render it was
+ * issued against — the SW's popup loop drops any command whose seq no longer
+ * matches the live view (stale-result discipline).
+ */
+export interface PeCommandMsg {
+  type: 'nexpath:pe-command';
+  projectRoot: string;
+  viewSeq: number;
+  command: PePanelCommandV1;
+}
+
+/**
+ * One-way terminal-outcome notice for the PE popup (use-enhanced / use-original
+ * / close). Same rationale as AdvisoryTerminalMsg: the popup loop's in-SW await
+ * dies with an MV3 teardown; this reaches whichever SW instance is alive so the
+ * pending-PE row is always consumed and the outcome always lands in the ring.
+ */
+export interface PeTerminalNoticeMsg {
+  type: 'nexpath:pe-terminal-notice';
+  projectRoot: string;
+  outcome: 'use_current' | 'use_original' | 'close';
+}
+
+/**
+ * Heartbeat while the PE panel is open (content → SW, ~20s cadence). Any
+ * runtime message resets MV3's service-worker idle timer, keeping the popup
+ * loop's SW instance alive while the user reads/edits — the documented MV3
+ * keepalive pattern. The SW handler is a no-op ack.
+ */
+export interface PeKeepaliveMsg {
+  type: 'nexpath:pe-keepalive';
+  projectRoot: string;
+}
+
+/**
+ * HB1 read-back (A7/A9): what the MAIN world actually believes about the
+ * submit-flow switch, forwarded so it lands in the ring buffer. Diagnostic only
+ * — nothing branches on it, and the SW handler is a log + ack.
+ */
+export interface SubmitFlowStateMsg {
+  type: 'nexpath:submit-flow-state';
+  site: string;
+  armed: boolean;
+  source: string;
+  seq: number;
+}
+
+/**
+ * One ring event from the page's gated submit path (`submit_hold_started`,
+ * `…_released_allow`, `…_echo_skip`, `…_expired`, …). Diagnostic only: the SW
+ * logs it into the durable buffer and acks. Nothing branches on it.
+ */
+export interface SubmitFlowEventMsg {
+  type: 'nexpath:submit-flow-event';
+  site: string;
+  event: string;
+  data: Record<string, unknown>;
+}
+
+/**
+ * The page is holding a submission and needs a verdict. Round-trip: the content
+ * script relays it and posts the answer straight back to the page, so the
+ * outcome never depends on this service-worker instance surviving.
+ */
+export interface SubmitDecisionRequestMsg {
+  type: 'nexpath:submit-decision-request';
+  site: string;
+  projectRoot: string;
+  requestId: string;
+  prompt: string;
+  submitId: string;
+}
+
 export type ContentToSwMsg =
   | PromptSubmitMsg
   | ResponseStopMsg
   | AdvisoryFooterIntentMsg
   | PromptInjectedMsg
-  | AdvisoryTerminalMsg;
+  | AdvisoryTerminalMsg
+  | PeCommandMsg
+  | PeTerminalNoticeMsg
+  | PeKeepaliveMsg
+  | SubmitFlowStateMsg
+  | SubmitFlowEventMsg
+  | SubmitDecisionRequestMsg;
 
 // ── Service Worker → Content ──────────────────────────────────────────────────
 
@@ -110,7 +193,38 @@ export interface ShowAdvisoryMsg {
   payload: AdvisoryPayload;
 }
 
-export type SwToContentMsg = ShowAdvisoryMsg;
+/** Render (or re-render) the PE panel with this view. Content acks after mount. */
+export interface ShowPeMsg {
+  type: 'nexpath:show-pe';
+  projectRoot: string;
+  payload: PePanelViewV1;
+}
+
+/**
+ * A popup IS coming for a held submit — show the "held" notice.
+ *
+ * Sent only after the worker has confirmed a pending enhancement exists and the
+ * cooldown has passed, so the notice never promises a popup that will not appear.
+ */
+export interface PePreparingMsg {
+  type: 'nexpath:pe-preparing';
+  projectRoot: string;
+}
+
+/** Hide the PE panel (loop ended without an inject). */
+export interface PeCloseMsg {
+  type: 'nexpath:pe-close';
+  projectRoot: string;
+}
+
+/** Inject + auto-submit the accepted enhanced body via the existing inject kit. */
+export interface PeInjectMsg {
+  type: 'nexpath:pe-inject';
+  projectRoot: string;
+  text: string;
+}
+
+export type SwToContentMsg = ShowAdvisoryMsg | ShowPeMsg | PeCloseMsg | PeInjectMsg | PePreparingMsg;
 
 // ── Content → Service Worker (panel event) ────────────────────────────────────
 
@@ -128,7 +242,16 @@ export type ExtensionMsg =
   | PanelEventMsg
   | AdvisoryFooterIntentMsg
   | PromptInjectedMsg
-  | AdvisoryTerminalMsg;
+  | AdvisoryTerminalMsg
+  | PeCommandMsg
+  | PeTerminalNoticeMsg
+  | PeKeepaliveMsg
+  | SubmitFlowStateMsg
+  | SubmitFlowEventMsg
+  | SubmitDecisionRequestMsg
+  | ShowPeMsg
+  | PeCloseMsg
+  | PeInjectMsg;
 
 // ── Type guards ───────────────────────────────────────────────────────────────
 
@@ -190,4 +313,79 @@ export function isAdvisoryTerminalMsg(msg: unknown): msg is AdvisoryTerminalMsg 
   return m['type'] === 'nexpath:advisory-terminal' &&
     (m['eventType'] === 'select' || m['eventType'] === 'skip' || m['eventType'] === 'dismiss') &&
     typeof m['advisoryId'] === 'string';
+}
+
+export function isSubmitFlowStateMsg(msg: unknown): msg is SubmitFlowStateMsg {
+  if (typeof msg !== 'object' || msg === null) return false;
+  const m = msg as Record<string, unknown>;
+  return m['type'] === 'nexpath:submit-flow-state' &&
+    typeof m['site'] === 'string' && typeof m['armed'] === 'boolean' &&
+    typeof m['source'] === 'string' && typeof m['seq'] === 'number';
+}
+
+export function isSubmitDecisionRequestMsg(msg: unknown): msg is SubmitDecisionRequestMsg {
+  if (typeof msg !== 'object' || msg === null) return false;
+  const m = msg as Record<string, unknown>;
+  return m['type'] === 'nexpath:submit-decision-request' &&
+    typeof m['site'] === 'string' && typeof m['projectRoot'] === 'string' &&
+    typeof m['requestId'] === 'string' && typeof m['prompt'] === 'string' &&
+    typeof m['submitId'] === 'string';
+}
+
+export function isSubmitFlowEventMsg(msg: unknown): msg is SubmitFlowEventMsg {
+  if (typeof msg !== 'object' || msg === null) return false;
+  const m = msg as Record<string, unknown>;
+  return m['type'] === 'nexpath:submit-flow-event' &&
+    typeof m['site'] === 'string' && typeof m['event'] === 'string' &&
+    typeof m['data'] === 'object' && m['data'] !== null;
+}
+
+export function isShowPeMsg(msg: unknown): msg is ShowPeMsg {
+  if (typeof msg !== 'object' || msg === null) return false;
+  const m = msg as Record<string, unknown>;
+  return m['type'] === 'nexpath:show-pe' &&
+    typeof m['projectRoot'] === 'string' &&
+    typeof m['payload'] === 'object' && m['payload'] !== null;
+}
+
+export function isPePreparingMsg(msg: unknown): msg is PePreparingMsg {
+  if (typeof msg !== 'object' || msg === null) return false;
+  const m = msg as Record<string, unknown>;
+  return m['type'] === 'nexpath:pe-preparing' && typeof m['projectRoot'] === 'string';
+}
+
+export function isPeCloseMsg(msg: unknown): msg is PeCloseMsg {
+  if (typeof msg !== 'object' || msg === null) return false;
+  const m = msg as Record<string, unknown>;
+  return m['type'] === 'nexpath:pe-close' && typeof m['projectRoot'] === 'string';
+}
+
+export function isPeInjectMsg(msg: unknown): msg is PeInjectMsg {
+  if (typeof msg !== 'object' || msg === null) return false;
+  const m = msg as Record<string, unknown>;
+  return m['type'] === 'nexpath:pe-inject' &&
+    typeof m['projectRoot'] === 'string' && typeof m['text'] === 'string';
+}
+
+export function isPeCommandMsg(msg: unknown): msg is PeCommandMsg {
+  if (typeof msg !== 'object' || msg === null) return false;
+  const m = msg as Record<string, unknown>;
+  return m['type'] === 'nexpath:pe-command' &&
+    typeof m['projectRoot'] === 'string' &&
+    typeof m['viewSeq'] === 'number' &&
+    isPePanelCommandV1(m['command']);
+}
+
+export function isPeTerminalNoticeMsg(msg: unknown): msg is PeTerminalNoticeMsg {
+  if (typeof msg !== 'object' || msg === null) return false;
+  const m = msg as Record<string, unknown>;
+  return m['type'] === 'nexpath:pe-terminal-notice' &&
+    typeof m['projectRoot'] === 'string' &&
+    (m['outcome'] === 'use_current' || m['outcome'] === 'use_original' || m['outcome'] === 'close');
+}
+
+export function isPeKeepaliveMsg(msg: unknown): msg is PeKeepaliveMsg {
+  if (typeof msg !== 'object' || msg === null) return false;
+  const m = msg as Record<string, unknown>;
+  return m['type'] === 'nexpath:pe-keepalive' && typeof m['projectRoot'] === 'string';
 }

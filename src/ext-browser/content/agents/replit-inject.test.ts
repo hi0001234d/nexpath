@@ -85,4 +85,54 @@ describe('replit-inject.ts — injectPromptText', () => {
 
     expect(focusSpy).toHaveBeenCalled();
   });
+
+  describe('Replit\'s paste SIZE LIMIT (measured live 2026-08-26)', () => {
+    // On a real Replit project: 1,500 characters landed in full, while 2,200 and
+    // 4,000 landed NOTHING — silently, no error. Real enhanced prompts are
+    // 2.1-2.5k, so every one was being discarded. Chunked delivery was verified
+    // on that same composer: 800 -> 1,600 -> 2,400 accumulated exactly.
+    function capturePastes(input: HTMLElement): string[] {
+      const seen: string[] = [];
+      input.addEventListener('paste', (ev) => {
+        const text = (ev as ClipboardEvent).clipboardData?.getData('text/plain') ?? '';
+        seen.push(text);
+        // Emulate the composer: first paste replaces, later ones append.
+        const sel = window.getSelection();
+        const collapsed = sel?.isCollapsed === true;
+        input.textContent = collapsed ? (input.textContent ?? '') + text : text;
+      });
+      return seen;
+    }
+
+    it('splits an oversized body into sub-limit pieces', async () => {
+      const input = makeInput();
+      const pastes = capturePastes(input);
+      const body = 'y'.repeat(2400);
+
+      await injectPromptText(body);
+
+      expect(pastes.length).toBeGreaterThan(1);
+      for (const piece of pastes) expect(piece.length).toBeLessThanOrEqual(800);
+      expect(pastes.join('')).toBe(body);
+    });
+
+    it('reassembles to exactly the original text in the composer', async () => {
+      const input = makeInput();
+      capturePastes(input);
+      const body = 'z'.repeat(2123);   // the tester's real body size
+
+      await injectPromptText(body);
+
+      expect(input.textContent).toBe(body);
+    });
+
+    it('sends a small body as ONE paste — no needless splitting', async () => {
+      const input = makeInput();
+      const pastes = capturePastes(input);
+
+      await injectPromptText('deploy it now');
+
+      expect(pastes).toEqual(['deploy it now']);
+    });
+  });
 });

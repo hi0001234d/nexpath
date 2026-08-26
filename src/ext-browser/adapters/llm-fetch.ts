@@ -33,6 +33,17 @@ export class FetchLLMAdapter implements LLMPort {
         body: JSON.stringify(body),
         signal,
       });
+    } catch (error) {
+      // The engine classifies composer failures by the error's wording
+      // (`llm-composer.ts:116-120`: name or message matching timeout/timed out
+      // → 'timeout', anything else → 'provider_error'). An aborted fetch
+      // throws AbortError/"The operation was aborted", which matches NEITHER —
+      // so a browser-side timeout would masquerade as a provider outage. The
+      // real OpenAI SDK throws "Request timed out"; present the same.
+      if (signal?.aborted) {
+        throw new Error(`OpenAI fetch timed out after ${params.timeoutMs}ms`);
+      }
+      throw error;
     } finally {
       if (timer !== undefined) clearTimeout(timer);
     }

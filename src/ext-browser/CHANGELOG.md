@@ -3,6 +3,32 @@
 All notable changes to the browser extension. Versions track the `version` field in
 `manifest.chrome.json` / `manifest.firefox.json`.
 
+## 0.1.51
+
+The suggestion now arrives **before** the prompt is sent, not after the agent replies.
+
+### Changed
+- **Submit‑time popup.** Submitting a prompt on a supported site holds it while Nexpath prepares a
+  suggestion, and the popup offers an improved version of that prompt alongside the original. In
+  0.1.5 the popup appeared only after the agent had finished responding, by which point the prompt
+  had already been sent.
+- **The chosen prompt is delivered per site.** Lovable rewrites the request already in flight, so
+  nothing is re‑typed. Bolt and Replit cancel the submission and re‑issue it through the composer,
+  which is briefly visible.
+- **Choosing "Use original prompt" sends it immediately.** The short feedback question that follows
+  no longer holds the prompt back while it is answered.
+- **No time limit on the popup.** It waits for the user, matching the CLI. A heartbeat keeps the
+  session alive, and the original prompt is sent unchanged if anything fails.
+
+### Added
+- **Prompt‑enhancement engine in the extension**, with the CLI's own popup surfaces rendered as a
+  right‑docked panel: the enhanced body, additional details, directional refinements, the
+  multi‑prompt sequence offer, and the post‑decision feedback step.
+
+### Notes
+- Permissions are unchanged from 0.1.5 (`storage`, `tabs`, and the same four supported sites).
+- An OpenAI API key is required for the popup to appear; without one the extension stays idle.
+
 ## 0.1.5
 
 First release candidate — CLI‑parity classifier and popup.

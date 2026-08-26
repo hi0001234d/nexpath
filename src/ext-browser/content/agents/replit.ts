@@ -1,4 +1,6 @@
 import { createCaptureKit } from './capture-kit.js';
+import { installSubmitGate } from './install-submit-gate.js';
+import { injectPromptText } from './replit-inject.js';
 
 /**
  * Replit capture — B3. Thin agent config over the shared capture kit.
@@ -84,6 +86,17 @@ const kit = createCaptureKit({
     maxTextLength: 60,
     log: '[nexpath] response-stop detected ("Worked for" label appeared)',
   },
+});
+
+// ── Submit-time gate installation ────────────────────────────────────────────
+//
+// Cancels the composer submit, holds, and then sends exactly one prompt: the
+// modified one if the user accepted it, otherwise the original. Inert unless the
+// switch is armed. See content/composer-submit-gate.ts for the mechanism.
+installSubmitGate({
+  agent: 'replit',
+  submitButtonSelector: SUBMIT_BUTTON_SELECTOR,
+  injectPromptText,
 });
 
 // Re-exported under the original names so tests (and any future callers) keep a

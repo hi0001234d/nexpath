@@ -26,6 +26,9 @@ const INPUT_SELECTORS = [
   '.tiptap.ProseMirror',                            // structural fallback (label-independent)
 ];
 
+// Lovable's real send control — the Enter-didn't-submit fallback clicks it.
+const SUBMIT_BUTTON_SELECTOR = 'button[aria-label="Send message"]';
+
 export async function injectPromptText(text: string): Promise<void> {
-  await injectViaSimulatedPaste(INPUT_SELECTORS, text);
+  await injectViaSimulatedPaste(INPUT_SELECTORS, text, SUBMIT_BUTTON_SELECTOR);
 }
