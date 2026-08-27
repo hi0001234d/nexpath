@@ -70,6 +70,16 @@ describe('ext-browser manifests — permission surface', () => {
     expect(firstHeading?.[1]).toBe(version);
   });
 
+  // A version number written into shipped markup goes stale the moment the manifest
+  // moves on. It did: the options footer read "nexpath v0.1.5" while the manifests had
+  // already advanced, so the settings page told users the wrong version and the store
+  // screenshot of that page showed it. The footer now reads the manifest at runtime.
+  it('no shipped page hard-codes a version number', () => {
+    const html = readFileSync(new URL('./options/options.html', import.meta.url), 'utf8');
+    expect(html).not.toMatch(/v\d+\.\d+\.\d+/);
+    expect(html).toContain('id="ext-version"');
+  });
+
   // Store version ordering is per-component NUMERIC, not decimal: 0.1.51 is [0,1,51], which
   // outranks [0,1,6]. Whatever ordering the team picks, a released version can never be
   // re-used or gone backwards from — so the released set is pinned here and a bump must be

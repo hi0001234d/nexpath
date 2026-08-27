@@ -130,6 +130,13 @@ jobs:
         with:
           platforms: arm64
 
+      # Tests run SERIALLY here (--no-file-parallelism) — under QEMU everything
+      # is 10-20x slower and vitest's worker<->main RPC has a fixed 60s timeout:
+      # Run #9 failed with "[vitest-worker]: Timeout calling snapshotSaved"
+      # while ALL 1175 tests PASSED (the starved main thread just missed the
+      # RPC window, and vitest exits 1 on that "unhandled error"). One worker
+      # means no cross-worker starvation, so the class cannot fire. Native
+      # jobs keep the parallel default.
       - name: Build + package inside arm64 container
         run: |
           docker run --rm --platform linux/arm64 \
@@ -137,7 +144,7 @@ jobs:
             node:20-bullseye bash -lc "
               npm ci &&
               npx tsc --noEmit &&
-              npm test &&
+              npm test -- --no-file-parallelism &&
               npm run build &&
               mkdir -p dist-vsix &&
               node scripts/package-with-electron-abi.mjs --target linux-arm64 --out dist-vsix/

@@ -10,6 +10,20 @@ const testBtn  = document.getElementById('test-key')     as HTMLButtonElement;
 const keyStatus = document.getElementById('key-status')  as HTMLParagraphElement;
 const checkEl  = document.getElementById('self-check')   as HTMLDivElement;
 const roleGroup = document.getElementById('role-group')      as HTMLDivElement;
+const versionEl = document.getElementById('ext-version')     as HTMLSpanElement | null;
+
+// The footer version is read from the manifest, never written into the markup.
+// It was hard-coded once ("nexpath v0.1.5") and silently went stale the moment the
+// manifest moved on — the settings page then tells every user the wrong version, and
+// it shows up in the store screenshots too. Reading it here means it can only ever
+// be the version that actually shipped.
+if (versionEl) {
+  try {
+    versionEl.textContent = `v${browser.runtime.getManifest().version}`;
+  } catch {
+    versionEl.textContent = '';   // manifest unavailable — say nothing rather than lie
+  }
+}
 
 // ── Project role — same value set, labels and default as the CLI installer
 // (src/cli/commands/install.ts's ROLE_OPTIONS).

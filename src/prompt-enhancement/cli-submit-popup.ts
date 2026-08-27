@@ -1177,7 +1177,10 @@ export function reducePromptEnhancementCliFeedbackV1(
 /** Render the feedback popup: three radio rows, the Other editable field, and the footer. */
 export function renderPromptEnhancementCliFeedbackFrameV1(
   state: PromptEnhancementCliFeedbackStateV1,
-  options: { colorize?: boolean } = {},
+  // caretOut: when the editable "Other" row is focused, the renderer records the caret's 1-based SCREEN
+  // row/column here (same contract as the main popup frame's caretOut) so the raw-TTY shell can place
+  // the hardware cursor. Left at its incoming value when the field is unfocused/empty/off-window.
+  options: { colorize?: boolean; caretOut?: { row: number; col: number } } = {},
 ): string {
   const c = options.colorize ? PROMPT_ENHANCEMENT_CLI_SGR_V1 : null;
   // Branded header identical to the PE popup (owner request): "◆ NEXPATH CLI ·
@@ -1198,8 +1201,30 @@ export function renderPromptEnhancementCliFeedbackFrameV1(
       lines.push(`  ${focused ? '●' : '○'} ${label}`);
     }
     if (index === 2) {
-      const text = state.editor.buffers.additional_details.text;
-      const shown = text ? publicText(text) : '(type your feedback)';
+      // Wrap + window the Other field exactly like the main popup's body/details field, so a long comment
+      // scrolls in place and the caret maps 1:1 to a rendered row (the caretOut recording below relies on
+      // the display being the SAME windowed text the caret position is measured against).
+      const otherRows = Math.min(Math.max(1, state.editor.viewportRows), 5);
+      const rawBuffer = state.editor.buffers.additional_details;
+      const buffer = focused
+        ? promptEnhancementKeepFieldCursorVisibleV1(rawBuffer, state.editor.fieldWidth, otherRows)
+        : rawBuffer;
+      const window = buffer.text
+        ? windowPromptEnhancementFieldForDisplayWithStartV1(buffer, state.editor.fieldWidth, otherRows)
+        : { text: '', start: 0 };
+      const shown = buffer.text ? publicText(window.text) : '(type your feedback)';
+      // Record the caret's real screen position (window-relative), mirroring the main popup's recordCaret:
+      // the field's first content line is the NEXT line pushed; the 6-space indent puts column 0 at col 7.
+      // Not guarded on non-empty text: like the main popup, a freshly-focused EMPTY Other field shows the
+      // caret at the start (over the '(type your feedback)' placeholder) so the user sees they can type.
+      if (focused && options.caretOut) {
+        const pos = promptEnhancementCursorVisualPositionV1(buffer, state.editor.fieldWidth);
+        const visualRow = pos.row - window.start;
+        if (visualRow >= 0 && visualRow < shown.split('\n').length) {
+          options.caretOut.row = lines.length + 1 + visualRow;
+          options.caretOut.col = 7 + pos.column;
+        }
+      }
       for (const line of shown.split('\n')) lines.push(`      ${line}`);
       // Editing keys under the editable Other field — light yellow, same shortcut tier as PE/MPS.
       if (focused) lines.push(c ? `      ${c.lightYellow}${PROMPT_ENHANCEMENT_CLI_EDIT_KEYS_HINT_V1}${c.reset}` : `      ${PROMPT_ENHANCEMENT_CLI_EDIT_KEYS_HINT_V1}`);
@@ -1409,11 +1434,19 @@ function createPromptEnhancementCliPopupInteractionV1(onFirstRender?: () => void
     let fb = buildPromptEnhancementCliFeedbackStateV1({ fieldWidth: fieldWidth(), viewportRows: viewportRows() });
     const paintFeedback = (): void => {
       fb = { ...fb, editor: resizePromptEnhancementMultilineEditorV1(fb.editor, fieldWidth(), viewportRows()) };
-      paint(renderPromptEnhancementCliFeedbackFrameV1(fb, { colorize: true }));
+      const caretOut = { row: -1, col: -1 };
+      paint(renderPromptEnhancementCliFeedbackFrameV1(fb, { colorize: true, caretOut }));
+      // Place + show the hardware cursor only when the editable Other row (index 2) is focused and the
+      // caret landed on-screen — mirrors the main render's placement (never clamp to the screen bottom).
+      if (fb.focusIndex === 2 && caretOut.row > 0 && caretOut.row <= Math.max(1, (output.rows ?? 24) - 1)) {
+        output.write(`${ESC}[${caretOut.row};${caretOut.col}H${SHOW_CURSOR}`);
+      } else {
+        output.write(HIDE_CURSOR);
+      }
     };
     repaint = paintFeedback;
     try {
-      paint(renderPromptEnhancementCliFeedbackFrameV1(fb, { colorize: true }));
+      paintFeedback();
       for (;;) {
         const raw = await readKey();
         if (raw === CTRL_C) return [];
@@ -1429,7 +1462,7 @@ function createPromptEnhancementCliPopupInteractionV1(onFirstRender?: () => void
           // sends it and finishes the cancel directly.
           return [command];
         }
-        paint(renderPromptEnhancementCliFeedbackFrameV1(fb, { colorize: true }));
+        paintFeedback();
       }
     } finally {
       repaint = paintMain;

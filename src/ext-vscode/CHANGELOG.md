@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.35 — 2026-08-26
+
+- Listing: the demo video is now linked at the top, next to what NexPath supports.
+
+## 0.1.34 — 2026-08-25
+
+- Popup selections now deliver within seconds in every case on Windows — a rare condition
+  could previously delay the injected prompt by ~30 seconds.
+- Windows Devin: one popup and one strengthened prompt per submission on builds that run
+  both hook registrations — previously a submission could produce two.
+- Windows: the first popup of a session injects and submits without the one-time
+  half-minute warm-up delay.
+- Windows: setup now completes cleanly for user accounts whose name contains a space
+  (previously looped "dependencies incomplete" despite a healthy install).
+- Refreshed the marketplace screenshot to show the submit-time flow.
+
 ## 0.1.33 — 2026-08-24
 
 - **Prompt-submit guidance**: all popups now fire at the moment you submit a prompt on

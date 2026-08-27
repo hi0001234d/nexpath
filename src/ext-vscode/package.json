@@ -2,7 +2,7 @@
   "name": "nexpath-vscode",
   "displayName": "Nexpath",
   "description": "Strengthen your prompts and catch skipped checks before shipping. NexPath holds your prompt at submit, offers a sharper version with your intent preserved, and sends the one you choose — on Cursor and Windsurf (Devin).",
-  "version": "0.1.33",
+  "version": "0.1.35",
   "publisher": "nexpath",
   "license": "Apache-2.0",
   "private": true,

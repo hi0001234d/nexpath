@@ -7,6 +7,8 @@ engineering layer for AI-powered development: it catches your prompt **at the mo
 submit it**, offers a sharper version with your intent preserved, and sends the version
 you choose — keeping your AI coding workflow disciplined without breaking flow.
 
+**Demo:** [Prompt Enhancement in action, on YouTube](https://youtu.be/pNejtPA5DPU)
+
 **Built for:** Cursor · Windsurf (Devin) — fully supported & end-to-end tested.
 
 ![NexPath prompt enhancement](https://raw.githubusercontent.com/hi0001234d/nexpath/main/src/ext-vscode/media/nexpath-demo.png)
@@ -85,8 +87,6 @@ Not a new tool to learn. A workflow step to adopt.
 - ✓ **No subscriptions** — bring your own API key
 
 **Result:** AI agents generate better code. Reviews go faster. Fewer production bugs.
-
-### Demo: [Prompt Enhancement in action, on YouTube](https://youtu.be/pNejtPA5DPU)
 
 ---
 

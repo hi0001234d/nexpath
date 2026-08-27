@@ -180,7 +180,7 @@ Use `nexpath config show-key-source` to confirm which layer is currently active.
 
 ## Contributing
 
-Contribution guide coming once the initial implementation is stable.
+[Contribution guide](CONTRIBUTING.md)
 
 ---
 
