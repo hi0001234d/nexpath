@@ -180,6 +180,55 @@ describe('installSubmitGate — exactly one gate may own a site', () => {
     expect(marks[0]!.text).toBe('the improved prompt');
   });
 
+  /**
+   * An inject that degraded to the clipboard KNOWS it did. This used to report
+   * success regardless, so the gate then spent its whole send-verification
+   * window hunting the composer for text it had already been told was never put
+   * there — seconds of waiting for an answer available immediately.
+   */
+  describe('the delivery outcome the injector reports', () => {
+    /** Every submit-flow event the gate emitted through the worker channel. */
+    const emitted = (): string[] => mockSendMessage.mock.calls
+      .map((c) => c[0] as { type?: string; event?: string })
+      .filter((m) => m.type === 'nexpath:submit-flow-event')
+      .map((m) => m.event ?? '');
+
+    /** A composer whose text the test controls, so a send can be observed. */
+    function controllableComposer(initial: string) {
+      let text = initial;
+      return {
+        composer: { readComposerText: () => text },
+        set: (t: string) => { text = t; },
+      };
+    }
+
+    it('⭐ FALSE is taken at its word — failed immediately, without a verification window', async () => {
+      const { composer } = controllableComposer('ship this to production now');
+      // Degraded to the clipboard: the replacement was never put in the composer.
+      const injectPromptText = vi.fn().mockResolvedValue(false);
+      installSubmitGate({ agent: 'bolt', submitButtonSelector: '#send', injectPromptText });
+      await settle();
+      mockSendMessage.mockResolvedValue({ decision: { kind: 'block', replacement: 'the improved prompt' } });
+
+      lastInterceptor()(makeEvent(), 'ship this to production now', INPUT, composer);
+      await vi.waitFor(() => expect(emitted()).toContain('submit_hold_substitution_failed'));
+      expect(emitted()).not.toContain('submit_replacement_sent');
+    });
+
+    it('reporting NOTHING is read as success — an injector that says nothing keeps today\'s behaviour', async () => {
+      const { composer, set } = controllableComposer('ship this to production now');
+      // Delivered and sent, and says nothing about it — the shipped shape.
+      const injectPromptText = vi.fn(async () => { set(''); });
+      installSubmitGate({ agent: 'bolt', submitButtonSelector: '#send', injectPromptText });
+      await settle();
+      mockSendMessage.mockResolvedValue({ decision: { kind: 'block', replacement: 'the improved prompt' } });
+
+      lastInterceptor()(makeEvent(), 'ship this to production now', INPUT, composer);
+      await vi.waitFor(() => expect(emitted()).toContain('submit_replacement_sent'));
+      expect(emitted()).not.toContain('submit_hold_substitution_failed');
+    });
+  });
+
   describe('re-issuing the original (live: "Use original" left the prompt stuck)', () => {
     function composerWith(text: string): HTMLElement {
       const el = document.createElement('div');

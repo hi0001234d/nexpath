@@ -81,23 +81,30 @@ describe('ext-browser manifests — permission surface', () => {
   });
 
   // Store version ordering is per-component NUMERIC, not decimal: 0.1.51 is [0,1,51], which
-  // outranks [0,1,6]. Whatever ordering the team picks, a released version can never be
-  // re-used or gone backwards from — so the released set is pinned here and a bump must be
-  // strictly ahead of every one of them.
-  it('ships a version strictly ahead of everything already submitted to a store', () => {
-    const RELEASED = ['0.1.5'];
+  // outranks [0,1,6]. Shipping 0.1.51 therefore made 0.1.6 through 0.1.50 permanently
+  // unreleasable — they would be downgrades, which both stores reject forever.
+  //
+  // What this guards is going BACKWARDS, which is irreversible. It deliberately allows the
+  // manifest to EQUAL the latest released version: that is the resting state between releases,
+  // and a test that runs continuously cannot tell "resting" from "about to re-upload". A genuine
+  // same-version re-upload is caught by the store at submit time, immediately and harmlessly.
+  it('never ships a version below one already submitted to a store', () => {
+    // Append at release time. A version that shipped can never be re-used or gone below,
+    // so this list only grows.
+    const RELEASED = ['0.1.5', '0.1.51'];
     const parse = (v: string) => v.split('.').map(Number);
-    const isAhead = (a: number[], b: number[]) => {
+    const isBelow = (a: number[], b: number[]) => {
       for (let i = 0; i < Math.max(a.length, b.length); i++) {
         const x = a[i] ?? 0, y = b[i] ?? 0;
-        if (x !== y) return x > y;
+        if (x !== y) return x < y;
       }
-      return false;   // equal is NOT ahead — both stores refuse a re-upload
+      return false;   // equal is not below
     };
     const current = parse(load('chrome').version as string);
     for (const released of RELEASED) {
-      expect(isAhead(current, parse(released)),
-        `manifest version must be strictly ahead of the released ${released}`).toBe(true);
+      expect(isBelow(current, parse(released)),
+        `manifest version is BELOW the released ${released} — both stores reject downgrades permanently`,
+      ).toBe(false);
     }
   });
 });

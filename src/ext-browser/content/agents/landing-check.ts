@@ -30,6 +30,45 @@ export function normalizeForLanding(value: string): string {
 }
 
 /**
+ * Read a composer's text the way a landing check has to see it.
+ *
+ * ── WHY `innerText` AND NOT `textContent` ────────────────────────────────────
+ * Every composer this kit targets renders a multi-line prompt as separate BLOCK
+ * elements — one `<p>` per line on TipTap/ProseMirror (Bolt, Lovable), one
+ * `.cm-line` per line on CodeMirror 6 (Replit). `textContent` concatenates those
+ * blocks with NO separator at all, while the text being looked for has its
+ * newlines normalised to spaces. The two can never match:
+ *
+ *   inserted     "Scope:\n- Export one invoice"
+ *   textContent  "Scope:- Export one invoice"     ← nothing between the blocks
+ *   needle       "Scope: - Export one invoice"    ← the newline became a space
+ *
+ * Measured live on Bolt's real composer (2026-08-27) at 300 / 2,500 / 8,000 /
+ * 20,000 and 50,000 characters: `textContent` failed at EVERY size while the
+ * text sat perfectly in the composer, and `innerText` matched at every size.
+ * This is NOT a timing problem, and no landing budget can make it pass — which
+ * is what the budget being raised from 900 ms to 6 s was trying to fix.
+ *
+ * The capture half of this codebase already knew: `readComposerText` in bolt.ts,
+ * lovable.ts and replit.ts joins `<p>` / `.cm-line` with '\n' and says exactly
+ * this in its comment ("textContent alone would drop the line breaks of a
+ * multi-line prompt"). The inject half never got the same treatment.
+ *
+ * ── WHY THE FALLBACK ─────────────────────────────────────────────────────────
+ * `innerText` is layout-dependent: it is '' for an element that is not rendered.
+ * Falling back to `textContent` keeps a hidden-composer read honest instead of
+ * reporting an empty box — and it is also what keeps this working under jsdom,
+ * which does not implement `innerText` at all.
+ */
+export function readLandingText(element: {
+  innerText?: string;
+  textContent?: string | null;
+}): string {
+  const rendered = typeof element.innerText === 'string' ? element.innerText : '';
+  return rendered.trim().length > 0 ? rendered : (element.textContent ?? '');
+}
+
+/**
  * True only when `text` is non-blank AND the whole of it (whitespace-normalised)
  * is present in `container`. A blank `text` is never "landed" — refusing it here
  * is what stops an empty injection from reaching the auto-submit.

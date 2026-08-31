@@ -42,8 +42,14 @@ export interface InstallSubmitGateOptions {
   agent: string;
   /** The site's real send control, clicked to submit what is in the composer. */
   submitButtonSelector: string;
-  /** The agent's own inject-and-send helper (simulated paste + submit). */
-  injectPromptText: (text: string) => Promise<void>;
+  /**
+   * The agent's own inject-and-send helper (simulated paste + submit).
+   *
+   * Returns FALSE when it could not deliver and degraded to the clipboard.
+   * `void` is accepted, and read as success, so an agent that does not report an
+   * outcome behaves exactly as it always has — see `deliverReplacement`.
+   */
+  injectPromptText: (text: string) => Promise<boolean | void>;
 }
 
 export function installSubmitGate(opts: InstallSubmitGateOptions): void {
@@ -180,8 +186,14 @@ export function installSubmitGate(opts: InstallSubmitGateOptions): void {
         // response-stop inject path uses; the worker's cross-page dedup
         // collapses the echo.
         sendToSw({ type: 'nexpath:prompt-injected', projectRoot: projectRootOf(), text });
-        await opts.injectPromptText(text);
-        return true;
+        // An inject that degraded to the clipboard KNOWS it did. This used to
+        // return true regardless, so the gate then spent its whole
+        // send-verification window hunting the composer for text it had already
+        // been told was never put there — eight seconds of waiting for an answer
+        // that was available immediately. Only an explicit `false` is treated as
+        // failure, so an injector that reports nothing is read as success and
+        // keeps today's behaviour exactly.
+        return await opts.injectPromptText(text) !== false;
       },
       // The original is still sitting in the composer — we cancelled the user's
       // own submit, so re-issuing means pressing the site's send control. The

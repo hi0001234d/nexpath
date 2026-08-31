@@ -137,7 +137,12 @@ describe('configRotateApiKeyAction', () => {
 // ── configShowKeySourceAction ────────────────────────────────────────────────
 
 describe('configShowKeySourceAction', () => {
-  it.each(['env', 'dotenv', 'keychain', 'file', 'none'] as const)(
+  // 'nexpath_token' added when the client seam extended KeySource — this
+  // function only ever prints whatever getKeySource() returns (that is the
+  // whole reason no edit to this file's production code was needed for it),
+  // so the parametrised list is what proves show-key-source actually reports
+  // the new mode, not merely that the type-check compiles.
+  it.each(['env', 'dotenv', 'keychain', 'file', 'nexpath_token', 'none'] as const)(
     'prints the source returned by getKeySource: %s',
     async (source) => {
       vi.mocked(resolver.getKeySource).mockResolvedValueOnce(source);

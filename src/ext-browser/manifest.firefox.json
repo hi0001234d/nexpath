@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Nexpath",
-  "version": "0.1.51",
+  "version": "0.1.52",
   "description": "AI coding assistant for Replit, Lovable, and Bolt — reviews your prompt before you send it.",
   "permissions": [
     "storage",

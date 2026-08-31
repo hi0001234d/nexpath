@@ -3,6 +3,31 @@
 All notable changes to the browser extension. Versions track the `version` field in
 `manifest.chrome.json` / `manifest.firefox.json`.
 
+## 0.1.52
+
+Faster delivery, and no clipboard permission prompt on Chrome.
+
+### Changed
+- **The suggestion arrives sooner.** The check that confirms your prompt was sent now samples
+  densely for the first second instead of waiting out a fixed interval, so a send that worked is
+  recognised almost immediately. The overall time limit is unchanged.
+- **Chrome no longer asks to see your clipboard.** Delivery on Bolt now uses a direct text
+  insertion rather than a synthetic paste event. The paste event was what made the site reach for
+  the clipboard, which is what raised the browser's permission bubble.
+- **Replit delivery goes through the editor itself.** The improved prompt is applied as a single
+  editor transaction, so it no longer has to be split into pieces to fit a paste size limit, and
+  arrives in one step regardless of length. The previous method remains as a fallback.
+
+### Fixed
+- A prompt could be sent twice when a site cleared its composer in the last moment of the settle
+  window.
+- A multi-line prompt could be reported as "not delivered" when it had in fact arrived, because the
+  check read the composer's raw text rather than what it actually renders.
+
+### Notes
+- Permissions, supported sites and privacy behaviour are unchanged from 0.1.51.
+- An OpenAI API key is still required.
+
 ## 0.1.51
 
 The suggestion now arrives **before** the prompt is sent, not after the agent replies.

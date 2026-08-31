@@ -12,7 +12,14 @@ import { injectPromptText as injectPromptTextLovable } from './agents/lovable-in
 import { clipboardFallback } from './agents/inject-kit.js';
 import { resolveAgentFromHostname } from './agents/agent-hosts.js';
 
-const INJECTORS: Record<string, (text: string) => Promise<void>> = {
+/**
+ * `Promise<unknown>` because the injectors no longer agree on a return type, and
+ * deliberately so: the two whose delivery outcome is consumed at the submit gate
+ * report it, and the one that is not on that path was left exactly as it was.
+ * Nothing on THIS path reads the value — both callers below fire and forget — so
+ * the loosest type that accepts every injector is the honest one here.
+ */
+const INJECTORS: Record<string, (text: string) => Promise<unknown>> = {
   replit: injectPromptTextReplit,
   bolt: injectPromptTextBolt,
   lovable: injectPromptTextLovable,
@@ -20,7 +27,7 @@ const INJECTORS: Record<string, (text: string) => Promise<void>> = {
 
 /** Inject `text` via the current host's agent injector; unknown hosts degrade
  * to the clipboard fallback rather than silently doing nothing. */
-export function injectPromptText(text: string): Promise<void> {
+export function injectPromptText(text: string): Promise<unknown> {
   const injector = INJECTORS[resolveAgentFromHostname(window.location.hostname)];
   return injector ? injector(text) : clipboardFallback(text);
 }

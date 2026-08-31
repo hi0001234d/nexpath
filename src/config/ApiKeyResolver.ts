@@ -3,13 +3,19 @@ import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { config as loadDotenv } from 'dotenv';
 import { getPassword, setPassword, deletePassword } from 'cross-keychain';
+import { readNexpathToken, resolveApiBaseUrl } from './NexpathTokenStore.js';
 
 export const KEYCHAIN_SERVICE = 'nexpath';
 export const KEYCHAIN_ACCOUNT = 'openai_api_key';
 export const FALLBACK_PATH    = join(homedir(), '.nexpath', 'config.json');
 export const API_KEY_REGEX    = /^sk-[A-Za-z0-9_-]{20,}$/;
 
-export type KeySource = 'env' | 'dotenv' | 'keychain' | 'file' | 'none';
+// The fifth and last resolution layer. `nexpath_token` means Mode B — no
+// OpenAI key anywhere, a Nexpath token stored instead. This is the single
+// place both env vars get set, so nothing that calls `resolveOpenAIKey` or
+// `getKeySource` — the only two entry points that reach an LLM call — needs
+// to change.
+export type KeySource = 'env' | 'dotenv' | 'keychain' | 'file' | 'nexpath_token' | 'none';
 
 export interface ResolveOptions {
   fallbackPath?: string;
@@ -43,6 +49,26 @@ export async function resolveOpenAIKey(projectRoot: string, opts: ResolveOptions
     return fileKey;
   }
 
+  // The fifth and last layer: only reached when none of the 4 above found an
+  // OpenAI key. The own-key-always-wins guarantee is structural here, not a
+  // separate check — every earlier layer already returned before this runs.
+  // No key + a stored token means the token takes over instead.
+  // ⚠️ fallbackPath must be forwarded — without it this silently reads the
+  // real home-directory file regardless of what the caller passed in, which
+  // would only ever surface as a bug in an isolated test or a custom-path
+  // caller, never in ordinary use where the two defaults happen to coincide.
+  const token = await readNexpathToken({ fallbackPath });
+  if (token) {
+    process.env.OPENAI_API_KEY = token;
+    // Never clobber a base URL the user configured themselves — e.g. pointed
+    // at their own proxy for testing. This only sets it when it is genuinely
+    // unset.
+    if (!process.env.OPENAI_BASE_URL) {
+      process.env.OPENAI_BASE_URL = resolveApiBaseUrl();
+    }
+    return token;
+  }
+
   return null;
 }
 
@@ -53,6 +79,7 @@ export async function getKeySource(projectRoot: string, opts: ResolveOptions = {
   if (tryProjectDotenv(projectRoot))       return 'dotenv';
   if (await tryKeychain())                 return 'keychain';
   if (await tryFallbackFile(fallbackPath)) return 'file';
+  if (await readNexpathToken({ fallbackPath })) return 'nexpath_token';
   return 'none';
 }
 

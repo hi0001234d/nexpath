@@ -104,6 +104,22 @@ export interface ComposerSubmitGate {
  */
 const SEND_VERIFY_TIMEOUT_MS = 8_000;
 const SEND_VERIFY_POLL_MS = 150;
+/**
+ * A tighter cadence for the FIRST second, then the steady one above.
+ *
+ * A send that works clears the composer within a few frames, so the answer is
+ * almost always available long before the first 150 ms tick — and this check
+ * sits directly in front of the user, between their click and the prompt
+ * appearing in the chat. The wide cadence exists for the tail (a site slow to
+ * reconcile), which is exactly where it still applies.
+ *
+ * Ceilings are untouched: same total wall clock, same poll-count bound, same
+ * verdict. Only the moment a SUCCESS becomes observable moves earlier — and a
+ * denser early sample also makes `sawIt` below more likely to catch the text
+ * before it leaves, which is what stops a real send being reported unverified.
+ */
+const SEND_VERIFY_FAST_POLL_MS = 50;
+const SEND_VERIFY_FAST_WINDOW_MS = 1_000;
 
 function submitIdFor(prompt: string): string {
   let h = 5381;
@@ -142,7 +158,14 @@ export function createComposerSubmitGate(deps: ComposerSubmitGateDeps): Composer
     const needle = normalize(text);
     const timeoutMs = deps.verify?.timeoutMs ?? SEND_VERIFY_TIMEOUT_MS;
     const pollMs = deps.verify?.pollMs ?? SEND_VERIFY_POLL_MS;
-    const maxPolls = Math.ceil(timeoutMs / pollMs);
+    // Never SLOWER than a caller explicitly asked for: an injected `pollMs` below
+    // the fast cadence wins, so a test that pins a cadence keeps exactly it.
+    const fastPollMs = Math.min(SEND_VERIFY_FAST_POLL_MS, pollMs);
+    const fastPolls = Math.ceil(Math.min(timeoutMs, SEND_VERIFY_FAST_WINDOW_MS) / fastPollMs);
+    const slowPolls = Math.ceil(Math.max(0, timeoutMs - SEND_VERIFY_FAST_WINDOW_MS) / pollMs);
+    // Both bounds preserved: the same clock ceiling, and still bounded by a poll
+    // COUNT so a stopped clock cannot turn this into an unbounded wait.
+    const maxPolls = fastPolls + slowPolls;
     // `sawIt` is what stops "the text is not there" from meaning "it was sent".
     // If the paste never landed, the text was NEVER in the box, and reporting
     // that as delivered would silently drop the user's turn.
@@ -154,7 +177,7 @@ export function createComposerSubmitGate(deps: ComposerSubmitGateDeps): Composer
       if (norm.length === 0) return true;                  // box cleared ⇒ sent
       if (needle.length > 0 && norm.includes(needle)) sawIt = true;
       else if (sawIt) return true;                          // was there, now gone
-      if (i < maxPolls) await new Promise((r) => setTimeout(r, pollMs));
+      if (i < maxPolls) await new Promise((r) => setTimeout(r, i < fastPolls ? fastPollMs : pollMs));
     }
     return false;
   };

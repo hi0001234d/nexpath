@@ -9,6 +9,10 @@ import {
   configShowKeySourceAction,
   configRemoveApiKeyAction,
 } from './commands/config.js';
+import {
+  configSetTokenAction,
+  configRemoveTokenAction,
+} from './commands/token.js';
 import { runMigrations } from '../store/schema.js';
 import { logAction } from './commands/log.js';
 import { storeDeleteAction, storeEnableAction, storeDisableAction, storePruneAction } from './commands/store.js';
@@ -190,6 +194,20 @@ export function createProgram(): Command {
     .description('Remove the stored OpenAI API key from both the keychain and the fallback file')
     .action(async () => {
       await configRemoveApiKeyAction();
+    });
+
+  configCmd
+    .command('set-token')
+    .description('Prompt for a Nexpath token and store it securely (keychain → fallback file)')
+    .action(async () => {
+      await configSetTokenAction();
+    });
+
+  configCmd
+    .command('remove-token')
+    .description('Remove the stored Nexpath token from both the keychain and the fallback file')
+    .action(async () => {
+      await configRemoveTokenAction();
     });
 
   // ── Content-template authoring command ─────────────────────────────────────────
