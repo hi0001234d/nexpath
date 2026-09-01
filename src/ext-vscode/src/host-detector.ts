@@ -115,7 +115,7 @@ export function workspaceStorageDir(inputs: HostStorageInputs = {}): string | nu
 /**
  * Windsurf's legacy Codeium Cascade chat-data directory: `~/.codeium/windsurf`.
  *
- * Per dev plan §2.3 acceptance #2, the watcher monitors BOTH `state.vscdb`
+ * Per the dev plan's acceptance criteria, the watcher monitors BOTH `state.vscdb`
  * (under `workspaceStorageDir`) AND this directory for Windsurf. The
  * directory holds per-session JSON files; the watcher dispatches it as a
  * `windsurf-dir` `WatchTarget`.

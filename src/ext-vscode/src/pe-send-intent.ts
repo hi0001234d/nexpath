@@ -1,5 +1,5 @@
 /**
- * PE send-intent gating (P7, VED-PE-7).
+ * PE send-intent gating (P7, PEH-7).
  *
  * Gates delivery on the 4 rejection reasons this phase's own acceptance
  * criteria name — `current_body_not_sendable`, `current_body_not_editable`,

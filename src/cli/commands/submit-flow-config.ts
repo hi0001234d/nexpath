@@ -9,11 +9,11 @@
  *
  * ── WHY A FLAG FILE, NOT THE nexpath CONFIG TABLE ────────────────────────────
  * The natural home would be `nexpath config`, but that table is dumped by
- * `nexpath status` (`status.ts`, Ashish-owned) and read/written by
- * `nexpath config get/set` (`config.ts` / `src/store/**`, Bhavnesh-owned,
- * FROZEN per dev plan §1.3). Hiding a key there would require editing files we
- * do not own. A dedicated JSON flag in `~/.nexpath/` is read/written ONLY by
- * Vedansi files, so it is invisible to `status`/`config` BY CONSTRUCTION — no
+ * `nexpath status` (`status.ts`, another member's module) and read/written by
+ * `nexpath config get/set` (`config.ts` / `src/store/**`, the store owner's
+ * module, FROZEN as consume-only). Hiding a key there would require editing
+ * files we do not own. A dedicated JSON flag in `~/.nexpath/` is read/written
+ * ONLY by this track's files, so it is invisible to `status`/`config` BY CONSTRUCTION — no
  * other member's code touched, and the team-lead "invisible to end users"
  * intent is honoured while giving the owner the config control they asked for.
  *

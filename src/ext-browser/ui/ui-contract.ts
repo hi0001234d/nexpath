@@ -1,4 +1,4 @@
-// Frozen contract — copied verbatim from docs/dev/v0.1.5-ui-developer-brief.md §5.
+// Frozen contract — copied verbatim from the v0.1.5 UI developer brief.
 // Do not edit without a major-version bump or explicit sign-off from both the
 // engine team and the UI developer. Deliberately has zero imports (see §9 of the
 // brief) so it can be dropped standalone into the UI developer's own build.

@@ -20,8 +20,8 @@
  * PRIVACY. `replacementText` is the only free text here and it is the text the
  * user themselves chose to send. The original prompt is deliberately NOT carried:
  * nothing downstream needs it, and keeping it would put a second copy of the
- * user's prompt on disk for no benefit — exactly the class of leak
- * `BUG-VEDANSI-AR9-G1` was raised for. `decisionId` is an opaque correlator and
+ * user's prompt on disk for no benefit — exactly the raw-prompt-on-disk leak
+ * class a tracked bug was raised for. `decisionId` is an opaque correlator and
  * must never be rendered.
  */
 
@@ -131,7 +131,7 @@ export function buildSubmitDecisionRecordV1(input: {
 /**
  * Redacted description for logs. **Never** includes `replacementText` — that is
  * the user's prompt content and must not reach a log, diagnostic, or telemetry
- * sink (`BUG-VEDANSI-AR9-G1`). Length only, so a delivery can still be correlated.
+ * sink (the raw-prompt-log leak class). Length only, so a delivery can still be correlated.
  */
 export function describeSubmitDecisionSafely(r: SubmitDecisionRecordV1): {
   decisionId: string; host: string; createdAt: number; replacementLength: number;

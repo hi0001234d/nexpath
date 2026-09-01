@@ -231,7 +231,7 @@ describe('spawnStop', () => {
     ).rejects.toBeInstanceOf(NexpathMalformedPayloadError);
   });
 
-  // BUG-VEDANSI-AR9-G1 vector 2 (`transport_channel_violation`). The stop
+  // BUG-AR9-G1 vector 2 (`transport_channel_violation`). The stop
   // stdout is `{decision:'block', reason:<body>}` — on the PE path that reason
   // IS the generated body. A malformed payload must therefore never surface the
   // content, only the shape of the failure.

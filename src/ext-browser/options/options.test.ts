@@ -17,6 +17,10 @@ function setupDom(): void {
     <button id="test-key"></button>
     <button id="save-key"></button>
     <p id="key-status"></p>
+    <input id="nexpath-token" />
+    <button id="test-token"></button>
+    <button id="save-token"></button>
+    <p id="token-status"></p>
     <div id="frequency-group"></div>
     <div id="role-group"></div>
     <div id="self-check"></div>
@@ -182,6 +186,56 @@ describe('options.ts', () => {
       const html = readFileSync('src/ext-browser/options/options.html', 'utf8');
       expect(html).not.toContain('frequency-group');
       expect(html).not.toMatch(/Advisory Frequency/i);
+    });
+  });
+
+  // Onboarding spec (2026-08-31): the token card must carry the exact,
+  // step-wise path to a token — register link, verify, copy, paste/Save/Test —
+  // so a user with no OpenAI key is never left guessing where tokens come from.
+  describe('token onboarding steps (shipped options.html)', () => {
+    it('walks the register -> verify -> copy -> paste path with a real signup link', async () => {
+      const { readFileSync } = await import('node:fs');
+      const html = readFileSync('src/ext-browser/options/options.html', 'utf8');
+      expect(html).toContain('https://parseos.tech/nexpath/signup');
+      expect(html).toContain('https://parseos.tech/nexpath/login');
+      expect(html).toMatch(/Create your free account/);
+      expect(html).toMatch(/Verify your email/);
+      expect(html).toMatch(/Copy the token/);
+      // The OpenAI-key-priority rule stays stated (both cards remain valid paths).
+      expect(html).toContain('takes priority');
+    });
+  });
+
+  // Owner direction 2026-08-31 (settings-page restructure): token card
+  // FIRST, no Advanced/Service-URL field, footer is the brand linking home.
+  describe('page structure (shipped options.html)', () => {
+    it('puts the Nexpath Token card before the OpenAI key card', async () => {
+      const { readFileSync } = await import('node:fs');
+      const html = readFileSync('src/ext-browser/options/options.html', 'utf8');
+      expect(html.indexOf('id="nexpath-token"')).toBeGreaterThan(-1);
+      expect(html.indexOf('id="nexpath-token"')).toBeLessThan(html.indexOf('id="api-key"'));
+    });
+
+    it('ships no Advanced section and no Service URL field', async () => {
+      const { readFileSync } = await import('node:fs');
+      const html = readFileSync('src/ext-browser/options/options.html', 'utf8');
+      expect(html).not.toContain('nexpath-base-url');
+      expect(html).not.toMatch(/Advanced/);
+      expect(html).not.toMatch(/Service URL/i);
+    });
+
+    it('footer is the clickable "Nexpath web" wordmark linking home — no version display, no icon', async () => {
+      const { readFileSync } = await import('node:fs');
+      const html = readFileSync('src/ext-browser/options/options.html', 'utf8');
+      expect(html).toContain('class="footer-brand"');
+      expect(html).toContain('href="https://parseos.tech/nexpath/"');
+      // The wordmark and the "web" qualifier live inside ONE anchor: the whole
+      // "Nexpath web" is the click target.
+      expect(html).toMatch(/<a class="footer-brand"[^>]*>Nexpath <span class="footer-web">web<\/span><\/a>/);
+      expect(html).not.toContain('nexpath.dev');
+      // Version display removed (owner 2026-09-01) — and no glyph/icon characters.
+      expect(html).not.toContain('ext-version');
+      expect(html).not.toMatch(/footer-brand[^<]*<[^>]*>[^<]*[↗➚➜→]/u);
     });
   });
 

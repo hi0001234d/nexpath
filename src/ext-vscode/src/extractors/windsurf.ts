@@ -28,7 +28,7 @@ import type {
  * detection + watch wiring stay so a future non-encrypted path could slot in)
  * but they will never emit on Windsurf 2.0. Re-capturing Windsurf would need a
  * non-file-watching route (Codeium MCP/command/API, or decrypting the `.pb`
- * store — high effort, brittle, ToS-sensitive). See architecture doc §5.3.
+ * store — high effort, brittle, ToS-sensitive). See the architecture notes.
  *
  * `decodeRow` is a fingerprint stub for the (unobserved) case where a future
  * Windsurf migrates chat to a VS Code-style ItemTable with `cascade.*` keys.

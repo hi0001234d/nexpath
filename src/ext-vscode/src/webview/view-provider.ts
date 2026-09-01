@@ -10,7 +10,7 @@ import type { DecisionSessionPayload } from '../ipc.js';
  * `type: "webview"`). Renders the decision-session UI inside a VS Code
  * WebviewView and auto-reveals the view whenever a new advisory payload is
  * published — matching the "user installs once, never invokes manually"
- * UX requirement from architecture rev 2 §4 / discussion log §2 Correction 9.
+ * UX requirement from the architecture (rev 2) and its review corrections.
  *
  * Lifecycle:
  *   1. `activate()` (in `extension.ts`) constructs an instance and registers it

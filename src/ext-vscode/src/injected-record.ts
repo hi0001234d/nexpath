@@ -1,6 +1,6 @@
 /**
  * PE-scoped record of what the extension itself just injected into the host's
- * chat input (analysis F6, part of VED-PE-10).
+ * chat input (analysis F6, part of PEH-10).
  *
  * A delivered PE body re-enters the watcher as an indistinguishable fresh
  * `ChatHistoryEvent` — nothing today records what the extension injected. The
@@ -19,7 +19,7 @@
  * Decision Session behaviour is entirely unaffected, since nothing here is
  * consulted on that path.
  *
- * **P8 extension (VED-PE-10 completion).** `isRecentEcho` alone is
+ * **P8 extension (PEH-10 completion).** `isRecentEcho` alone is
  * text-similarity — necessarily so at this boundary, since a re-entering
  * chat event is just a plain string with no attached metadata. What P8 adds
  * is a second, typed layer on top: an optional `origin` (the delivered PE
@@ -74,7 +74,7 @@ export interface InjectedRecordStore {
    */
   isRecentEcho(projectRoot: string, text: string, now?: number): boolean;
   /**
-   * Typed-origin-aware echo check (P8, VED-PE-10 completion). Reports
+   * Typed-origin-aware echo check (P8, PEH-10 completion). Reports
    * `next_submit_processed_as_delivery_echo` only when the text matches AND
    * the recorded entry carries a typed `origin` — a text match against an
    * entry with no origin (a DS injection) reports `not_delivered`, never an

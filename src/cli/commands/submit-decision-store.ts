@@ -14,8 +14,8 @@
  * than silently breaking the handoff at runtime.
  *
  * ── OWNERSHIP ────────────────────────────────────────────────────────────────
- * Everything here is Vedansi-owned (`src/cli/commands/**`). Hiren's
- * `engine-option-generator.ts` and Bhavnesh's `TtySelectFn.ts` are **consumed via
+ * Everything here belongs to this track (`src/cli/commands/**`). The engine's
+ * `engine-option-generator.ts` and the store layer's `TtySelectFn.ts` are **consumed via
  * injected ports at the call site and never imported here** — this file has no
  * `decision-session` dependency at all.
  *

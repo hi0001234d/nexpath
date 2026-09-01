@@ -47,11 +47,10 @@ export type SubstitutionStrategy = 'body_rewrite' | 'composer_intercept';
  * bubble is painted at submit, so a rewrite creates no mismatch. `message` is the
  * single field to change.
  *
- * ONE LEG OF LOVABLE IS STILL UNPROVEN: which text it renders as the user bubble
- * once the response ARRIVES (the recon's released request came back HTTP 402, so
- * the server never answered). If a live block on Lovable shows the ORIGINAL text
- * in the transcript, flip Lovable to 'composer_intercept' here — one line, and the
- * gate follows automatically.
+ * The once-unproven Lovable leg is now PROVEN LIVE (2026-08-31, owner's real
+ * project): a blocked submit (23.5s hold, 1496-char replacement) rendered the
+ * ENHANCED text as the user bubble in the transcript — body_rewrite is correct
+ * for Lovable and no strategy flip is needed.
  *
  * A site listed as `body_rewrite` is gated in the page's fetch patch. A site
  * listed as `composer_intercept` is gated in the capture-phase composer listener
@@ -146,4 +145,71 @@ export function withReplacedBody(
   // Nothing we know how to rewrite — the caller checks for this by comparing
   // against the original body and falls back to sending the original.
   return [input, init];
+}
+
+// ── F4: the orphaned-hold guard (2026-08-31) ─────────────────────────────────
+//
+// LIVE-CAUGHT: a popup held a Lovable submission ~5 minutes; the page's own
+// AbortController gave up while we held, so releasing afterwards fired the
+// native fetch with an ALREADY-ABORTED signal — instant AbortError, nothing
+// reached the platform, and the user's prompt was gone (the composer had been
+// cleared at submit). The 2026-08-26 unbounded-hold ruling assumed "the browser
+// has no orphan case"; this is that case, found.
+//
+// The fix is NOT a clock (a 75s ceiling once threw away a real human decision —
+// see composer-submit-gate.ts): it is detection. At release time, if the page
+// has abandoned the request, sending is pointless — instead the prompt is put
+// BACK into the composer (insert only, never submit; the user stays in charge)
+// and the caller surfaces the same AbortError the page already expects from an
+// aborted fetch, keeping page semantics untouched.
+
+/**
+ * Where a restored prompt is typed back, per fetch-gated site. Only sites in
+ * SITE_SUBSTITUTION_STRATEGY with 'body_rewrite' can ever need this (only a
+ * held REQUEST can be orphaned; the composer path holds no request).
+ * Lovable's selector is the one its own delivery path targets.
+ */
+export const RESTORE_COMPOSER_SELECTOR: Record<string, string> = {
+  lovable: 'div.tiptap.ProseMirror',
+};
+
+export interface OrphanGuardDeps {
+  /** The page caller's own signal for the held request; null when it has none. */
+  signal: AbortSignal | null;
+  agent: string;
+  prompt: string;
+  /** Best-effort in-page insert (no submit). Must not throw to the caller. */
+  insertText: (selector: string, text: string) => boolean;
+  emit: (event: string, data?: Record<string, unknown>) => void;
+}
+
+/**
+ * Wrap a send closure so an orphaned hold restores the prompt instead of
+ * firing into the void. Restoration runs AT MOST ONCE per guard, even when the
+ * gate's fallback chain calls both wrapped closures.
+ */
+export function makeOrphanGuard(deps: OrphanGuardDeps): {
+  guard: <A extends unknown[], T>(sendFn: (...args: A) => T) => (...args: A) => T;
+} {
+  let restored = false;
+  const guard = <A extends unknown[], T>(sendFn: (...args: A) => T): ((...args: A) => T) => (...args: A) => {
+    if (deps.signal?.aborted) {
+      if (!restored) {
+        restored = true;
+        const selector = RESTORE_COMPOSER_SELECTOR[deps.agent];
+        let landed = false;
+        if (selector) {
+          try { landed = deps.insertText(selector, deps.prompt); } catch { landed = false; }
+        }
+        // Ring events carry counts only — never prompt text (L11 posture).
+        deps.emit('submit_hold_orphaned', {
+          agent: deps.agent, restored: landed, chars: deps.prompt.length,
+        });
+      }
+      // The page's caller aborted; an AbortError is exactly what it expects.
+      throw new DOMException('nexpath: page abandoned the held request', 'AbortError');
+    }
+    return sendFn(...args);
+  };
+  return { guard };
 }

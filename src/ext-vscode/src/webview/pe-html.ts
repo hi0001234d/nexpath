@@ -1,5 +1,5 @@
 /**
- * Prompt Enhancement HTML template (P5, VED-PE-2).
+ * Prompt Enhancement HTML template (P5, PEH-2).
  *
  * Pure function — given a {@link PromptEnhancementExtensionPayloadV1} (or
  * `null` for no pending PE), returns a fully self-contained HTML string
@@ -8,7 +8,7 @@
  * (`html.test.ts` locks its literal source text; the Decision Session and PE
  * surfaces are rendered by separate modules).
  *
- * Required behaviour (VED-PE-2), all satisfied here:
+ * Required behaviour (PEH-2), all satisfied here:
  *   - Exactly ONE editable current-body field — a `<textarea>`, not a
  *     read-only display, and never a 3-4 option button list.
  *   - No "Show simpler options" control anywhere.
@@ -156,7 +156,7 @@ ${detailsHtml}
       bodyId: bodyEl.dataset.bodyId,
       bodyRevision: Number(bodyEl.dataset.bodyRevision),
       bodyText: bodyEl.value,
-      // P7 (VED-PE-7): unsubmitted text in the details field must block
+      // P7 (PEH-7): unsubmitted text in the details field must block
       // delivery (dirty_additional_details_requires_apply_or_clear) until
       // the user presses Enter there (submits) or clears it — this is the
       // only signal proving that, computed live at click time since the
@@ -176,7 +176,7 @@ ${detailsHtml}
         actionType: btn.dataset.actionType,
         bodyId: bodyEl.dataset.bodyId,
         bodyRevision: Number(bodyEl.dataset.bodyRevision),
-        // P9 (VED-PE-6): unsaved manual edits must be discarded, not silently sent
+        // P9 (PEH-6): unsaved manual edits must be discarded, not silently sent
         // as if canonical, when a directional action fires — this is the only
         // signal proving the textarea diverged from its last-rendered canonical
         // text, computed live at click time (defaultValue reflects the
@@ -194,7 +194,7 @@ ${detailsHtml}
           bodyId: bodyEl.dataset.bodyId,
           bodyRevision: Number(bodyEl.dataset.bodyRevision),
           additionalDetailsText: detailsEl.value,
-          // P9 (VED-PE-6): Apply is the only path sending the current VISIBLE
+          // P9 (PEH-6): Apply is the only path sending the current VISIBLE
           // edited body alongside the details — the user may have edited the
           // body before applying details, and that edit must not be lost.
           bodyText: bodyEl.value,

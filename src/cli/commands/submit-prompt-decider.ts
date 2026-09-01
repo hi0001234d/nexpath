@@ -6,12 +6,11 @@
  *
  * ── OWNERSHIP: why everything here is INJECTED, not imported ──────────────────
  * The spec'd flow is `classify → composeDeterministicOptions → TtySelectFn`, but
- * two of those live in files this milestone must NOT edit, verified by authorship:
+ * two of those live in files this milestone must NOT edit, verified by authorship
+ * (both are other members' modules):
  *   • `composeDeterministicOptions` — `src/decision-session/engine-option-generator.ts`
- *     (8 Hiren / 1 bhavnesh)
  *   • `createTtySelectFn`           — `src/decision-session/TtySelectFn.ts`
- *     (26 bhavnesh / 13 harshil)
- * Dev plan §1.3 freezes `src/decision-session/**` as consume-only. So this module
+ * The dev plan freezes `src/decision-session/**` as consume-only. So this module
  * imports **neither**: it declares the narrow ports it needs and the wiring site
  * adapts the real functions onto them. That keeps the ownership boundary provable
  * at the import graph (this file has zero `decision-session` imports) rather than

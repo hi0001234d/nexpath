@@ -50,7 +50,7 @@ import type {
  * globalStorage (not the workspaceStorage paths the watcher was
  * monitoring). The Composer/Agent panel is Cursor's default modern UX;
  * without this extractor the extension is effectively blind to the
- * majority of real-world prompts. Closes the F2 gap in dev plan §2.10.
+ * majority of real-world prompts. Closes the F2 gap recorded in the dev plan.
  */
 
 const KEY_PREFIX = 'cursorDiskKV/bubbleId:';

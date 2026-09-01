@@ -12,3 +12,7 @@ src/ext-vscode/dist-vsix/
 
 # better-sqlite3 multi-ABI prebuilds (build output, produced by package-with-electron-abi.mjs)
 src/ext-vscode/prebuilds/
+
+# Local runtime artifacts (never ship): nexpath state dir + hook lib skeleton
+.nexpath/
+lib/

@@ -5,7 +5,7 @@
  * ── THE COLLISION THIS PREVENTS ──────────────────────────────────────────────
  * `session_states.lastInjectedPrompt` carries TWO meanings:
  *   - everywhere: the echo guard `auto.ts:706` reads-and-clears so an injected
- *     turn is never re-classified (the hook's VED-PE-10 fix writes it for
+ *     turn is never re-classified (the hook's re-entry fix writes it for
  *     exactly that reason);
  *   - on Windsurf ONLY: it is also the DS advisory-poller's delivery-bridge
  *     signal — "a popup selection appeared; inject it into Cascade."

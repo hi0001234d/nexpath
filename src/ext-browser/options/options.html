@@ -19,7 +19,39 @@
       </header>
 
       <section class="card">
+        <label for="nexpath-token">Nexpath Token</label>
+        <p class="field-hint">
+          No OpenAI key needed &mdash; the free plan includes $1.00 of credit:
+        </p>
+        <ol class="token-steps">
+          <li>Create your free account at <a href="https://parseos.tech/nexpath/signup" target="_blank" rel="noopener">parseos.tech/nexpath</a> (or <a href="https://parseos.tech/nexpath/login" target="_blank" rel="noopener">sign in</a>).</li>
+          <li>Verify your email &mdash; that activates your credit.</li>
+          <li>Copy the token shown on your account page.</li>
+          <li>Paste it below, then <strong>Save</strong> and <strong>Test</strong>.</li>
+        </ol>
+        <div class="input-row">
+          <input
+            type="password"
+            id="nexpath-token"
+            placeholder="npk_..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button id="test-token">Test</button>
+          <button id="save-token">Save</button>
+        </div>
+        <p id="token-status" class="status"></p>
+      </section>
+
+      <div class="or-divider">OR</div>
+
+      <section class="card">
         <label for="api-key">OpenAI API Key</label>
+        <p class="field-hint">
+          Use your own OpenAI account instead. If both are set, this key
+          takes priority over the Nexpath token above &mdash; you only need
+          one of the two.
+        </p>
         <div class="input-row">
           <input
             type="password"
@@ -55,13 +87,13 @@
         <label>Supported Agent Sites</label>
         <ul class="site-list">
           <li>Replit <span class="badge">replit.com</span></li>
-          <li>Bolt.new <span class="badge">bolt.new</span></li>
           <li>Lovable <span class="badge">lovable.dev</span></li>
+          <li>Bolt.new <span class="badge">bolt.new</span></li>
         </ul>
       </section>
 
       <footer>
-        <p>nexpath <span id="ext-version">—</span> · <a href="https://nexpath.dev" target="_blank" rel="noopener">nexpath.dev</a></p>
+        <p><a class="footer-brand" href="https://parseos.tech/nexpath/" target="_blank" rel="noopener" title="Visit the Nexpath website">Nexpath <span class="footer-web">web</span></a></p>
       </footer>
     </main>
     <script type="module" src="options.js"></script>

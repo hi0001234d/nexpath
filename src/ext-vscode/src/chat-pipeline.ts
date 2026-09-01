@@ -25,7 +25,7 @@ import { toSafeErrorRecord } from './diagnostics.js';
  *      fallback. No selection (dismissed / no-advisory / popup couldn't open) →
  *      the armed fallback stays as the escape hatch.
  *
- * **PE branch (VED-PE-10 / D-6, additive — DS behaviour above is unchanged
+ * **PE branch (PE-origin routing, additive — DS behaviour above is unchanged
  * when the three optional PE deps are omitted):**
  *   0. Before any of the above: `isPeEcho` (if provided) checks whether this
  *      event is a self-echo of a PE body the extension itself just injected
@@ -98,7 +98,7 @@ export interface ChatPipelineDeps {
   /**
    * Optional: called right after `spawnAuto` succeeds, to decide whether THIS
    * turn parked a pending Prompt Enhancement rather than a Decision Session
-   * advisory (VED-PE-10 / D-6 — see `pe-origin.ts`; decided from typed store
+   * advisory (PE-origin routing — see `pe-origin.ts`; decided from typed store
    * evidence only, never from Stop's returned text). When it resolves `true`,
    * a later non-null `spawnStop` result is routed to `injectPeResult` instead
    * of `injectSelection`. Absent, or throwing, => every result is treated as
@@ -150,7 +150,7 @@ export interface ChatPipelineDeps {
    * command, same store, same project): `checkPeOrigin` still classifies the
    * turn, PE turns still run `spawnStop` + `injectPeResult`. An injected
    * replacement then has NO auto at all (the hook echo-skips its own) — which
-   * is precisely VED-PE-10's requirement; Layer C clears the stale guard on
+   * is precisely PEH-10's requirement; Layer C clears the stale guard on
    * the next genuine turn regardless.
    *
    * Interim implementation of the G-ARBITRATION injector-contention half,

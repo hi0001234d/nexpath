@@ -3,7 +3,7 @@ import { renderPromptEnhancementHtml } from './pe-html.js';
 import type { PromptEnhancementExtensionPayloadV1 } from '../pe-payload.js';
 
 /**
- * NexpathPromptEnhancementViewProvider (P5, VED-PE-2 / DEP-B1.3A-VED-01).
+ * NexpathPromptEnhancementViewProvider (P5, PEH-2 / PEH-DEP-01).
  *
  * Sibling of `NexpathDecisionSessionViewProvider` (`view-provider.ts`), same
  * lifecycle shape, backing a SEPARATE activity-bar view so the PE surface

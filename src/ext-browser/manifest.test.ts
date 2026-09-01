@@ -18,6 +18,14 @@ const EXPECTED_HOSTS = [
   'https://bolt.new/*',
   'https://*.stackblitz.com/*',
   'https://lovable.dev/*',
+  // Nexpath-token mode (llm-credentials.ts): the service worker fetches the
+  // configured Nexpath service directly, and unlike api.openai.com the service
+  // sends no CORS headers — host permission is what authorises the call.
+  // ONLY the production origin ships. localhost was dropped for 0.1.53: the
+  // Advanced service-URL field it existed for no longer exists, and a shipped
+  // localhost permission is reviewer bait; developers add it to their own
+  // unpacked build when they need a local instance.
+  'https://parseos.tech/*',
 ];
 
 describe('ext-browser manifests — permission surface', () => {
@@ -73,11 +81,48 @@ describe('ext-browser manifests — permission surface', () => {
   // A version number written into shipped markup goes stale the moment the manifest
   // moves on. It did: the options footer read "nexpath v0.1.5" while the manifests had
   // already advanced, so the settings page told users the wrong version and the store
-  // screenshot of that page showed it. The footer now reads the manifest at runtime.
-  it('no shipped page hard-codes a version number', () => {
+  // screenshot of that page showed it. Since 2026-09-01 the page shows no version at
+  // all (product decision): the footer is only the "Nexpath web" link, so a stale
+  // hard-coded version can never reappear by construction.
+  it('no shipped page hard-codes or displays a version number', () => {
     const html = readFileSync(new URL('./options/options.html', import.meta.url), 'utf8');
     expect(html).not.toMatch(/v\d+\.\d+\.\d+/);
-    expect(html).toContain('id="ext-version"');
+    expect(html).not.toContain('ext-version');
+  });
+
+  // User-facing platform copy rules (product decision, re-affirmed 2026-09-01):
+  // only the three supported platforms are ever named where a user reads, in the
+  // canonical order Replit → Lovable → Bolt. "StackBlitz" stays a functional host
+  // in the manifests' technical arrays but must never surface in user-facing text.
+  // Both rules were previously enforced only by review and each regressed once.
+  const USER_FACING_DOCS = [
+    './options/options.html',
+    './README.md',
+    './PUBLISH.md',
+    './CHANGELOG.md',
+    '../../docs/privacy.html',
+  ];
+
+  it('user-facing text never names StackBlitz', () => {
+    for (const doc of USER_FACING_DOCS) {
+      const text = readFileSync(new URL(doc, import.meta.url), 'utf8');
+      expect(text.toLowerCase(), `${doc} names StackBlitz`).not.toContain('stackblitz');
+    }
+  });
+
+  it('platforms appear in the canonical order Replit, Lovable, Bolt', () => {
+    // CHANGELOG is excluded: its entries are shipped prose, mentioning platforms
+    // per-fix, not as a lineup — retro-editing history would be worse.
+    const lineupDocs = ['./options/options.html', './README.md', './PUBLISH.md', '../../docs/privacy.html'];
+    const sources = lineupDocs.map((doc) => [doc, readFileSync(new URL(doc, import.meta.url), 'utf8')] as const);
+    sources.push(['manifest description', load('chrome').description as string]);
+    for (const [label, text] of sources) {
+      const lower = text.toLowerCase();
+      const at = (name: string) => lower.indexOf(name);
+      expect(at('replit'), `${label} lacks Replit`).toBeGreaterThan(-1);
+      expect(at('lovable'), `${label}: Lovable must follow Replit`).toBeGreaterThan(at('replit'));
+      expect(at('bolt'), `${label}: Bolt must follow Lovable`).toBeGreaterThan(at('lovable'));
+    }
   });
 
   // Store version ordering is per-component NUMERIC, not decimal: 0.1.51 is [0,1,51], which
@@ -91,7 +136,7 @@ describe('ext-browser manifests — permission surface', () => {
   it('never ships a version below one already submitted to a store', () => {
     // Append at release time. A version that shipped can never be re-used or gone below,
     // so this list only grows.
-    const RELEASED = ['0.1.5', '0.1.51'];
+    const RELEASED = ['0.1.5', '0.1.51', '0.1.52'];
     const parse = (v: string) => v.split('.').map(Number);
     const isBelow = (a: number[], b: number[]) => {
       for (let i = 0; i < Math.max(a.length, b.length); i++) {

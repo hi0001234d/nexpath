@@ -42,7 +42,7 @@ import { join, resolve, posix as posixPath, win32 as win32Path } from 'node:path
 import { isWindowsBatchShim } from '../../utils/batch-shim.js';
 import { writeSubmitDecision, appendReplacementEcho, latestReplacementEchoAt } from './submit-decision-store.js';
 import { log } from '../../logger.js';
-// CONSUME-ONLY store calls (bhavnesh75-owned exports), used exactly as stop.ts
+// CONSUME-ONLY store calls (another member's exports), used exactly as stop.ts
 // uses them — no Layer C file is modified.
 import { openStore, closeStore } from '../../store/db.js';
 import { getPendingAdvisory, markAdvisoryShown } from '../../store/pending-advisories.js';

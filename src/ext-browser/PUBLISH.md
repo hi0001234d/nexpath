@@ -20,8 +20,9 @@ is **ParseOS**.
 | **Firefox AMO** | <https://addons.mozilla.org/developers/> | free |
 | **(optional) Edge Add-ons** | <https://partner.microsoft.com/dashboard/microsoftedge> — accepts the same Chrome zip | free |
 
-**Privacy policy URL (required by both stores):** host the README's *Privacy* section at a public URL
-(e.g. GitHub Pages, or link to `README.md#privacy` on the public repo).
+**Privacy policy URL (required by both stores):** the policy lives at `docs/privacy.html` in this
+repo and is served by GitHub Pages — keep that page current with the shipped behaviour (it is part
+of every release that changes what data goes where).
 
 ### 2. CI credentials (GitHub → Settings → Secrets and variables → Actions)
 
@@ -44,8 +45,11 @@ Before each publish:
 - [ ] **Bump the version in BOTH manifests to the same value** — `src/ext-browser/manifest.chrome.json`
       and `manifest.firefox.json` (the extension's single source of truth; the root `package.json`
       version is the CLI's and is intentionally independent). `npm run package:ext` **aborts** on drift.
-- [ ] **Update `src/ext-browser/CHANGELOG.md`** with the user-facing changes.
-- [ ] **Verify `README.md` is current** — it's the source for the store listing.
+      Version components compare **numerically** per store: never ship a version below one already
+      published (`manifest.test.ts` pins the released list — append each version there once it ships).
+- [ ] **Update `src/ext-browser/CHANGELOG.md`** with the user-facing changes — its top heading must
+      be the shipping version (test-enforced).
+- [ ] **Update `docs/privacy.html`** if the release changes what data goes where.
 - [ ] Confirm the **privacy policy URL** is live.
 - [ ] **Green local run:**
       ```bash
@@ -62,10 +66,13 @@ Because the extension is bundled by esbuild, AMO reviewers require the source + 
 Provide these at submission:
 
 ```
-Requirements: Node.js 20       (matches the publish workflow that builds the uploaded package)
+Requirements: Node.js 22       (the toolchain that builds the uploaded package)
 Build:        npm ci && npm run build:ext
 Output:       dist/ext-firefox   (the uploaded zip's contents)
 ```
+
+State the **exact** Node version that produced your upload in the reviewer notes — AMO rebuilds
+and byte-diffs, so the stated toolchain must be the real one, not the aspirational one.
 
 The committed source at the tagged release reproduces the uploaded package exactly. AMO reviewers
 rebuild from these steps and byte-diff the result against the upload — use `npm ci` (exact lockfile),
@@ -78,29 +85,19 @@ disclosures (the API key + prompt text).
 
 ---
 
-## Publishing — automated (recommended)
+## Publishing — automated (currently DEFERRED, do not use)
 
-Workflow: `.github/workflows/publish-ext-browser.yml`. It always builds/tests/packages the two zips;
-it **publishes** only on a tag `ext-v*` or a manual dispatch with `publish=true`.
+Workflow: `.github/workflows/publish-ext-browser.yml`. Its build job cannot currently produce a
+release (its test step needs content a plain CI checkout does not have), so **publishing is manual**
+until the workflow is repaired. Consequences, both deliberate:
 
-```bash
-# after the checklist is done and merged:
-git tag -a "ext-v<version>" -m "Nexpath browser extension v<version>"
-git push --tags
-```
-
-Or trigger manually:
-
-```bash
-gh workflow run "Publish Nexpath Browser Extension" -f publish=true
-gh run watch
-```
-
-The preflight step reports exactly which stores are publishing.
+- **Do NOT push `ext-v*` tags** — a pushed tag triggers the broken workflow. Create release tags
+  locally only (or skip tagging) until the workflow is fixed.
+- CI store credentials are unset by design; nothing publishes from CI.
 
 ---
 
-## Publishing — manual (first time, or a dry run)
+## Publishing — manual (the current procedure)
 
 1. `npm run package:ext` → the two zips in `dist/store-packages/`.
 2. **Chrome Web Store:** Developer Dashboard → *Add new item* (first time) or the existing item →
@@ -114,29 +111,36 @@ The preflight step reports exactly which stores are publishing.
    source + build steps above → submit.
 4. **(optional) Edge Add-ons:** upload the **chrome** zip to the Edge Partner Center.
 
-**Beta first:** publish **Chrome = Unlisted** and **Firefox = Unlisted (signed `.xpi`)** for the
-tester round — gives testers a *signed* Firefox build that survives restarts. Flip to Public/Listed
-once testing is done.
+**The extension is already live Public/Listed on both stores** — releases are *Upload new package /
+Upload New Version* on the existing items, keeping current visibility. (Historical note: the first
+release went out Unlisted for the tester round, then flipped Public.)
 
 ---
 
 ## Store listing
 
 - **Name:** Nexpath · **Category:** Developer Tools.
-- **Summary:** "Behaviour guidance for vibe coders using AI coding agents."
-- **Permission justifications** (both stores ask): `storage` (save key/settings), `tabs` (show the
-  popup on the right tab), host access limited to
-  `*.replit.com`, `bolt.new`, `*.stackblitz.com`, `lovable.dev`. (Injection is declarative —
-  `content_scripts` + `web_accessible_resources` — so no `scripting` permission is requested.)
-- **Privacy policy URL**, **screenshots** (1280×800), **128×128 icon** (`icons/icon128.png`).
+- **Summary:** derived from the manifest `description` on Chrome (not editable in the dashboard,
+  capped at 132 chars, test-enforced); AMO has its own summary field.
+- **Permission justifications** (both stores ask): `storage` (save the key or Nexpath token +
+  settings locally), `tabs` (show the popup on the right tab), host access limited to the supported
+  agent sites — **Replit, Lovable, Bolt.new** (the exact host list lives in the manifests'
+  `host_permissions`; user-facing copy names only these three platforms, in this order) — plus the
+  Nexpath service origin (`parseos.tech`), contacted **only** in token mode. (Injection is
+  declarative — `content_scripts` + `web_accessible_resources` — so no `scripting` permission is
+  requested.)
+- **Privacy policy URL** (`docs/privacy.html` via GitHub Pages), **screenshots** (exactly 1280×800),
+  **128×128 icon** (`icons/icon128.png`).
 
 ---
 
 ## Post-publish verification
 
-1. Listings live — confirm the new version appears (Chrome item URL; AMO addon page or signed `.xpi`).
+1. Listings live — confirm the new version appears (Chrome item URL; AMO addon page).
 2. Install from the store into a clean profile; confirm the options page + a popup fire.
-3. **Tag the release** if not already: `git tag -a "ext-v<version>" && git push --tags`.
+3. Append the shipped version to the released list in `manifest.test.ts` (next commit).
+4. **Tag locally only** (`git tag -a "ext-v<version>"`) — do not push tags while the publish
+   workflow is deferred (see above).
 
 ---
 

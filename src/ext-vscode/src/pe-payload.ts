@@ -1,6 +1,6 @@
 /**
  * Versioned extension-side transport envelope for a pending Prompt Enhancement
- * (P5, VED-PE-1). Parses the raw `PromptEnhancementPrepareResultV1` JSON — P3's
+ * (P5, PEH-1). Parses the raw `PromptEnhancementPrepareResultV1` JSON — P3's
  * `pe-store-reader.ts` `resultJson` field — into a minimal, defensively-typed
  * shape this renderer needs. Never imports anything from `src/prompt-enhancement/**`.
  *
@@ -45,7 +45,7 @@ export interface PeDirectionalAction {
 }
 
 /**
- * Typed render bucket for the webview — VED-PE-2 requires fallback/no-popup/
+ * Typed render bucket for the webview — PEH-2 requires fallback/no-popup/
  * error/loading states to come from typed state, never string matching.
  */
 export type PeRenderState = 'ready' | 'loading' | 'fallback' | 'blocked' | 'no_popup';

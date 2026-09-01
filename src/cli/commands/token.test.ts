@@ -8,7 +8,7 @@ vi.mock('../../config/NexpathTokenStore.js', () => ({
   resolveApiBaseUrl:   vi.fn(() => 'http://localhost:8000/v1'),
 }));
 
-import { configSetTokenAction, configRemoveTokenAction, modeBDisclosureLine } from './token.js';
+import { configSetTokenAction, configRemoveTokenAction } from './token.js';
 import * as tokenStore from '../../config/NexpathTokenStore.js';
 
 function captureOutput(): { lines: string[]; print: (line: string) => void } {
@@ -32,15 +32,13 @@ afterEach(() => {
 // ── configSetTokenAction (FP-4.3: happy path, cancel, malformed) ────────────────
 
 describe('configSetTokenAction', () => {
-  it('happy path: prompts, stores the token, prints the source and the disclosure exactly once', async () => {
+  it('happy path: prompts, stores the token, prints the source — and no disclosure (2026-09-01 decision)', async () => {
     const { lines, print } = captureOutput();
     await configSetTokenAction({ output: print, passwordFn: async () => VALID_TOKEN });
 
     expect(tokenStore.storeNexpathToken).toHaveBeenCalledWith(VALID_TOKEN);
     expect(lines.join('\n')).toContain('Nexpath token stored in keychain');
-
-    const disclosureOccurrences = lines.filter((l) => l.includes('prompt context will be sent')).length;
-    expect(disclosureOccurrences).toBe(1);
+    expect(lines.filter((l) => l.includes('prompt context will be sent')).length).toBe(0);
   });
 
   it('reports file fallback when storeNexpathToken returns source="file"', async () => {
@@ -72,18 +70,18 @@ describe('configSetTokenAction', () => {
     ).rejects.toThrow(/Invalid Nexpath token/);
   });
 
-  it('⛔ D-6: never claims "nothing leaves your machine" — it would be untrue in Mode B', async () => {
+  it('⛔ honesty guard: never claims "nothing leaves your machine" — untrue in token mode', async () => {
     const { lines, print } = captureOutput();
     await configSetTokenAction({ output: print, passwordFn: async () => VALID_TOKEN });
     const text = lines.join('\n').toLowerCase();
     expect(text).not.toContain('nothing leaves your machine');
   });
 
-  it('the disclosure names the actually-configured host, not a hardcoded string', async () => {
-    vi.mocked(tokenStore.resolveApiBaseUrl).mockReturnValueOnce('https://configured-for-this-test.example/v1');
+  it('set-token output never names the service host (the disclosure line is gone, 2026-09-01)', async () => {
+    vi.mocked(tokenStore.resolveApiBaseUrl).mockReturnValue('https://configured-for-this-test.example/v1');
     const { lines, print } = captureOutput();
     await configSetTokenAction({ output: print, passwordFn: async () => VALID_TOKEN });
-    expect(lines.join('\n')).toContain('https://configured-for-this-test.example/v1');
+    expect(lines.join('\n')).not.toContain('configured-for-this-test.example');
   });
 });
 
@@ -107,12 +105,19 @@ describe('configRemoveTokenAction', () => {
   });
 });
 
-// ── modeBDisclosureLine ────────────────────────────────────────────────────────
+// ── no user-facing disclosure (2026-09-01) ───────────────────────────────────
 
-describe('modeBDisclosureLine', () => {
-  it('states plainly that prompt context leaves the machine, and that no prompt text is stored', () => {
-    const line = modeBDisclosureLine().toLowerCase();
-    expect(line).toContain('prompt context will be sent');
-    expect(line).toContain('stores no prompt text');
+describe('set-token output carries no privacy/disclosure statements', () => {
+  it('prints only the stored-confirmation — no data-flow or storage sentences (product decision 2026-09-01)', async () => {
+    const lines: string[] = [];
+    await configSetTokenAction({
+      output: (l) => { lines.push(l); },
+      passwordFn: async () => 'npk_0123456789abcdefghij',
+    });
+    const all = lines.join(' ').toLowerCase();
+    expect(all).toContain('nexpath token stored');
+    expect(all).not.toContain('prompt context');
+    expect(all).not.toContain('stores no prompt');
+    expect(all).not.toContain('sent to');
   });
 });

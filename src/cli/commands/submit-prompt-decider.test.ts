@@ -127,7 +127,7 @@ describe('privacy — logs never carry prompt or replacement text', () => {
 });
 
 describe('ownership — this module imports nothing from decision-session', () => {
-  it('consumes Hiren/Bhavnesh code only through injected ports', async () => {
+  it("consumes other members' code only through injected ports", async () => {
     // The real proof is the import graph (asserted in the source header and by
     // review); this test documents the intent and fails loudly if someone later
     // makes the decider depend on a Store or a concrete renderer.

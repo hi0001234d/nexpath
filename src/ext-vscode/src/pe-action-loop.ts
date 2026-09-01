@@ -1,8 +1,8 @@
 /**
- * PE action request/response loop (P9, VED-PE-6, DEP-B1.3A-VED-02/04).
+ * PE action request/response loop (P9, PEH-6).
  *
  * SCOPE, decided against the actual handoff text, not inferred from the dev
- * plan's own "Design" section: VED-PE-6 (the authoritative extension-handoff
+ * plan's own "Design" section: PEH-6 (the authoritative extension-handoff
  * item this phase implements) describes required BEHAVIOUR — loading state,
  * previous-body survival, canonical ids, the dirty-draft-discarded +
  * locked-while-pending state pair, apply_details' distinctness, surfacing
@@ -26,7 +26,7 @@
  * imported. Read in full before designing this module. `actionRequestLockState`'s
  * value `'locked_action_loading'` is not invented — it is a real value of
  * `popup-session.ts`'s `PromptEnhancementPopupSessionV1.preSendBoundaryState.editabilityState`
- * (that field itself is not reused directly — VED-PE-6's own handoff text
+ * (that field itself is not reused directly — PEH-6's own handoff text
  * names the field `actionRequestLockState`, not `editabilityState`, so this
  * mirrors the handoff's field name with the real contract's value).
  * `dirtyDraftDisposition`/`discarded_for_canonical_action` have no direct
@@ -48,9 +48,9 @@ export interface PeActionRequestV1 {
   /** Canonical ids only — directional requests never carry dirty textarea text. */
   currentBodyId: string;
   bodyRevision: number;
-  /** VED-PE-6: transmitted explicitly on every request, never inferred by the response side. */
+  /** PEH-6: transmitted explicitly on every request, never inferred by the response side. */
   dirtyDraftDisposition: 'discarded_for_canonical_action' | 'not_applicable';
-  /** VED-PE-6: transmitted explicitly on every request. Only value this loop ever produces. */
+  /** PEH-6: transmitted explicitly on every request. Only value this loop ever produces. */
   actionRequestLockState: 'locked_action_loading';
   /** `apply_details` only — the ONLY request type carrying visible edited body + details. */
   editedBodyText?: string;
@@ -107,7 +107,7 @@ export type PeBuildActionRequestResult =
   | { ok: false; reasonCodes: readonly string[] };
 
 /**
- * Build a typed action request, or reject it. VED-PE-6 / acceptance:
+ * Build a typed action request, or reject it. PEH-6 / acceptance:
  * "a duplicate send intent is rejected" — refuses to build a second request
  * while one is already in flight, rather than silently overlapping them.
  */
@@ -158,7 +158,7 @@ export interface PeApplyActionResponseResult {
  * doesn't match the current in-flight request — stale (superseded by a
  * newer request) or a duplicate of an already-settled one — is ignored
  * entirely: `lastValidBody` and `lockState` are left exactly as they were,
- * TRACEABILITY: DEP-B1.3A-VED-04 (stale never replaces). Recorded as
+ * TRACEABILITY: PEH-DEP-04 (stale never replaces). Recorded as
  * "unconfirmed, needs verification" in the H8 audit; verified 2026-08-11 —
  * implemented here and pinned by `pe-action-loop.test.ts`.
  *

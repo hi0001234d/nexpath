@@ -8,7 +8,7 @@
  * ── WHY THIS FILE EXISTS SEPARATELY FROM THE DECIDER ─────────────────────────
  * `submit-prompt-decider.ts` has **zero imports of any kind**, so the ownership
  * boundary is provable in the import graph rather than by reviewer discipline.
- * Hiren's `composeDeterministicOptions` and Bhavnesh's `createTtySelectFn` are
+ * The engine's `composeDeterministicOptions` and the store layer's `createTtySelectFn` are
  * therefore consumed **here, at the wiring site**, and handed to the decider as
  * injected ports. Both are consume-only — neither file is modified.
  *
@@ -43,7 +43,7 @@
  * HOLDING the user's prompt is strictly worse than today's "no advisory appears".
  */
 import { getPendingAdvisory, markAdvisoryShown } from '../../store/pending-advisories.js';
-// CONSUME-ONLY (bhavnesh75-owned): called exactly as stop.ts already calls them.
+// CONSUME-ONLY (another member's module): called exactly as stop.ts already calls them.
 import {
   getPendingPromptEnhancement,
   markPromptEnhancementShown,
@@ -70,7 +70,7 @@ import type { DeciderOptionSet, DeciderSelection } from './submit-prompt-decider
 
 /**
  * Structurally identical to the decider's `DeciderOptionSet` and to the `l1/l2/l3`
- * of Hiren's `GeneratedOptions` — deliberately, so the set passes through without
+ * of the engine's `GeneratedOptions` — deliberately, so the set passes through without
  * the decider ever importing `decision-session`.
  */
 export interface SubmitOptionSourceDeps {
@@ -199,7 +199,7 @@ export function createDeterministicSubmitOptionSource(
 
       const register = selectionRegister(deps.nature as never);
 
-      // 5. Hiren's generator — synchronous, LLM-free, consume-only.
+      // 5. The engine's generator — synchronous, LLM-free, consume-only.
       const generated = composeFn({ lookup, level: resolvedLevel, register, role: deps.role });
       if (!generated) {
         log('submit_option_source: generator returned nothing — allowing');
@@ -227,7 +227,7 @@ export function createDeterministicSubmitOptionSource(
       const choices = listForLevel(options, resolvedLevel);
       if (choices.length === 0) return null;
 
-      // Bhavnesh's TTY selector — consume-only.
+      // The store layer's TTY selector — consume-only.
       // Same arguments the CLI flow passes (`stop.ts:303`). We reuse Layer C's
       // popup wholesale, so it must be constructed the same way — the store and
       // project root are what let the popup script resolve its clipboard command
@@ -301,7 +301,7 @@ export function createDeterministicSubmitOptionSource(
     // pending artifact survives a turn this path fully handled") extended to
     // the PE table. Called only on 'block' by the wiring site, so an allowed
     // prompt keeps today's PE behaviour exactly. CONSUME-ONLY: both functions
-    // are bhavnesh75-owned store exports, called precisely as stop.ts calls
+    // are another member's store exports, called precisely as stop.ts calls
     // them — no Layer C file is modified.
     try {
       const getPeRow = deps.getPeRowFn ?? getPendingPromptEnhancement;

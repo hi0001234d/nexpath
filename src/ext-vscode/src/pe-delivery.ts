@@ -1,6 +1,6 @@
 /**
  * PE typed delivery: payload validation, host-capability evaluation, and
- * visible-surface ACK (P8, VED-PE-4 / VED-PE-12 / DEP-B1.3A-VED-03).
+ * visible-surface ACK (P8, PEH-4 / PEH-12).
  *
  * ARCHITECTURAL NOTE — same `G-ROOTDIR` constraint found for P5/P6/P7. The
  * real `validatePromptEnhancementExtensionDeliveryPayload` and
@@ -30,7 +30,7 @@
  * `PromptEnhancementVisibleSurfaceAckState` by name. `resolvePeVisibleSurfaceAckState`
  * is this extension's own decision function — the real type has no
  * corresponding "resolve from these inputs" function to mirror, so this is
- * built from the real state names' own definitions (VED-PE-12: emit ACK from
+ * built from the real state names' own definitions (PEH-12: emit ACK from
  * REAL render/insert outcomes, never from DS `status='shown'`).
  */
 
@@ -221,7 +221,7 @@ export interface PeRenderOutcome {
 
 /**
  * Resolve the visible-surface ACK from a REAL render outcome — never from DS
- * `status='shown'`/`stop_advisory_shown`/`decision_session_count` (VED-PE-12's
+ * `status='shown'`/`stop_advisory_shown`/`decision_session_count` (PEH-12's
  * explicit prohibition; this function's signature has no such field to read).
  * Called on both success and failure so an ACK is always emitted either way.
  */
@@ -239,7 +239,7 @@ export function resolvePeVisibleSurfaceAckState(outcome: PeRenderOutcome): PeVis
 }
 
 /**
- * D-1 (owner-resolved): on insert failure, emit a typed failed outcome —
+ * No-clipboard rule (owner-resolved): on insert failure, emit a typed failed outcome —
  * NEVER fall back to the clipboard for a PE body. This is a deliberate,
  * narrower sibling of `prompt-injection.ts`'s `handleOptionSelection`, which
  * DOES fall back to the clipboard for DS options; that function is untouched

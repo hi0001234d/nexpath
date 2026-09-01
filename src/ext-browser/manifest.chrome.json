@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Nexpath",
-  "version": "0.1.52",
+  "version": "0.1.53",
   "description": "AI coding assistant for Replit, Lovable, and Bolt — reviews your prompt before you send it.",
   "permissions": [
     "storage",
@@ -11,7 +11,8 @@
     "https://*.replit.com/*",
     "https://bolt.new/*",
     "https://*.stackblitz.com/*",
-    "https://lovable.dev/*"
+    "https://lovable.dev/*",
+    "https://parseos.tech/*"
   ],
   "background": {
     "service_worker": "service-worker.js",

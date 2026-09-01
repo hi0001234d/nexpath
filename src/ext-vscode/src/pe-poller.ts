@@ -1,5 +1,5 @@
 /**
- * Windsurf/Devin PE delivery poller (P10, analysis §4d).
+ * Windsurf/Devin PE delivery poller (P10).
  *
  * Sibling of `advisory-poller.ts` — read this module's own doc comment
  * first, the design reasoning here only covers where PE genuinely differs.
@@ -39,7 +39,7 @@
  * own tests inject as `pe-store-reader.ts`'s `readPendingPromptEnhancement`.
  *
  * **"A row marked `'shown'` is not treated as proof a surface appeared."**
- * Historical note, corrected here per the dev plan's own §13.3/§13.4
+ * Historical note, corrected here per the dev plan's own later
  * finding: the CLI bug this once described (`markPromptEnhancementShown`
  * firing before `peLaunch`) **was fixed upstream** (commit `ad73180`) before
  * this module was written — the wording is deliberately "was", not "is".
@@ -80,7 +80,7 @@ export interface PePollerDeps {
   readPendingPe: (projectRoot: string) => Promise<PendingPromptEnhancementRow | null>;
   /**
    * Direct-insert `text` into Cascade. Wire this to `injectPeBody` wrapping
-   * `injectViaCascadeAction` — never a clipboard-touching injector (D-1).
+   * `injectViaCascadeAction` — never a clipboard-touching injector (the no-clipboard rule).
    */
   onDeliver: (text: string) => Promise<PeInsertOutcome>;
   /** Optional: publish the parsed payload to the PE webview too, so the same renderer shows what was delivered if the panel is open. */

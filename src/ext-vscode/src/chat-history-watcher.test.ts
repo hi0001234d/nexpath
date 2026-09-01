@@ -823,7 +823,7 @@ describe('defaultReadWindsurfJsonFiles', () => {
 //
 // These tests exercise the REAL reader against synthetic SQLite files (built
 // with better-sqlite3 in the test setup). They cover the WAL-mode branch
-// from dev plan §2.5 — the whole reason we swapped sql.js → better-sqlite3
+// from the dev plan — the whole reason we swapped sql.js → better-sqlite3
 // in M2/B4.
 
 /**

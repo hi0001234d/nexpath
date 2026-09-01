@@ -15,7 +15,7 @@ import { hasTextLanded, readLandingText } from '../content/agents/landing-check.
 import { setupSubmitFlowPage, SUBMIT_FLOW_EVENT_TYPE } from './submit-flow-page.js';
 import { createSubmitGate } from './submit-gate.js';
 import { createDecisionChannel } from './submit-decision-channel.js';
-import { rewriteBodyForAgent, withReplacedBody, fetchGateOwnsSite } from './submit-substitution.js';
+import { rewriteBodyForAgent, withReplacedBody, fetchGateOwnsSite, makeOrphanGuard } from './submit-substitution.js';
 
 type PromptCapturedMsg = {
   type: 'nexpath:prompt-captured';
@@ -189,6 +189,25 @@ async function maybeCaptureFetch(input: RequestInfo | URL, init?: RequestInit): 
 const _nativeFetch = window.fetch.bind(window);
 
 /**
+ * Best-effort in-page insert for the F4 restore: focus the composer and type
+ * the text through `execCommand('insertText')` — the editor-native route that
+ * is proven live on Lovable's ProseMirror. Insert ONLY; submitting stays the
+ * user's act. Returns whether the text visibly landed.
+ */
+function insertTextInPage(selector: string, text: string): boolean {
+  try {
+    const el = document.querySelector<HTMLElement>(selector);
+    if (!el) return false;
+    el.focus();
+    const ok = document.execCommand('insertText', false, text);
+    const rendered = (el.innerText ?? '').replace(/\s+/g, ' ');
+    return ok && rendered.includes(text.slice(0, 40).replace(/\s+/g, ' '));
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Stable id for one submission, derived from its text.
  *
  * Content-derived rather than a counter, because the claim's job is to collapse
@@ -222,6 +241,20 @@ async function gatedFetch(
     const prompt = bodyText === null ? null : matched.rule.extractPrompt(bodyText);
     if (prompt === null || bodyText === null) return send();
 
+    // F4 orphan guard: if the page abandons this request while the popup holds
+    // it, releasing must restore the prompt, not fire an already-aborted fetch.
+    // See submit-substitution.ts for the live incident and the design.
+    const pageSignal = init?.signal
+      ?? (typeof Request !== 'undefined' && input instanceof Request ? input.signal : null)
+      ?? null;
+    const { guard } = makeOrphanGuard({
+      signal: pageSignal,
+      agent: matched.agent,
+      prompt,
+      insertText: insertTextInPage,
+      emit: emitSubmitFlowEvent,
+    });
+
     // Emit exactly as the ungated path does, so the existing submit pipeline
     // (classification, PE prepare) sees this prompt identically.
     emitFetchPrompt(prompt, matched.agent);
@@ -241,8 +274,8 @@ async function gatedFetch(
 
     return await submitGate.runGatedSubmit(
       { prompt, submitId: submitIdFor(prompt) },
-      send,
-      sendReplacement,
+      guard(send),
+      guard(sendReplacement),
     );
   } catch {
     return send();

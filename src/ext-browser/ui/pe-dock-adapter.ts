@@ -15,7 +15,7 @@
  *    terminal command completes the flow; Esc on PEF skips straight to the
  *    terminal. Esc on the PE surface itself closes IMMEDIATELY with no PEF —
  *    the CLI's shipped rule ("Feedback opens ONLY when the user chooses Use
- *    original prompt", cli-submit-popup.ts:1469-1471; its §8.3 comment is
+ *    original prompt", cli-submit-popup.ts:1469-1471; its 'every cancel' comment is
  *    stale). PEF renders the CLI's full three rows — the two categories AND
  *    the free-text "Other" (PE-BR-11 closed 2026-08-25: typed feedback
  *    persists via the browser feedback store, host-side).
@@ -357,7 +357,7 @@ export function mountNexpathPeDock(opts: PeDockAdapterOptions): PePanelControlle
         // Esc on the PE surface = the CLI's immediate close: "Feedback opens
         // ONLY when the user chooses Use original prompt … Close / Esc / crash
         // send nothing and show no feedback" (cli-submit-popup.ts:1469-1471 —
-        // the shipped code; the §8.3 'every cancel' comment there is stale).
+        // the shipped code; the 'every cancel' comment there is stale).
         emitCommand({ type: 'close' });
         return;
       case 'declined':

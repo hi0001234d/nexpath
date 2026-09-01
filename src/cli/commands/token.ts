@@ -33,16 +33,9 @@ const defaultPrint = (line: string): void => { console.log(line); };
 
 // Mode B disclosure: a factual statement of what actually happens, not a
 // marketing line, and pending final wording approval from the project's public
-// docs. ⛔ Never claims "nothing leaves your machine": in Mode B, prompt
-// context genuinely does leave the machine, and saying otherwise would be
-// untrue. The host is read from whatever is actually configured
-// (resolveApiBaseUrl), not a hardcoded string, so the sentence is always
-// accurate to the real destination rather than a placeholder that could drift
-// from it.
-export function modeBDisclosureLine(): string {
-  const host = resolveApiBaseUrl();
-  return `With no OpenAI API key configured, prompt context will be sent to ${host} to be answered. This service stores no prompt text.`;
-}
+// The Mode-B disclosure line was REMOVED on 2026-09-01 (product decision: no
+// storage/data-flow statements shown to users for now; revisit at a future
+// privacy pass). `resolveApiBaseUrl` remains in use by the resolver itself.
 
 export async function configSetTokenAction(opts: ConfigTokenOpts = {}): Promise<void> {
   const print      = opts.output     ?? defaultPrint;
@@ -56,7 +49,6 @@ export async function configSetTokenAction(opts: ConfigTokenOpts = {}): Promise<
 
   const result = await storeNexpathToken(token);
   print(`✓ Nexpath token stored in ${result.source}`);
-  print(modeBDisclosureLine());
 }
 
 export async function configRemoveTokenAction(opts: ConfigTokenOpts = {}): Promise<void> {

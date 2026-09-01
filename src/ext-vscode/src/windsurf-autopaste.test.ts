@@ -93,7 +93,7 @@ describe('raiseAppWindow (generalised — used for Cursor inject)', () => {
   });
 });
 
-/** ⭐ RC49 — paste gets the same win32 targeting submit has (§8.2 asymmetry). */
+/** ⭐ RC49 — paste gets the same win32 targeting submit has (closing a platform asymmetry). */
 describe('⭐ RC49 — pasteKeystroke win32 targeting', () => {
   it('⭐ with win32Titles: uses the foreground-first targeted script', () => {
     const calls: string[][] = [];

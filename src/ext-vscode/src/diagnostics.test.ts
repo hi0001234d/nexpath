@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { toSafeErrorRecord } from './diagnostics.js';
 
-// BUG-VEDANSI-AR9-G1 vector 4 (`diagnostic_error_object_leak`). The Stop-hook
+// BUG-AR9-G1 vector 4 (`diagnostic_error_object_leak`). The Stop-hook
 // `reason` / IPC stdout body is delivery-only: it may travel that channel to be
 // delivered, but must never be copied into a log or error payload. These tests
 // pin the redaction, using a distinctive marker that stands in for a delivered

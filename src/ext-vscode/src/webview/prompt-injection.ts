@@ -32,7 +32,7 @@ import * as vscode from 'vscode';
  * the `injectFn`. Documented as a load-bearing contract in the project
  * memory `project_b4_prompt_injection_contract.md`.
  *
- * Documented as a known fallback in dev plan §2.4 (Risks → "Round-trip
+ * Documented as a known fallback in the dev plan's risk register ("Round-trip
  * prompt injection").
  */
 

@@ -36,7 +36,7 @@ import { decodeWindsurfJsonFile } from './extractors/windsurf.js';
  * reader is used — chosen over sql.js because the live Cursor `.vscdb`
  * file is in **WAL mode** (the main file is ~4 KB; all writes go to the
  * sibling `.vscdb-wal`). sql.js operates on a buffer and cannot read the
- * WAL siblings, so it never sees the live data (dev plan §2.5). The
+ * WAL siblings, so it never sees the live data (a WAL constraint the dev plan records). The
  * better-sqlite3 reader copies main + wal + shm to a tmp staging dir,
  * checkpoints the WAL into the staged main file, then reads — never
  * touching the live file Cursor is actively writing to.

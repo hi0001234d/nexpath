@@ -3,6 +3,24 @@
 All notable changes to the browser extension. Versions track the `version` field in
 `manifest.chrome.json` / `manifest.firefox.json`.
 
+## 0.1.53
+
+Nexpath token support — run without an OpenAI API key.
+
+### Added
+- **Nexpath token.** Paste a token from your Nexpath account instead of an OpenAI API key —
+  the extension then routes its LLM calls through the Nexpath service on your account credit.
+  The bring-your-own-OpenAI-key path is unchanged and still works exactly as before.
+
+### Changed
+- **Settings page rebuilt around the simpler setup**: the Nexpath token card comes first with
+  step-by-step instructions and a link to your account page; the footer is now a single
+  "Nexpath web" link and no longer shows a version number.
+- **A held prompt can no longer be lost.** If the page itself abandons the request while a
+  suggestion is open, the original prompt is restored into the composer instead of disappearing.
+- **Duplicate prompts are recognised across whitespace differences** — a resend that differs only
+  in spacing or line breaks is no longer treated as a new prompt.
+
 ## 0.1.52
 
 Faster delivery, and no clipboard permission prompt on Chrome.

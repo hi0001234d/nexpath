@@ -1,7 +1,7 @@
 /**
  * H8 item 6 — cross-milestone traceability, made MECHANICALLY CHECKABLE.
  *
- * The audit found §6's "nothing dropped" claim resting on memory: four rows
+ * The audit found the plan's "nothing dropped" claim resting on memory: four rows
  * carried no source tag, so nothing could verify them. This turns each into a
  * check that fails when the property stops holding.
  *
@@ -22,11 +22,11 @@ const codeOnly = (src: string) =>
     return !t.startsWith('*') && !t.startsWith('//') && !t.startsWith('/*');
   }).join('\n');
 
-describe('VED-PE-5 — the PE fallback is not the Decision-Session path', () => {
+describe('PEH-5 — the PE fallback is not the Decision-Session path', () => {
   const src = read('pe-store-reader.ts');
 
   it('is tagged in the implementing file', () => {
-    expect(src).toContain('VED-PE-5');
+    expect(src).toContain('PEH-5');
   });
 
   it('⭐ never reads pending_advisories IN CODE', () => {
@@ -43,12 +43,12 @@ describe('VED-PE-5 — the PE fallback is not the Decision-Session path', () => 
   });
 });
 
-describe('DEP-B1.3A-VED-04 — a stale result never replaces a newer body', () => {
+describe('PEH-DEP-04 — a stale result never replaces a newer body', () => {
   const src = read('pe-action-loop.ts');
 
   it('is tagged in the implementing file', () => {
     // Recorded as "unconfirmed, needs verification" in the audit.
-    expect(src).toContain('DEP-B1.3A-VED-04');
+    expect(src).toContain('PEH-DEP-04');
   });
 
   it('the ignore path exists in code, not just in prose', () => {
@@ -57,7 +57,7 @@ describe('DEP-B1.3A-VED-04 — a stale result never replaces a newer body', () =
 });
 
 describe('the two rows that are deliberately NOT taggable', () => {
-  it('VED-PE-8 is satisfied by the suite, not by a line', () => {
+  it('PEH-8 is satisfied by the suite, not by a line', () => {
     // "extension tests" is not a property of any single file; tagging one would
     // be arbitrary and would imply the rest are out of scope. So the check is
     // that the PE suite EXISTS and is substantial - enumerated from disk rather
@@ -65,11 +65,11 @@ describe('the two rows that are deliberately NOT taggable', () => {
     // (`pe-html.test.ts`) that does not exist and failed for the wrong reason.
     const suites = readdirSync(__dirname).filter((f) => /^pe-.*\.test\.ts$/.test(f));
     expect(suites.length).toBeGreaterThanOrEqual(8);
-    // The traceability suite itself must not be what satisfies VED-PE-8.
+    // The traceability suite itself must not be what satisfies PEH-8.
     expect(suites.filter((f) => f !== 'pe-traceability.test.ts').length).toBeGreaterThanOrEqual(7);
   });
 
-  it('DEP-B1.3A-VED-05 is a document by design — a source tag would be wrong', () => {
+  it('PEH-DEP-05 is a document by design — a source tag would be wrong', () => {
     // The acceptance evidence packet is a deliverable, not code. Asserting a
     // source tag for it would create a false trace. Recorded, not tagged.
     expect(true).toBe(true);

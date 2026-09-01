@@ -1,5 +1,5 @@
 /**
- * H7 — NEGATIVE ORACLES for the §9 risk register.
+ * H7 — NEGATIVE ORACLES for the milestone's risk register.
  *
  * Every other suite in this milestone asserts the feature WORKS. These assert the
  * named risks do NOT occur. That distinction matters: four times this milestone a
@@ -7,7 +7,7 @@
  * branch produced the same observable output. A negative oracle fails loudly when
  * a risk materialises, rather than staying quiet because nothing looked wrong.
  *
- * Risk IDs are from the analysis §9 and are quoted so a future reader can map a
+ * Risk IDs are from that register and are quoted so a future reader can map a
  * failure straight back to the register.
  */
 import { describe, it, expect } from 'vitest';
@@ -36,7 +36,7 @@ describe('R12 — the new flow must NOT reach into the old, un-gated path', () =
     // `buildSubmitAdvisory`, whose own early return refuses to construct.
     const lines = code(ext).split('\n');
     const helperAt = lines.findIndex((l) => l.includes('function buildSubmitAdvisory('));
-    // RC48-era fix (Bhavnesh §8.4): CRLF checkouts make lines '}\r' — trim before matching.
+    // RC48-era fix (CRLF normalization): CRLF checkouts make lines '}\r' — trim before matching.
     const helperEnd = lines.findIndex((l, i) => i > helperAt && l.trim() === '}');
     const sites = lines
       .map((l, i) => ({ l, i }))

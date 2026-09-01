@@ -226,7 +226,7 @@ describe('UNMAPPED_HANDOFF_CONCEPTS', () => {
   });
 });
 
-describe('describePeEventSafely — raw-text leak test (VED-PE-9 extended to PE events)', () => {
+describe('describePeEventSafely — raw-text leak test (PEH-9 extended to PE events)', () => {
   const MARKER = 'ZZQX_PE_EVENT_LEAK_MARKER_9182';
 
   it('never includes the raw editedBodyText content, only its presence', () => {

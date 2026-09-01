@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 
 /**
- * Clipboard-fallback delivery for the submit-time advisory (hook milestone H3, Q3).
+ * Clipboard-fallback delivery for the submit-time advisory (hook milestone H3).
  *
  * WHY THIS PATH FIRST (owner ruling on `G-POLICY`, 2026-08-10). Windsurf has two
  * insert mechanisms. The direct one (`addCascadeInput`) is faster but its protobuf
@@ -23,7 +23,7 @@ import { spawn, spawnSync } from 'node:child_process';
  * typing; on Cursor it failed without a focus command and succeeded with one. So
  * `focus` is a first-class injected step here, not an incidental detail.
  *
- * CROSS-OS FROM THE FIRST COMMIT (§2.4b). `submitKeystroke` branches macOS /
+ * CROSS-OS FROM THE FIRST COMMIT (a standing requirement). `submitKeystroke` branches macOS /
  * Windows / Linux exactly as the shipped `pasteKeystroke` does
  * (`windsurf-autopaste.ts:73-89`) — osascript / PowerShell SendKeys / xdotool with
  * Wayland alternates. **No submit-keystroke helper existed before this**; the
@@ -33,9 +33,9 @@ import { spawn, spawnSync } from 'node:child_process';
  * wires it behind `NEXPATH_WINDSURF_PROMPTSUBMIT_ADVISORY`. It does not modify
  * `windsurf-autopaste.ts`, `extension.ts`, or any other shipping file.
  *
- * OWNERSHIP. Everything referenced here is Vedansi-owned
- * (`src/ext-vscode/**`). Hiren's `engine-option-generator.ts` and Bhavnesh's
- * `TtySelectFn.ts` are consumed elsewhere in H3 but never edited.
+ * OWNERSHIP. Everything referenced here belongs to this track
+ * (`src/ext-vscode/**`). The engine's `engine-option-generator.ts` and the store
+ * layer's `TtySelectFn.ts` are consumed elsewhere in H3 but never edited.
  */
 
 

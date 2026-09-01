@@ -1,11 +1,11 @@
 /**
- * H3 Q3 — the clipboard fallback, built FIRST per the owner's `G-POLICY` ruling
+ * H3 — the clipboard fallback, built FIRST per the owner's `G-POLICY` ruling
  * because it carries no reverse-engineering exposure.
  *
  * Two things these tests exist to pin, both from H1's empirical findings:
  *   1. inject and submit are SEPARATE steps (neither platform auto-submits);
  *   2. focus is an explicit precondition of submit, not an incidental detail.
- * Plus the cross-OS matrix required by §2.4b from the first commit — macOS,
+ * Plus the cross-OS matrix required from the first commit — macOS,
  * Windows, Linux/X11 and Linux/Wayland, none of which can be tested on real
  * hardware here (`G-HARDWARE`), so the command each OS would run is pinned instead.
  */
@@ -84,7 +84,7 @@ describe('inject — clipboard → focus → paste, in that order', () => {
     await expect(h.d.inject('x')).resolves.toBe(false);
   });
 
-  it('never logs the replacement text (BUG-VEDANSI-AR9-G1)', async () => {
+  it('never logs the replacement text (the raw-prompt-log leak class)', async () => {
     const lines: string[] = [];
     const h = deliveryHarness({ log: (m) => lines.push(m) });
     await h.d.inject('ZZQX_LEAK_MARKER_7741');
@@ -119,7 +119,7 @@ describe('submit — a genuinely separate step', () => {
   });
 });
 
-describe('submitKeystroke — cross-OS matrix (§2.4b), pinned per platform', () => {
+describe('submitKeystroke — cross-OS matrix, pinned per platform', () => {
   it('macOS uses osascript key code 36 (Return)', () => {
     const run = vi.fn().mockReturnValue(true);
     expect(submitKeystroke({ isPopupFocused: () => false, platform: 'darwin', run })).toBe(true);
@@ -240,7 +240,7 @@ describe('submitKeystroke — cross-OS matrix (§2.4b), pinned per platform', ()
     // point is not the return value but that the defaults actually execute
     // instead of short-circuiting to false.
     const calls: string[] = [];
-    // RC48-era fix (Bhavnesh §8.4): this case exercises the REAL default
+    // RC48-era fix (CRLF normalization): this case exercises the REAL default
     // detector, which shells out to `which` — on a host with no keystroke tool
     // installed (Windows/macOS checkouts, minimal CI) no tool can match and the
     // assertion is about the HOST, not the code. Skip honestly there.

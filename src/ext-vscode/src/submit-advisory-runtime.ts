@@ -360,7 +360,7 @@ export function isCursorSubmitAdvisoryEnabled(
  * Finding 1).
  *
  * ── WHY THIS EXISTS ──────────────────────────────────────────────────────────
- * The hook's VED-PE-10 guard writes the replacement into
+ * The hook's re-entry guard writes the replacement into
  * `session_states.lastInjectedPrompt` so `auto` skips the injected turn. On
  * Windsurf that SAME field is also the DS advisory-poller's delivery-bridge
  * signal (`advisory-poller.ts` — "bridge the popup selection"), so the DS

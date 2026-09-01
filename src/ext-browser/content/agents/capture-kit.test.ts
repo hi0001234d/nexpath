@@ -139,6 +139,51 @@ describe('content/agents/capture-kit.ts', () => {
       );
       expect(captured).toHaveLength(1);
     });
+
+    it('composer + fetch of the same prompt with DIFFERENT whitespace still collapse to ONE emit (F1, live 2026-08-29)', async () => {
+      // The live double-bill: the composer read joins paragraphs with '\n' while
+      // the page's fetch body carries the same words with different line breaks —
+      // exact-match dedup let both through and the pipeline billed the turn twice.
+      const kit = createCaptureKit(makeConfig({
+        bootstrapFlag: '__nexpathObsOff3', observeRenderedMessages: false,
+        userMessageSelector: '[data-testid="m4"]',
+        composer: {
+          composerSelector: '.tiptap.ProseMirror',
+          submitButtonSelector: 'button[aria-label="Send message"]',
+          readComposerText: (el) => Array.from(el.querySelectorAll('p'), (p) => p.textContent ?? '').join('\n').trim(),
+        },
+        listenForFetchPrompts: true,
+      }));
+      observers.push(kit.observeComposerSubmit(document));
+      observers.push(kit.observeFetchPrompts(window));
+
+      const container = document.createElement('div');
+      const composer = document.createElement('div');
+      composer.className = 'tiptap ProseMirror';
+      composer.setAttribute('contenteditable', 'true');
+      const p1 = document.createElement('p');
+      p1.textContent = 'My original request:';
+      const p2 = document.createElement('p');
+      p2.textContent = 'ship it now';
+      composer.append(p1, p2);
+      const btn = document.createElement('button');
+      btn.setAttribute('aria-label', 'Send message');
+      container.append(composer, btn);
+      document.body.appendChild(container);
+
+      // Composer reads 'My original request:\nship it now'; the fetch body carries
+      // the same words re-serialized with a blank line and a trailing newline.
+      p1.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { type: 'nexpath:fetch-prompt', promptText: 'My original request:\n\nship it now\n', agent: 'test-agent' },
+        origin: window.location.origin, source: window,
+      }));
+
+      const captured = postMessageSpy.mock.calls.filter(
+        (c) => (c[0] as { type?: string })?.type === 'nexpath:prompt-captured',
+      );
+      expect(captured).toHaveLength(1);
+    });
   });
 
   it('carries the configured agent id in prompt-captured messages', async () => {

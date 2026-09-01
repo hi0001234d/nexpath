@@ -17,7 +17,7 @@
  *
  * The advisory panel's frozen `ui-contract.ts` is deliberately NOT extended —
  * that file is the UI developer's contract for panel.js; this one is
- * engine-side (decision D-5) and owned with the popup host.
+ * engine-side (a settled decision) and owned with the popup host.
  */
 
 export const PE_PANEL_SCHEMA_VERSION = 1 as const;

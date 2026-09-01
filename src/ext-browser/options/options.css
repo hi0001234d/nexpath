@@ -51,7 +51,8 @@ label {
   gap: 8px;
 }
 
-input[type="password"] {
+input[type="password"],
+input[type="text"] {
   flex: 1;
   background: #1e1e2e;
   border: 1px solid #45475a;
@@ -63,7 +64,8 @@ input[type="password"] {
   transition: border-color 0.15s;
 }
 
-input[type="password"]:focus {
+input[type="password"]:focus,
+input[type="text"]:focus {
   border-color: #cba6f7;
 }
 
@@ -196,3 +198,48 @@ footer a:hover { color: #6c7086; }
 /* Brand header — same icon as the VS Code extension (media/icon.png). */
 .brand-row { display: flex; align-items: center; gap: 14px; }
 .brand-icon { border-radius: 8px; flex: 0 0 auto; }
+
+/* Divider between the two credential options (either/or) */
+.or-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #6c7086;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin: -8px 0;
+}
+.or-divider::before,
+.or-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #45475a;
+}
+
+/* Secondary label inside a card (e.g. the token card's Service URL row) */
+
+/* Advanced disclosure — collapsed by default so normal users never meet it */
+
+
+/* Step list for the token onboarding (product messaging direction, 2026-08-31). */
+.token-steps {
+  margin: 6px 0 10px;
+  padding-left: 20px;
+  font-size: 0.85rem;
+  color: var(--muted, #9aa0b4);
+}
+.token-steps li { margin: 3px 0; }
+.token-steps a { color: inherit; text-decoration: underline; }
+
+/* Footer branding (owner 2026-09-01): wordmark + muted "web" qualifier, one click
+   target linking home. No version text, no icons. */
+.footer-brand {
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: none;
+  letter-spacing: 0.01em;
+}
+.footer-brand:hover { text-decoration: underline; }
+.footer-brand .footer-web { font-weight: 400; color: #6c7086; }

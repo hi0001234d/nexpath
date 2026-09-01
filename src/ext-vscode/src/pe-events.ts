@@ -1,12 +1,12 @@
 /**
- * PE event routing (P6, VED-PE-3 / DEP-B1.3A-VED-02 part).
+ * PE event routing (P6).
  *
  * Maps the raw webview messages `pe-html.ts`'s embedded script emits into a
  * typed, stable event record — routed from the message's own `type`/
  * `actionType` fields only, never inferred from body text.
  *
- * ARCHITECTURAL NOTE — same constraint P5 found and documented (dev plan §5
- * P5, Gate Register `G-ROOTDIR`): `src/ext-vscode` cannot import anything
+ * ARCHITECTURAL NOTE — same constraint P5 found and documented (Gate
+ * Register `G-ROOTDIR`): `src/ext-vscode` cannot import anything
  * from `src/prompt-enhancement/**` — verified empirically, any import
  * (type-only or not) fails `tsc` with `TS6059` by transitively reaching the
  * frozen Layer C modules. `PeEventType` below is therefore a LOCAL
@@ -15,10 +15,10 @@
  * `pe-payload.ts`'s fields mirror `contracts.ts`'s names without importing
  * them.
  *
- * D-5 scope: the handoff (VED-PE-3) lists 20 event categories; the real core
+ * Scope: the engine handoff lists 20 event categories; the real core
  * type has only 10. This module routes onto those 10 (build against the
- * implemented set, per the dev plan's own instruction while D-5/R5 is
- * unanswered). The 5 handoff concepts with no member at all are NOT silently
+ * implemented set, per the dev plan's own instruction while the wider list
+ * is unratified). The 5 handoff concepts with no member at all are NOT silently
  * dropped — see {@link UNMAPPED_HANDOFF_CONCEPTS}, published per this
  * phase's acceptance criterion.
  *
@@ -28,7 +28,7 @@
  * `submit_additional_details`, `close_no_send`). `use_original`, `edit_body`,
  * `skip_or_reject`, and `explicit_feedback` have no button/control in the
  * rendered HTML at all yet — that is the UI owner's wording to add
- * (VED-PE-2: "final labels/layout remain UI-owned"), not something
+ * (per the handoff: "final labels/layout remain UI-owned"), not something
  * this phase invents ahead of the product. {@link routePeWebviewMessage} can
  * therefore only ever produce 6 of the 10 event types until those controls
  * exist; the other 4 remain declared in {@link PeEventType} so the target
@@ -67,7 +67,7 @@ export interface PeEventV1 {
   /**
    * Only meaningful on `deliver_current_body`: true when the additional-details
    * field had unsubmitted text at the moment the user clicked deliver (P7,
-   * VED-PE-7's `dirty_additional_details_requires_apply_or_clear` gate).
+   * the handoff's `dirty_additional_details_requires_apply_or_clear` gate).
    * Computed client-side in `pe-html.ts` — this extension has no other way
    * to observe the field's live dirtiness.
    */
@@ -75,7 +75,7 @@ export interface PeEventV1 {
   /**
    * Only meaningful on the 3 directional event types: true when the body
    * textarea had unsaved manual edits at the moment the user clicked a
-   * directional action (P9, VED-PE-6's `dirtyDraftDisposition` requirement —
+   * directional action (P9, the handoff's `dirtyDraftDisposition` requirement —
    * the edit itself is never carried here, only its presence as a boolean;
    * directional requests always use canonical ids, never dirty text).
    * Computed client-side in `pe-html.ts`, same reasoning as
@@ -177,7 +177,7 @@ export function routePeWebviewMessage(
         currentBodyId: ctx.currentBodyId,
         bodyRevision: ctx.bodyRevision,
         additionalDetailsText: msg.additionalDetailsText,
-        // P9 (VED-PE-6): Apply carries the current visible edited body
+        // P9 (per the handoff): Apply carries the current visible edited body
         // alongside the details — the only event type that does. Optional/
         // defensive (never rejects the whole event over it) matching this
         // module's established tolerance for malformed optional fields.

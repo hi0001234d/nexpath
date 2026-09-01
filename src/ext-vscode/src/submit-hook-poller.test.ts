@@ -1,10 +1,10 @@
 /**
- * H3 — submit-time poller: cross-process handoff (H1 Q1) and latency (H1 Q2).
+ * H3 — submit-time poller: cross-process handoff and latency (H1's two open questions).
  *
  * These are the tests H1's spike could not produce. It tried twice to measure the
  * handoff through synthetic GUI input and produced no data both times. Because
  * the poller takes an injectable clock and interval, the same questions are
- * answered here deterministically — which is exactly why Q1/Q2 were folded out of
+ * answered here deterministically — which is exactly why both were folded out of
  * the spike and into this phase.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -44,7 +44,7 @@ function harness(over: Record<string, unknown> = {}) {
   return { timings, outcomes, clock: c, deps };
 }
 
-describe('H3 Q1 — the cross-process handoff closes in one turn', () => {
+describe('H3 — the cross-process handoff closes in one turn', () => {
   it('delivers a decision parked AFTER start(): inject then submit, in that order', async () => {
     const h = harness({ readPendingDecision: vi.fn().mockResolvedValue(decision({ createdAt: 1_000 })) });
     const p = createSubmitHookPoller(h.deps);
@@ -91,7 +91,7 @@ describe('H3 Q1 — the cross-process handoff closes in one turn', () => {
   });
 });
 
-describe('H3 Q1 — the stale-turn guard (the pe-poller idiom)', () => {
+describe('H3 — the stale-turn guard (the pe-poller idiom)', () => {
   it('SKIPS a decision parked before start() — it belongs to an earlier turn', async () => {
     const h = harness({ readPendingDecision: vi.fn().mockResolvedValue(decision({ createdAt: 100 })) });
     const p = createSubmitHookPoller(h.deps); // startedAt = 500
@@ -110,7 +110,7 @@ describe('H3 Q1 — the stale-turn guard (the pe-poller idiom)', () => {
   });
 });
 
-describe('H3 Q2 — measured handoff latency (the number the evidence packet needs)', () => {
+describe('H3 — measured handoff latency (the number the evidence packet needs)', () => {
   it('records all FIVE mandated stages, timed from block_issued and from persistence', async () => {
     // The dev plan mandates five: block issued -> decision persisted -> extension
     // observed -> inject dispatched -> submit dispatched. This suite previously

@@ -1,6 +1,6 @@
 /**
  * The service worker's single seam onto the prompt-enhancement engine
- * (`src/prompt-enhancement/**` — Hiren/Bhavnesh's layer, never edited by the
+ * (`src/prompt-enhancement/**` — the engine owners' layer, never edited by the
  * browser milestone). Everything the browser needs from the engine flows
  * through this module so the coupling stays auditable in one place:
  *
@@ -13,7 +13,7 @@
  *    (facade.ts, two read sites). MV3 workers have no `process`, so a minimal
  *    `{ env: {} }` is installed at import time and the stored key is copied in
  *    before every prepare/action call. Build-level workaround by design — the
- *    typed key seam on the facade is an open ask to the engine owners (R-1);
+ *    typed key seam on the facade is an open ask to the engine owners;
  *    no engine file is modified.
  *
  * node:fs / node:path / node:crypto reached through the engine's import graph

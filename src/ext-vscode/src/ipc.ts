@@ -14,7 +14,7 @@ import { readInjectedPrompt } from './advisory-store-reader.js';
  * Defines the spawn + parse contract and the error taxonomy. The chat-history
  * watcher and webview payload renderer call into this module; the Cursor /
  * Windsurf adapters supply concrete binary-path resolution. Fully built and
- * hard-frozen (dev plan §2.1) — `ipc.test.ts` locks `spawnStop`'s contract
+ * hard-frozen by the dev plan — `ipc.test.ts` locks `spawnStop`'s contract
  * including Windows crash recovery; any change here is a regression risk.
  *
  * Binary path resolution order (highest priority first):

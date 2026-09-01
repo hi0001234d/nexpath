@@ -234,7 +234,7 @@ describe('resolvePeVisibleSurfaceAckState — ACK on both success and failure', 
     expect(resolvePeVisibleSurfaceAckState({ renderState: null, renderThrew: false })).toBe('not_counted_as_shown');
   });
 
-  it('the input shape has no DS-specific field — structural proof VED-PE-12 is never read from DS status', () => {
+  it('the input shape has no DS-specific field — structural proof PEH-12 is never read from DS status', () => {
     const input = { renderState: 'ready' as const, renderThrew: false };
     expect(Object.keys(input).sort()).toEqual(['renderState', 'renderThrew']);
   });

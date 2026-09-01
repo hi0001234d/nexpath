@@ -70,7 +70,7 @@ async function bootstrap(): Promise<void> {
   console.log('[nexpath harness] payload:', payload);
 
   // Expose controls on window for manual testing in devtools, and wire the
-  // "Simulate setBusy/hide" buttons the brief (§7) promises the harness has.
+  // "Simulate setBusy/hide" buttons the brief promises the harness has.
   (window as unknown as Record<string, unknown>)['nexpathController'] = controller;
 
   document.getElementById('nexpath-harness-busy-on')?.addEventListener('click', () => {

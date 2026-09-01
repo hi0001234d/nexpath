@@ -44,7 +44,7 @@ describe('accepts a well-formed record', () => {
     expect(parsed).not.toBeNull();
     expect(parsed).not.toHaveProperty('sneaky');
     // The original prompt must never survive into the record — a second on-disk
-    // copy of the user's prompt is exactly the BUG-VEDANSI-AR9-G1 leak class.
+    // copy of the user's prompt is exactly the raw-prompt-on-disk leak class.
     expect(parsed).not.toHaveProperty('originalPrompt');
   });
 });

@@ -1,7 +1,7 @@
 /**
- * VED-PE-10 — an injected body must not re-enter as a new user prompt.
+ * PE re-entry guard — an injected body must not re-enter as a new user prompt.
  *
- * The handoff (`...vedansi-handoff-separation-2026-07-30.md`, lines 385–387) is
+ * The engine handoff contract is
  * explicit: a generated body re-entering `UserPromptSubmit` "must not silently
  * trigger fresh classification, profile cadence, product-feedback cadence,
  * detected-language updates, memory learning, or another PE/DS popup as if they
@@ -46,7 +46,7 @@ describe('⭐ the injected replacement is recorded for the existing echo guard',
   });
 
   it('consumes SessionStateManager, never modifies it', () => {
-    // Not Vedansi-owned (hi0001234d 15 / harshil480 15).
+    // Owned by other members (authorship verified) — consume-only here.
     expect(src).toMatch(/import \{ SessionStateManager \}/);
   });
 
@@ -61,7 +61,7 @@ describe('⭐ the injected replacement is recorded for the existing echo guard',
 describe('the guard is not engaged when nothing was blocked', () => {
   it('an allowed prompt records no injected text', async () => {
     // Recording on an allow would suppress the NEXT genuine user prompt.
-    const root = mkdtempSync(join(tmpdir(), 'nexpath-vedpe10-'));
+    const root = mkdtempSync(join(tmpdir(), 'nexpath-pe-reentry-'));
     try {
       const openStore = vi.fn(async () => ({ db: {} }));
       const decide = buildDefaultPromptSubmitDecider({ project: root }, {

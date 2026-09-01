@@ -3,7 +3,7 @@
 // ----------------------------------------------------------------------------
 // Visual reference: nexpath-popup.html (approved). Contract wiring unchanged
 // from panel.skeleton.js. This revision closes the 4 CLI-parity gaps from
-// v0.1.5-UI-DEV-cli-parity-gaps.md / v0.1.5-ui-panel-cli-parity-brief.md §7:
+// the v0.1.5 UI parity brief:
 //   1. centered placement — engine's job; we simply don't set our own position.
 //   2. fixed width/min-height so the box doesn't resize between L1/L2/L3/confirm.
 //   3. "Send to your agent now / Copy to clipboard" confirm screen after a pick.

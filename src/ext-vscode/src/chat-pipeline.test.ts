@@ -192,7 +192,7 @@ describe('createChatEventHandler', () => {
 
   // ── P4: PE-origin routing + F6 self-echo guard ────────────────────────────
 
-  describe('PE-origin routing (VED-PE-10 / D-6)', () => {
+  describe('PE-origin routing (typed store evidence only)', () => {
     let checkPeOrigin: ReturnType<typeof vi.fn>;
     let injectPeResult: ReturnType<typeof vi.fn>;
 

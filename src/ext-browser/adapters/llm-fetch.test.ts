@@ -185,3 +185,49 @@ describe('timeout presentation (engine classification faithfulness)', () => {
     }
   });
 });
+
+describe('FetchLLMAdapter — endpoint resolution (Nexpath-token mode, llm-credentials.ts)', () => {
+  type EnvHolder = { process?: { env?: Record<string, string | undefined> } };
+  function env(): Record<string, string | undefined> {
+    const holder = globalThis as EnvHolder;
+    holder.process ??= {};
+    holder.process.env ??= {};
+    return holder.process.env;
+  }
+
+  beforeEach(() => {
+    // An earlier test ends with vi.unstubAllGlobals(), which removes the
+    // module-level fetch stub — without re-stubbing here these tests would hit
+    // the real network (C-12 forbids that; it happened on first run: a real
+    // OpenAI 401 came back).
+    vi.stubGlobal('fetch', mockFetch);
+    mockFetch.mockClear();
+    delete env()['OPENAI_BASE_URL'];
+  });
+
+  const ok = () => makeResponse({ choices: [{ message: { content: 'ok' } }] });
+  const params = { model: 'gpt-4o-mini', messages: [], temperature: 0 } as never;
+
+  it('defaults to the OpenAI endpoint when no env base URL is set (unchanged behaviour)', async () => {
+    mockFetch.mockResolvedValueOnce(ok());
+    await new FetchLLMAdapter('sk-test').chat(params);
+    expect(mockFetch.mock.calls[0]![0]).toBe('https://api.openai.com/v1/chat/completions');
+  });
+
+  it('honours the env OPENAI_BASE_URL published by applyLLMCredentialEnv', async () => {
+    env()['OPENAI_BASE_URL'] = 'https://service.example/v1';
+    mockFetch.mockResolvedValueOnce(ok());
+    await new FetchLLMAdapter('npk_0123456789abcdefghij').chat(params);
+    expect(mockFetch.mock.calls[0]![0]).toBe('https://service.example/v1/chat/completions');
+    // and the bearer is the token, exactly as passed
+    const init = mockFetch.mock.calls[0]![1] as { headers: Record<string, string> };
+    expect(init.headers['Authorization']).toBe('Bearer npk_0123456789abcdefghij');
+  });
+
+  it('an explicit constructor URL outranks the env (test seam)', async () => {
+    env()['OPENAI_BASE_URL'] = 'https://ignored.example/v1';
+    mockFetch.mockResolvedValueOnce(ok());
+    await new FetchLLMAdapter('sk-test', 'https://explicit.example/v1/chat/completions').chat(params);
+    expect(mockFetch.mock.calls[0]![0]).toBe('https://explicit.example/v1/chat/completions');
+  });
+});

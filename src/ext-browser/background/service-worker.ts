@@ -28,6 +28,8 @@ import { profileToRegister } from '../../decision-session/register.js';
 import { IdbStorageAdapter } from '../adapters/storage-idb.js';
 import { makeMemoryStoragePort } from '../adapters/memory-storage.js';
 import { FetchLLMAdapter } from '../adapters/llm-fetch.js';
+import { applyLLMCredentialEnv, resolveLLMCredentials } from '../adapters/llm-credentials.js';
+import { normalizePromptForDedup } from '../adapters/prompt-dedup.js';
 import { ChromeStorageKeyAdapter } from '../adapters/storage-chrome.js';
 import { BrowserClockAdapter } from '../adapters/clock-browser.js';
 import { ConsoleLogAdapter } from '../adapters/log-console.js';
@@ -734,10 +736,14 @@ async function decideHeldSubmit(
   browser.tabs.sendMessage(tabId, { type: 'nexpath:pe-preparing', projectRoot })
     .catch(() => { /* tab gone — the notice is advisory only */ });
 
-  const [apiKey, sequenceEnabled] = await Promise.all([
-    keyStore.getKey('openai_api_key'),
+  const [llmCreds, sequenceEnabled] = await Promise.all([
+    resolveLLMCredentials(keyStore),
     resolvePeSequenceEnabled(projectRoot),
   ]);
+  // Publish key + base URL into the engine's polyfilled env (own key wins;
+  // Nexpath-token mode routes through the configured service — llm-credentials.ts).
+  applyLLMCredentialEnv(llmCreds);
+  const apiKey = llmCreds.apiKey;
 
   const popup = runBrowserPePopup({
     log,
@@ -847,10 +853,10 @@ async function runPromptSubmitPipeline(
   const now = clock.now();
 
   // ── Step 1: Load persisted session state + config ───────────────────────────
-  const [loadedState, lang, apiKey, freqRaw, roleRaw, lastPromptRaw, projectFreqRaw, projectRoleRaw, langOverrideRaw, forceAdvisoryRaw] = await Promise.all([
+  const [loadedState, lang, llmCreds, freqRaw, roleRaw, lastPromptRaw, projectFreqRaw, projectRoleRaw, langOverrideRaw, forceAdvisoryRaw] = await Promise.all([
     idb.loadSessionState(projectRoot),
     idb.getProjectDetectedLanguage(projectRoot),
-    keyStore.getKey('openai_api_key'),
+    resolveLLMCredentials(keyStore),
     keyStore.getKey('advisory_frequency'),
     keyStore.getKey('role'),
     keyStore.getKey(lastPromptKeyFor(projectRoot)),
@@ -870,11 +876,25 @@ async function runPromptSubmitPipeline(
     keyStore.getKey(FORCE_ADVISORY_KEY),
   ]);
 
+  // Publish the resolved credential (own OpenAI key wins; a stored Nexpath
+  // token routes the adapters through the configured service via the env's
+  // OPENAI_BASE_URL — llm-credentials.ts). Every `apiKey` gate below behaves
+  // exactly as before: the variable is the effective bearer, null when neither
+  // credential exists.
+  applyLLMCredentialEnv(llmCreds);
+  const apiKey = llmCreds.apiKey;
+
   // ── Step 1.2: Cross-page duplicate guard (see CROSS_PAGE_PROMPT_DEDUP_MS) ───
+  // Whitespace-insensitive compare: the capture channels serialize the SAME
+  // submission differently (composer innerText vs request body vs the
+  // prompt-injected marker), and exact `===` let a "Use enhanced" echo through
+  // as two billed pipeline runs (F1, live 2026-08-29 — see prompt-dedup.ts).
   if (lastPromptRaw) {
     try {
       const last = JSON.parse(lastPromptRaw) as { text?: unknown; at?: unknown };
-      if (last.text === promptText && typeof last.at === 'number' && now - last.at < CROSS_PAGE_PROMPT_DEDUP_MS) {
+      if (typeof last.text === 'string'
+        && normalizePromptForDedup(last.text) === normalizePromptForDedup(promptText)
+        && typeof last.at === 'number' && now - last.at < CROSS_PAGE_PROMPT_DEDUP_MS) {
         log.debug('prompt_submit_deduped', { projectRoot, ageMs: now - last.at });
         return;
       }
@@ -1027,7 +1047,7 @@ async function runPromptSubmitPipeline(
   );
   log.debug('absence_flags', { new: newAbsenceFlags.length, total: mgr.current.absenceFlags.length });
 
-  // ── PE context builder + sequence-shaped fallback (mirrors auto.ts §4.6) ──────
+  // ── PE context builder + sequence-shaped fallback (mirrors auto.ts's own) ─────
   // Assemble the browser PE context from what this pipeline already computed. The
   // fallback runs ON BLOCKED EXITS for multi-intent / list-shaped prompts only, so
   // the MPS surface is reachable without an advisory trigger — exactly the CLI's
@@ -1448,7 +1468,7 @@ async function runPromptSubmitPipeline(
 }
 
 /**
- * D-2 advisory-surface switch. The CLI's PE branch REMOVED the decision-session
+ * Advisory-surface switch. The CLI's PE branch REMOVED the decision-session
  * advisory popup outright (MPS-7) — a queued advisory is consumed silently and
  * the prompt-enhancement popup is the surface the user sees. That is this
  * extension's DEFAULT. The hidden storage.local key below, set to the exact
@@ -1460,7 +1480,7 @@ const ADVISORY_LEGACY_SURFACE_KEY = 'nexpath_advisory_legacy_surface';
 
 /**
  * Response-stop dispatcher — CLI-parity popup timing (the browser's Stop hook).
- * Reads the D-2 switch and routes: default = PE-first (mirrors the CLI's PE
+ * Reads the switch and routes: default = PE-first (mirrors the CLI's PE
  * branch of stop.ts — feedback popups don't exist in the browser, PE popup
  * next, advisory surface removed); 'enabled' = the legacy advisory flow,
  * unchanged, with any pending PE row consumed silently so the two surfaces
@@ -1491,7 +1511,7 @@ async function handleResponseStop(projectRoot: string, tabId: number | undefined
 }
 
 /**
- * PE-first response-stop (the D-2 default) — the browser mirror of the CLI PE
+ * PE-first response-stop (the default) — the browser mirror of the CLI PE
  * branch's Stop hook: wait out a still-running submit decision, consume any
  * queued advisory SILENTLY (MPS-7 — the advisory popup no longer exists on
  * this surface), then show the parked prompt enhancement through the engine's
@@ -1520,7 +1540,7 @@ async function handleResponseStopPeFirst(projectRoot: string, tabId: number | un
   if (!pe) {
     // PB6 fail-closed row behaviour: an active sequence row with no pending PE
     // would be the CLI's continuation moment — the browser has no continuation
-    // runtime (deferred, R-3), so it logs and does NOTHING, exactly the CLI's
+    // runtime (deferred), so it logs and does NOTHING, exactly the CLI's
     // planner-off default. Content-free: counts only.
     try {
       const seq = await getPendingSequence(projectRoot);
@@ -1578,10 +1598,13 @@ async function handleResponseStopPeFirst(projectRoot: string, tabId: number | un
     return;
   }
 
-  const [apiKey, sequenceEnabled] = await Promise.all([
-    keyStore.getKey('openai_api_key'),
+  const [llmCreds, sequenceEnabled] = await Promise.all([
+    resolveLLMCredentials(keyStore),
     resolvePeSequenceEnabled(projectRoot),
   ]);
+  // Own key wins; token mode routes via the service (llm-credentials.ts).
+  applyLLMCredentialEnv(llmCreds);
+  const apiKey = llmCreds.apiKey;
   const stopOutcome = await runBrowserPePopup({
     log,
     projectRoot,
@@ -1642,7 +1665,7 @@ async function handleResponseStopPeFirst(projectRoot: string, tabId: number | un
 }
 
 /**
- * LEGACY response-stop handler (D-2 switch 'enabled') — the shipped advisory
+ * LEGACY response-stop handler (switch 'enabled') — the shipped advisory
  * flow, byte-for-byte. Shows the advisory that handlePromptSubmit queued for
  * this project, if any — so the popup lands AFTER the response, never
  * before/during it. Mirrors cli/commands/stop.ts (runStop): pull pending →
@@ -1652,11 +1675,14 @@ async function handleResponseStopPeFirst(projectRoot: string, tabId: number | un
 async function handleResponseStopLegacyAdvisory(projectRoot: string, tabId: number | undefined): Promise<void> {
   const key   = pendingAdvisoryKeyFor(projectRoot);
   const ogKey = pendingAdvisoryOgKeyFor(projectRoot);
-  let [raw, ogRaw, apiKey] = await Promise.all([
+  let [raw, ogRaw] = await Promise.all([
     keyStore.getKey(key),
     keyStore.getKey(ogKey),
-    keyStore.getKey('openai_api_key'),
   ]);
+  // Own key wins; token mode routes via the service (llm-credentials.ts).
+  const llmCreds = await resolveLLMCredentials(keyStore);
+  applyLLMCredentialEnv(llmCreds);
+  const apiKey = llmCreds.apiKey;
 
   if (!raw) {
     // Nothing queued YET — but the submit-path decision may still be running (see
@@ -1733,7 +1759,7 @@ async function handleResponseStopLegacyAdvisory(projectRoot: string, tabId: numb
       const og      = JSON.parse(ogRaw) as PendingOgContext;
       const content = resolveDecisionContent(og.stage, og.flagType, og.profile ?? undefined, og.prevStage ?? undefined);
 
-      // ── CLI parity (stop.ts §1.5): natural-language detection over recent prompts,
+      // ── CLI parity (stop.ts): natural-language detection over recent prompts,
       // run post-response like the CLI. Only fires once >= LANG_DETECT_INTERVAL prompts
       // exist for this project. tinyld runs locally (no API cost). The detected code is
       // persisted so later submits pick it up (auto.ts reads the stored value), and the

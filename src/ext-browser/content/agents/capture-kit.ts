@@ -1,4 +1,5 @@
 import type { PromptCapturedMsg, ResponseStoppedMsg } from '../ipc.js';
+import { normalizePromptForDedup } from '../../adapters/prompt-dedup.js';
 
 /**
  * Capture kit — the agent-agnostic DOM-capture machinery shared by every
@@ -179,6 +180,10 @@ export function createCaptureKit(config: CaptureKitConfig): CaptureKit {
   // tradeoff: sending the exact same text twice in a row with nothing in between is
   // indistinguishable from a re-render artifact — unavoidable from DOM observation
   // alone, and a narrower miss than a time window.
+  //
+  // Held NORMALIZED (prompt-dedup.ts): the channels serialize one submission with
+  // different whitespace (composer innerText vs fetch body), and exact compare let
+  // a "Use enhanced" send emit twice → two billed pipeline runs (F1, 2026-08-29).
   let lastEmittedText: string | null = null;
 
   // Messages whose element existed but whose text was still EMPTY when first
@@ -237,8 +242,9 @@ export function createCaptureKit(config: CaptureKitConfig): CaptureKit {
   // submit time followed by the rendered message echo in the chat feed) can never
   // double-emit.
   function emitIfNewText(text: string, viaLog?: string): void {
-    if (!text || text === lastEmittedText) return;
-    lastEmittedText = text;
+    const normalized = normalizePromptForDedup(text);
+    if (!normalized || normalized === lastEmittedText) return;
+    lastEmittedText = normalized;
     if (viaLog) console.log(viaLog);
     // A prompt we just captured IS a turn — arm the completion-label detector
     // even on sites/response types where the stop button is never observed.
