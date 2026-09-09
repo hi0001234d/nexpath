@@ -141,7 +141,7 @@ jobs:
         run: |
           docker run --rm --platform linux/arm64 \
             -v "${{ github.workspace }}":/work -w /work/src/ext-vscode \
-            node:22-bullseye bash -lc "
+            node:22-bookworm bash -lc "
               npm ci &&
               npx tsc --noEmit &&
               npm test -- --no-file-parallelism &&
