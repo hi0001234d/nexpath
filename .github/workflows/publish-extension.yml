@@ -202,18 +202,43 @@ jobs:
         if: ${{ env.VSCE_PAT != '' }}
         working-directory: src/ext-vscode
         run: |
+          # Run #16 built all five .vsix files and then died on
+          # "Request timeout: /_apis/gallery" — a transient Marketplace API
+          # timeout. Two hardening changes:
+          #   --skip-duplicate : a timeout PART WAY through five sequential
+          #     uploads leaves earlier ones published; without this every
+          #     re-run then dies on "version already exists" and the only way
+          #     out is bumping the version. With it, re-running is always safe.
+          #   retry loop       : one slow response no longer fails the release.
           for vsix in ../../dist-vsix-all/*.vsix ; do
             echo "Publishing $vsix to VS Code Marketplace..."
-            npx vsce publish --packagePath "$vsix"
+            for attempt in 1 2 3 ; do
+              npx vsce publish --skip-duplicate --packagePath "$vsix" && break
+              if [ "$attempt" -eq 3 ]; then
+                echo "::error::vsce publish failed 3 times for $vsix"
+                exit 1
+              fi
+              echo "attempt $attempt failed; retrying in $((attempt * 30))s"
+              sleep $((attempt * 30))
+            done
           done
 
       - name: Publish to Open VSX (ovsx)
         if: ${{ env.OVSX_PAT != '' }}
         working-directory: src/ext-vscode
         run: |
+          # Same hardening as the Marketplace step above.
           for vsix in ../../dist-vsix-all/*.vsix ; do
             echo "Publishing $vsix to Open VSX..."
-            npx ovsx publish "$vsix"
+            for attempt in 1 2 3 ; do
+              npx ovsx publish --skip-duplicate "$vsix" && break
+              if [ "$attempt" -eq 3 ]; then
+                echo "::error::ovsx publish failed 3 times for $vsix"
+                exit 1
+              fi
+              echo "attempt $attempt failed; retrying in $((attempt * 30))s"
+              sleep $((attempt * 30))
+            done
           done
 
       - name: Sanity-check publication
