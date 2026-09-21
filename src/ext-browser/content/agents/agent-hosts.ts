@@ -36,7 +36,16 @@ export function resolveProjectRootFromLocation(hostname: string, pathname: strin
   if (agent === 'replit') {
     // replit.com/@<user>/<project> (confirmed in B3 recon)
     const m = pathname.match(/^\/(@[^/]+\/[^/]+)/);
-    return m ? `${origin}/${m[1]}` : null;
+    if (m) return `${origin}/${m[1]}`;
+    // Team workspaces: replit.com/t/<team>/repls/<project> and
+    // replit.com/t/<team>/chats/<chat-id> (both on a tester's pages, 2026-09-18).
+    // Neither starts with "/@", so every prompt typed there was skipped as "no
+    // project context" and no popup could show. Each project and each chat is its
+    // own root — one session per project, as above; a chat cannot be tied to its
+    // project from the URL alone. The team's list pages and any shape not seen
+    // yet still have no project context → null.
+    const t = pathname.match(/^\/(t\/[^/]+\/(?:repls|chats)\/[^/]+)/);
+    return t ? `${origin}/${t[1]}` : null;
   }
   if (agent === 'lovable') {
     // lovable.dev/projects/<uuid> (confirmed live in B5 recon 2026-07-06);
