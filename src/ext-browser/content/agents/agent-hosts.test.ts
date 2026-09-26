@@ -69,6 +69,19 @@ describe('resolveProjectRootFromLocation (per-project session roots — CLI pari
       .toBe('https://replit.com/t/my-team/chats/chat-cnv_0abc123def456ghi789');
   });
 
+  // A chat outside a team workspace: where a prompt typed on the home page lands
+  // before the project exists (seen live on a personal account, 2026-09-25).
+  it('replit chat page without a team → origin + /chats/<chat-id>', () => {
+    expect(replitRoot('/chats/hello-world-cnv_0abc123def456'))
+      .toBe('https://replit.com/chats/hello-world-cnv_0abc123def456');
+    expect(replitRoot('/chats/hello-world-cnv_0abc123def456/')).toBe('https://replit.com/chats/hello-world-cnv_0abc123def456');
+  });
+
+  it('the chats list is not a chat → null', () => {
+    expect(replitRoot('/chats')).toBeNull();
+    expect(replitRoot('/chats/')).toBeNull();
+  });
+
   it('replit team sub-paths and a trailing slash still resolve to the project / chat only', () => {
     expect(replitRoot('/t/my-team/repls/Invoice-App/')).toBe('https://replit.com/t/my-team/repls/Invoice-App');
     expect(replitRoot('/t/my-team/repls/Invoice-App/files/src')).toBe('https://replit.com/t/my-team/repls/Invoice-App');
@@ -83,6 +96,8 @@ describe('resolveProjectRootFromLocation (per-project session roots — CLI pari
       '/t/my-team/chats/chat-cnv_0abc',
       '/t/my-team/chats/chat-cnv_0def',
       '/t/my-team/chats/Invoice-App',
+      '/chats/chat-cnv_0abc',
+      '/chats/chat-cnv_0def',
     ].map(replitRoot);
     expect(roots.every((r) => r !== null)).toBe(true);
     expect(new Set(roots).size).toBe(roots.length);

@@ -1,15 +1,16 @@
 // @vitest-environment jsdom
 
 /**
- * Replit team workspaces through the content-script relay.
+ * Replit chats and team workspaces through the content-script relay.
  *
- * A team workspace puts the project under /t/<team>/ instead of /@<user>/, and
- * the relay used to treat those pages as having no project: every prompt was
- * "capture skipped — no project context", a prompt typed on the team home was
- * stashed and then "expired without entering a project", and nothing ever
- * reached the service worker — so no popup could show. The URL rule itself is
- * unit-tested in agents/agent-hosts.test.ts; this file proves the relay now
- * forwards team-page prompts and response-stops under the project's own root.
+ * A chat lives at /chats/<id>, and a team workspace puts its chats and projects
+ * under /t/<team>/ — none of them start with /@<user>/, and the relay used to
+ * treat all of them as having no project: every prompt was "capture skipped — no
+ * project context", a prompt typed on the home page was stashed and then
+ * "expired without entering a project", and nothing ever reached the service
+ * worker, so no popup could show. The URL rule itself is unit-tested in
+ * agents/agent-hosts.test.ts; this file proves the relay now forwards those
+ * pages' prompts and response-stops under each page's own root.
  */
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
 
@@ -31,6 +32,8 @@ vi.mock('webextension-polyfill', () => ({
 const ORIGIN = 'https://replit.com';
 const PROJECT_PATH = '/t/my-team/repls/Invoice-App';
 const CHAT_PATH = '/t/my-team/chats/chat-cnv_0abc123def456ghi789';
+/** A chat outside a team workspace — where a home-page prompt lands first. */
+const PLAIN_CHAT_PATH = '/chats/hello-world-cnv_0abc123def456';
 
 function setPath(pathname: string): void {
   vi.stubGlobal('location', { origin: ORIGIN, hostname: 'replit.com', pathname });
@@ -76,6 +79,42 @@ describe('main-world-injector.ts — Replit team workspace pages', () => {
       type: 'nexpath:prompt-submit',
       promptText: 'fix the checkout import',
       projectRoot: `${ORIGIN}${CHAT_PATH}`,
+      agent: 'replit',
+      tabId: 0,
+    });
+  });
+
+  it('forwards a prompt typed in a chat that has no team, under that chat\'s root', () => {
+    sendMessageMock.mockClear();
+    setPath(PLAIN_CHAT_PATH);
+    dispatchWindowMessage({ type: 'nexpath:prompt-captured', promptText: 'make it dark mode', agent: 'replit' });
+
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: 'nexpath:prompt-submit',
+      promptText: 'make it dark mode',
+      projectRoot: `${ORIGIN}${PLAIN_CHAT_PATH}`,
+      agent: 'replit',
+      tabId: 0,
+    });
+  });
+
+  it('a prompt typed on the Replit home is delivered once the page moves into the new chat', () => {
+    // The live shape: the home page has no project, the prompt is held, and the
+    // page then lands on the chat the site just created for it.
+    vi.useFakeTimers();
+    sendMessageMock.mockClear();
+    setPath('/~');
+    dispatchWindowMessage({ type: 'nexpath:prompt-captured', promptText: 'make a hello world page', agent: 'replit' });
+    expect(sendMessageMock).not.toHaveBeenCalled();
+
+    setPath(PLAIN_CHAT_PATH);
+    vi.advanceTimersByTime(1_100);
+
+    expect(sendMessageMock).toHaveBeenCalledTimes(1);
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: 'nexpath:prompt-submit',
+      promptText: 'make a hello world page',
+      projectRoot: `${ORIGIN}${PLAIN_CHAT_PATH}`,
       agent: 'replit',
       tabId: 0,
     });
