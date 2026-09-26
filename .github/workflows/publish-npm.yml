@@ -1,0 +1,107 @@
+name: Publish Nexpath CLI to npm
+
+# Tag push (cli-v*) ya manual dispatch with publish=true par hi publish hota hai.
+# publish=false = poora rehearsal: `npm publish --dry-run` tarball dikhata hai,
+# bhejta kuch nahi.
+#
+# Required repository secret:
+#   NPM_TOKEN — npm **Automation** token (npmjs.com → Access Tokens →
+#               Generate New Token → Automation; ya Granular token with
+#               Read and write on nexpath-cli). Classic "Publish" token kaafi
+#               NAHI hai jab account par 2FA-on-writes ho: sirf Automation
+#               tokens OTP prompt skip karte hain, aur CI mein OTP kaun daale.
+#
+# Published name = package.json#name (`nexpath-cli`) → `npm i -g nexpath-cli`.
+# files:["dist"] ka matlab tarball mein sirf build output jaata hai, aur
+# prepublishOnly yahin dist/ dobara banata hai — local gitignored dist/ kabhi
+# ship nahi hoti.
+#
+# LESSON FROM THE VS CODE WORKFLOW (do NOT regress): step-level `env` us step ke
+# apne `if:` ke scope mein NAHI hota. Isliye token job level par hai aur
+# preflight LOUD hai — koi silent no-op publish nahi.
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to npmjs.com (false = verify + dry-run only)"
+        type: boolean
+        required: true
+        default: false
+  push:
+    tags:
+      - "cli-v*"
+
+jobs:
+  publish:
+    name: Verify + publish
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write        # `npm publish --provenance` ke liye zaroori
+    env:
+      # Job level on purpose — header ka note dekho (step-level env aur `if:`).
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      SHOULD_PUBLISH: ${{ github.event_name == 'push' || inputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          # Ye wo .npmrc likhta hai jisse npm NODE_AUTH_TOKEN padhta hai. Iske
+          # bina secret set hone par bhi `npm publish` ENEEDAUTH deta hai.
+          registry-url: "https://registry.npmjs.org"
+
+      # OIDC ("trusted publishing") needs npm >= 11.5.1; Node 22 ships npm 10.x.
+      # Harmless when a token is used instead — it is just a newer npm.
+      - name: Upgrade npm (trusted publishing needs npm >= 11.5.1)
+        run: npm install -g npm@latest
+
+      - name: Preflight — how this run will authenticate
+        run: |
+          if [ -n "$NODE_AUTH_TOKEN" ]; then
+            echo "::notice::NPM_TOKEN present — publishing with a token."
+          else
+            echo "::notice::No NPM_TOKEN — publishing via trusted publishing (OIDC). npmjs.com must list this repo + workflow as the package's trusted publisher, or the publish will fail with ENEEDAUTH."
+          fi
+          echo "publish=$SHOULD_PUBLISH"
+          npm --version
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit + integration tests
+        run: npm test
+
+      # Build BEFORE publish so dist/ exists when npm first reads package.json.
+      # Without it npm warns "No bin file found at dist/cli/index.js" (twice per
+      # bin) because `prepublishOnly` only builds AFTER that read — the tarball
+      # was always correct, the warning just looked like a packaging fault.
+      - name: Build (so npm sees dist/ when it reads the bin paths)
+        run: npm run build
+
+      - name: Preflight — this version is not already on npm
+        run: |
+          NAME="$(node -p "require('./package.json').name")"
+          VER="$(node -p "require('./package.json').version")"
+          echo "about to publish $NAME@$VER"
+          if npm view "$NAME@$VER" version >/dev/null 2>&1; then
+            echo "::error::$NAME@$VER is already on npm — published versions are immutable. Bump package.json first."
+            exit 1
+          fi
+
+      - name: Publish (dry run)
+        if: env.SHOULD_PUBLISH != 'true'
+        run: npm publish --dry-run --access public
+
+      - name: Publish to npmjs.com
+        if: env.SHOULD_PUBLISH == 'true'
+        # --provenance tarball ko is workflow run se link karta hai (public repo
+        # + id-token: write chahiye). Registry reject kare to ye flag hata dena.
+        run: npm publish --provenance --access public

@@ -112,7 +112,7 @@ The core interaction keeps your request and the added workflow guidance together
 
 Nexpath CLI is built for prompt capture across AI coding agents.
 
-| Agent | Status in v0.1.55 |
+| Agent | Status in v0.1.57 |
 |-------|-----------------|
 | [**Claude Code**](#add-nexpath-to-your-development-workflow--installation) | Fully supported — end-to-end tested |
 | [**Cursor**](https://marketplace.visualstudio.com/items?itemName=nexpath.nexpath-vscode) | Fully supported — end-to-end tested |

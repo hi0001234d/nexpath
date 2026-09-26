@@ -1,6 +1,6 @@
 {
   "name": "nexpath-cli",
-  "version": "0.1.55",
+  "version": "0.1.57",
   "description": "Behaviour guidance system for vibe coders using AI coding agents",
   "license": "Apache-2.0",
   "homepage": "https://github.com/hi0001234d/nexpath#readme",
@@ -29,8 +29,8 @@
   ],
   "type": "module",
   "bin": {
-    "nexpath": "./dist/cli/index.js",
-    "nexpath-serve": "./dist/server/index.js"
+    "nexpath": "dist/cli/index.js",
+    "nexpath-serve": "dist/server/index.js"
   },
   "files": [
     "dist"

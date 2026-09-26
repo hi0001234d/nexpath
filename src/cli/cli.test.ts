@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { createRequire } from 'node:module';
 import { createProgram } from './index.js';
 
 async function run(...args: string[]) {
@@ -12,8 +13,12 @@ async function run(...args: string[]) {
 }
 
 describe('nexpath CLI — metadata', () => {
-  it('version is 0.1.55', () => {
-    expect(createProgram().version()).toBe('0.1.55');
+  // Compared against package.json, NOT a literal. A literal here is what let
+  // 0.1.56 ship a CLI reporting 0.1.55: the bump touched package.json only, and
+  // this test agreed with the stale number instead of catching it.
+  it('version matches package.json', () => {
+    const { version } = createRequire(import.meta.url)('../../package.json') as { version: string };
+    expect(createProgram().version()).toBe(version);
   });
 
   it('name is nexpath', () => {

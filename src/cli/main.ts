@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { createRequire } from 'node:module';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../store/db.js';
 import {
   configGetAction,
@@ -72,13 +73,28 @@ ${err.message}
   }
 }
 
+/**
+ * `nexpath --version`, read from package.json rather than typed out here.
+ *
+ * ⚠️ WHY (2026-09-21). This line used to carry its own literal, and a release
+ * bumped package.json to 0.1.56 without it — so `nexpath-cli@0.1.56` shipped a
+ * CLI that reported 0.1.55, and nothing caught it: the test pinned the same
+ * literal, so the two wrong numbers agreed with each other. One source of truth
+ * makes that drift impossible.
+ *
+ * The relative path resolves in BOTH layouts, because `files: ["dist"]` ships
+ * package.json at the tarball root: src/cli/main.ts → repo root, and
+ * dist/cli/main.js → package root (the staged CLI inside the .vsix included).
+ */
+const { version: NEXPATH_VERSION } = createRequire(import.meta.url)('../../package.json') as { version: string };
+
 export function createProgram(): Command {
   const program = new Command();
 
   program
     .name('nexpath')
     .description('Behaviour guidance system for vibe coders using AI coding agents')
-    .version('0.1.55');
+    .version(NEXPATH_VERSION);
 
   // ── Lifecycle commands ────────────────────────────────────────────────────────
 

@@ -3,11 +3,19 @@
 All notable changes to the browser extension. Versions track the `version` field in
 `manifest.chrome.json` / `manifest.firefox.json`.
 
-## 0.1.55
+## 0.1.57
 
-Token mode now delivers the full enhancement.
+Token mode now delivers the full enhancement, and Nexpath works on Replit chats and
+team workspaces.
 
 ### Fixed
+- **Nexpath now works on Replit chats and team workspaces.** A chat lives at
+  `replit.com/chats/<id>`, and a team workspace puts its projects and chats under
+  `replit.com/t/<team>/…`. Neither was recognised as a project, so prompts typed on those
+  pages were skipped and no popup could appear — a prompt typed on the Replit home page was
+  held for a project that never arrived and was then dropped. They are recognised now, and
+  each project and each chat keeps its own session, exactly as `replit.com/@<user>/<project>`
+  always has. Nothing changes on any other page, on Lovable or on Bolt.
 - **With a Nexpath token, the improved prompt is now composed by the model, the same
   way it is with your own OpenAI key.** Since token mode arrived in 0.1.53 the check
   that decides whether a model call is allowed only recognised OpenAI keys, so token
