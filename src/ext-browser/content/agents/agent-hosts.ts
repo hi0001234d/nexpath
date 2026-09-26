@@ -36,7 +36,23 @@ export function resolveProjectRootFromLocation(hostname: string, pathname: strin
   if (agent === 'replit') {
     // replit.com/@<user>/<project> (confirmed in B3 recon)
     const m = pathname.match(/^\/(@[^/]+\/[^/]+)/);
-    return m ? `${origin}/${m[1]}` : null;
+    if (m) return `${origin}/${m[1]}`;
+    // Chats and team workspaces — three shapes that do not start with "/@", so a
+    // prompt typed on any of them used to be skipped as "no project context" and
+    // no popup could ever show:
+    //   /chats/<id>                 an agent chat (seen live on a personal account,
+    //                               2026-09-25: a prompt from the home page lands
+    //                               here before any project exists)
+    //   /t/<team>/chats/<id>        the same chat inside a team workspace
+    //   /t/<team>/repls/<project>   a team workspace's project
+    // Each chat and each project is its own root — one session per project, as
+    // above. A chat cannot be tied to its project from the URL alone, so when a
+    // chat turns into a project the session starts fresh there; nothing is lost,
+    // because the prompt held for a page with no project is delivered under the
+    // new root (see main-world-injector's stash).
+    // List pages (/chats, /t/<team>/repls) and any shape not seen yet stay null.
+    const t = pathname.match(/^\/(t\/[^/]+\/(?:repls|chats)\/[^/]+|chats\/[^/]+)/);
+    return t ? `${origin}/${t[1]}` : null;
   }
   if (agent === 'lovable') {
     // lovable.dev/projects/<uuid> (confirmed live in B5 recon 2026-07-06);

@@ -55,6 +55,74 @@ describe('resolveProjectRootFromLocation (per-project session roots — CLI pari
     expect(resolveProjectRootFromLocation('replit.com', '/', 'https://replit.com')).toBeNull();
   });
 
+  // Team workspaces put the project under /t/<team>/ — before these shapes were
+  // recognised, every prompt typed there was skipped and no popup could show.
+  const replitRoot = (pathname: string): string | null =>
+    resolveProjectRootFromLocation('replit.com', pathname, 'https://replit.com');
+
+  it('replit team project page → origin + /t/<team>/repls/<project>', () => {
+    expect(replitRoot('/t/my-team/repls/Invoice-App')).toBe('https://replit.com/t/my-team/repls/Invoice-App');
+  });
+
+  it('replit team chat page → origin + /t/<team>/chats/<chat-id>', () => {
+    expect(replitRoot('/t/my-team/chats/chat-cnv_0abc123def456ghi789'))
+      .toBe('https://replit.com/t/my-team/chats/chat-cnv_0abc123def456ghi789');
+  });
+
+  // A chat outside a team workspace: where a prompt typed on the home page lands
+  // before the project exists (seen live on a personal account, 2026-09-25).
+  it('replit chat page without a team → origin + /chats/<chat-id>', () => {
+    expect(replitRoot('/chats/hello-world-cnv_0abc123def456'))
+      .toBe('https://replit.com/chats/hello-world-cnv_0abc123def456');
+    expect(replitRoot('/chats/hello-world-cnv_0abc123def456/')).toBe('https://replit.com/chats/hello-world-cnv_0abc123def456');
+  });
+
+  it('the chats list is not a chat → null', () => {
+    expect(replitRoot('/chats')).toBeNull();
+    expect(replitRoot('/chats/')).toBeNull();
+  });
+
+  it('replit team sub-paths and a trailing slash still resolve to the project / chat only', () => {
+    expect(replitRoot('/t/my-team/repls/Invoice-App/')).toBe('https://replit.com/t/my-team/repls/Invoice-App');
+    expect(replitRoot('/t/my-team/repls/Invoice-App/files/src')).toBe('https://replit.com/t/my-team/repls/Invoice-App');
+    expect(replitRoot('/t/my-team/chats/chat-cnv_0abc/')).toBe('https://replit.com/t/my-team/chats/chat-cnv_0abc');
+  });
+
+  it('replit team roots never merge — each project, chat and team is its own session', () => {
+    const roots = [
+      '/t/my-team/repls/Invoice-App',
+      '/t/my-team/repls/Tip-Calculator',
+      '/t/other-team/repls/Invoice-App',
+      '/t/my-team/chats/chat-cnv_0abc',
+      '/t/my-team/chats/chat-cnv_0def',
+      '/t/my-team/chats/Invoice-App',
+      '/chats/chat-cnv_0abc',
+      '/chats/chat-cnv_0def',
+    ].map(replitRoot);
+    expect(roots.every((r) => r !== null)).toBe(true);
+    expect(new Set(roots).size).toBe(roots.length);
+  });
+
+  it('replit team pages without a project or chat → null (capture stays skipped there)', () => {
+    for (const p of [
+      '/t', '/t/', '/t/my-team', '/t/my-team/',
+      '/t/my-team/repls', '/t/my-team/repls/', '/t/my-team/chats', '/t/my-team/chats/',
+      '/t//repls/Invoice-App',
+    ]) {
+      expect(replitRoot(p), p).toBeNull();
+    }
+  });
+
+  it('replit shapes not recognised yet stay skipped, exactly as before', () => {
+    for (const p of ['/t/my-team/deployments/Invoice-App', '/team/my-team/repls/Invoice-App', '/x/t/my-team/repls/Invoice-App']) {
+      expect(replitRoot(p), p).toBeNull();
+    }
+  });
+
+  it('the /@user/project shape is read first and is unchanged', () => {
+    expect(replitRoot('/@some-user/Some-Project/files')).toBe('https://replit.com/@some-user/Some-Project');
+  });
+
   it('lovable project page → origin + /projects/<uuid> (B5 recon confirmed 2026-07-06)', () => {
     expect(resolveProjectRootFromLocation('lovable.dev', '/projects/21239a50-17b8-4fa3-a8ca-03ab8d24d0c3', 'https://lovable.dev'))
       .toBe('https://lovable.dev/projects/21239a50-17b8-4fa3-a8ca-03ab8d24d0c3');

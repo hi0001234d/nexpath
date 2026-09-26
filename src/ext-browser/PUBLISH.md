@@ -78,6 +78,14 @@ The committed source at the tagged release reproduces the uploaded package exact
 rebuild from these steps and byte-diff the result against the upload — use `npm ci` (exact lockfile),
 not `npm install`, and match the Node version above.
 
+⚠️ **One line will differ if the reviewer builds from a source archive rather than a git checkout.**
+`build-ext.mjs` stamps the commit and branch it built from into `service-worker.js`
+(`var BUILD_ID = "<short-sha>@<branch>:<target>"`), and outside a git checkout that stamp falls back to
+`"unknown:<target>"`. Everything else is byte-identical — measured for 0.1.57 by diffing a clone build
+against an archive build: `service-worker.js` differed by that single line and no other file differed at
+all. Say this in the reviewer notes, or point reviewers at the tagged commit so they build with `.git`
+present and the diff is empty.
+
 The Firefox manifest sets `strict_min_version` **112** and declares Mozilla's built-in
 data-consent keys as:
 

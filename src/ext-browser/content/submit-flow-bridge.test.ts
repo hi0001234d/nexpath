@@ -204,11 +204,11 @@ describe('setupSubmitFlowBridge — the content-script side', () => {
 });
 
 describe('the decision relay (page ⇄ service worker), and its fail-open posture', () => {
-  function makeWin(hostname = 'bolt.new') {
+  function makeWin(hostname = 'bolt.new', pathname = '/~/my-project') {
     const listeners: Array<(ev: MessageEvent) => void> = [];
     const posts: Array<Record<string, unknown>> = [];
     const win = {
-      location: { origin: `https://${hostname}`, hostname, pathname: '/~/my-project' },
+      location: { origin: `https://${hostname}`, hostname, pathname },
       addEventListener(type: string, cb: (ev: MessageEvent) => void): void {
         if (type === 'message') listeners.push(cb);
       },
@@ -238,6 +238,19 @@ describe('the decision relay (page ⇄ service worker), and its fail-open postur
       requestId: 'r1',
       prompt: 'ship the thing',
       submitId: 's1',
+    }));
+  });
+
+  it('on a Replit team project page the request carries that project\'s root, not an empty one', async () => {
+    const { win, deliver } = makeWin('replit.com', '/t/my-team/repls/Invoice-App');
+    const askSw = vi.fn().mockResolvedValue({ decision: { kind: 'allow' } });
+    setupSubmitFlowBridge({ ...base, win, site: 'replit', askSw });
+
+    deliver(REQ);
+    expect(askSw).toHaveBeenCalledWith(expect.objectContaining({
+      type: SUBMIT_DECISION_REQUEST_TYPE,
+      site: 'replit',
+      projectRoot: 'https://replit.com/t/my-team/repls/Invoice-App',
     }));
   });
 
