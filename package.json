@@ -35,6 +35,10 @@
   "files": [
     "dist"
   ],
+  "exports": {
+    ".": "./dist/cli/index.js",
+    "./context-engineering": "./dist/context-engineering/index.js"
+  },
   "scripts": {
     "prebuild": "tsx scripts/check-build-gate.ts",
     "build": "tsc",
