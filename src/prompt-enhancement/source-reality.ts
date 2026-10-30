@@ -317,6 +317,8 @@ export interface StoreSourceSnapshot {
 const SOURCE_TABLES = [
   'config',
   'content_templates',
+  'context_memory', // Feature 1 (context engineering), not PE memory
+  'delivered_items', // Feature 1 (context engineering), not PE memory
   'feedback_signals',
   'pending_advisories',
   'pending_prompt_enhancements',

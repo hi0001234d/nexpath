@@ -23,11 +23,11 @@ export interface FailOpenOptions extends EnhancementOptions {
 /**
  * Executes a prompt enhancement action inside an unbreakable fail-open boundary.
  */
-export async function withFailOpen(
+export async function withFailOpen<T extends EnhancementResult = EnhancementResult>(
   rawPrompt: string,
-  action: (signal: AbortSignal) => Promise<EnhancementResult>,
+  action: (signal: AbortSignal) => Promise<T>,
   options?: FailOpenOptions
-): Promise<EnhancementResult> {
+): Promise<T | EnhancementResult> {
   const startTime = performance.now();
   const timeoutMs = options?.timeoutMs && options.timeoutMs > 0
     ? options.timeoutMs
@@ -35,12 +35,20 @@ export async function withFailOpen(
 
   const controller = new AbortController();
 
-  // Wire external AbortSignal if provided
-  if (options?.signal) {
-    if (options.signal.aborted) {
-      return buildFallbackResult(rawPrompt, startTime, options?.fallbackStage);
-    }
-    options.signal.addEventListener('abort', () => controller.abort(), { once: true });
+  // Wire external AbortSignal if provided. The abort also rejects the race below,
+  // so a cancel returns at once even while the pipeline is stuck awaiting I/O.
+  let onExternalAbort: (() => void) | undefined;
+  const abortPromise = new Promise<never>((_, reject) => {
+    if (!options?.signal) return;
+    onExternalAbort = () => {
+      controller.abort();
+      reject(new Error('Context-engineering enhancement aborted by caller'));
+    };
+    options.signal.addEventListener('abort', onExternalAbort, { once: true });
+  });
+  if (options?.signal?.aborted) {
+    options.signal.removeEventListener('abort', onExternalAbort!);
+    return buildFallbackResult(rawPrompt, startTime, options?.fallbackStage);
   }
 
   // Timer race
@@ -52,16 +60,22 @@ export async function withFailOpen(
     }, timeoutMs);
   });
 
+  const cleanup = () => {
+    clearTimeout(timerId);
+    if (onExternalAbort) options?.signal?.removeEventListener('abort', onExternalAbort);
+  };
+
   try {
     const result = await Promise.race([
       action(controller.signal),
       timeoutPromise,
+      abortPromise,
     ]);
 
-    clearTimeout(timerId);
+    cleanup();
     return result;
   } catch (error) {
-    clearTimeout(timerId);
+    cleanup();
 
     // Diagnostic log without throwing
     const durationMs = Math.min(Math.round(performance.now() - startTime), timeoutMs);

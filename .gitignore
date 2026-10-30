@@ -19,3 +19,4 @@ lib/
 
 # npm lockfile. NB: the publish workflows run `npm ci`, which requires a lockfile.
 package-lock.json
+*.tgz

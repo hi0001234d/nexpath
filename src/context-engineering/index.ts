@@ -12,6 +12,10 @@ export * from './core/project-scope.js';
 // Historical Map & Delivered Items Store
 export * from './store/historical-map-store.js';
 
+// Shared SQLite store (~/.nexpath/prompt-store.db): the desktop runtime opens it
+// once and passes it to every call, so CLI and desktop share one memory.
+export { openStore, closeStore, type Store } from '../store/db.js';
+
 // Adapters
 export * from './adapters/memos-adapter.js';
 

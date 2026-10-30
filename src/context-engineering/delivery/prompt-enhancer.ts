@@ -30,7 +30,7 @@ import { classifyTask } from '../retrieval/task-classifier.js';
 import { rankAndAllocateBudget } from '../retrieval/budget-ranker.js';
 import { routeSectionsAndCompose } from './section-router.js';
 import { generateContextTags, estimateTokenCount } from './tag-generator.js';
-import { withFailOpen } from './fail-open.js';
+import { withFailOpen, DEFAULT_TIMEOUT_MS } from './fail-open.js';
 import { F3ResourceClient } from '../clients/f3-resource-client.js';
 import {
   executeLocalOrProCompletion,
@@ -42,11 +42,23 @@ import type {
   WorkspaceContext,
   EnhancementOptions,
   EnhancementResult,
+  EnhancementResultWithSections,
   EnhancementStage,
   TaskType,
   F3ResourceRequest,
   F3FailType,
 } from '../types/context-engineering.js';
+
+/**
+ * The fail-open timer cannot fire while synchronous work (sql.js, ranking) runs,
+ * so the pipeline checks the clock itself between steps. Throwing here lands in
+ * withFailOpen, which returns the unenhanced fallback.
+ */
+function assertWithinDeadline(startTime: number, timeoutMs: number): void {
+  if (performance.now() - startTime > timeoutMs) {
+    throw new Error(`Context-engineering SLA timeout exceeded (${timeoutMs}ms)`);
+  }
+}
 
 /**
  * Sanitizes prompt text by stripping synthetic context tag tokens (@file:..., @rule:..., @alert:...).
@@ -82,7 +94,8 @@ function mapToF3FailType(failType: string | null): F3FailType | null {
 }
 
 /**
- * Public entry point for Prompt Enhancement invoked by Desktop Runtime and Nexpath CLI.
+ * Public entry point for Prompt Enhancement invoked by Desktop Runtime.
+ * Returns exactly the 7-field EnhancementResult contract (no extra fields).
  * Strictly adheres to Universal Zero-UI Law (headless) and Clean Prompt Text Guarantee.
  */
 export async function preparePromptEnhancement(
@@ -90,10 +103,24 @@ export async function preparePromptEnhancement(
   context?: WorkspaceContext,
   options?: EnhancementOptions
 ): Promise<EnhancementResult> {
-  return withFailOpen(
+  const { sections: _sections, ...result } = await preparePromptEnhancementWithSections(rawPrompt, context, options);
+  return result;
+}
+
+/**
+ * Same pipeline as preparePromptEnhancement, plus the Two-Tier sections.
+ * Used by the open-source CLI popup, which renders the sections itself.
+ */
+export async function preparePromptEnhancementWithSections(
+  rawPrompt: string,
+  context?: WorkspaceContext,
+  options?: EnhancementOptions
+): Promise<EnhancementResultWithSections> {
+  return withFailOpen<EnhancementResultWithSections>(
     rawPrompt,
     async (signal) => {
       const startTime = performance.now();
+      const timeoutMs = options?.timeoutMs && options.timeoutMs > 0 ? options.timeoutMs : DEFAULT_TIMEOUT_MS;
 
       // 1. Sanity check: Empty or whitespace prompts immediately return unenhanced
       if (!rawPrompt || typeof rawPrompt !== 'string' || rawPrompt.trim().length === 0) {
@@ -162,8 +189,11 @@ export async function preparePromptEnhancement(
           }
         );
 
-        // 9. If no relevant facts qualify, return unenhanced cleanly (<5ms)
-        if (budgetResult.allocatedLines.length === 0 && budgetResult.workspaceLines.length === 0) {
+        assertWithinDeadline(startTime, timeoutMs);
+
+        // 9. If no relevant facts qualify, return unenhanced cleanly (<5ms).
+        //    Workspace lines alone (active file / git status) are not worth an enhancement.
+        if (budgetResult.allocatedLines.length === 0) {
           return {
             isEnhanced: false,
             enhancedPrompt: rawPrompt,
@@ -307,6 +337,9 @@ export async function preparePromptEnhancement(
         finalEnhancedPrompt = cleanPromptText(finalEnhancedPrompt);
         const processingTimeMs = Math.max(1, Math.round(performance.now() - startTime));
 
+        // A run that overshot the deadline must not record facts as delivered.
+        assertWithinDeadline(startTime, timeoutMs);
+
         // 13. Record delivered item to SQLite (enforces FIFO cap)
         try {
           insertDeliveredItem(store, {
@@ -332,7 +365,9 @@ export async function preparePromptEnhancement(
           stageConfidence,
           injectedContextTags,
           contextTokenEstimate,
-          processingTimeMs,
+          // Measured after the delivered-item write (which saves the whole DB file),
+          // so the caller sees the real total, not the time before the save.
+          processingTimeMs: Math.max(processingTimeMs, Math.round(performance.now() - startTime)),
           sections: routingResult.sections,
         };
       } finally {

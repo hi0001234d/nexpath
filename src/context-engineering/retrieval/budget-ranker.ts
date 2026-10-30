@@ -84,6 +84,16 @@ export function rankAndAllocateBudget(
     }
 
     const breakdown = calculateScoreBreakdown(fact, promptTokens, now, context);
+
+    // Relevance gate: confidence and recency alone must not pull a fact into an
+    // unrelated prompt. A fact needs shared words, or a link to the active/recent
+    // files when the prompt is an actual task ("fix this bug"), not chat ("hello").
+    // Pattern alerts are exempt so unfinished work is still surfaced.
+    const linkedToWorkingFiles = breakdown.fileProximity > 0 && taskType !== 'general';
+    if (fact.kind !== 'pattern_alert' && !linkedToWorkingFiles && !sharesMeaningfulWord(promptTokens, fact)) {
+      continue;
+    }
+
     const score = Number(
       (
         breakdown.keywordMatch * 0.40 +
@@ -261,6 +271,42 @@ export function formatFactTag(fact: ContextMemoryRow): string {
     ? 'alert'
     : 'rule';
   return `@${prefix}:${fact.key}`;
+}
+
+// Words that say nothing about the topic: grammar, generic task verbs, the lock
+// vocabulary ("lock the design", "final decision"), key prefixes, and file
+// extensions (so "discount.ts" does not match every fact that names a .ts file).
+const RELEVANCE_STOP_WORDS = new Set([
+  'a', 'an', 'the', 'in', 'on', 'of', 'to', 'for', 'and', 'or', 'is', 'are', 'it', 'be',
+  'this', 'that', 'with', 'from', 'by', 'at', 'as', 'we', 'you', 'my', 'our', 'please',
+  'can', 'do', 'does', 'how', 'what', 'why', 'now', 'use', 'uses', 'not', 'no', 'all', 'only',
+  'also', 'into', 'out', 'new', 'add', 'fix', 'make', 'update', 'change', 'create', 'implement',
+  'keep', 'get', 'set', 'run', 'show', 'write', 'need', 'want', 'should', 'must', 'stays',
+  'rule', 'intent', 'failure', 'alert', 'lock', 'locked', 'design', 'final', 'decision',
+  'requirement', 'settled',
+  'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'py', 'go', 'rs', 'java', 'rb', 'php', 'cs',
+  'css', 'scss', 'html', 'json', 'yml', 'yaml', 'md', 'sql', 'sh', 'txt',
+]);
+
+function sharesMeaningfulWord(promptTokens: Set<string>, fact: ContextMemoryRow): boolean {
+  const factStems = new Set(
+    [...tokenize(`${fact.key} ${fact.content} ${fact.verbatim ?? ''}`)].map(stem)
+  );
+  for (const token of promptTokens) {
+    if (!RELEVANCE_STOP_WORDS.has(token) && factStems.has(stem(token))) return true;
+  }
+  return false;
+}
+
+/** Cheap suffix folding so "retries"/"retry" and "pooling"/"pool" count as the same word. */
+function stem(word: string): string {
+  let w = word;
+  if (w.length > 4 && w.endsWith('ies')) w = w.slice(0, -3) + 'y';
+  else if (w.length > 5 && w.endsWith('ing')) w = w.slice(0, -3);
+  else if (w.length > 4 && w.endsWith('ed')) w = w.slice(0, -2);
+  else if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) w = w.slice(0, -1);
+  if (w.length > 4 && w.endsWith('e')) w = w.slice(0, -1);
+  return w;
 }
 
 function tokenize(text: string): Set<string> {

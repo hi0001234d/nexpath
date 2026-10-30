@@ -75,7 +75,24 @@ export function extractFacts(input: FactExtractionInput): ExtractedFact[] {
 
   // 1. Inspect Developer Prompt for INTENT facts (user goals)
   const trimmedPrompt = prompt.trim();
-  if (matchesAny(trimmedPrompt, INTENT_PATTERNS)) {
+
+  // A prompt can carry both a goal and a decision ("I want X. Final decision: Y").
+  // Each locked sentence becomes its own rule so it can be superseded later;
+  // the rest of the prompt is still checked for intent.
+  const lockSentences = splitSentences(trimmedPrompt).filter(
+    (s) => EXPLICIT_LOCK_REGEX.test(s) && !isQuestion(s)
+  );
+  if (lockSentences.length > 0) {
+    for (const sentence of lockSentences) {
+      facts.push(buildFact(projectRoot, 'rule', sentence, sentence, extractIdentities(sentence)));
+    }
+    const remainder = splitSentences(trimmedPrompt)
+      .filter((s) => !lockSentences.includes(s))
+      .join(' ');
+    if (remainder && matchesAny(remainder, INTENT_PATTERNS)) {
+      facts.push(buildFact(projectRoot, 'intent', remainder, remainder, extractIdentities(remainder)));
+    }
+  } else if (matchesAny(trimmedPrompt, INTENT_PATTERNS)) {
     const identities = extractIdentities(trimmedPrompt);
     facts.push(buildFact(projectRoot, 'intent', trimmedPrompt, trimmedPrompt, identities));
   } else if (EXPLICIT_LOCK_REGEX.test(trimmedPrompt) && !isQuestion(trimmedPrompt)) {
@@ -169,6 +186,20 @@ export function extractIdentities(text: string): ContextIdentity[] {
     }
   }
 
+  // Match symbols written without parentheses: `backticked` names and camelCase
+  // identifiers (processRetry, computeBackoff). File paths are removed first so
+  // "src/paymentService.ts" does not also yield "paymentService".
+  const withoutFiles = fileMatches
+    ? fileMatches.reduce((acc, f) => acc.split(f).join(' '), text)
+    : text;
+  const symbolMatches = withoutFiles.matchAll(/`([A-Za-z_][A-Za-z0-9_]*)`|\b([a-z][a-z0-9]*[A-Z][A-Za-z0-9]*)\b/g);
+  for (const m of symbolMatches) {
+    const clean = m[1] ?? m[2];
+    if (clean && !identities.some((i) => i.symbol === clean)) {
+      identities.push({ symbol: clean, type: 'function' });
+    }
+  }
+
   return identities;
 }
 
@@ -189,6 +220,14 @@ export function computeFactFingerprint(
 // ============================================================================
 // Helpers
 // ============================================================================
+
+/** Splits text into sentences on ". ! ?" followed by whitespace, and on newlines. */
+function splitSentences(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+|\r?\n+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
 
 function isQuestion(text: string): boolean {
   if (text.endsWith('?')) return true;

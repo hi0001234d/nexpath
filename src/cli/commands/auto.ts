@@ -126,7 +126,7 @@ import {
   type PromptEnhancementCliHostCapabilityV1,
   type PromptEnhancementCliPopupHostLaunchResultV1,
 } from '../prompt-enhancement-host.js';
-import { preparePromptEnhancement as prepareFeature1PromptEnhancement } from '../../context-engineering/index.js';
+import { preparePromptEnhancementWithSections as prepareFeature1PromptEnhancement } from '../../context-engineering/index.js';
 
 /**
  * nexpath auto — orchestration command (per decision-session-ux-research.md).
@@ -1133,8 +1133,8 @@ export async function runAuto(
   // (undefined on non-sequence), so no stale list can carry across preparations.
   let capturedPlannerItems: readonly PromptEnhancementSequenceItemV1[] | undefined;
   let capturedPlannerPromptDirectives: readonly PromptEnhancementSequenceOffsetRangeV1[] | undefined;
-  let cachedF1Result: import('../../context-engineering/index.js').EnhancementResult | undefined = undefined;
-  const getF1Result = async (promptText: string, projectRoot: string): Promise<import('../../context-engineering/index.js').EnhancementResult | undefined> => {
+  let cachedF1Result: import('../../context-engineering/index.js').EnhancementResultWithSections | undefined = undefined;
+  const getF1Result = async (promptText: string, projectRoot: string): Promise<import('../../context-engineering/index.js').EnhancementResultWithSections | undefined> => {
     if (cachedF1Result !== undefined) return cachedF1Result;
     try {
       cachedF1Result = await prepareFeature1PromptEnhancement(promptText, {

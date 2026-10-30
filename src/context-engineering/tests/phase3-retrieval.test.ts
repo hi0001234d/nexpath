@@ -274,7 +274,7 @@ describe('Phase 3: Retrieval & Selection Layer', () => {
           project_root: projectRoot,
           kind: 'rule',
           key: 'unlocked-rule',
-          content: 'Use 5s timeout',
+          content: 'Use 5s retry timeout',
           verbatim: null,
           identities: [{ file: 'src/other.ts' }],
           locked: 0,
@@ -499,7 +499,8 @@ describe('Phase 3: Retrieval & Selection Layer', () => {
         },
       ];
 
-      const result = rankAndAllocateBudget('any prompt', facts, 'feature');
+      // Both facts relate to the prompt; only two exist, so exactly two come back (no filler).
+      const result = rankAndAllocateBudget('check the available fact', facts, 'feature');
       expect(result.allocatedLines.length).toBe(2);
       expect(result.totalLines).toBe(2);
     });

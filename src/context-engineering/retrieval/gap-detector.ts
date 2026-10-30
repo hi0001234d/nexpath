@@ -48,6 +48,11 @@ const ERROR_KEYWORDS: { pattern: RegExp; token: string }[] = [
   { pattern: /\b(segfault|segmentation\s*fault)\b/i, token: 'segfault' },
   { pattern: /\b(unhandled\s*rejection|promise\s*rejected)\b/i, token: 'promise rejected' },
   { pattern: /\b(null\s*pointer|undefined\s*is\s*not\s*a\s*function)\b/i, token: 'null pointer' },
+  // System / Node error codes reported without a trace ("getting ECONNREFUSED")
+  {
+    pattern: /\b(ECONNREFUSED|ECONNRESET|ECONNABORTED|ETIMEDOUT|ENOTFOUND|EADDRINUSE|EACCES|EPERM|ENOENT|EPIPE|EHOSTUNREACH|ENETUNREACH|EAI_AGAIN|EMFILE|ERR_[A-Z0-9_]+)\b/,
+    token: 'error code',
+  },
 ];
 
 // Indicators that an error trace or log snippet is ALREADY present in the prompt

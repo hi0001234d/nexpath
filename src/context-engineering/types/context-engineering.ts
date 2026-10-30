@@ -78,12 +78,15 @@ export interface EnhancementResult {
   contextTokenEstimate: number;
   /** Total processing latency in milliseconds */
   processingTimeMs: number;
-  /** Categorized Two-Tier context sections */
+}
+
+/** EnhancementResult plus the Two-Tier sections, for the CLI popup (not part of the Ved contract) */
+export interface EnhancementResultWithSections extends EnhancementResult {
   sections?: PromptSection[];
 }
 
 export interface EnhancementOptions {
-  /** Hard timeout ceiling in ms (default: 800ms) */
+  /** Hard timeout ceiling in ms (default: 2500ms) */
   timeoutMs?: number;
   /** Abort signal for immediate cancellation */
   signal?: AbortSignal;
