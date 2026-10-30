@@ -94,6 +94,13 @@ describe('mistake-categories — live detectors (channels a / b / Y available no
     expect(c.requiresChannel).toBeUndefined();
   });
 
+  it('secret_in_prompt fires on OpenAI project and Anthropic key formats', () => {
+    const c = byName('secret_in_prompt');
+    expect(c.detect([p('use sk-proj-Ab3dEfGh1jKlMnOpQrStUvWxYz0123456789_abcDEF')], {})).toBe(1);
+    expect(c.detect([p('use sk-ant-api03-AbCdEfGhIjKlMnOpQrStUvWx-yz0123456789')], {})).toBe(1);
+    expect(c.detect([p('open the task-management-dashboard-v2 page')], {})).toBe(0);
+  });
+
   it('ai_overtrust_accept_without_read fires on a long accept-without-review streak', () => {
     const c = byName('ai_overtrust_accept_without_read');
     expect(c.detect([], { consecutiveAcceptanceStreak: 5 })).toBe(1);

@@ -26,7 +26,14 @@ export function isConfigSet(db: Database, key: string): boolean {
 export function getConfig(db: Database, key: string): string | undefined {
   const result = db.exec('SELECT value FROM config WHERE key = ?', [key]);
   const stored = result[0]?.values[0]?.[0] as string | undefined;
-  return stored !== undefined ? stored : DEFAULT_CONFIG[key];
+  if (stored !== undefined) return stored;
+
+  // DEFAULT_CONFIG is an ordinary object, so bracket lookup alone also sees
+  // inherited properties such as "constructor" and "toString". Config keys are
+  // user-controlled; only return a default when the key is actually defined here.
+  return Object.prototype.hasOwnProperty.call(DEFAULT_CONFIG, key)
+    ? DEFAULT_CONFIG[key]
+    : undefined;
 }
 
 /** Upserts a config value and persists the store to disk. */

@@ -111,7 +111,7 @@ export function liveDetectors(categories: readonly MistakeCategory[]): readonly 
  * known-tool gate reuses these shapes rather than keeping a second copy that could drift.
  */
 export const SECRET_IN_TEXT =
-  /\b(sk-[A-Za-z0-9]{16,}|AKIA[0-9A-Z]{12,}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{30,})\b|-----BEGIN [A-Z ]*PRIVATE KEY|\b(api[_-]?key|secret|password|passwd|token)\b\s*[:=]\s*\S{8,}/i;
+  /\b(sk-[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{12,}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{30,})\b|-----BEGIN [A-Z ]*PRIVATE KEY|\b(api[_-]?key|secret|password|passwd|token)\b\s*[:=]\s*\S{8,}/i;
 
 /** Error / fix framing — used by the doom-loop velocity detector. */
 const ERROR_FIX_TEXT =

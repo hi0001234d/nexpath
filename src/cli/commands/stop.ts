@@ -36,6 +36,10 @@ import {
   runPromptEnhancementCliMpsContinuationHostLaunchV1,
 } from '../prompt-enhancement-host.js';
 import {
+  ingestSessionFacts as ingestFeature1SessionFacts,
+  onTurnComplete as onFeature1TurnComplete,
+} from '../../context-engineering/index.js';
+import {
   validatePromptEnhancementCliPopupResultV1,
   runPromptEnhancementCliSubmitPopupV1,
   type PromptEnhancementCliPopupResultV1,
@@ -501,6 +505,11 @@ export async function runStop(
   feedbackDeps?: FeedbackDeps,
   peLaunch?:     PromptEnhancementStopLaunchFn,
 ): Promise<StopOutcome> {
+  // Desktop session isolation guard: completely bypass CLI stop hook when Desktop App is running
+  if (process.env.NEXPATH_DESKTOP_SESSION === '1') {
+    return { outcome: 'no_pending' };
+  }
+
   // Load session state up front — BEFORE the loop guard — so the MPS-6 exemption below can look up an
   // active session-scoped sequence, and so the PE popup + advisory lookups further down stay
   // session-scoped (a record queued in one session must not surface in an unrelated later one).
@@ -522,6 +531,28 @@ export async function runStop(
     }
     logger.debug('stop_loop_guard', { cwd: payload.cwd });
     return { outcome: 'loop_guard' };
+  }
+
+  // Feature 1: Continuous learning & ingestion on turn completion
+  try {
+    const recent = getRecentPrompts(store, payload.cwd, 1);
+    const userPrompt = recent[0]?.text || '';
+    const assistantResponse = payload.last_assistant_message || '';
+    if (userPrompt) {
+      ingestFeature1SessionFacts(store, {
+        projectRoot: payload.cwd,
+        prompt: userPrompt,
+        assistantResponse,
+      });
+      await onFeature1TurnComplete(store, {
+        projectRoot: payload.cwd,
+        sessionId: mgr.current.sessionId,
+        prompt: userPrompt,
+        response: assistantResponse,
+      });
+    }
+  } catch (f1Err) {
+    logger.debug('feature1_cli_stop_ingest_failed', { error: String(f1Err) });
   }
 
   // 1.3. Feedback popup — when due, show it in place of the advisory this turn.

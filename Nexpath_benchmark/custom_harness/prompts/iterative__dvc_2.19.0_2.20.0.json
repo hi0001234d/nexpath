@@ -1,0 +1,163 @@
+{
+  "schema": "custom_harness.prompts.v1",
+  "task": "iterative__dvc_2.19.0_2.20.0",
+  "frozen": true,
+  "frozen_at": "2026-09-26",
+  "length": 20,
+  "length_rule": "14 required tests -> 20 prompts (SPEC.md part 7.1: <=20 tests = 20, 21-60 = 30, >60 = 40)",
+  "source": "problem_statement only, 501 chars, from banchmark/datasets/swe_evo.arrow (copy in harness/nexpath_benchmark/sample/sweevo_run20.jsonl)",
+  "rules": [
+    "Both arms receive this exact list, in this order. The control arm differs only by having no NexPath popups.",
+    "Every word comes from the task's problem statement. No file name, function name or fix from the gold patch appears anywhere.",
+    "Frozen before any run. Never edited after seeing a result.",
+    "Each prompt carries an 'assumes' line; after the run each turn is tagged fits / does_not_fit by its 'check'. The tag is reported, never scored.",
+    "Typos and missing apostrophes are deliberate — real typing, and they also test that NexPath does not rely on tidy text."
+  ],
+  "style_targets": {
+    "pushback_share": "strict corrections (pushback + nitpick + failure report): 6 of 20 = 30%; counting the two 'why did it fail' debug turns as user pushback: 8 of 20 = 40%. Real sessions measure 44% (SWE-chat).",
+    "one_long_paste": "turn 1 (spec front-loaded, matching V2's single-prompt runs)",
+    "shortest_line": "7 characters"
+  },
+  "prompts": [
+    {
+      "n": 1,
+      "type": "paste_spec",
+      "text": "need to do the 2.20 release, heres whats in it\n\n## What's Changed\n* build: skip install fpm and ruby on Windows by @skshetry in https://github.com/iterative/dvc/pull/8169\n* import-url/update: add --no-download flag by @dtrifiro in https://github.com/iterative/dvc/pull/8024\n* fs: optimize dvc list --recursive by @rlamy in https://github.com/iterative/dvc/pull/8150\n\n## New Contributors\n* @rlamy made their first contribution in https://github.com/iterative/dvc/pull/8150\n\n**Full Changelog**: https://github.com/iterative/dvc/compare/2.19.0...2.20.0",
+      "assumes": "nothing — this is the opening turn",
+      "check": "always fits"
+    },
+    {
+      "n": 2,
+      "type": "understand",
+      "text": "which files handle import-url?",
+      "assumes": "the agent has the release note",
+      "check": "always fits"
+    },
+    {
+      "n": 3,
+      "type": "pushback",
+      "text": "no not the tests, the real code",
+      "assumes": "the agent looked at or opened test files in turn 2",
+      "check": "transcript: a test path was read in turn 2"
+    },
+    {
+      "n": 4,
+      "type": "create",
+      "text": "ok add the --no-download flag",
+      "assumes": "the agent has found where import-url lives",
+      "check": "transcript: a source file under the import/url area was read before this turn"
+    },
+    {
+      "n": 5,
+      "type": "failure",
+      "text": "doesnt work",
+      "assumes": "the agent changed something in turn 4",
+      "check": "transcript: an edit/write tool call in turn 4"
+    },
+    {
+      "n": 6,
+      "type": "debug",
+      "text": "why did the flag not do anything",
+      "assumes": "an edit exists that could be wrong",
+      "check": "transcript: any edit before this turn"
+    },
+    {
+      "n": 7,
+      "type": "nitpick",
+      "text": "use the option style thats already there, dont invent a new one",
+      "assumes": "the agent added an option in its own style",
+      "check": "diff: a new CLI option was added before this turn"
+    },
+    {
+      "n": 8,
+      "type": "understand",
+      "text": "what does update do with that flag",
+      "assumes": "the flag work has started",
+      "check": "diff: the flag name appears in the diff so far"
+    },
+    {
+      "n": 9,
+      "type": "create",
+      "text": "apply it",
+      "assumes": "the agent proposed something in turn 8",
+      "check": "transcript: the reply to turn 8 proposed a change"
+    },
+    {
+      "n": 10,
+      "type": "pushback",
+      "text": "that broke the normal import-url",
+      "assumes": "the agent edited import-url behaviour",
+      "check": "diff: a file in the import/url area was changed"
+    },
+    {
+      "n": 11,
+      "type": "git",
+      "text": "what have you changed so far",
+      "assumes": "at least one edit exists",
+      "check": "diff: non-empty"
+    },
+    {
+      "n": 12,
+      "type": "mind_change",
+      "text": "actually do the list --recursive speedup first",
+      "assumes": "nothing — a change of mind is always allowed",
+      "check": "always fits"
+    },
+    {
+      "n": 13,
+      "type": "debug",
+      "text": "still slow on a big folder",
+      "assumes": "the agent touched the recursive-list path",
+      "check": "diff: the list/recursive code was changed before this turn"
+    },
+    {
+      "n": 14,
+      "type": "create",
+      "text": "fix that",
+      "assumes": "the agent said what was slow in turn 13",
+      "check": "transcript: the reply to turn 13 named a cause"
+    },
+    {
+      "n": 15,
+      "type": "verify",
+      "text": "does the old behaviour still work?",
+      "assumes": "some change exists to test",
+      "check": "diff: non-empty"
+    },
+    {
+      "n": 16,
+      "type": "nitpick",
+      "text": "shorter",
+      "assumes": "the agent's last reply was long",
+      "check": "transcript: the previous reply is over 40 lines"
+    },
+    {
+      "n": 17,
+      "type": "create",
+      "text": "now the windows build thing, dont touch linux",
+      "assumes": "the agent has the release note",
+      "check": "always fits"
+    },
+    {
+      "n": 18,
+      "type": "pushback",
+      "text": "that message is wrong, it still says downloaded",
+      "assumes": "the flag work exists and prints or logs something",
+      "check": "diff: the flag name appears and a message/log line was touched"
+    },
+    {
+      "n": 19,
+      "type": "accept",
+      "text": "ok that looks right",
+      "assumes": "nothing — acceptance is always allowed",
+      "check": "always fits"
+    },
+    {
+      "n": 20,
+      "type": "wrapup",
+      "text": "anything from that release i missed",
+      "assumes": "nothing — closing turn",
+      "check": "always fits"
+    }
+  ]
+}

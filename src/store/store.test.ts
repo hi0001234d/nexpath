@@ -28,6 +28,27 @@ describe('redactSecrets', () => {
     expect(out).not.toContain('sk-abc123');
   });
 
+  // Fake keys in the current OpenAI project and Anthropic formats (issue #187): the body carries
+  // `-` and `_`, which the old `sk-[A-Za-z0-9]` class stopped at, leaving the key in the store.
+  it('redacts OpenAI project keys (sk-proj-)', () => {
+    const out = redactSecrets('use key sk-proj-Ab3dEfGh1jKlMnOpQrStUvWxYz0123456789_abcDEF please');
+    expect(out).toContain('sk-[REDACTED');
+    expect(out).not.toContain('Ab3dEfGh1jKl');
+    expect(out).not.toContain('abcDEF');
+  });
+
+  it('redacts Anthropic keys (sk-ant-)', () => {
+    const out = redactSecrets('use key sk-ant-api03-AbCdEfGhIjKlMnOpQrStUvWx-yz0123456789 please');
+    expect(out).toContain('sk-[REDACTED');
+    expect(out).not.toContain('AbCdEfGhIjKl');
+    expect(out).not.toContain('yz0123456789');
+  });
+
+  it('leaves ordinary words containing sk- untouched', () => {
+    const text = 'see the task-list, the desk-lamp and the task-management-dashboard-v2 page';
+    expect(redactSecrets(text)).toBe(text);
+  });
+
   it('redacts Nexpath tokens (npk_)', () => {
     const token = 'npk_' + 'a'.repeat(43);
     const out = redactSecrets(`my token is ${token} ok`);
@@ -36,7 +57,7 @@ describe('redactSecrets', () => {
   });
 
   it('redacts a Nexpath token containing url-safe - and _ characters', () => {
-    // The class carries `-` and `_` where the `sk-` pattern does not; a token
+    // The class carries `-` and `_` (url-safe base64); a token
     // that stopped at the first `-` would leave the rest of it in the store.
     const token = 'npk_-7zI1d-H_obJzkBkWgzA97lEWGUR_BUvMXFrz2AzgJk';
     const out = redactSecrets(`token: ${token}`);
@@ -88,6 +109,8 @@ describe('redactSecrets', () => {
       'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload done',
       ['-----BEGIN RSA PRIVATE KEY-----', 'MIIEpAIBAAKCAQEA...', '-----END RSA PRIVATE KEY-----after'].join(String.fromCharCode(10)),
       'two secrets sk-abc123def456ghi789jkl012mno and ghp_' + 'c'.repeat(36) + ' end',
+      'key sk-proj-Ab3dEfGh1jKlMnOpQrStUvWxYz0123456789_abcDEF trailing',
+      'key sk-ant-api03-AbCdEfGhIjKlMnOpQrStUvWx-yz0123456789 trailing',
     ];
     for (const text of cases) {
       expect(redactSecrets(text)).toHaveLength(text.length);
@@ -235,6 +258,14 @@ describe('store — prompt CRUD', () => {
     const stored = res[0]?.values[0]?.[0] as string;
     expect(stored).toContain('sk-[REDACTED');
     expect(stored).not.toContain('sk-abc123');
+  });
+
+  it('redacts an OpenAI project key before writing to disk', () => {
+    insertPrompt(store, { projectRoot: '/proj/a', promptText: 'use sk-proj-Ab3dEfGh1jKlMnOpQrStUvWxYz0123456789_abcDEF please' });
+    const res = store.db.exec('SELECT prompt_text FROM prompts');
+    const stored = res[0]?.values[0]?.[0] as string;
+    expect(stored).toContain('sk-[REDACTED');
+    expect(stored).not.toContain('Ab3dEfGh1jKl');
   });
 
   it('deleteProjectPrompts removes only that project', () => {

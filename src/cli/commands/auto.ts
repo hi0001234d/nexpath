@@ -126,6 +126,7 @@ import {
   type PromptEnhancementCliHostCapabilityV1,
   type PromptEnhancementCliPopupHostLaunchResultV1,
 } from '../prompt-enhancement-host.js';
+import { preparePromptEnhancementWithSections as prepareFeature1PromptEnhancement } from '../../context-engineering/index.js';
 
 /**
  * nexpath auto — orchestration command (per decision-session-ux-research.md).
@@ -1109,6 +1110,11 @@ export async function runAuto(
   openai?: OpenAI,
   promptEnhancement?: AutoPromptEnhancementIntegration,
 ): Promise<AutoOutcome> {
+  // Desktop session isolation guard: completely bypass CLI auto hook when Desktop App is running
+  if (process.env.NEXPATH_DESKTOP_SESSION === '1') {
+    return { outcome: 'no_action' };
+  }
+
   // MPS P1b-i (owner unit P1) — thread the live store handle + the (optional, key-gated) LLM client
   // into the PE facade so the full sequence planner can REPLACE the display-only describe splitter as
   // the source of truth for the compact sequence summary. The planner runs ONLY on sequence candidates
@@ -1127,6 +1133,20 @@ export async function runAuto(
   // (undefined on non-sequence), so no stale list can carry across preparations.
   let capturedPlannerItems: readonly PromptEnhancementSequenceItemV1[] | undefined;
   let capturedPlannerPromptDirectives: readonly PromptEnhancementSequenceOffsetRangeV1[] | undefined;
+  let cachedF1Result: import('../../context-engineering/index.js').EnhancementResultWithSections | undefined = undefined;
+  const getF1Result = async (promptText: string, projectRoot: string): Promise<import('../../context-engineering/index.js').EnhancementResultWithSections | undefined> => {
+    if (cachedF1Result !== undefined) return cachedF1Result;
+    try {
+      cachedF1Result = await prepareFeature1PromptEnhancement(promptText, {
+        workspacePath: projectRoot,
+        store,
+      });
+    } catch {
+      cachedF1Result = undefined;
+    }
+    return cachedF1Result;
+  };
+
   const preparePromptEnhancementForRunAuto: PromptEnhancementPrepareFacadeV1 = async (peRequest) => {
     const prepared = await preparePromptEnhancementWithSequenceV1(peRequest, {
       db: store.db,
@@ -1134,6 +1154,86 @@ export async function runAuto(
     });
     capturedPlannerItems = prepared.plannerItems;
     capturedPlannerPromptDirectives = prepared.plannerPromptDirectives;
+
+    // Feature 1: Context Engine integration for CLI popup
+    try {
+      const f1Result = await getF1Result(peRequest.sourcePrompt.text, peRequest.projectRoot);
+
+      if (f1Result && f1Result.isEnhanced && prepared.result) {
+        const rawUserPrompt = peRequest.sourcePrompt.text.trim();
+        const sectionBlocks: string[] = [
+          'My original request (verbatim):',
+          rawUserPrompt,
+        ];
+
+        if (f1Result.sections && f1Result.sections.length > 0) {
+          for (const sec of f1Result.sections) {
+            if (sec.lines && sec.lines.length > 0) {
+              sectionBlocks.push('');
+              sectionBlocks.push(`${sec.title}:`);
+              for (const line of sec.lines) {
+                sectionBlocks.push(line);
+              }
+            }
+          }
+        }
+
+        const formattedEnhancedBody = sectionBlocks.join('\n');
+
+        prepared.result.disposition = 'show_current_body';
+        prepared.result.currentBody = {
+          ...prepared.result.currentBody,
+          composerMode: 'baseline_llm_structured_wording',
+          text: formattedEnhancedBody,
+          renderedPromptBody: formattedEnhancedBody,
+        };
+        if (prepared.result.uiView && prepared.result.uiView.body) {
+          prepared.result.uiView = {
+            ...prepared.result.uiView,
+            body: {
+              ...prepared.result.uiView.body,
+              text: formattedEnhancedBody,
+              sendPolicy: 'send_current',
+            },
+          };
+        }
+
+        if (prepared.result.bodyPlan) {
+          const orderedSectionPlans = (f1Result.sections && f1Result.sections.length > 0)
+            ? f1Result.sections.map((sec, idx) => ({
+                sectionPlanId: `${sec.id}:plan`,
+                sectionId: sec.id,
+                templateId: 'prompt_enhancement_template',
+                order: idx + 1,
+                sourceRefs: [],
+                validationStatus: 'pass' as const,
+                fallbackMode: 'allowed' as const,
+                callVisibilityMode: 'llm_wording' as const,
+              }))
+            : [
+                {
+                  sectionPlanId: 'context_and_constraints:plan',
+                  sectionId: 'context_and_constraints',
+                  templateId: 'prompt_enhancement_template',
+                  order: 1,
+                  sourceRefs: [],
+                  validationStatus: 'pass' as const,
+                  fallbackMode: 'allowed' as const,
+                  callVisibilityMode: 'llm_wording' as const,
+                },
+              ];
+
+          prepared.result.bodyPlan = {
+            ...prepared.result.bodyPlan,
+            orderedSectionPlans: orderedSectionPlans as any,
+            generatedOriginPolicy: 'attach_generated_origin_metadata',
+          };
+        }
+      }
+    } catch (f1Err) {
+      logger.debug('feature1_cli_prepare_failed', { error: String(f1Err) });
+    }
+
     return prepared.result;
   };
 
@@ -1505,7 +1605,11 @@ export async function runAuto(
   ): Promise<void> => {
     // Injected boundary-test integrations keep their own single explicit path.
     if (sequencePeFallbackDone || promptEnhancement !== undefined) return;
-    if (!isPromptEnhancementSequenceShapedTextV1(input.promptText)) return;
+    const isSequenceShaped = isPromptEnhancementSequenceShapedTextV1(input.promptText);
+    const f1 = await getF1Result(input.promptText, input.projectRoot);
+    const hasFeature1Context = f1?.isEnhanced === true;
+
+    if (!isSequenceShaped && !hasFeature1Context) return;
     sequencePeFallbackDone = true;
     await ensurePromptFactsFresh();
     const request = buildPromptEnhancementRequestForAuto({

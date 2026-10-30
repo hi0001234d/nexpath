@@ -293,6 +293,51 @@ CREATE TABLE IF NOT EXISTS prompt_enhancement_status (
 
 CREATE INDEX IF NOT EXISTS idx_pe_status_project_updated
   ON prompt_enhancement_status (project_root, updated_at);
+
+-- Feature 1 (Context Engineering): Master Historical Map
+CREATE TABLE IF NOT EXISTS context_memory (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_root    TEXT    NOT NULL,
+  kind            TEXT    NOT NULL,
+  key             TEXT    NOT NULL,
+  content         TEXT    NOT NULL,
+  verbatim        TEXT,
+  identities_json TEXT,
+  locked          INTEGER NOT NULL DEFAULT 0,
+  confidence      REAL    NOT NULL DEFAULT 0.50,
+  staleness       TEXT,
+  superseded_by   INTEGER REFERENCES context_memory(id),
+  active          INTEGER NOT NULL DEFAULT 1,
+  evidence        TEXT,
+  created_at      INTEGER NOT NULL,
+  updated_at      INTEGER NOT NULL,
+  UNIQUE(project_root, kind, key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_context_memory_project_active
+  ON context_memory (project_root, active);
+
+CREATE INDEX IF NOT EXISTS idx_context_memory_project_kind
+  ON context_memory (project_root, kind);
+
+-- Feature 1 (Context Engineering): Delivered Enhancement Payloads & Metrics
+CREATE TABLE IF NOT EXISTS delivered_items (
+  id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_root           TEXT    NOT NULL,
+  session_id             TEXT,
+  raw_prompt             TEXT    NOT NULL,
+  enhanced_prompt        TEXT    NOT NULL,
+  is_enhanced            INTEGER NOT NULL,
+  stage                  TEXT    NOT NULL,
+  stage_confidence       REAL    NOT NULL,
+  injected_context_tags  TEXT    NOT NULL,
+  context_token_estimate INTEGER NOT NULL,
+  processing_time_ms     INTEGER NOT NULL,
+  created_at             INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_delivered_items_project_created
+  ON delivered_items (project_root, created_at);
 `;
 
 export function migrate(db: Database): void {

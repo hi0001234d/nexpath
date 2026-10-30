@@ -1,0 +1,18 @@
+# Local output — never published.
+# NOTE: a comment must be on its own line; git does not strip a trailing comment,
+# it treats it as part of the pattern. That mistake published everything once.
+
+# session databases, popups, logs: one folder per run
+runs/
+
+# recorded prompts and model replies
+proxy/cassettes/
+
+# secrets and local state
+.env
+*.db
+*.db-journal
+*.db-wal
+
+# internal planning, kept on the operator's machine
+SPEC.md

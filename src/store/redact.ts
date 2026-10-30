@@ -3,9 +3,12 @@
 // Not exhaustive — documented limitation.
 
 const PATTERNS: [RegExp, string][] = [
-  [/sk-[A-Za-z0-9]{20,}/g, 'sk-[REDACTED]'],
-  // Nexpath tokens are url-safe base64, so the class carries `_` and `-` where
-  // the `sk-` pattern above does not. The body length here matches the
+  // OpenAI (`sk-proj-…`) and Anthropic (`sk-ant-api03-…`) keys put `-` and `_`
+  // inside the body, so the class carries both. The lookbehind keeps ordinary
+  // hyphenated words such as `task-management-dashboard` from matching mid-word.
+  [/(?<![A-Za-z0-9])sk-[A-Za-z0-9_-]{20,}/g, 'sk-[REDACTED]'],
+  // Nexpath tokens are url-safe base64, so the class carries `_` and `-` like
+  // the `sk-` pattern above. The body length here matches the
   // validator's own minimum, and redaction stays the looser of the two by
   // construction: it asks only "does this look like a token", never "is this
   // one we would accept" — a malformed or truncated token must be scrubbed too.

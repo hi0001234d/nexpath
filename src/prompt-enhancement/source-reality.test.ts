@@ -189,6 +189,8 @@ describe('prompt-enhancement source-reality adapters', () => {
     expect(snapshot.tableNames).toEqual([
       'config',
       'content_templates',
+      'context_memory',
+      'delivered_items',
       'feedback_signals',
       'pending_advisories',
       'pending_prompt_enhancements',
