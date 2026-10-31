@@ -284,6 +284,8 @@ const RELEVANCE_STOP_WORDS = new Set([
   'keep', 'get', 'set', 'run', 'show', 'write', 'need', 'want', 'should', 'must', 'stays',
   'rule', 'intent', 'failure', 'alert', 'lock', 'locked', 'design', 'final', 'decision',
   'requirement', 'settled',
+  // Folder names that appear in almost every path; sharing them says nothing about the topic.
+  'src', 'lib', 'dist',
   'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'py', 'go', 'rs', 'java', 'rb', 'php', 'cs',
   'css', 'scss', 'html', 'json', 'yml', 'yaml', 'md', 'sql', 'sh', 'txt',
 ]);

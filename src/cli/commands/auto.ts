@@ -1137,9 +1137,12 @@ export async function runAuto(
   const getF1Result = async (promptText: string, projectRoot: string): Promise<import('../../context-engineering/index.js').EnhancementResultWithSections | undefined> => {
     if (cachedF1Result !== undefined) return cachedF1Result;
     try {
+      // sessionId scopes Feature 1's "already delivered" dedup to this session. Without it the
+      // dedup spans every session, so a fact shown once is never shown again.
       cachedF1Result = await prepareFeature1PromptEnhancement(promptText, {
         workspacePath: projectRoot,
         store,
+        sessionId: mgr.current.sessionId,
       });
     } catch {
       cachedF1Result = undefined;

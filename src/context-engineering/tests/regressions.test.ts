@@ -193,6 +193,14 @@ describe('Regressions from manual E2E', () => {
       expect(result.isEnhanced).toBe(false);
     });
 
+    it('does not treat a shared src/ folder as relevance', async () => {
+      const result = await preparePromptEnhancement(
+        'Final decision: getPool in src/db.ts now allows a maximum of 25 connections.',
+        ctx('r4g')
+      );
+      expect(result.isEnhanced).toBe(false);
+    });
+
     it('still enhances a related prompt', async () => {
       const result = await preparePromptEnhancement('fix the retries in processRetry', ctx('r4c'));
       expect(result.isEnhanced).toBe(true);
@@ -241,6 +249,19 @@ describe('Regressions from manual E2E', () => {
       expect(result.enhancedPrompt).toBe('fix the retries in processRetry');
       const delivered = store.db.exec('SELECT COUNT(*) FROM delivered_items')[0]?.values[0]?.[0];
       expect(delivered).toBe(0);
+    });
+  });
+
+  describe('R9: "already delivered" dedup is per session', () => {
+    it('shows a fact once per session and again in the next session', async () => {
+      ingest('Locked requirement: processRetry in src/payment.ts is the only entry point for retries.');
+      const prompt = 'fix the retries in processRetry';
+
+      expect((await preparePromptEnhancement(prompt, ctx('session-a'))).isEnhanced).toBe(true);
+      expect((await preparePromptEnhancement(prompt, ctx('session-a'))).isEnhanced).toBe(false);
+      const next = await preparePromptEnhancement(prompt, ctx('session-b'));
+      expect(next.isEnhanced).toBe(true);
+      expect(next.enhancedPrompt).toContain('only entry point');
     });
   });
 
