@@ -13,6 +13,7 @@
  *    so developer prompt execution is never dropped or blocked.
  */
 
+import { linkAbortSignal } from './abort-link.js';
 import type {
   F3LanDevice,
   LocalChatCompletionRequest,
@@ -56,6 +57,10 @@ export interface LocalExecutionOptions {
   timeoutMs?: number;
   deviceToken?: string;
   deviceId?: string;
+  /** Cloud Pro endpoint. Per-call value first, then NEXPATH_CLOUD_PRO_URL, then parseos.tech. */
+  cloudProUrl?: string;
+  /** Caller's cancel / time budget. Aborting stops the call at once, with no cloud fallback. */
+  signal?: AbortSignal;
 }
 
 export interface LocalExecutionResult {
@@ -80,6 +85,7 @@ export async function executeLocalOrProCompletion(
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const unlink = linkAbortSignal(controller, options?.signal);
 
   try {
     const response = await fetch(bridgeUrl, {
@@ -98,6 +104,7 @@ export async function executeLocalOrProCompletion(
     });
 
     clearTimeout(timeoutId);
+    unlink();
 
     if (!response.ok) {
       throw new Error(`Local bridge returned status ${response.status}`);
@@ -121,6 +128,19 @@ export async function executeLocalOrProCompletion(
     };
   } catch (err) {
     clearTimeout(timeoutId);
+    unlink();
+
+    // Cancelled by the caller (user cancel or the enhancement's time budget): stop here.
+    // A cloud fallback now would be paid for and then dropped.
+    if (options?.signal?.aborted) {
+      return {
+        content: '',
+        ranOn: 'local',
+        fellBackToPro: false,
+        failType: 'LOCAL_TIMEOUT',
+        latencyMs: Math.round(performance.now() - startTime),
+      };
+    }
 
     const isTimeout = controller.signal.aborted;
     const errMsg = err instanceof Error ? err.message : String(err);
@@ -179,8 +199,14 @@ export async function executeCloudProFallback(
     headers['X-Device-Id'] = deviceId;
   }
 
+  if (options?.signal?.aborted) return '';
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), options?.timeoutMs || 25000);
+  const unlink = linkAbortSignal(controller, options?.signal);
+  const url = options?.cloudProUrl || process.env.NEXPATH_CLOUD_PRO_URL || CLOUD_PRO_URL;
+
   try {
-    const response = await fetch(CLOUD_PRO_URL, {
+    const response = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -189,7 +215,7 @@ export async function executeCloudProFallback(
         temperature: request.temperature ?? 0.2,
         max_tokens: request.max_tokens ?? 2000,
       }),
-      signal: AbortSignal.timeout(options?.timeoutMs || 25000),
+      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -200,5 +226,8 @@ export async function executeCloudProFallback(
     return data.choices?.[0]?.message?.content ?? '';
   } catch {
     return '';
+  } finally {
+    clearTimeout(timeoutId);
+    unlink();
   }
 }

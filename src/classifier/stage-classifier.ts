@@ -1,3 +1,4 @@
+import { newNexpathOpenAIClient } from '../config/llm-client-scope.js';
 import OpenAI from 'openai';
 import type { Stage, ClassificationResult, UserProfile } from './types.js';
 import {
@@ -609,7 +610,7 @@ export async function classifyStage(
   try {
     // Construct inside the try: with no client and no API key, `new OpenAI()` throws
     // synchronously — degrade to the local classifier instead of crashing the caller.
-    const openai = client ?? new OpenAI();
+    const openai = client ?? newNexpathOpenAIClient();
     const response = await openai.chat.completions.create(
       {
         model: STAGE_CLASSIFIER_MODEL,

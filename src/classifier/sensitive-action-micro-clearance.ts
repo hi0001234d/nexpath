@@ -1,3 +1,4 @@
+import { newNexpathOpenAIClient } from '../config/llm-client-scope.js';
 import OpenAI from 'openai';
 import { promptEnhancementRiskKindsForTextV1 } from '../prompt-enhancement/safety-sendability.js';
 import type { PromptEnhancementSensitiveActionClearanceV1 } from '../prompt-enhancement/sensitive-action-clearance.js';
@@ -150,7 +151,7 @@ export function startSensitiveActionMicroClearanceV1(
   let resolvedClient: SensitiveActionMicroClientV1;
   try {
     // Same pattern as the stage classifier: construct on demand; no key ⇒ throws ⇒ inert.
-    resolvedClient = client ?? (new OpenAI() as unknown as SensitiveActionMicroClientV1);
+    resolvedClient = client ?? (newNexpathOpenAIClient() as unknown as SensitiveActionMicroClientV1);
   } catch {
     return inertHandle('gated_out_no_client');
   }

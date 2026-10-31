@@ -1,3 +1,4 @@
+import { isPromptEnhancementProjectMemoryFactV1 } from './project-memory-facts.js';
 import type { PromptEnhancementPrepareRequestV1 } from './contracts.js';
 import { redactSecrets } from '../store/redact.js';
 import type {
@@ -533,6 +534,17 @@ export function applyPromptEnhancementSourceMixV1(
   // both stay visible as source labels, never as independent grounding.
   let sourceBSelected = 0;
   for (const fact of sourceB) {
+    // Feature 1 project memory arrives already budgeted (max 10 lines, relevance-gated,
+    // once per session), so it rides beside Nexpath's grounding instead of taking its
+    // slots. It is support-only, so it still can never open a popup by itself.
+    if (isPromptEnhancementProjectMemoryFactV1(fact)) {
+      classified.push({
+        fact,
+        selectionRole: 'selected_supporting',
+        selectionReasonCode: 'project_memory_within_feature1_budget',
+      });
+      continue;
+    }
     if (fact.factRole === 'safety_confirmation_support') {
       classified.push({
         fact,

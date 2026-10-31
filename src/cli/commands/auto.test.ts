@@ -2299,7 +2299,10 @@ describe('validated PE preparation boundary', () => {
     // Counted as the GATE usage (`|| …;` inside a displayDecision), not as any call: the boundary
     // log calls the same predicate and must not be mistaken for a guard.
     const gates = source.split('|| promptEnhancementBodyHasNoLlmWordingV1(preparation.result);').length - 1;
-    const persists = source.split('upsertPendingPromptEnhancement(store, {').length - 1;
+    // Sites persist through `storePendingPromptEnhancement` (which hands the body to an in-process
+    // host instead) or, if one is ever added directly, `upsertPendingPromptEnhancement`.
+    const persists = source.split('upsertPendingPromptEnhancement(store, {').length - 1
+      + source.split('storePendingPromptEnhancement({').length - 1;
     expect(
       gates,
       `${persists} persistence sites exist and ${gates} carry the no-LLM-wording check — a body with `

@@ -339,13 +339,17 @@ describe('Store-backed pipeline (test-plan §7, §9, §12)', () => {
     expect(r.contextTokenEstimate).toBeLessThanOrEqual(500);
   });
 
-  it('[TC-FAIL-1] a 2,600ms stall falls back to the raw prompt within the 2,500ms SLA', async () => {
+  // Desktop decision (Ved, 2026-10-31): a stalled LLM step (F3 / local / cloud) is cancelled
+  // when its budget runs out and the non-LLM enhanced prompt is returned within the SLA.
+  // Stalls in the rest of the pipeline still fall back to the raw prompt (R6, TC-FAIL-3).
+  it('[TC-FAIL-1] a stalled LLM step returns the non-LLM enhanced prompt within the 2,500ms SLA', async () => {
     const t0 = performance.now();
     const r = await preparePromptEnhancement('fix the payment retry', ctx('fail1'), { f3Client: neverResolvingF3() });
     const elapsed = performance.now() - t0;
-    expect(r.isEnhanced).toBe(false);
-    expect(r.enhancedPrompt).toBe('fix the payment retry');
-    expect(elapsed).toBeLessThan(2700);
+    expect(r.isEnhanced).toBe(true);
+    expect(r.enhancedPrompt.startsWith('fix the payment retry')).toBe(true);
+    expect(r.enhancedPrompt.length).toBeGreaterThan('fix the payment retry'.length);
+    expect(elapsed).toBeLessThan(2500);
   }, 10_000);
 
   it('[TC-FAIL-2] a corrupted context_memory table falls back without throwing', async () => {

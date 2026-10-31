@@ -35,6 +35,8 @@ export * from './delivery/section-router.js';
 export * from './delivery/tag-generator.js';
 export * from './delivery/fail-open.js';
 export * from './delivery/prompt-enhancer.js';
+// Desktop writer version: Nexpath's enhanced prompt with Feature 1 memory (option b)
+export * from './delivery/nexpath-writer-enhancer.js';
 
 // Clients (F3 Dynamic Router & F6 Local LLM Bridge)
 export * from './clients/f3-resource-client.js';

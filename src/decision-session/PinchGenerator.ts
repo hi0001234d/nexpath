@@ -1,3 +1,4 @@
+import { newNexpathOpenAIClient } from '../config/llm-client-scope.js';
 import OpenAI from 'openai';
 import type { Stage, UserProfile } from '../classifier/types.js';
 import type { FlagType } from '../classifier/Stage2Trigger.js';
@@ -149,7 +150,7 @@ export async function generatePinchLabel(
   const fallback = overrides?.pinchFallback ?? fields?.pinchFallback ?? '';
 
   try {
-    const openai   = client ?? new OpenAI();
+    const openai   = client ?? newNexpathOpenAIClient();
     const prompt   = buildPinchPrompt(question, flagType, stage, profile, language);
 
     const response = await openai.chat.completions.create(

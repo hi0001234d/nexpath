@@ -434,8 +434,9 @@ describe('Phase 2 Ingestion Layer — Detailed Test Plan Execution', () => {
       await handleStopHookCapture(store, {
         projectRoot,
         prompt: 'Configure payment service',
+        // Replies only become memory when they state a decision (not a plain code-location note).
         assistantResponse:
-          'Payment endpoint handler is defined in src/services/payment.ts.',
+          'Decision: the payment endpoint handler stays in src/services/payment.ts.',
       });
 
       // Git diff modifies src/services/payment.ts

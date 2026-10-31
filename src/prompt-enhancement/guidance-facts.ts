@@ -37,6 +37,7 @@ import { isPromptEnhancementSourceCriticalFactV1 } from './templates/section-pla
  * signal. Kept token-safe (no '>' etc.) because they become persisted memory keys.
  */
 import { stampPromptEnhancementFatigueKeysV1 } from './guidance-fatigue.js';
+import { PROMPT_ENHANCEMENT_PROJECT_MEMORY_REF_PREFIX_V1, buildProjectMemoryGuidanceFactV1 } from './project-memory-facts.js';
 
 export function promptEnhancementStageSignalKeyV1(prevStage: string | undefined, currentStage: string): string {
   return `stage:${prevStage ?? 'unknown'}-to-${currentStage}`;
@@ -443,6 +444,13 @@ export function buildPromptEnhancementGuidanceFactsV1(
 
   // RIGHT&GOOD / work-style / env-runtime profile signals.
   for (const ref of signals.rightGoodWorkStyleEnvRuntimeRefs) {
+    if (ref.startsWith(PROMPT_ENHANCEMENT_PROJECT_MEMORY_REF_PREFIX_V1)) {
+      // Feature 1 project memory (earlier decisions, rules, past errors) for the writer.
+      // See project-memory-facts.ts for the lane, claim and routing rules.
+      const memoryFact = buildProjectMemoryGuidanceFactV1(ref, nextId('project-memory'), signals.groundingEvidenceByRef?.[ref]);
+      if (memoryFact) facts.push(memoryFact);
+      continue;
+    }
     if (ref.startsWith('mistake:')) {
       // A recurring mistake is a negative-capability signal: a missing practice, so
       // it belongs in Source A (fix-plan §4b), NOT the positive Source-B pattern lane.

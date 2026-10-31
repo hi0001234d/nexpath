@@ -1,3 +1,4 @@
+import { newNexpathOpenAIClient } from '../config/llm-client-scope.js';
 import OpenAI from 'openai';
 import { detectAbsenceFlags } from './AbsenceDetector.js';
 
@@ -97,7 +98,7 @@ export function startQueueRankMicroCallV1(
 ): QueueRankMicroHandleV1 {
   if (offeredKeys.length < 2) return inert('gated_out_fewer_than_two');
   let resolved: QueueRankMicroClientV1;
-  try { resolved = client ?? (new OpenAI() as unknown as QueueRankMicroClientV1); } catch { return inert('gated_out_no_client'); }
+  try { resolved = client ?? (newNexpathOpenAIClient() as unknown as QueueRankMicroClientV1); } catch { return inert('gated_out_no_client'); }
 
   const controller = new AbortController();
   let settled: string | undefined;

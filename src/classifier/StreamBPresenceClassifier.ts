@@ -1,3 +1,4 @@
+import { newNexpathOpenAIClient } from '../config/llm-client-scope.js';
 import OpenAI from 'openai';
 import { logger } from '../logger.js';
 
@@ -62,7 +63,7 @@ export async function classifyStreamBPresence(
   promptText: string,
   client?:    OpenAI,
 ): Promise<StreamBPresenceResult> {
-  const openai = client ?? new OpenAI();
+  const openai = client ?? newNexpathOpenAIClient();
 
   const response = await openai.chat.completions.create(
     {

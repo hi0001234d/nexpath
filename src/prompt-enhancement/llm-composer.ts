@@ -1,3 +1,4 @@
+import { newNexpathOpenAIClient } from '../config/llm-client-scope.js';
 import OpenAI from 'openai';
 import { promptEnhancementSectionModelFactsV1 } from './fact-value-render.js';
 import type { PromptEnhancementGuidanceFact } from './templates/section-plan.js';
@@ -209,6 +210,9 @@ function actionWordingDirective(
   }
 }
 
+/** Marks a Feature 1 locked decision in the writer's fact list (see the system prompt rule). */
+export const LOCKED_DECISION_MARKER = 'LOCKED DECISION';
+
 const SYSTEM_PROMPT = [
   "You are Nexpath's prompt-enhancement composer. You word guidance sections that will",
   "become the user's own next prompt to their coding agent — write in the user's first-person",
@@ -243,6 +247,13 @@ const SYSTEM_PROMPT = [
   '  what the user asked FOR, not what you wrote. Asking to plan, review, check, prepare, assess,',
   '  investigate or break down work is "plan_or_review"; asking for the work to be carried out is',
   '  "execute_requested". These two fields answer different questions and often differ.',
+  '',
+  'Locked decisions (critical):',
+  `- A fact marked "${LOCKED_DECISION_MARKER}" is a decision the developer locked for this project. It is`,
+  '  binding: state it as a constraint, never as a suggestion.',
+  '- If the original request goes against a locked decision, say so plainly in that section, in the',
+  "  user's voice: name the decision, say the request conflicts with it, and say it must be confirmed",
+  '  before anything is changed. Do NOT write steps, done-criteria or checks that would break it.',
   '',
   'Authority boundary (critical):',
   '- Keep every generated section in the SAME mode as the original request. If it asks to plan, review,',
@@ -388,6 +399,7 @@ function buildUserPrompt(
             promptEnhancementClaimWordingV1(fact.claimVerbPolicy),
           ].filter((wording): wording is string => wording !== undefined);
           return `\n    - ${fact.factId}${labels.map((wording) => ` | ${wording}`).join('')}`
+            + (fact.lockedDecision ? ` | ${LOCKED_DECISION_MARKER}` : '')
             + (fact.evidence === undefined
               ? (fact.contentGated
                 ? ' | evidence: WITHHELD (cite the source, never state its content)'
@@ -491,7 +503,7 @@ export async function composeStructuredComposerOutputV1(
   let openai: PromptEnhancementComposerClientV1;
   try {
     // With no injected client and no key, `new OpenAI()` throws -> deterministic fallback.
-    openai = client ?? (new OpenAI() as unknown as PromptEnhancementComposerClientV1);
+    openai = client ?? (newNexpathOpenAIClient() as unknown as PromptEnhancementComposerClientV1);
   } catch {
     return { ok: false, reason: 'no_key' };
   }

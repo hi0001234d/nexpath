@@ -38,6 +38,7 @@
  * and §42.3's fatigue guard says the same thing about the same material.
  */
 
+import { isLockedProjectMemoryFactV1 } from './project-memory-facts.js';
 import type { PromptEnhancementGuidanceFact } from './templates/section-plan.js';
 import { PROMPT_ENHANCEMENT_UNCONDITIONAL_SAFETY_FLAGS_V1 } from './templates/section-plan.js';
 import type { PromptEnhancementSectionPlanItemV1 } from './contracts.js';
@@ -237,10 +238,15 @@ export function prunePromptEnhancementSectionsV1(input: {
   // actually wrote is not empty just because the registry had no fact producer for its kind — and
   // for nine of the eleven kinds, no producer exists at all.
   const drafted = input.draftedSectionIds ?? new Set<string>();
+  // A required Source-A survivor, or a locked Feature 1 decision (owner decision 2026-10-31:
+  // a decision the developer locked must not silently vanish), puts its section in the floor.
   const carriesRequiredSurvivor = (section: PromptEnhancementSectionPlanItemV1): boolean =>
     section.structuredContentPartRefs
       .map((ref: string) => ref.replace(/^guidance_fact:/, ''))
-      .some((factId: string) => factsById.get(factId)?.priority === 'required_survivor');
+      .some((factId: string) => {
+        const fact = factsById.get(factId);
+        return fact?.priority === 'required_survivor' || (fact !== undefined && isLockedProjectMemoryFactV1(fact));
+      });
   const floorIds = selectFloorV1(sectionPlans, carriesRequiredSurvivor);
   const floor: PromptEnhancementSectionPlanItemV1[] = [];
   const evidenced: PromptEnhancementSectionPlanItemV1[] = [];

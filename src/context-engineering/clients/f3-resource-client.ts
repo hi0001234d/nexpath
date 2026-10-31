@@ -12,6 +12,7 @@
  *  - Asynchronous telemetry reporting to POST /f3/v1/resource-result (fire-and-forget).
  */
 
+import { linkAbortSignal } from './abort-link.js';
 import type {
   F3ResourceRequest,
   F3ResourceDecision,
@@ -32,18 +33,23 @@ interface CacheEntry {
 export interface F3ClientOptions {
   baseUrl?: string;
   deviceToken?: string;
+  /** Sent as X-Device-Id; the server's desktop gate requires it next to the device token. */
+  deviceId?: string;
   timeoutMs?: number;
 }
 
 export class F3ResourceClient {
   private readonly baseUrl: string;
   private readonly deviceToken?: string;
+  private readonly deviceId?: string;
   private readonly timeoutMs: number;
   private readonly cache = new Map<string, CacheEntry>();
 
   constructor(options?: F3ClientOptions) {
-    this.baseUrl = (options?.baseUrl || F3_ROUTER_DEFAULT_URL).replace(/\/+$/, '');
+    // Per-call option first, then NEXPATH_F3_URL, then parseos.tech.
+    this.baseUrl = (options?.baseUrl || process.env.NEXPATH_F3_URL || F3_ROUTER_DEFAULT_URL).replace(/\/+$/, '');
     this.deviceToken = options?.deviceToken;
+    this.deviceId = options?.deviceId;
     this.timeoutMs = options?.timeoutMs || F3_ROUTER_TIMEOUT_MS;
   }
 
@@ -53,7 +59,9 @@ export class F3ResourceClient {
    */
   async getResourceDecision(
     request: F3ResourceRequest,
-    customToken?: string
+    customToken?: string,
+    /** Caller's cancel / time budget; aborting it stops the request at once. */
+    signal?: AbortSignal
   ): Promise<F3ResourceDecision> {
     const token = customToken || this.deviceToken;
     const cacheKey = `${request.callKind}:${request.localAllowed}:${request.language}`;
@@ -81,6 +89,7 @@ export class F3ResourceClient {
     // 3. Dispatch to F3 Router with 1,000ms timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+    const unlink = linkAbortSignal(controller, signal);
 
     try {
       const headers: Record<string, string> = {
@@ -88,6 +97,9 @@ export class F3ResourceClient {
       };
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+      }
+      if (this.deviceId) {
+        headers['X-Device-Id'] = this.deviceId;
       }
 
       const response = await fetch(`${this.baseUrl}/f3/v1/resource`, {
@@ -98,6 +110,7 @@ export class F3ResourceClient {
       });
 
       clearTimeout(timeoutId);
+      unlink();
 
       if (!response.ok) {
         // Any 4xx or 5xx fails open to Pro
@@ -112,6 +125,7 @@ export class F3ResourceClient {
       return decision;
     } catch (err) {
       clearTimeout(timeoutId);
+      unlink();
       const isTimeout = controller.signal.aborted;
       const reason = isTimeout ? 'ROUTER_TIMEOUT' : 'ROUTER_NETWORK_ERROR';
       return this.createFallbackProDecision(reason);
@@ -134,6 +148,9 @@ export class F3ResourceClient {
         };
         if (token) {
           headers['Authorization'] = `Bearer ${token}`;
+        }
+        if (this.deviceId) {
+          headers['X-Device-Id'] = this.deviceId;
         }
 
         await fetch(url, {

@@ -1,3 +1,4 @@
+import { hasUsableNexpathLlmCredential } from '../../config/llm-client-scope.js';
 import OpenAI from 'openai';
 import { readFileSync, existsSync } from 'node:fs';
 import { basename, join } from 'node:path';
@@ -126,7 +127,13 @@ import {
   type PromptEnhancementCliHostCapabilityV1,
   type PromptEnhancementCliPopupHostLaunchResultV1,
 } from '../prompt-enhancement-host.js';
-import { preparePromptEnhancementWithSections as prepareFeature1PromptEnhancement } from '../../context-engineering/index.js';
+import {
+  preparePromptEnhancementWithSections as prepareFeature1PromptEnhancement,
+  insertDeliveredItem as insertFeature1DeliveredItem,
+  normalizeProjectId as normalizeFeature1ProjectId,
+  type Feature1SelectedFact,
+} from '../../context-engineering/index.js';
+import { buildProjectMemoryRefV1, projectMemoryEvidenceKeyV1 } from '../../prompt-enhancement/project-memory-facts.js';
 
 /**
  * nexpath auto — orchestration command (per decision-session-ux-research.md).
@@ -1104,14 +1111,70 @@ function emphasisPhrasesForPreparedBodyV1(
   });
 }
 
+/**
+ * Adds Feature 1's selected memory to a PE request as `project_memory:` refs with the
+ * remembered text as typed evidence — the same channel every grounding producer uses.
+ */
+function withFeature1ProjectMemoryV1(
+  request: PromptEnhancementPrepareRequestV1,
+  facts: readonly Feature1SelectedFact[],
+): PromptEnhancementPrepareRequestV1 {
+  const refs: string[] = [];
+  const evidence: Record<string, { key: string; value: string; runtimePath: 'local_store'; anchorScope: 'project_root' }> = {};
+  for (const fact of facts) {
+    const ref = buildProjectMemoryRefV1({ sectionId: fact.sectionId, locked: fact.locked, kind: fact.kind, id: fact.id });
+    refs.push(ref);
+    evidence[ref] = {
+      key: projectMemoryEvidenceKeyV1(fact.kind, fact.locked),
+      value: fact.content,
+      runtimePath: 'local_store',
+      anchorScope: 'project_root',
+    };
+  }
+  return {
+    ...request,
+    sourceSignals: {
+      ...request.sourceSignals,
+      rightGoodWorkStyleEnvRuntimeRefs: [...request.sourceSignals.rightGoodWorkStyleEnvRuntimeRefs, ...refs],
+      groundingEvidenceByRef: { ...(request.sourceSignals.groundingEvidenceByRef ?? {}), ...evidence },
+    },
+  };
+}
+
+/** Same display decision the host uses before storing a pending popup (see the blink gate). */
+function promptEnhancementResultWillShowV1(result: PromptEnhancementPrepareResultV1): boolean {
+  return result.disposition !== 'no_popup_not_applicable'
+    && result.uiView.body.sendPolicy !== 'no_popup'
+    && !promptEnhancementBodyHasNoLlmWordingV1(result);
+}
+
+/**
+ * Lets an in-process host (the desktop app, through Feature 1) run the same pipeline the CLI
+ * hook runs, and receive the prepared prompt enhancement instead of a pending popup row.
+ */
+export interface RunAutoOptionsV1 {
+  host?: {
+    /** Called with the prepared body when Nexpath would show its popup. Nothing is stored for a Stop hook. */
+    onShownPromptEnhancement: (result: PromptEnhancementPrepareResultV1) => void;
+    /** Called with Feature 1's result when its memory was handed to the writer. */
+    onFeature1Memory?: (result: import('../../context-engineering/index.js').EnhancementResultWithSections) => void;
+    /** The host's own session id for Feature 1's once-per-session memory. */
+    feature1SessionId?: string;
+    /** Editor context the host knows (active file, branch, recent files) for Feature 1. */
+    feature1Context?: Partial<import('../../context-engineering/index.js').WorkspaceContext>;
+  };
+}
+
 export async function runAuto(
   input:   AutoInput,
   store:   Store,
   openai?: OpenAI,
   promptEnhancement?: AutoPromptEnhancementIntegration,
+  options?: RunAutoOptionsV1,
 ): Promise<AutoOutcome> {
-  // Desktop session isolation guard: completely bypass CLI auto hook when Desktop App is running
-  if (process.env.NEXPATH_DESKTOP_SESSION === '1') {
+  // Desktop session isolation guard: completely bypass the CLI auto HOOK when the Desktop App is
+  // running. The desktop itself calls in through `options.host`.
+  if (process.env.NEXPATH_DESKTOP_SESSION === '1' && !options?.host) {
     return { outcome: 'no_action' };
   }
 
@@ -1133,14 +1196,25 @@ export async function runAuto(
   // (undefined on non-sequence), so no stale list can carry across preparations.
   let capturedPlannerItems: readonly PromptEnhancementSequenceItemV1[] | undefined;
   let capturedPlannerPromptDirectives: readonly PromptEnhancementSequenceOffsetRangeV1[] | undefined;
+  // Feature 1 shows memory once per session: the host's session when it has one, else Nexpath's.
+  const feature1SessionId = (): string => options?.host?.feature1SessionId ?? mgr.current.sessionId;
+  // A host gets the prepared popup body back; the CLI stores it for its Stop hook.
+  const storePendingPromptEnhancement = (row: Parameters<typeof upsertPendingPromptEnhancement>[1]): void => {
+    if (options?.host) options.host.onShownPromptEnhancement(row.result);
+    else upsertPendingPromptEnhancement(store, row);
+  };
   let cachedF1Result: import('../../context-engineering/index.js').EnhancementResultWithSections | undefined = undefined;
   const getF1Result = async (promptText: string, projectRoot: string): Promise<import('../../context-engineering/index.js').EnhancementResultWithSections | undefined> => {
     if (cachedF1Result !== undefined) return cachedF1Result;
     try {
-      cachedF1Result = await prepareFeature1PromptEnhancement(promptText, {
-        workspacePath: projectRoot,
-        store,
-      });
+      // sessionId scopes Feature 1's "already delivered" dedup to this session. Without it the
+      // dedup spans every session, so a fact shown once is never shown again.
+      cachedF1Result = await prepareFeature1PromptEnhancement(
+        promptText,
+        { ...options?.host?.feature1Context, workspacePath: projectRoot, store, sessionId: feature1SessionId() },
+        // Memory only: Nexpath's writer does the writing, so no Feature 1 LLM rewrite here.
+        { recordDelivery: false, skipLlmRewrite: true },
+      );
     } catch {
       cachedF1Result = undefined;
     }
@@ -1148,90 +1222,46 @@ export async function runAuto(
   };
 
   const preparePromptEnhancementForRunAuto: PromptEnhancementPrepareFacadeV1 = async (peRequest) => {
-    const prepared = await preparePromptEnhancementWithSequenceV1(peRequest, {
+    // Feature 1: the project memory relevant to this prompt (earlier decisions, rules, past
+    // errors) is handed to Nexpath's writer as guidance facts, so the writer words it into
+    // the enhanced prompt together with Nexpath's own guidance.
+    let f1Result: Awaited<ReturnType<typeof getF1Result>>;
+    try {
+      f1Result = await getF1Result(peRequest.sourcePrompt.text, peRequest.projectRoot);
+    } catch (f1Err) {
+      logger.debug('feature1_cli_prepare_failed', { error: String(f1Err) });
+    }
+    const f1Facts = f1Result?.isEnhanced ? f1Result.facts ?? [] : [];
+    const writerRequest = f1Facts.length > 0 ? withFeature1ProjectMemoryV1(peRequest, f1Facts) : peRequest;
+
+    const prepared = await preparePromptEnhancementWithSequenceV1(writerRequest, {
       db: store.db,
       client: openai as unknown as PromptEnhancementSequencePlannerClientV1 | undefined,
     });
     capturedPlannerItems = prepared.plannerItems;
     capturedPlannerPromptDirectives = prepared.plannerPromptDirectives;
 
-    // Feature 1: Context Engine integration for CLI popup
-    try {
-      const f1Result = await getF1Result(peRequest.sourcePrompt.text, peRequest.projectRoot);
-
-      if (f1Result && f1Result.isEnhanced && prepared.result) {
-        const rawUserPrompt = peRequest.sourcePrompt.text.trim();
-        const sectionBlocks: string[] = [
-          'My original request (verbatim):',
-          rawUserPrompt,
-        ];
-
-        if (f1Result.sections && f1Result.sections.length > 0) {
-          for (const sec of f1Result.sections) {
-            if (sec.lines && sec.lines.length > 0) {
-              sectionBlocks.push('');
-              sectionBlocks.push(`${sec.title}:`);
-              for (const line of sec.lines) {
-                sectionBlocks.push(line);
-              }
-            }
-          }
-        }
-
-        const formattedEnhancedBody = sectionBlocks.join('\n');
-
-        prepared.result.disposition = 'show_current_body';
-        prepared.result.currentBody = {
-          ...prepared.result.currentBody,
-          composerMode: 'baseline_llm_structured_wording',
-          text: formattedEnhancedBody,
-          renderedPromptBody: formattedEnhancedBody,
-        };
-        if (prepared.result.uiView && prepared.result.uiView.body) {
-          prepared.result.uiView = {
-            ...prepared.result.uiView,
-            body: {
-              ...prepared.result.uiView.body,
-              text: formattedEnhancedBody,
-              sendPolicy: 'send_current',
-            },
-          };
-        }
-
-        if (prepared.result.bodyPlan) {
-          const orderedSectionPlans = (f1Result.sections && f1Result.sections.length > 0)
-            ? f1Result.sections.map((sec, idx) => ({
-                sectionPlanId: `${sec.id}:plan`,
-                sectionId: sec.id,
-                templateId: 'prompt_enhancement_template',
-                order: idx + 1,
-                sourceRefs: [],
-                validationStatus: 'pass' as const,
-                fallbackMode: 'allowed' as const,
-                callVisibilityMode: 'llm_wording' as const,
-              }))
-            : [
-                {
-                  sectionPlanId: 'context_and_constraints:plan',
-                  sectionId: 'context_and_constraints',
-                  templateId: 'prompt_enhancement_template',
-                  order: 1,
-                  sourceRefs: [],
-                  validationStatus: 'pass' as const,
-                  fallbackMode: 'allowed' as const,
-                  callVisibilityMode: 'llm_wording' as const,
-                },
-              ];
-
-          prepared.result.bodyPlan = {
-            ...prepared.result.bodyPlan,
-            orderedSectionPlans: orderedSectionPlans as any,
-            generatedOriginPolicy: 'attach_generated_origin_metadata',
-          };
-        }
+    // Mark the memory as shown for this session only when Nexpath will actually show the
+    // popup; otherwise it stays available for the next prompt.
+    if (f1Result && f1Facts.length > 0 && prepared.result && promptEnhancementResultWillShowV1(prepared.result)) {
+      try {
+        insertFeature1DeliveredItem(store, {
+          projectRoot: normalizeFeature1ProjectId(peRequest.projectRoot),
+          sessionId: feature1SessionId(),
+          rawPrompt: peRequest.sourcePrompt.text,
+          enhancedPrompt: f1Result.enhancedPrompt,
+          isEnhanced: true,
+          stage: f1Result.stage,
+          stageConfidence: f1Result.stageConfidence,
+          injectedContextTags: f1Result.injectedContextTags,
+          contextTokenEstimate: f1Result.contextTokenEstimate,
+          processingTimeMs: f1Result.processingTimeMs,
+        });
+      } catch (f1Err) {
+        logger.debug('feature1_cli_delivery_record_failed', { error: String(f1Err) });
       }
-    } catch (f1Err) {
-      logger.debug('feature1_cli_prepare_failed', { error: String(f1Err) });
+      options?.host?.onFeature1Memory?.(f1Result);
+      logger.debug('feature1_cli_memory_to_writer', { facts: f1Facts.length });
     }
 
     return prepared.result;
@@ -1376,7 +1406,7 @@ export async function runAuto(
   // classifier already performs, and every consumer of `profile` already handles null.
   if (isProfileStale(mgr.current.profile, mgr.current.promptCount) &&
       mgr.current.promptHistory.length >= MIN_PROFILE_PROMPTS - 1 &&
-      (openai !== undefined || isUsableLlmCredential(process.env['OPENAI_API_KEY'] ?? ''))) {
+      (openai !== undefined || hasUsableNexpathLlmCredential())) {
     const updatedProfile = await classifyUserProfileLLM(
       mgr.current.promptHistory as import('../../core/classifier/types.js').PromptRecord[],
       mgr.current.promptCount,
@@ -1606,10 +1636,8 @@ export async function runAuto(
     // Injected boundary-test integrations keep their own single explicit path.
     if (sequencePeFallbackDone || promptEnhancement !== undefined) return;
     const isSequenceShaped = isPromptEnhancementSequenceShapedTextV1(input.promptText);
-    const f1 = await getF1Result(input.promptText, input.projectRoot);
-    const hasFeature1Context = f1?.isEnhanced === true;
-
-    if (!isSequenceShaped && !hasFeature1Context) return;
+    // Feature 1 memory never opens a popup by itself; it only enriches one Nexpath shows.
+    if (!isSequenceShaped) return;
     sequencePeFallbackDone = true;
     await ensurePromptFactsFresh();
     const request = buildPromptEnhancementRequestForAuto({
@@ -1677,7 +1705,7 @@ export async function runAuto(
       // earn a popup. Same row, same gate as the blink fix above.
       || promptEnhancementBodyHasNoLlmWordingV1(preparation.result);
     if (!preparation.safeFallback && preparation.result && !displayDecisionIsNoPopup) {
-      upsertPendingPromptEnhancement(store, {
+      storePendingPromptEnhancement({
         projectRoot: input.projectRoot,
         sessionId:   mgr.current.sessionId,
         promptCount: mgr.current.promptCount,
@@ -2021,7 +2049,7 @@ export async function runAuto(
       // earn a popup. Same row, same gate as the blink fix above.
       || promptEnhancementBodyHasNoLlmWordingV1(preparation.result);
     if (!preparation.safeFallback && preparation.result && !displayDecisionIsNoPopup) {
-      upsertPendingPromptEnhancement(store, {
+      storePendingPromptEnhancement({
         projectRoot: input.projectRoot,
         sessionId:   mgr.current.sessionId,
         promptCount: mgr.current.promptCount,

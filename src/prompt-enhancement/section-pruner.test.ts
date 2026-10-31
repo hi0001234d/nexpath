@@ -755,3 +755,40 @@ describe('I3 step 3 — relevance ordering visibly follows the prompt, ASSERTED'
       .toHaveLength(PROMPT_ENHANCEMENT_PRUNE_EXTRA_CAP_V1);
   });
 });
+
+describe('Feature 1 locked decisions (owner decision 2026-10-31)', () => {
+  const memoryFact = (factId: string, locked: boolean) => ({
+    ...fact(factId),
+    sourceType: 'prompt_derived_fact',
+    sourceIds: [`project_memory:context_and_constraints:${locked ? 'locked' : 'open'}:rule:1`],
+  }) as unknown as PromptEnhancementGuidanceFact;
+
+  const plans = [
+    section({ kind: 'original_request_or_goal' }),
+    section({ kind: 'problem_statement', factIds: ['p1'], isRequired: true }),
+    section({ kind: 'reproduction_or_evidence', factIds: ['r1'] }),
+    section({ kind: 'verification_or_test_plan', factIds: ['v1'] }),
+    section({ kind: 'acceptance_or_output_expectation', factIds: ['a1'] }),
+    section({ kind: 'context_and_constraints', factIds: ['mem'] }),
+  ];
+  // The model ranks the constraints section last, below the extra-section cap.
+  const relevanceOrder = ['reproduction_or_evidence', 'verification_or_test_plan', 'acceptance_or_output_expectation', 'context_and_constraints'];
+
+  it('never prunes the section carrying a locked decision, even when ranked last', () => {
+    const result = prunePromptEnhancementSectionsV1({
+      sectionPlans: plans,
+      facts: [fact('p1'), fact('r1'), fact('v1'), fact('a1'), memoryFact('mem', true)],
+      relevanceOrder,
+    });
+    expect(result.sectionPlans.map((s) => s.sectionKind)).toContain('context_and_constraints');
+  });
+
+  it('still prunes it normally when the memory is not locked', () => {
+    const result = prunePromptEnhancementSectionsV1({
+      sectionPlans: plans,
+      facts: [fact('p1'), fact('r1'), fact('v1'), fact('a1'), memoryFact('mem', false)],
+      relevanceOrder,
+    });
+    expect(result.droppedSectionIds).toContain('sec-context_and_constraints');
+  });
+});
