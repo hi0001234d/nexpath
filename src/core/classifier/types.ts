@@ -11,8 +11,14 @@ export type Stage =
   | 'feedback_loop';
 
 export const STAGES: Stage[] = [
-  'idea', 'prd', 'architecture', 'task_breakdown',
-  'implementation', 'review_testing', 'release', 'feedback_loop',
+  'architecture',
+  'feedback_loop',
+  'idea',
+  'implementation',
+  'prd',
+  'release',
+  'review_testing',
+  'task_breakdown',
 ];
 
 // ── Classifier output ──────────────────────────────────────────────────────────
