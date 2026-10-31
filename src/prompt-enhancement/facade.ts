@@ -1,3 +1,4 @@
+import { hasUsableNexpathLlmCredential } from '../config/llm-client-scope.js';
 import {
   PROMPT_ENHANCEMENT_CONTRACT_VERSION,
   validatePromptEnhancementPrepareRequestV1,
@@ -219,7 +220,7 @@ async function prepare(
     // which is a narrower question and silently said no to a perfectly good
     // Nexpath token, so the deterministic fallback ran as if nothing were
     // configured. Both credential formats can make this call.
-    isUsableLlmCredential(process.env['OPENAI_API_KEY'] ?? '')
+    hasUsableNexpathLlmCredential()
   ) {
     const llmRouteDecision = await decidePromptEnhancementRouteViaLlmV1({
       promptText: request.sourcePrompt.text,
@@ -331,7 +332,7 @@ async function prepare(
     !noPopup &&
     // Same correction as the route guard above: the question stays "do we have
     // something to call with", and a Nexpath token is something to call with.
-    isUsableLlmCredential(process.env['OPENAI_API_KEY'] ?? '')
+    hasUsableNexpathLlmCredential()
   ) {
     const composerCall = await composeStructuredComposerOutputV1({
       enhancementId,

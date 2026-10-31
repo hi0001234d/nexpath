@@ -29,7 +29,8 @@ const CATEGORIES: CategoryDefinition[] = [
       'failing', 'revert', 'unhandled', 'corrupt', 'timeout',
     ],
     patterns: [
-      /\b(fix(ing|ed|es)?|bugs?|errors?|exceptions?|crashes?|crashed|broken|failing|fails|failures?)\b/i,
+      // Not "fixed": in prompts it is nearly always the adjective ("fixed 5s delays").
+      /\b(fix(ing|es)?|bugs?|errors?|exceptions?|crashes?|crashed|broken|failing|fails|failures?)\b/i,
       /\b(not working|doesn't work|syntax error|type error|segmentation fault)\b/i,
     ],
     weight: 1.2, // Prioritize bugfix keywords
@@ -51,12 +52,12 @@ const CATEGORIES: CategoryDefinition[] = [
   {
     type: 'refactor',
     keywords: [
-      'refactor', 'clean', 'restructure', 'simplify', 'split',
+      'refactor', 'rework', 'clean', 'restructure', 'simplify', 'split',
       'reorganize', 'extract', 'rename', 'deduplicate', 'modularize',
       'cleanup', 'decouple', 'modernize', 'dry',
     ],
     patterns: [
-      /\b(refactor(ing|ed|s)?|clean(ing)? up|restructur(e|ing)|simplif(y|ied|ying))\b/i,
+      /\b(refactor(ing|ed|s)?|rework(ing)?|clean(ing)? up|restructur(e|ing)|simplif(y|ied|ying))\b/i,
       /\b(split|reorganiz(e|ing)|extract(ing)?|renam(e|ing)|deduplicat(e|ing))\b/i,
     ],
     weight: 1.1,

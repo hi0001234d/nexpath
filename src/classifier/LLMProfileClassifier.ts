@@ -1,3 +1,4 @@
+import { newNexpathOpenAIClient } from '../config/llm-client-scope.js';
 import OpenAI from 'openai';
 import type { PromptRecord, UserProfile, UserNature, UserMood, SessionDepth, OrdinalAxis } from './types.js';
 import { logger } from '../logger.js';
@@ -245,7 +246,7 @@ export async function classifyUserProfileLLM(
   }
 
   try {
-    const openai = client ?? new OpenAI();
+    const openai = client ?? newNexpathOpenAIClient();
     const { system, user } = buildClassifierPrompt(history);
 
     const response = await openai.chat.completions.create(

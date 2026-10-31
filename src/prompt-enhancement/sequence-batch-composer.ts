@@ -1,3 +1,4 @@
+import { newNexpathOpenAIClient } from '../config/llm-client-scope.js';
 import OpenAI from 'openai';
 import {
   PROMPT_ENHANCEMENT_COST_MODEL_V1,
@@ -686,7 +687,7 @@ export async function runPromptEnhancementSequenceBatchV1(
 ): Promise<PromptEnhancementSequenceBatchResultV1> {
   let openai: PromptEnhancementSequencePlannerClientV1;
   try {
-    openai = client ?? (new OpenAI() as unknown as PromptEnhancementSequencePlannerClientV1);
+    openai = client ?? (newNexpathOpenAIClient() as unknown as PromptEnhancementSequencePlannerClientV1);
   } catch {
     return { ok: false, reason: 'no_key' };
   }

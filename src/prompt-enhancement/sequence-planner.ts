@@ -1,3 +1,4 @@
+import { newNexpathOpenAIClient } from '../config/llm-client-scope.js';
 import OpenAI from 'openai';
 import type { Database } from 'sql.js';
 import {
@@ -955,7 +956,7 @@ export async function runPromptEnhancementSequencePlannerV1(
   let openai: PromptEnhancementSequencePlannerClientV1;
   try {
     // With no injected client and no key this throws, which is a call that never happened.
-    openai = client ?? (new OpenAI() as unknown as PromptEnhancementSequencePlannerClientV1);
+    openai = client ?? (newNexpathOpenAIClient() as unknown as PromptEnhancementSequencePlannerClientV1);
   } catch {
     return { ok: false, reason: 'no_key' };
   }

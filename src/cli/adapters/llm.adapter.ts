@@ -1,3 +1,4 @@
+import { newNexpathOpenAIClient } from '../../config/llm-client-scope.js';
 import OpenAI from 'openai';
 import type { LLMPort, LLMChatParams } from '../../core/ports/llm.port.js';
 
@@ -11,7 +12,7 @@ export class OpenAILLMAdapter implements LLMPort {
   private readonly client: OpenAI;
 
   constructor(client?: OpenAI) {
-    this.client = client ?? new OpenAI();
+    this.client = client ?? newNexpathOpenAIClient();
   }
 
   async chat(params: LLMChatParams): Promise<string> {

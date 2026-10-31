@@ -12,6 +12,7 @@
  * and the batch agree on when the provider is available, and takes an injectable constructor so the
  * check is testable without a real key.
  */
+import { newNexpathOpenAIClient } from '../config/llm-client-scope.js';
 import OpenAI from 'openai';
 import { nexpathClientHeaders } from '../config/nexpath-client-headers.js';
 
@@ -41,7 +42,7 @@ export function checkPromptEnhancementProviderApiAvailabilityV1(
   // ⚠️ It buys nothing at runtime, and that is expected. Nothing is sent from here: the client is
   // constructed to see whether construction throws, and is then dropped without a request. The
   // headers matter on the sites that actually call.
-  constructClient: () => unknown = () => new OpenAI({ defaultHeaders: nexpathClientHeaders() }),
+  constructClient: () => unknown = () => newNexpathOpenAIClient({ defaultHeaders: nexpathClientHeaders() }),
 ): PromptEnhancementProviderApiAvailabilityV1 {
   try {
     constructClient();

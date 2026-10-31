@@ -83,6 +83,18 @@ export interface EnhancementResult {
 /** EnhancementResult plus the Two-Tier sections, for the CLI popup (not part of the Ved contract) */
 export interface EnhancementResultWithSections extends EnhancementResult {
   sections?: PromptSection[];
+  /** The facts placed in `sections`, with what the CLI needs to hand them to Nexpath's writer. */
+  facts?: Feature1SelectedFact[];
+}
+
+/** One memory fact Feature 1 selected for a prompt (CLI only; not part of the 7-field contract). */
+export interface Feature1SelectedFact {
+  id: number;
+  kind: ContextMemoryKind;
+  locked: boolean;
+  content: string;
+  /** Id of the section it was routed to, e.g. 'context_and_constraints'. */
+  sectionId: string;
 }
 
 export interface EnhancementOptions {
@@ -94,10 +106,24 @@ export interface EnhancementOptions {
   bypassCancelToast?: boolean;
   /** Force LLM synthesis via Feature 3 / Feature 6 / Cloud Pro */
   delegateToLlm?: boolean;
+  /**
+   * Record the facts as delivered for this session (default true). The CLI passes false and
+   * records them itself, only once Nexpath has actually decided to show its popup.
+   */
+  recordDelivery?: boolean;
+  /**
+   * Skip Feature 1's own LLM rewrite (F3 + local/cloud). Used when Nexpath's writer AI
+   * does the writing and Feature 1 only supplies memory.
+   */
+  skipLlmRewrite?: boolean;
   /** Custom F3 router client instance */
   f3Client?: any;
   /** Local model execution allowed (defaults to true) */
   localAllowed?: boolean;
+  /** F3 router base URL. Wins over NEXPATH_F3_URL; default https://parseos.tech. */
+  f3BaseUrl?: string;
+  /** Cloud Pro chat-completions URL. Wins over NEXPATH_CLOUD_PRO_URL; default parseos.tech. */
+  cloudProUrl?: string;
   /** Custom bridge or local execution options */
   localExecutionOptions?: {
     bridgePort?: number;

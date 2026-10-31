@@ -1,3 +1,4 @@
+import { newNexpathOpenAIClient } from '../config/llm-client-scope.js';
 import OpenAI from 'openai';
 import { promptEnhancementSectionModelFactsV1 } from './fact-value-render.js';
 import type { PromptEnhancementGuidanceFact } from './templates/section-plan.js';
@@ -491,7 +492,7 @@ export async function composeStructuredComposerOutputV1(
   let openai: PromptEnhancementComposerClientV1;
   try {
     // With no injected client and no key, `new OpenAI()` throws -> deterministic fallback.
-    openai = client ?? (new OpenAI() as unknown as PromptEnhancementComposerClientV1);
+    openai = client ?? (newNexpathOpenAIClient() as unknown as PromptEnhancementComposerClientV1);
   } catch {
     return { ok: false, reason: 'no_key' };
   }

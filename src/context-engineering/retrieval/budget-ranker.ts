@@ -4,12 +4,14 @@
  * Scores candidate context facts via the 4-factor relevance formula:
  *   Score = (KeywordMatch * 0.40) + (Confidence * 0.30) + (RecencyDecay * 0.20) + (FileProximity * 0.10)
  *
- * Allocates lines based on TaskType caps (bugfix, feature, refactor, test, config, general)
- * and enforces a strict, unbreakable ceiling of at most 10 lines.
+ * Allocates lines based on TaskType caps (bugfix, feature, refactor, test, config, general),
+ * backfills unused lines with further relevant LOCKED decisions, and enforces a strict,
+ * unbreakable ceiling of at most 10 lines.
  *
  * Deduplicates facts already delivered in the active session to eliminate repetitive prompt noise.
  */
 
+import { estimateTokenCount } from '../delivery/tag-generator.js';
 import type {
   ContextMemoryRow,
   WorkspaceContext,
@@ -21,6 +23,8 @@ import type {
 } from '../types/context-engineering.js';
 
 export const MAX_BUDGET_LINES = 10;
+/** Backfilled decisions stop before the context passes the initial-turn token budget. */
+const BACKFILL_TOKEN_BUDGET = 500;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface CategoryCaps {
@@ -156,6 +160,20 @@ export function rankAndAllocateBudget(
   const primaryIntents = intents.slice(0, caps.intent);
 
   selectedFacts.push(...primaryFailures, ...primaryRules, ...primaryIntents);
+
+  // Backfill pass: the caps decide the mix, but they must not leave budget unused while a
+  // relevant LOCKED decision is left out (e.g. a rework prompt naming DeadLetterSink while
+  // 6 of 10 lines sit empty). Only locked decisions qualify; the 10-line ceiling still holds.
+  // Backfill never pushes the context past the initial-turn token budget (TC-RNK-8).
+  let selectedTokens = selectedFacts.reduce((sum, item) => sum + estimateTokenCount(item.formattedLine), 0);
+  for (const item of rules.slice(caps.rule)) {
+    if (selectedFacts.length >= maxFactLines) break;
+    if (item.fact.locked !== 1) continue;
+    const tokens = estimateTokenCount(item.formattedLine);
+    if (selectedTokens + tokens > BACKFILL_TOKEN_BUDGET) break;
+    selectedFacts.push(item);
+    selectedTokens += tokens;
+  }
 
   // Sort selected by score
   selectedFacts.sort((a, b) => b.score - a.score);

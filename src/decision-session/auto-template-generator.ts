@@ -16,6 +16,7 @@
  * eligible, so nothing is personalized until behaviour accrues.
  */
 
+import { newNexpathOpenAIClient } from '../config/llm-client-scope.js';
 import OpenAI from 'openai';
 import type { RightGoodProfile } from '../classifier/right-good-aggregator.js';
 import { ANTI_PATTERN_KEYS } from '../classifier/maturity-level.js';
@@ -301,7 +302,7 @@ export async function selectDistinctiveTopics(
     eligible = eligible.filter((st) => allowed.has(st));
   }
   if (eligible.length === 0) return [];
-  const openai = client ?? new OpenAI();
+  const openai = client ?? newNexpathOpenAIClient();
   const raw = await chat(openai, buildSelectionPrompt(input.patternSummary, eligible));
   return parseRanked(raw, new Set(eligible));
 }
@@ -397,7 +398,7 @@ export async function generatePerUserRecord(
   const floor   = resolveLevelForm(preset.levelForms, 1 as MaturityLevel);
   if (!atLevel || !floor) return null;
 
-  const openai = client ?? new OpenAI();
+  const openai = client ?? newNexpathOpenAIClient();
   const cell = await generateCell(openai, buildGenerationPrompt(atLevel.form.cell, patternSummary));
   if (!cell) return null;
   // The personalization must keep the topic anchor; else discard it (the read side

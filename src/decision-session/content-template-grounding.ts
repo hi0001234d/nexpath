@@ -14,6 +14,7 @@
  * reach this module (this layer adds no new prompt-text leakage).
  */
 
+import { newNexpathOpenAIClient } from '../config/llm-client-scope.js';
 import OpenAI from 'openai';
 import { lengthPreservingMarker } from '../store/redact.js';
 import { logger } from '../logger.js';
@@ -86,7 +87,7 @@ export async function deriveSimplerCell(
   client?: OpenAI,
   opts: { l2Safeguard?: string } = {},
 ): Promise<TwoChannelCell> {
-  const openai = client ?? new OpenAI();
+  const openai = client ?? newNexpathOpenAIClient();
   const raw = await chat(openai, buildSimplerPrompt(current));
   const obj = parseJson(raw);
   if (!obj || typeof obj.option !== 'string' || typeof obj.whyDesc !== 'string' || obj.option.trim() === '') {
@@ -166,7 +167,7 @@ Return JSON only, no markdown:
 export async function extractParamsFromPrompts(prompts: readonly string[], client?: OpenAI): Promise<ExtractedParam[]> {
   if (prompts.length === 0) return [];
   try {
-    const openai = client ?? new OpenAI();
+    const openai = client ?? newNexpathOpenAIClient();
     const raw = await chat(openai, buildParamExtractionPrompt(prompts));
     const obj = parseJson(raw);
     const rawFacts = obj && Array.isArray(obj.facts) ? obj.facts : [];
@@ -232,7 +233,7 @@ const PLACEHOLDER_TOKEN_RE = /\{R4_OPEN\}|\{R4_CLOSE\}|\{R5_INJECT:[^}]*\}|\{\{\
 export async function weaveWhyDesc(input: WeaveInput, client?: OpenAI): Promise<string> {
   const deterministic = [input.coreLine, ...input.facts.map((f) => f.text), ...(input.l2Safeguard ? [input.l2Safeguard] : [])].join('\n');
   try {
-    const openai = client ?? new OpenAI();
+    const openai = client ?? newNexpathOpenAIClient();
     const raw = await chat(openai, buildWeavePrompt(input));
     const obj = parseJson(raw);
     const woven = obj && typeof obj.whyDesc === 'string' ? obj.whyDesc.trim() : '';

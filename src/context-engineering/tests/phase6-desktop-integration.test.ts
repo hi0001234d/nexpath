@@ -758,14 +758,26 @@ describe('Phase 6: Desktop App Integration Track (Locked Architecture Flow)', ()
         deviceToken: 'npd_ved_token',
       };
 
+      // The writer version passes a long overall limit; the LLM may use its own 30s of it.
       await preparePromptEnhancement('configure database pool', context, {
         delegateToLlm: true,
         f3Client: mockF3Client,
+        timeoutMs: 40000,
         localExecutionOptions: { timeoutMs: 30000 },
       });
 
       expect(capturedRequest).toBeDefined();
       expect(capturedRequest.timeoutMs).toBe(30000); // Real LLM limit, not 1000ms
+
+      // With the default 2.5s limit, F3 is told the time the rewrite really has left.
+      capturedRequest = null;
+      await preparePromptEnhancement('configure the database pool size', { ...context, sessionId: 'f3-budget-2' }, {
+        delegateToLlm: true,
+        f3Client: mockF3Client,
+        localExecutionOptions: { timeoutMs: 30000 },
+      });
+      expect(capturedRequest.timeoutMs).toBeGreaterThan(1000);
+      expect(capturedRequest.timeoutMs).toBeLessThan(2500);
     });
   });
 

@@ -32,6 +32,7 @@ import { routeSectionsAndCompose } from './section-router.js';
 import { generateContextTags, estimateTokenCount } from './tag-generator.js';
 import { withFailOpen, DEFAULT_TIMEOUT_MS } from './fail-open.js';
 import { F3ResourceClient } from '../clients/f3-resource-client.js';
+import { linkAbortSignal, untilAborted } from '../clients/abort-link.js';
 import {
   executeLocalOrProCompletion,
   executeCloudProFallback,
@@ -47,7 +48,17 @@ import type {
   TaskType,
   F3ResourceRequest,
   F3FailType,
+  Feature1SelectedFact,
+  PromptSection,
+  ScoredFact,
 } from '../types/context-engineering.js';
+
+/** Time kept back from the LLM step for the delivery write that follows it. */
+const LLM_RESERVE_MS = 300;
+/** Below this, there is no point starting the F3 decision and rewrite at all. */
+const MIN_LLM_BUDGET_MS = 250;
+/** The F3 decision never waits longer than this, whatever the budget. */
+const F3_DECISION_TIMEOUT_MS = 1000;
 
 /**
  * The fail-open timer cannot fire while synchronous work (sql.js, ranking) runs,
@@ -103,7 +114,7 @@ export async function preparePromptEnhancement(
   context?: WorkspaceContext,
   options?: EnhancementOptions
 ): Promise<EnhancementResult> {
-  const { sections: _sections, ...result } = await preparePromptEnhancementWithSections(rawPrompt, context, options);
+  const { sections: _sections, facts: _facts, ...result } = await preparePromptEnhancementWithSections(rawPrompt, context, options);
   return result;
 }
 
@@ -238,18 +249,35 @@ export async function preparePromptEnhancementWithSections(
           process.env.NEXPATH_DESKTOP_SESSION === '1'
         );
 
-        if (isDesktopOrLlmMode && routingResult.sections.length > 0) {
+        // The LLM step (F3 decision + local/cloud rewrite) gets only the time left in
+        // timeoutMs, minus a reserve for the delivery write. When that budget runs out the
+        // calls are cancelled and the non-LLM enhanced prompt is returned; when the caller
+        // cancels, every call stops and the original prompt is returned (fail-open).
+        const llmBudgetMs = Math.floor(timeoutMs - (performance.now() - startTime) - LLM_RESERVE_MS);
+        if (
+          isDesktopOrLlmMode &&
+          options?.skipLlmRewrite !== true &&
+          routingResult.sections.length > 0 &&
+          llmBudgetMs >= MIN_LLM_BUDGET_MS
+        ) {
+          const llmController = new AbortController();
+          const budgetTimer = setTimeout(() => llmController.abort(), llmBudgetMs);
+          const unlinkCaller = linkAbortSignal(llmController, signal);
           try {
+            // The server's desktop gate in front of /f3/v1/* takes the desktop's own device
+            // token (Bearer npd_...) together with its X-Device-Id, and answers 401 without it.
+            const f3Token = context?.deviceToken;
             const f3Client: F3ResourceClient =
               options?.f3Client ||
               new F3ResourceClient({
-                deviceToken: context?.deviceToken,
-                timeoutMs: 1000,
+                baseUrl: options?.f3BaseUrl,
+                deviceToken: f3Token,
+                deviceId: context?.deviceId,
+                timeoutMs: Math.min(F3_DECISION_TIMEOUT_MS, llmBudgetMs),
               });
 
             const rawTokens = estimateTokenCount(rawPrompt);
             const approxInputTokens = rawTokens + contextTokenEstimate + 150;
-            const llmTimeoutMs = options?.localExecutionOptions?.timeoutMs || 45000;
 
             const f3Request: F3ResourceRequest = {
               requestId: `req-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -257,28 +285,39 @@ export async function preparePromptEnhancementWithSections(
               approxInputTokens,
               typicalOutputTokens: Math.max(300, Math.min(1000, approxInputTokens)),
               maxOutputTokens: 2000,
-              timeoutMs: llmTimeoutMs, // Real LLM limit (e.g. 45,000ms) so F3 can evaluate if local machine can finish within 70%
+              // The real time the rewrite may take, so F3 can judge whether a local machine
+              // can finish within it.
+              timeoutMs: options?.localExecutionOptions?.timeoutMs
+                ? Math.min(options.localExecutionOptions.timeoutMs, llmBudgetMs)
+                : llmBudgetMs,
               needsJson: false,
               language: 'en',
               background: false,
               localAllowed: options?.localAllowed !== false,
             };
 
-            const decision = await f3Client.getResourceDecision(f3Request, context?.deviceToken);
+            const decision = await untilAborted(f3Client.getResourceDecision(f3Request, f3Token, llmController.signal), llmController.signal);
+            if (llmController.signal.aborted) throw new Error('LLM budget spent before the rewrite started');
+
             const chatMessages = formatEnhancementChatMessages(rawPrompt, routingResult.sections);
+            // The budget signal alone ends the calls at the deadline. The clients keep their
+            // own configured timeouts: a client timer set to the same instant could fire first
+            // and be taken for an ordinary local timeout, starting a cloud fallback.
             const execOptions = {
               ...options?.localExecutionOptions,
               deviceToken: context?.deviceToken || options?.localExecutionOptions?.deviceToken,
               deviceId: context?.deviceId || options?.localExecutionOptions?.deviceId,
+              cloudProUrl: options?.cloudProUrl,
+              signal: llmController.signal,
             };
 
             if (decision.target === 'local' && decision.lanDevice) {
-              const localRes = await executeLocalOrProCompletion(
-                decision.lanDevice,
-                { messages: chatMessages },
-                execOptions
+              const localRes = await untilAborted(
+                executeLocalOrProCompletion(decision.lanDevice, { messages: chatMessages }, execOptions),
+                llmController.signal
               );
-              if (localRes.content && localRes.content.trim().length > 0) {
+              const cancelled = llmController.signal.aborted;
+              if (!cancelled && localRes.content && localRes.content.trim().length > 0) {
                 finalEnhancedPrompt = localRes.content.trim();
               }
 
@@ -288,24 +327,25 @@ export async function preparePromptEnhancementWithSections(
                   {
                     decisionId: decision.decisionId,
                     ranOn: localRes.ranOn,
-                    ok: !localRes.fellBackToPro,
+                    ok: !cancelled && !localRes.fellBackToPro,
                     latencyMs: localRes.latencyMs,
-                    failType: mapToF3FailType(localRes.failType),
+                    failType: cancelled ? 'cancelled' : mapToF3FailType(localRes.failType),
                     fellBackToPro: localRes.fellBackToPro,
                   },
-                  context?.deviceToken
+                  f3Token
                 );
               } catch {
                 // Ignore telemetry errors
               }
             } else {
               const tPro0 = performance.now();
-              const proContent = await executeCloudProFallback(
-                { messages: chatMessages },
-                execOptions
+              const proContent = await untilAborted(
+                executeCloudProFallback({ messages: chatMessages }, execOptions),
+                llmController.signal
               );
               const proLatency = Math.round(performance.now() - tPro0);
-              const ok = Boolean(proContent && proContent.trim().length > 0);
+              const cancelled = llmController.signal.aborted;
+              const ok = !cancelled && Boolean(proContent && proContent.trim().length > 0);
 
               if (ok) {
                 finalEnhancedPrompt = proContent.trim();
@@ -319,10 +359,10 @@ export async function preparePromptEnhancementWithSections(
                     ranOn: 'pro',
                     ok,
                     latencyMs: proLatency,
-                    failType: ok ? null : 'PRO_ERROR',
+                    failType: ok ? null : cancelled ? 'cancelled' : 'PRO_ERROR',
                     fellBackToPro: false,
                   },
-                  context?.deviceToken
+                  f3Token
                 );
               } catch {
                 // Ignore telemetry errors
@@ -330,7 +370,15 @@ export async function preparePromptEnhancementWithSections(
             }
           } catch {
             // Fail-open guarantee: silently preserve routingResult.enhancedPrompt
+          } finally {
+            clearTimeout(budgetTimer);
+            unlinkCaller();
           }
+        }
+
+        // A caller cancel during the LLM step returns the original prompt, not the enhanced one.
+        if (signal.aborted) {
+          throw new Error('Enhancement aborted by signal');
         }
 
         // Enforce Clean Prompt Text Guarantee (no synthetic @ tags)
@@ -341,7 +389,7 @@ export async function preparePromptEnhancementWithSections(
         assertWithinDeadline(startTime, timeoutMs);
 
         // 13. Record delivered item to SQLite (enforces FIFO cap)
-        try {
+        if (options?.recordDelivery !== false) try {
           insertDeliveredItem(store, {
             projectRoot: projectId,
             sessionId,
@@ -369,6 +417,7 @@ export async function preparePromptEnhancementWithSections(
           // so the caller sees the real total, not the time before the save.
           processingTimeMs: Math.max(processingTimeMs, Math.round(performance.now() - startTime)),
           sections: routingResult.sections,
+          facts: selectedFacts(budgetResult.allocatedLines, routingResult.sections),
         };
       } finally {
         if (shouldCloseStore) {
@@ -403,4 +452,21 @@ function mapTaskToStage(taskType: TaskType): EnhancementStage {
     default:
       return 'implementation';
   }
+}
+
+/** The selected memory facts with the section each was routed to (workspace lines excluded). */
+function selectedFacts(allocated: ScoredFact[], sections: PromptSection[]): Feature1SelectedFact[] {
+  const out: Feature1SelectedFact[] = [];
+  for (const item of allocated) {
+    const section = sections.find((s) => s.lines.includes(item.formattedLine));
+    if (!section) continue;
+    out.push({
+      id: item.fact.id,
+      kind: item.fact.kind,
+      locked: item.fact.locked === 1,
+      content: item.fact.content,
+      sectionId: section.id,
+    });
+  }
+  return out;
 }

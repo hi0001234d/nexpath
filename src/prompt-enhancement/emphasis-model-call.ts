@@ -1,3 +1,4 @@
+import { newNexpathOpenAIClient } from '../config/llm-client-scope.js';
 import OpenAI from 'openai';
 import { redactSecrets } from '../store/redact.js';
 import { SECRET_IN_TEXT } from '../classifier/mistake-categories.js';
@@ -315,7 +316,7 @@ export function startPromptEnhancementEmphasisModelCallV1(
     client = input.client;
   } else if (input.enabled === true) {
     try {
-      client = new OpenAI() as unknown as PromptEnhancementEmphasisModelClientV1;
+      client = newNexpathOpenAIClient() as unknown as PromptEnhancementEmphasisModelClientV1;
     } catch {
       return inertHandle('gated_out_no_client');
     }
