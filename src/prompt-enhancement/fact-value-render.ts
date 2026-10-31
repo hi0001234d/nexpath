@@ -1,4 +1,5 @@
 import { redactSecrets } from '../store/redact.js';
+import { isLockedProjectMemoryFactV1 } from './project-memory-facts.js';
 import { promptEnhancementConfidenceBandForV1 } from './source-mix.js';
 import {
   isPromptEnhancementRenderableRuntimePathV1,
@@ -252,11 +253,13 @@ export function promptEnhancementSectionModelFactsV1(
    * secret. That is measurable in the sim bodies (§17.13).
    */
   readonly contentGated: boolean;
+  /** A decision the developer locked (Feature 1 memory): binding, and conflicts must be flagged. */
+  readonly lockedDecision: boolean;
 }[] {
   const out: {
     factId: string; guidanceKind: string; confidenceBand: string;
     originScope: string; claimVerbPolicy: string; evidence: string | undefined;
-    contentGated: boolean;
+    contentGated: boolean; lockedDecision: boolean;
   }[] = [];
   for (const fact of facts) {
     // §17.7: ask the PLANNER's resolution, never the raw field. A content-carrying fact ships
@@ -295,6 +298,7 @@ export function promptEnhancementSectionModelFactsV1(
       // Reference-only IS the gated case: sensitive treatments and `source_label_only` say the
       // content exists and may not be stated. Anything else with no value simply has none.
       contentGated: referenceOnly,
+      lockedDecision: isLockedProjectMemoryFactV1(fact),
       evidence: referenceOnly || !value
         ? undefined
         // Order matters: redact the secret, flatten the structure, bound the length,

@@ -105,3 +105,11 @@ export function buildProjectMemoryGuidanceFactV1(
     publicCopySafe: false,
   };
 }
+
+/**
+ * A locked decision from Feature 1 memory. Its section is never pruned (owner decision
+ * 2026-10-31): a decision the developer locked must not silently vanish from the prompt.
+ */
+export function isLockedProjectMemoryFactV1(fact: Pick<PromptEnhancementGuidanceFact, 'sourceIds'>): boolean {
+  return fact.sourceIds.some((id) => parseProjectMemoryRefV1(id)?.locked === true);
+}

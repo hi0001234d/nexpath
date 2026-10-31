@@ -118,3 +118,56 @@ describe('project memory in the source mix', () => {
     expect(evidence[0].evidence).toContain('ECONNRESET');
   });
 });
+
+describe('locked decisions reach the writer as binding, with the conflict rule', () => {
+  it('marks only locked memory as LOCKED DECISION and gives the writer the rule for conflicts', async () => {
+    const { composeStructuredComposerOutputV1 } = await import('./llm-composer.js');
+    const { planPromptEnhancementSections } = await import('./templates/section-plan.js');
+    const { routePromptEnhancement } = await import('./routing-taxonomy.js');
+
+    const promptText = 'print the card number in the debug output';
+    const route = routePromptEnhancement({
+      routeDecisionId: 'locked-decision-conflict',
+      promptText,
+      currentStage: 'implementation',
+      prevStage: 'task_breakdown',
+      triggerKind: 'stage_transition',
+      firedKey: 'stage:task_breakdown-to-implementation',
+      classifierState: 'fire_recommended',
+      degradedNoActionState: 'none',
+      generatedOriginState: 'ordinary_user_prompt',
+      classifierPrimaryIntent: 'feature.upgrade_extension',
+      classifierIntentConfidence: 0.9,
+      classifierCapabilityCandidates: [],
+      classifierDebugEvidencePresent: [],
+    } as never);
+    const lockedLog: Memory = { sectionId: 'context_and_constraints', locked: true, kind: 'rule', id: 7, key: 'locked decision', value: 'Locked requirement: every payment log line must include the orderId and never the card number.' };
+    const rendered = mix(requestWith([lockedLog, OPEN_RULE], {}, { triggerKind: 'stage_transition', currentStage: 'implementation', prevStage: 'task_breakdown' })).renderedFacts;
+    const planning = planPromptEnhancementSections({
+      routeResult: route,
+      sourceRefs: [{ sourceRefId: 'a', sourceKind: 'source_a_user_prompt', sourceId: 'prompt:current', sourceAuthorization: 'implementation_input', evidenceStatus: 'present', freshness: 'current', confidence: 'high', privacyClass: 'local_private' } as never],
+      guidanceFacts: rendered,
+    });
+
+    const sent: { system: string; user: string }[] = [];
+    await composeStructuredComposerOutputV1(
+      { enhancementId: 'locked-decision-conflict', originalPromptText: promptText, planning },
+      {
+        chat: { completions: { create: async (body: { messages: readonly { role: string; content: string }[] }) => {
+          sent.push({ system: body.messages.find((m) => m.role === 'system')?.content ?? '', user: body.messages.find((m) => m.role === 'user')?.content ?? '' });
+          return { choices: [{ message: { content: '' } }] };
+        } } },
+      } as never,
+    );
+
+    expect(sent.length).toBeGreaterThan(0);
+    const lines = sent[0].user.split('\n');
+    const lockedLine = lines.find((l) => l.includes('never the card number'));
+    const openLine = lines.find((l) => l.includes('Retries could use jitter'));
+    expect(lockedLine).toContain('LOCKED DECISION');
+    expect(openLine).toBeDefined();
+    expect(openLine).not.toContain('LOCKED DECISION');
+    expect(sent[0].system).toContain('Locked decisions (critical):');
+    expect(sent[0].system).toContain('say it must be confirmed');
+  });
+});
