@@ -33,8 +33,16 @@ export function ingestSessionFacts(
   // (preparePromptEnhancement / onTurnComplete normalise too), so a trailing
   // slash, relative path or symlink from the caller cannot hide the memory.
   const projectRoot = normalizeProjectId(input.projectRoot);
-  const facts = extractFacts({ ...input, projectRoot });
+  return ingestExtractedFacts(store, projectRoot, extractFacts({ ...input, projectRoot }));
+}
 
+/**
+ * Saves facts into our map with the same rules as V1's capture: a fact that replaces an older
+ * one on the same topic marks it superseded (never deleted); identical text dedupes. Used by
+ * V1's own extractor and by v1(a)'s MemOS turn summaries.
+ */
+export function ingestExtractedFacts(store: Store, projectRootIn: string, facts: ExtractedFact[]): IngestionResult {
+  const projectRoot = normalizeProjectId(projectRootIn);
   let insertedCount = 0;
   let supersededCount = 0;
 
@@ -73,6 +81,7 @@ export function ingestSessionFacts(
       identities: fact.identities,
       locked: fact.locked,
       confidence: fact.confidence,
+      ...(fact.evidence ? { evidence: fact.evidence } : {}),
     });
     insertedCount++;
 
@@ -131,7 +140,7 @@ function primarySymbol(content: string, identities: ContextIdentity[]): string |
 }
 
 /** Jaccard similarity over meaningful words (lowercased, 3+ chars, no stop words). */
-function wordSimilarity(a: string, b: string): number {
+export function wordSimilarity(a: string, b: string): number {
   const words = (t: string) =>
     new Set(
       t

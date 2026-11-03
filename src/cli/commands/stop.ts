@@ -39,6 +39,7 @@ import {
   ingestSessionFacts as ingestFeature1SessionFacts,
   onTurnComplete as onFeature1TurnComplete,
 } from '../../context-engineering/index.js';
+import { WorkerLink, FEATURE1_TOOLS_CONFIG_KEY } from '../../context-engineering/worker/worker-client.js';
 import {
   validatePromptEnhancementCliPopupResultV1,
   runPromptEnhancementCliSubmitPopupV1,
@@ -550,6 +551,17 @@ export async function runStop(
         prompt: userPrompt,
         response: assistantResponse,
       });
+      // v1(a): hand the finished turn to the background worker (MemOS save, OpenClaw export).
+      // Waits at most a few hundred ms and never throws; a missing worker is started for next time.
+      if (getConfig(store.db, FEATURE1_TOOLS_CONFIG_KEY) === 'on') {
+        await new WorkerLink().capture({
+          projectRoot: payload.cwd,
+          sessionId: mgr.current.sessionId,
+          prompt: userPrompt,
+          response: assistantResponse,
+          ts: Date.now(),
+        });
+      }
     }
   } catch (f1Err) {
     logger.debug('feature1_cli_stop_ingest_failed', { error: String(f1Err) });

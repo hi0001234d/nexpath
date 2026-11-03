@@ -83,3 +83,21 @@ describe('cliRuns', () => {
     expect(cliRuns('nexpath', ['--version'], run)).toBe(false);
   });
 });
+
+describe('meetsToolsBaseline (Node 22.22.3+, OpenClaw 2026.9.2)', () => {
+  it('accepts 22.22.3+ in the 22 line, 24.15+ in the 24 line, 25.9+ and newer; rejects older and 23', async () => {
+    const { meetsToolsBaseline } = await import('./prereq.js');
+    expect(meetsToolsBaseline('v22.22.3')).toBe(true);
+    expect(meetsToolsBaseline('v22.23.2')).toBe(true);
+    expect(meetsToolsBaseline('v24.15.0')).toBe(true);
+    expect(meetsToolsBaseline('v24.22.0')).toBe(true);
+    expect(meetsToolsBaseline('v25.9.0')).toBe(true);
+    expect(meetsToolsBaseline('v26.12.1')).toBe(true);
+    expect(meetsToolsBaseline('v22.22.2')).toBe(false);
+    expect(meetsToolsBaseline('v20.18.0')).toBe(false);
+    expect(meetsToolsBaseline('v23.4.0')).toBe(false);
+    expect(meetsToolsBaseline('v24.14.9')).toBe(false);
+    expect(meetsToolsBaseline('v25.1.0')).toBe(false);
+    expect(meetsToolsBaseline(null)).toBe(false);
+  });
+});

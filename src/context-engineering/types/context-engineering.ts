@@ -95,6 +95,8 @@ export interface Feature1SelectedFact {
   content: string;
   /** Id of the section it was routed to, e.g. 'context_and_constraints'. */
   sectionId: string;
+  /** Its delivery tag (e.g. `@rule:<key>`), recorded when the fact is really shown. */
+  tag?: string;
 }
 
 export interface EnhancementOptions {
@@ -124,6 +126,12 @@ export interface EnhancementOptions {
   f3BaseUrl?: string;
   /** Cloud Pro chat-completions URL. Wins over NEXPATH_CLOUD_PRO_URL; default parseos.tech. */
   cloudProUrl?: string;
+  /**
+   * v1(a) source drivers (MemOS, OpenClaw, codebase-memory-mcp). Tools are the main
+   * retrieval path; our map stays the authority and V1 retrieval is the fallback
+   * (sources/candidate-filter.ts). Omitted or empty → exactly the V1 behaviour.
+   */
+  sources?: readonly import('../sources/source-driver.js').SourceDriver[];
   /** Custom bridge or local execution options */
   localExecutionOptions?: {
     bridgePort?: number;
@@ -243,7 +251,12 @@ export type ContextMemoryKind =
   | 'rule'
   | 'failure'
   | 'intent'
-  | 'pattern_alert';
+  | 'pattern_alert'
+  // v1(a) tool candidates — never stored as map rows by retrieval; built per prompt from
+  // MemOS / OpenClaw / codebase-memory-mcp results (sources/candidate-filter.ts).
+  | 'memos_recall'
+  | 'openclaw_recall'
+  | 'code_context';
 
 export interface ContextIdentity {
   file?: string;
@@ -357,6 +370,11 @@ export interface BudgetRankingOptions {
   deliveredTags?: Set<string>;
   context?: WorkspaceContext;
   maxTotalLines?: number; // Defaults to 10
+  /**
+   * v1(a): our map's facts that match the prompt by meaning (local embedding model). One that
+   * shares no word with the prompt may still fill a line left over after V1's own choice.
+   */
+  meaningMatchedIds?: ReadonlySet<number>;
 }
 
 export interface BudgetRankingResult {

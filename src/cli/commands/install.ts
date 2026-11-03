@@ -6,6 +6,8 @@ import { confirm, isCancel, select, password, note, intro, outro, cancel as clac
 import { SelectPrompt } from '@clack/core';
 import pc from 'picocolors';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
+import { describeFeature1Tools, feature1ToolsStatus, stopFeature1Worker } from '../../context-engineering/worker/tools-status.js';
+import { FEATURE1_TOOLS_CONFIG_KEY } from '../../context-engineering/worker/worker-client.js';
 import { isConfigSet, setConfig, getConfig } from '../../store/config.js';
 import { setInstalledAtIfMissing } from '../../store/feedback-signals.js';
 import { expireSessionsForCredentialChange } from '../../store/session-reset.js';
@@ -942,6 +944,11 @@ export async function installAction(
   // locally until the user submits feedback.
   await flushIfTelemetryOn(store);
 
+  // Feature 1 v1(a): switch the memory tools on when MemOS or codebase-memory-mcp is installed
+  // (both ship as Nexpath dependencies; OpenClaw is a separate global install).
+  const feature1Tools = feature1ToolsStatus();
+  if (feature1Tools.memos || feature1Tools.codebase) setConfig(store, FEATURE1_TOOLS_CONFIG_KEY, 'on');
+
   closeStore(store);
 
   let clipboardResult: ClipboardEnsureResult = { installed: false, toolName: null, alreadyHad: false };
@@ -975,6 +982,7 @@ export async function installAction(
     // `Telemetry:  ${telemetryEnabled ? 'enabled' : 'disabled'}`,
     `Agents:     ${registered.length > 0 ? registered.join(', ') : 'none'}`,
     failed.length > 0 ? `Failed:     ${failed.join(', ')}` : null,
+    `Memory:     ${describeFeature1Tools(feature1Tools)}`,
     extrasLine,
   ].filter((l): l is string => l !== null).join('\n');
 
@@ -1204,6 +1212,9 @@ export async function uninstallAction(
     dbPath?:              string;
   } = {},
 ): Promise<void> {
+  // Feature 1 v1(a): stop the background worker (and the tools it holds) first.
+  await stopFeature1Worker();
+
   // Uninstall must clean up registration entries from agents that may have
   // been written by an older nexpath version, so it bypasses the support
   // filter and walks every agent present on disk.

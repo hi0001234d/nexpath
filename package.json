@@ -60,7 +60,10 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
     "@clack/prompts": "^0.9",
+    "@huggingface/transformers": "4.2.0",
+    "@memtensor/memos-local-plugin": "2.0.21",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "codebase-memory-mcp": "0.12.1",
     "commander": "^12",
     "cross-keychain": "^1.1.0",
     "dotenv": "^17.4.2",
@@ -84,6 +87,6 @@
     "vitest": "^4.1.8"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.22.3"
   }
 }

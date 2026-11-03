@@ -35,6 +35,11 @@ const DEFAULT_API_BASE_URL = 'https://parseos.tech';
 export interface NexpathWriterOptions extends Pick<EnhancementOptions, 'timeoutMs' | 'signal'> {
   /** The app's server; LLM calls go to <apiBaseUrl>/v1/chat/completions. Default https://parseos.tech. */
   apiBaseUrl?: string;
+  /**
+   * v1(a): the app's in-process tools (MemOS / OpenClaw / codebase-memory-mcp), created once with
+   * `createDesktopFeature1Tools`. Omitted → Feature 1 memory comes from our map only (V1).
+   */
+  tools?: import('./desktop-feature1-tools.js').DesktopFeature1Tools;
 }
 
 /**
@@ -73,6 +78,13 @@ export async function prepareNexpathWriterEnhancement(
         ownsStore = true;
       }
 
+      // MemOS's background AI calls use the same device credentials (the token stays in `tools`).
+      options?.tools?.setCredentials({
+        deviceToken: context.deviceToken!,
+        deviceId: context.deviceId!,
+        apiBaseUrl: options?.apiBaseUrl || DEFAULT_API_BASE_URL,
+      });
+
       let shown: PromptEnhancementPrepareResultV1 | undefined;
       let memory: EnhancementResultWithSections | undefined;
       try {
@@ -89,6 +101,7 @@ export async function prepareNexpathWriterEnhancement(
                 onShownPromptEnhancement: (result) => { shown = result; },
                 onFeature1Memory: (result) => { memory = result; },
                 feature1SessionId: context.sessionId,
+                ...(options?.tools ? { feature1Sources: options.tools.drivers } : {}),
                 feature1Context: {
                   activeFilePath: context.activeFilePath,
                   gitBranch: context.gitBranch,

@@ -161,6 +161,30 @@ export function extractFacts(input: FactExtractionInput): ExtractedFact[] {
   return Array.from(uniqueMap.values());
 }
 
+/** A turn summary below this many words says nothing worth remembering ("User is agreeable."). */
+const MIN_SUMMARY_WORDS = 5;
+/** MemOS summaries are a model's paraphrase: never locked, never as strong as the user's own words. */
+const MAX_SUMMARY_CONFIDENCE = 0.7;
+
+/**
+ * v1(a): MemOS's one-line summary of a turn → one fact for our map (a failure when it names an
+ * error, otherwise a project note kept as a rule so later decisions can replace it). Our map then
+ * understands turns our patterns miss ("let's just go with redis"). Returns undefined for a
+ * summary too short to be a fact.
+ */
+export function factFromTurnSummary(projectRoot: string, summary: string, ref: string): ExtractedFact | undefined {
+  const content = summary.replace(/\s+/g, ' ').trim();
+  if (content.split(' ').filter((w) => /[\p{L}\p{N}]/u.test(w)).length < MIN_SUMMARY_WORDS) return undefined;
+  const kind: ContextMemoryKind = REPLY_FAILURE_REGEX.test(content) ? 'failure' : 'rule';
+  const fact = buildFact(projectRoot, kind, content, undefined, extractIdentities(content));
+  return {
+    ...fact,
+    locked: false,
+    confidence: Math.min(fact.confidence, MAX_SUMMARY_CONFIDENCE),
+    evidence: JSON.stringify({ source: 'memos', ref }),
+  };
+}
+
 /**
  * Derives lock status and 2-tier confidence for a candidate text.
  */

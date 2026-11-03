@@ -37,10 +37,19 @@ export * from './delivery/fail-open.js';
 export * from './delivery/prompt-enhancer.js';
 // Desktop writer version: Nexpath's enhanced prompt with Feature 1 memory (option b)
 export * from './delivery/nexpath-writer-enhancer.js';
+export * from './delivery/desktop-feature1-tools.js';
 
 // Clients (F3 Dynamic Router & F6 Local LLM Bridge)
 export * from './clients/f3-resource-client.js';
 export * from './clients/f6-delegation-client.js';
+
+// v1(a) source drivers (MemOS / OpenClaw / codebase-memory-mcp) + candidate selection
+export * from './sources/source-driver.js';
+export * from './sources/candidate-filter.js';
+export * from './sources/codebase-memory-driver.js';
+export * from './sources/memos-driver.js';
+export * from './sources/openclaw-driver.js';
+export * from './sources/host-llm-bridge.js';
 
 // Learning & Post-Session Pattern Analysis (Path C / Phase 5)
 export * from './learning/pattern-learner.js';
