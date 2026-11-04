@@ -1,0 +1,250 @@
+{
+ "about": "Popup check popup-check-A: decisions in several languages in ONE project (different decisions, so none replaces another). AI-written sample sentences.",
+ "files": {
+  "src/payments/retry.ts": "export async function processRetry(paymentId: string) {\n  // retries a failed payment\n}\n",
+  "src/email.ts": "export async function sendMail(to: string, body: string) {\n  // queues an email\n}\n",
+  "src/auth/token.ts": "export const TOKEN_TTL_MINUTES = 15;\n",
+  "src/upload.ts": "export const MAX_UPLOAD_MB = 5;\n"
+ },
+ "prompts": [
+  {
+   "id": 1,
+   "phase": "1. Teach the decisions (one per language)",
+   "prompt": "Locked requirement: processRetry in src/payments/retry.ts is the only entry point for payment retries.",
+   "reply": "Noted, I will keep that decision in mind for this project.",
+   "expect": "setup"
+  },
+  {
+   "id": 2,
+   "phase": "1. Teach the decisions (one per language)",
+   "prompt": "पक्का फ़ैसला: login token 15 मिनट बाद expire होगा, इसे मत बदलना।",
+   "reply": "Noted, I will keep that decision in mind for this project.",
+   "expect": "setup"
+  },
+  {
+   "id": 3,
+   "phase": "1. Teach the decisions (one per language)",
+   "prompt": "Ye fix hai: DB me saari dates UTC me hi save hongi, local time me nahi.",
+   "reply": "Noted, I will keep that decision in mind for this project.",
+   "expect": "setup"
+  },
+  {
+   "id": 4,
+   "phase": "1. Teach the decisions (one per language)",
+   "prompt": "પાકો નિયમ: payment logs માં card number ક્યારેય ન આવવો જોઈએ, આ બદલવાનું નથી.",
+   "reply": "Noted, I will keep that decision in mind for this project.",
+   "expect": "setup"
+  },
+  {
+   "id": 5,
+   "phase": "1. Teach the decisions (one per language)",
+   "prompt": "Aa final che: darek email sendMail queue thi j jase, SMTP ne direct call nahi karvanu.",
+   "reply": "Noted, I will keep that decision in mind for this project.",
+   "expect": "setup"
+  },
+  {
+   "id": 6,
+   "phase": "1. Teach the decisions (one per language)",
+   "prompt": "We're locked in on Postgres, no cap, nobody's switching databases.",
+   "reply": "Noted, I will keep that decision in mind for this project.",
+   "expect": "setup"
+  },
+  {
+   "id": 7,
+   "phase": "1. Teach the decisions (one per language)",
+   "prompt": "Decisión final: el deploy solo se hace los martes.",
+   "reply": "Noted, I will keep that decision in mind for this project.",
+   "expect": "setup"
+  },
+  {
+   "id": 8,
+   "phase": "1. Teach the decisions (one per language)",
+   "prompt": "É definitivo: upload de imagem tem limite de 5 MB, não mexam nisso.",
+   "reply": "Noted, I will keep that decision in mind for this project.",
+   "expect": "setup"
+  },
+  {
+   "id": 9,
+   "phase": "2. Unrelated prompts: no memory",
+   "prompt": "make the footer links a lighter grey",
+   "reply": "Done.",
+   "expect": "no-context",
+   "lang": "en"
+  },
+  {
+   "id": 10,
+   "phase": "2. Unrelated prompts: no memory",
+   "prompt": "settings page पर dark mode का बटन जोड़ो",
+   "reply": "Done.",
+   "expect": "no-context",
+   "lang": "hi"
+  },
+  {
+   "id": 11,
+   "phase": "2. Unrelated prompts: no memory",
+   "prompt": "landing page ka logo badal do",
+   "reply": "Done.",
+   "expect": "no-context",
+   "lang": "hi-latn"
+  },
+  {
+   "id": 12,
+   "phase": "2. Unrelated prompts: no memory",
+   "prompt": "About page પરની spelling ભૂલ સુધારો",
+   "reply": "Done.",
+   "expect": "no-context",
+   "lang": "gu"
+  },
+  {
+   "id": 13,
+   "phase": "2. Unrelated prompts: no memory",
+   "prompt": "sidebar thodi patli karo",
+   "reply": "Done.",
+   "expect": "no-context",
+   "lang": "gu-latn"
+  },
+  {
+   "id": 14,
+   "phase": "2. Unrelated prompts: no memory",
+   "prompt": "throw a tooltip on the export button",
+   "reply": "Done.",
+   "expect": "no-context",
+   "lang": "en-US-slang"
+  },
+  {
+   "id": 15,
+   "phase": "2. Unrelated prompts: no memory",
+   "prompt": "agranda la letra de los títulos",
+   "reply": "Done.",
+   "expect": "no-context",
+   "lang": "es-419"
+  },
+  {
+   "id": 16,
+   "phase": "2. Unrelated prompts: no memory",
+   "prompt": "coloca um spinner de carregamento no dashboard",
+   "reply": "Done.",
+   "expect": "no-context",
+   "lang": "pt-BR"
+  },
+  {
+   "id": 17,
+   "phase": "3. Related prompts: memory in the popup",
+   "prompt": "add a retry when the checkout payment fails",
+   "reply": "Done.",
+   "expect": "context",
+   "shows": [
+    [
+     "processRetry"
+    ]
+   ],
+   "lang": "en",
+   "memoryId": "en-01"
+  },
+  {
+   "id": 18,
+   "phase": "3. Related prompts: memory in the popup",
+   "prompt": "users बार-बार logout हो रहे हैं, session लंबा कर दो",
+   "reply": "Done.",
+   "expect": "context",
+   "shows": [
+    [
+     "15 मिनट",
+     "15 minute",
+     "15-minute",
+     "15 min"
+    ]
+   ],
+   "lang": "hi",
+   "memoryId": "hi-02"
+  },
+  {
+   "id": 19,
+   "phase": "3. Related prompts: memory in the popup",
+   "prompt": "order date user ke timezone me save karo",
+   "reply": "Done.",
+   "expect": "context",
+   "shows": [
+    [
+     "UTC"
+    ]
+   ],
+   "lang": "hi-latn",
+   "memoryId": "hi-latn-03"
+  },
+  {
+   "id": 20,
+   "phase": "3. Related prompts: memory in the popup",
+   "prompt": "payment fail થાય તો આખી card detail debug log માં print કરો",
+   "reply": "Done.",
+   "expect": "context",
+   "shows": [
+    [
+     "card number",
+     "કાર્ડ",
+     "card detail"
+    ]
+   ],
+   "lang": "gu",
+   "memoryId": "gu-04"
+  },
+  {
+   "id": 21,
+   "phase": "3. Related prompts: memory in the popup",
+   "prompt": "signup pachi welcome mail sidho mokli do",
+   "reply": "Done.",
+   "expect": "context",
+   "shows": [
+    [
+     "sendMail"
+    ]
+   ],
+   "lang": "gu-latn",
+   "memoryId": "gu-latn-05"
+  },
+  {
+   "id": 22,
+   "phase": "3. Related prompts: memory in the popup",
+   "prompt": "yo can we just move the orders over to Mongo real quick",
+   "reply": "Done.",
+   "expect": "context",
+   "shows": [
+    [
+     "Postgres"
+    ]
+   ],
+   "lang": "en-US-slang",
+   "memoryId": "en-US-slang-06"
+  },
+  {
+   "id": 23,
+   "phase": "3. Related prompts: memory in the popup",
+   "prompt": "che, subamos la versión nueva a producción ahora, aunque sea viernes",
+   "reply": "Done.",
+   "expect": "context",
+   "shows": [
+    [
+     "martes",
+     "Tuesday"
+    ]
+   ],
+   "lang": "es-419",
+   "memoryId": "es-419-07"
+  },
+  {
+   "id": 24,
+   "phase": "3. Related prompts: memory in the popup",
+   "prompt": "deixa os usuários subirem fotos de perfil maiores",
+   "reply": "Done.",
+   "expect": "context",
+   "shows": [
+    [
+     "5 MB",
+     "5MB"
+    ]
+   ],
+   "lang": "pt-BR",
+   "memoryId": "pt-BR-08"
+  }
+ ]
+}

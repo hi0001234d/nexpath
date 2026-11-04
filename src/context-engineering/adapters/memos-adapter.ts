@@ -17,6 +17,10 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { hashProjectPath } from '../core/project-scope.js';
 import { redactSecrets } from '../../store/redact.js';
+import { normalizeText, letterCount, WORD_CHARS } from '../core/unicode-text.js';
+
+/** Anything but a word character of any script or `_` (the Unicode form of `\W`). */
+const QUERY_TERM_BREAK = new RegExp(`[^${WORD_CHARS}_]+`, 'u');
 
 export interface MemOSConfig {
   projectRoot: string;
@@ -108,7 +112,8 @@ export class MemOSAdapter {
 
       const raw = readFileSync(this.turnsFilePath, 'utf-8');
       const lines = raw.trim().split('\n').filter(Boolean);
-      const queryTerms = query.toLowerCase().split(/\W+/).filter((t) => t.length > 2);
+      // Words of every script (multilingual #7); for ASCII the same terms as the old \W+ split.
+      const queryTerms = normalizeText(query).toLowerCase().split(QUERY_TERM_BREAK).filter((t) => letterCount(t) > 2);
 
       if (queryTerms.length === 0 || lines.length === 0) {
         return [];
@@ -120,7 +125,7 @@ export class MemOSAdapter {
         try {
           const parsed = JSON.parse(line) as MemOSTurn;
           const text = `${parsed.prompt} ${parsed.response}`;
-          const lowerText = text.toLowerCase();
+          const lowerText = normalizeText(text).toLowerCase();
 
           let matchCount = 0;
           for (const term of queryTerms) {

@@ -12,6 +12,7 @@
  */
 
 import { createHash } from 'node:crypto';
+import { normalizeText, phrase, literal, letterCount, splitSentences as splitUnicodeSentences } from '../core/unicode-text.js';
 import type {
   ContextMemoryKind,
   ContextIdentity,
@@ -39,11 +40,59 @@ export interface FactExtractionInput {
 // Lock Phrase Matchers
 // ============================================================================
 
-const EXPLICIT_LOCK_REGEX =
-  /\b(lock\s+the\s+design|settled|locked\s+requirement|final\s+decision|lock\s+this|strictly\s+locked|locked)\b/i;
+// English lock words: the same alternatives as before V2 #7, so English lock results do not change.
+const ENGLISH_EXPLICIT_LOCK = 'lock\\s+the\\s+design|settled|locked\\s+requirement|final\\s+decision|lock\\s+this|strictly\\s+locked|locked';
+const ENGLISH_INFERRED_LOCK = 'always|never|must|only\\s+allowed|strictly|do\\s+not\\s+allow|shall\\s+not|prohibited';
 
-const INFERRED_LOCK_REGEX =
-  /\b(always|never|must|only\s+allowed|strictly|do\s+not\s+allow|shall\s+not|prohibited)\b/i;
+/** An apostrophe typed straight or curly (`that's` / `that’s`) or left out (`thats`). */
+const APOS = "['\u2019]?";
+
+/**
+ * Lock words of the other languages Nexpath supports (multilingual #7, impl Step 2; user decision
+ * 2026-11-03: all added now). Clear decisions lock a fact at 0.95; softer "don't change it" wording only
+ * at 0.70, as English "never" / "must". Hindi, Hinglish, Gujarati and Gujlish are team-checked; the
+ * Spanish, Portuguese, American slang and African-language words are drafts not yet checked by a native
+ * speaker (v2-multilingual docs).
+ */
+const MULTILINGUAL_EXPLICIT_LOCK: Record<string, string[]> = {
+  hi: ['यह final है', 'ये final है', 'यह फ़ाइनल है', 'ये फ़ाइनल है', 'पक्का फ़ैसला', 'पक्का फैसला', 'पक्का निर्णय', 'पक्का नियम', 'अंतिम फ़ैसला', 'अंतिम फैसला', 'अंतिम निर्णय'],
+  'hi-latn': ['final hai', 'ye fix hai', 'yeh fix hai', 'ye fixed hai', 'pakka faisla', 'pakka niyam'],
+  gu: ['આ final છે', 'આ ફાઇનલ છે', 'પાકો નિર્ણય', 'પાકો નિયમ', 'અંતિમ નિર્ણય'],
+  'gu-latn': ['aa final che', 'aa final chhe', 'aa fix che', 'aa fix chhe', 'pako nirnay', 'pako niyam'],
+  'en-US-slang': [`that${APOS}s final`, 'set in stone', 'locked in'],
+  'es-419': ['ya está decidido', 'ya esta decidido', 'está decidido', 'es definitivo', 'decisión final', 'decision final'],
+  'pt-BR': ['já está decidido', 'ja esta decidido', 'é definitivo', 'decisão final', 'decisao final'],
+  sw: ['ni uamuzi wa mwisho', 'uamuzi wa mwisho', 'imeamuliwa'],
+  pcm: ['na final be that'],
+  'sw-sheng': ['hii ni final'],
+  ha: ['an yanke shawara', 'wannan shi ne na ƙarshe', 'wannan shine na ƙarshe', 'wannan shi ne na karshe', 'wannan shine na karshe'],
+  am: ['የመጨረሻ ውሳኔ'],
+};
+const MULTILINGUAL_INFERRED_LOCK: Record<string, string[]> = {
+  hi: ['इसे मत बदलना', 'मत बदलना', 'बदलना नहीं है', 'इसे नहीं बदलना'],
+  'hi-latn': ['change mat karna', 'change mat kar', 'mat badalna', 'mat chhedna', 'mat chedna', 'change nahi karna'],
+  gu: ['આ બદલવાનું નથી', 'બદલવાનું નથી', 'બદલશો નહીં'],
+  'gu-latn': ['badalvanu nahi', 'badalvanu nathi', 'badalso nahi'],
+  'en-US-slang': [`don${APOS}t touch that`, 'hands off'],
+  'es-419': ['no se cambia', 'no lo cambien', 'no lo cambies'],
+  'pt-BR': ['não muda', 'nao muda', 'não mexam nisso', 'nao mexam nisso', 'não mexa nisso', 'nao mexa nisso'],
+  sw: ['usibadilishe', 'msibadilishe'],
+  pcm: ['make una no change am', 'no change am', 'no touch am'],
+  'sw-sheng': ['msiibadilishe', 'usiguze hiyo', 'msiguze hiyo'],
+  ha: ['kada a canza', 'kar a canza'],
+  am: ['አትቀይሩት', 'አትቀይረው'],
+};
+
+/** Plain phrases become regex sources; an `APOS` slot is kept as a regex. */
+const lockSources = (byLanguage: Record<string, string[]>) =>
+  Object.values(byLanguage).flat().map((p) => p.split(APOS).map(literal).join(APOS));
+
+const EXPLICIT_LOCK_REGEX = phrase([ENGLISH_EXPLICIT_LOCK, ...lockSources(MULTILINGUAL_EXPLICIT_LOCK)]);
+
+const INFERRED_LOCK_REGEX = phrase([ENGLISH_INFERRED_LOCK, ...lockSources(MULTILINGUAL_INFERRED_LOCK)]);
+
+/** Lock-word test in every script (text NFC-normalized first, see unicode-text.ts). */
+const hasLockWord = (re: RegExp, text: string) => re.test(normalizeText(text));
 
 // ============================================================================
 // Bucket Matchers
@@ -93,6 +142,22 @@ const QUESTION_PREFIXES = [
   /^(how|what|why|when|where|which|who|can\s+we|could\s+we|is\s+there|are\s+we|should\s+we|do\s+we|does\s+it)\b/i,
 ];
 
+/** Question words of the other languages (multilingual #7): at the start, or Hindi `kya` at the end. */
+const MULTILINGUAL_QUESTION_WORDS = [
+  'kya', 'kaise', 'kyun', 'kyu', 'kab', 'kahan', 'kaun sa', 'kaunsa', // Hinglish
+  'shu', 'kem', 'kevi rite', 'kyare', // Gujlish
+  'क्या', 'कैसे', 'क्यों', 'कब', 'कहाँ', 'कौन सा', // Hindi
+  'શું', 'કેમ', 'ક્યારે', 'કેવી રીતે', // Gujarati
+  'qué', 'cómo', 'por qué', 'cuándo', 'dónde', 'cuál', // Spanish
+  'o que', 'como', 'por que', // Portuguese
+  'nini', 'vipi', 'kwa nini', // Swahili
+].map(literal);
+const MULTILINGUAL_QUESTION_START = new RegExp(`^${phrase(MULTILINGUAL_QUESTION_WORDS).source}`, 'iu');
+const MULTILINGUAL_QUESTION_END = new RegExp(`${phrase([literal('kya'), literal('क्या')]).source}\\s*[.!]?$`, 'iu');
+/** `?`, the Arabic `؟`, the Amharic `፧`, or a Spanish opening `¿`. */
+const QUESTION_MARK_END = /[?؟፧]$/u;
+
+
 // ============================================================================
 // Main Extractor
 // ============================================================================
@@ -108,7 +173,7 @@ export function extractFacts(input: FactExtractionInput): ExtractedFact[] {
   // Each locked sentence becomes its own rule so it can be superseded later;
   // the rest of the prompt is still checked for intent.
   const lockSentences = splitSentences(trimmedPrompt).filter(
-    (s) => EXPLICIT_LOCK_REGEX.test(s) && !isQuestion(s)
+    (s) => hasLockWord(EXPLICIT_LOCK_REGEX, s) && !isQuestion(s)
   );
   if (lockSentences.length > 0) {
     for (const sentence of lockSentences) {
@@ -123,7 +188,7 @@ export function extractFacts(input: FactExtractionInput): ExtractedFact[] {
   } else if (matchesAny(trimmedPrompt, INTENT_PATTERNS)) {
     const identities = extractIdentities(trimmedPrompt);
     facts.push(buildFact(projectRoot, 'intent', trimmedPrompt, trimmedPrompt, identities));
-  } else if (EXPLICIT_LOCK_REGEX.test(trimmedPrompt) && !isQuestion(trimmedPrompt)) {
+  } else if (hasLockWord(EXPLICIT_LOCK_REGEX, trimmedPrompt) && !isQuestion(trimmedPrompt)) {
     // Explicit user lock command (e.g. "Lock this requirement: ...")
     const identities = extractIdentities(trimmedPrompt);
     facts.push(buildFact(projectRoot, 'rule', trimmedPrompt, trimmedPrompt, identities));
@@ -145,7 +210,7 @@ export function extractFacts(input: FactExtractionInput): ExtractedFact[] {
     }
 
     // B. RULE facts: only explicit decision wording.
-    if (EXPLICIT_LOCK_REGEX.test(sentence) || REPLY_RULE_REGEX.test(sentence) || REPLY_DECISION_LABEL_REGEX.test(sentence)) {
+    if (hasLockWord(EXPLICIT_LOCK_REGEX, sentence) || REPLY_RULE_REGEX.test(sentence) || REPLY_DECISION_LABEL_REGEX.test(sentence)) {
       facts.push(buildFact(projectRoot, 'rule', sentence, undefined, identities));
     }
   }
@@ -189,10 +254,10 @@ export function factFromTurnSummary(projectRoot: string, summary: string, ref: s
  * Derives lock status and 2-tier confidence for a candidate text.
  */
 export function evaluateLockConfidence(text: string): { locked: boolean; confidence: number } {
-  if (EXPLICIT_LOCK_REGEX.test(text)) {
+  if (hasLockWord(EXPLICIT_LOCK_REGEX, text)) {
     return { locked: true, confidence: 0.95 };
   }
-  if (INFERRED_LOCK_REGEX.test(text)) {
+  if (hasLockWord(INFERRED_LOCK_REGEX, text)) {
     return { locked: true, confidence: 0.70 };
   }
   return { locked: false, confidence: 0.50 };
@@ -260,17 +325,19 @@ export function computeFactFingerprint(
 // Helpers
 // ============================================================================
 
-/** Splits text into sentences on ". ! ?" followed by whitespace, and on newlines. */
+/**
+ * Splits text into sentences on ". ! ?" followed by whitespace, on the Hindi danda `।` / `॥` and the
+ * Amharic `።`, and on newlines (unicode-text.ts SENTENCE_END).
+ */
 function splitSentences(text: string): string[] {
-  return text
-    .split(/(?<=[.!?])\s+|\r?\n+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+  return splitUnicodeSentences(text);
 }
 
 function isQuestion(text: string): boolean {
   if (text.endsWith('?')) return true;
-  return matchesAny(text, QUESTION_PREFIXES);
+  if (matchesAny(text, QUESTION_PREFIXES)) return true;
+  const t = normalizeText(text.trim());
+  return QUESTION_MARK_END.test(t) || t.startsWith('¿') || MULTILINGUAL_QUESTION_START.test(t) || MULTILINGUAL_QUESTION_END.test(t);
 }
 
 function buildFact(
@@ -297,11 +364,14 @@ function buildFact(
 }
 
 function generateFactKey(content: string, kind: ContextMemoryKind): string {
-  const words = content
+  // Letters of every script stay in the key (multilingual #7): Hindi or Gujarati-only rules used to all
+  // get `rule-fact` and replace each other. Plain-ASCII text gives the same key as before.
+  const words = normalizeText(content)
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/[^\p{L}\p{M}\p{N}\s]/gu, '')
     .split(/\s+/)
-    .filter((w) => w.length > 2 && !['the', 'and', 'for', 'with', 'that', 'this'].includes(w))
+    // letters, not code units: a Hindi vowel sign is not a letter, so `में` / `है` are short words too
+    .filter((w) => letterCount(w) > 2 && !['the', 'and', 'for', 'with', 'that', 'this'].includes(w))
     .slice(0, 4);
 
   const slug = words.join('-') || 'fact';

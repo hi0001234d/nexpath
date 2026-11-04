@@ -43,9 +43,10 @@ export interface HostLlmBridgeOptions {
   /** Pause after a 402 / no credit (default 10 min). */
   noCreditPauseMs?: number;
   /**
-   * Language of what MemOS writes (turn summaries, learned rules). 'en' (default, v1(a) D11):
-   * always English — gpt-4o-mini otherwise sometimes answers MemOS's prompts in Chinese.
-   * 'match' (for multilingual later): the language of the user's own text.
+   * Language of what MemOS writes (turn summaries, learned rules). 'match' — the language of the
+   * user's own text, never translated (user decision 2026-11-03, multilingual #7); the worker and
+   * the desktop use it. 'en' (the default here): always English. Either line also stops
+   * gpt-4o-mini from answering MemOS's prompts in Chinese (v1(a) real-key run).
    */
   language?: 'en' | 'match';
   now?: () => number;

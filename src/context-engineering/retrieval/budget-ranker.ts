@@ -13,6 +13,8 @@
 
 import { estimateTokenCount } from '../delivery/tag-generator.js';
 import { isToolCandidateKind } from '../sources/candidate-filter.js';
+import { words as unicodeWords } from '../core/unicode-text.js';
+import { MULTILINGUAL_STOP_WORDS } from '../core/filler-words.js';
 import type {
   ContextMemoryRow,
   WorkspaceContext,
@@ -354,6 +356,8 @@ const RELEVANCE_STOP_WORDS = new Set([
   'src', 'lib', 'dist',
   'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'py', 'go', 'rs', 'java', 'rb', 'php', 'cs',
   'css', 'scss', 'html', 'json', 'yml', 'yaml', 'md', 'sql', 'sh', 'txt',
+  // Hindi / Gujarati grammar words and every language's lock words (multilingual #7)
+  ...MULTILINGUAL_STOP_WORDS,
 ]);
 
 function sharesMeaningfulWord(
@@ -373,8 +377,12 @@ function sharesMeaningfulWord(
   return false;
 }
 
-/** Cheap suffix folding so "retries"/"retry" and "pooling"/"pool" count as the same word. */
+/**
+ * Cheap suffix folding so "retries"/"retry" and "pooling"/"pool" count as the same word. English
+ * suffixes only: other words (Hindi, Gujarati, `está`) are kept as they are (multilingual #7).
+ */
 function stem(word: string): string {
+  if (!/^[\x00-\x7f]*$/.test(word)) return word;
   let w = word;
   if (w.length > 4 && w.endsWith('ies')) w = w.slice(0, -3) + 'y';
   else if (w.length > 5 && w.endsWith('ing')) w = w.slice(0, -3);
@@ -390,7 +398,8 @@ function stem(word: string): string {
  * summary writes it.
  */
 function tokenize(text: string): Set<string> {
-  const words = new Set(text.toLowerCase().match(/\b[a-z0-9_]{2,}\b/g) ?? []);
+  // Words of every script (multilingual #7); for ASCII the same as the old \b[a-z0-9_]{2,}\b match.
+  const words = unicodeWords(text, 2, { underscore: true });
   for (const name of text.match(/\b[a-z]+(?:[A-Z][a-z0-9]*)+\b|\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]*)+\b/g) ?? []) {
     for (const part of name.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase().split(' ')) {
       if (part.length >= 2) words.add(part);

@@ -56,6 +56,8 @@ const memos = isInstalled('@memtensor/memos-local-plugin/package.json')
         // CLI: the user's own key. MemOS makes ~1 call per turn (summary) + 1 per prompt
         // (background search); 6/min starved it in the real-key run (14 refused calls).
         maxCallsPerMinute: 20,
+        // MemOS writes in the user's own language, never translated (multilingual #7).
+        language: 'match',
       }),
       schedule: (job) => server.schedule(job),
     })

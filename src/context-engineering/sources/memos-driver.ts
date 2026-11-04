@@ -16,6 +16,7 @@ import type { HostLlmBridge } from './host-llm-bridge.js';
 import type { InsertContextMemoryInput } from '../types/context-engineering.js';
 import { hashProjectPath, normalizeProjectId } from '../core/project-scope.js';
 import type { SourceCandidate, SourceDriver, SourceQuery } from './source-driver.js';
+import { words as unicodeWords } from '../core/unicode-text.js';
 
 export const MEMOS_AGENT = 'nexpath';
 
@@ -392,8 +393,9 @@ export function cleanSnippet(snippet: string | undefined): string {
 }
 
 /** Same words as the prompt (≥ 80% overlap): the user's earlier copy of this prompt. */
-function isEcho(text: string, prompt: string): boolean {
-  const words = (t: string) => new Set(t.toLowerCase().match(/[a-z0-9_]{2,}/g) ?? []);
+export function isEcho(text: string, prompt: string): boolean {
+  // Words of every script (multilingual #7); for ASCII the same as the old [a-z0-9_]{2,} match.
+  const words = (t: string) => unicodeWords(t, 2, { underscore: true });
   const a = words(text);
   const b = words(prompt);
   if (b.size === 0) return false;

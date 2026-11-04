@@ -17,10 +17,20 @@ import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { SourceCandidate, SourceDriver, SourceQuery } from './source-driver.js';
+import { scriptShare } from '../core/unicode-text.js';
 
 export const MEANING_MODEL = 'Xenova/all-MiniLM-L6-v2';
 /** Cosine at or above this counts as "about the same thing" (unrelated prompts stay ≤ 0.13). */
 export const MEANING_MIN_SCORE = 0.5;
+/**
+ * The floor for a prompt written mostly in Devanagari (Hindi script). The model reads Devanagari
+ * poorly, so unrelated Hindi texts score up to 0.75. At 0.6 the same Hindi memories are found as at
+ * 0.5 (12/20) and 13/20 unrelated prompts are rejected instead of 4/20 (multilingual #7, measured on
+ * AI-written sample sentences). Every other script keeps MEANING_MIN_SCORE.
+ */
+export const MEANING_MIN_SCORE_DEVANAGARI = 0.6;
+/** A prompt is "mostly Devanagari" at this share of its letters. */
+const DEVANAGARI_PROMPT_SHARE = 0.5;
 const MAX_RESULTS = 5;
 const MAX_CACHED = 5000;
 /** Stop embedding new facts this long before the deadline; the rest are embedded in the background. */
@@ -35,6 +45,8 @@ export interface MeaningDriverOptions {
   /** Default ~/.cache/memos/models — where MemOS keeps the model. */
   cacheDir?: string;
   minScore?: number;
+  /** Floor for mostly-Devanagari prompts (default MEANING_MIN_SCORE_DEVANAGARI; never below minScore). */
+  minScoreDevanagari?: number;
   now?: () => number;
 }
 
@@ -81,7 +93,7 @@ export class MeaningDriver implements SourceDriver {
     }
     if (missing.length > 0) void this.embedInBackground(embed, missing);
 
-    const minScore = this.options.minScore ?? MEANING_MIN_SCORE;
+    const minScore = meaningFloor(query.prompt, this.options);
     const scored: SourceCandidate[] = [];
     for (const fact of facts) {
       const vector = this.vectors.get(keyOf(fact.content));
@@ -111,6 +123,13 @@ export class MeaningDriver implements SourceDriver {
       this.embeddingInBackground = false;
     }
   }
+}
+
+/** The cosine floor for this prompt: higher when the prompt is mostly Devanagari. */
+export function meaningFloor(prompt: string, options: Pick<MeaningDriverOptions, 'minScore' | 'minScoreDevanagari'> = {}): number {
+  const base = options.minScore ?? MEANING_MIN_SCORE;
+  if (scriptShare(prompt, 'Devanagari') < DEVANAGARI_PROMPT_SHARE) return base;
+  return Math.max(base, options.minScoreDevanagari ?? MEANING_MIN_SCORE_DEVANAGARI);
 }
 
 function keyOf(text: string): string {

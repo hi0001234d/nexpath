@@ -17,6 +17,8 @@ import type { Store } from '../../store/db.js';
 import type { ContextMemoryKind, ContextMemoryRow } from '../types/context-engineering.js';
 import { getContextMemoryHistory } from '../store/historical-map-store.js';
 import { wordSimilarity } from '../ingestion/decision-chainer.js';
+import { words as unicodeWords } from '../core/unicode-text.js';
+import { MULTILINGUAL_STOP_WORDS } from '../core/filler-words.js';
 import { extractIdentities } from '../ingestion/fact-extractor.js';
 import { type SourceCandidate, type SourceName, type SourceRunResult } from './source-driver.js';
 
@@ -107,7 +109,9 @@ function matchesReplacedDecision(
  * much of the shorter text is inside the longer one (only for texts of 4+ words).
  */
 export function factOverlap(a: string, b: string): number {
-  const words = (t: string) => new Set(t.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2));
+  // Words of every script; Hindi / Gujarati grammar and lock words do not count (multilingual #7).
+  // For ASCII text the same words as before.
+  const words = (t: string) => new Set([...unicodeWords(t, 3)].filter((w) => !MULTILINGUAL_STOP_WORDS.has(w)));
   const wa = words(a);
   const wb = words(b);
   const smaller = wa.size <= wb.size ? wa : wb;

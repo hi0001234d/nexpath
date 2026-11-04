@@ -7,6 +7,7 @@ import { SelectPrompt } from '@clack/core';
 import pc from 'picocolors';
 import { openStore, closeStore, DEFAULT_DB_PATH } from '../../store/db.js';
 import { describeFeature1Tools, feature1ToolsStatus, stopFeature1Worker } from '../../context-engineering/worker/tools-status.js';
+import { prefetchMemoryModel, removeMemoryModel, removeMemoryToolData } from '../../context-engineering/sources/memory-model.js';
 import { FEATURE1_TOOLS_CONFIG_KEY } from '../../context-engineering/worker/worker-client.js';
 import { isConfigSet, setConfig, getConfig } from '../../store/config.js';
 import { setInstalledAtIfMissing } from '../../store/feedback-signals.js';
@@ -610,6 +611,7 @@ export async function installAction(
     // suite, and writing to it is not something a test may ever do.
     keySourceFn = getKeySource,
     storeApiKeyFn = storeApiKey,
+    prefetchMemoryModelFn = prefetchMemoryModel,
   }: {
     isWin?:               boolean;
     paths?:               AgentPaths;
@@ -623,6 +625,8 @@ export async function installAction(
     platformForKeychain?: NodeJS.Platform;
     keySourceFn?:         typeof getKeySource;
     storeApiKeyFn?:       typeof storeApiKey;
+    /** Fetches the 24 MB memory model when MemOS is installed (multilingual #7, Phase 6). */
+    prefetchMemoryModelFn?: () => Promise<unknown>;
   } = {},
 ): Promise<InstallSummary | null> {
   const platform = opts.platform ?? DEFAULT_PLATFORM;
@@ -950,6 +954,17 @@ export async function installAction(
   if (feature1Tools.memos || feature1Tools.codebase) setConfig(store, FEATURE1_TOOLS_CONFIG_KEY, 'on');
 
   closeStore(store);
+
+  // Fetch MemOS's local model now, so memory works offline from the first prompt (multilingual #7).
+  // Never fails the install: no network or a slow download → it downloads on first use, as before.
+  // NEXPATH_SKIP_MODEL_DOWNLOAD=1 skips it (offline machines, CI, the test suite).
+  if (feature1Tools.memos && process.env.NEXPATH_SKIP_MODEL_DOWNLOAD !== '1') {
+    try {
+      await prefetchMemoryModelFn();
+    } catch {
+      // prefetchMemoryModel never throws; a test seam might
+    }
+  }
 
   let clipboardResult: ClipboardEnsureResult = { installed: false, toolName: null, alreadyHad: false };
   if (!skipClipboardCheck) {
@@ -1309,6 +1324,11 @@ export async function uninstallAction(
     try {
       if (existsSync(resolvedDbPath)) unlinkSync(resolvedDbPath);
       console.log('✓ Local data deleted.');
+      // MemOS's local memory model (multilingual #7): only our model's folder, nothing else in the cache.
+      if (removeMemoryModel()) console.log('✓ Memory model removed.');
+      // The memory tools' data is local data too: MemOS memories, OpenClaw agents / session notes,
+      // the codebase-memory index (all under ~/.nexpath; the worker was stopped above).
+      for (const label of removeMemoryToolData()) console.log(`✓ ${label} removed.`);
     } catch (err) {
       console.log(`- Could not delete local data (${(err as Error).message}); remove ${resolvedDbPath} manually.`);
     }

@@ -18,6 +18,8 @@ import {
 } from '../store/historical-map-store.js';
 import { extractFacts, type FactExtractionInput, type ExtractedFact } from './fact-extractor.js';
 import { normalizeProjectId } from '../core/project-scope.js';
+import { words as unicodeWords } from '../core/unicode-text.js';
+import { MULTILINGUAL_STOP_WORDS } from '../core/filler-words.js';
 
 export interface IngestionResult {
   insertedCount: number;
@@ -139,15 +141,14 @@ function primarySymbol(content: string, identities: ContextIdentity[]): string |
   return best?.symbol;
 }
 
-/** Jaccard similarity over meaningful words (lowercased, 3+ chars, no stop words). */
+/**
+ * Jaccard similarity over meaningful words (lowercased, 3+ letters, no stop words), in every script
+ * (multilingual #7): a Hindi or Gujarati decision is compared by its own words, not only by the English
+ * words inside it. For ASCII text the words are the same as before.
+ */
 export function wordSimilarity(a: string, b: string): number {
   const words = (t: string) =>
-    new Set(
-      t
-        .toLowerCase()
-        .split(/[^a-z0-9]+/)
-        .filter((w) => w.length > 2 && !STOP_WORDS.has(w))
-    );
+    new Set([...unicodeWords(t, 3)].filter((w) => !STOP_WORDS.has(w) && !MULTILINGUAL_STOP_WORDS.has(w)));
   const wa = words(a);
   const wb = words(b);
   if (wa.size === 0 || wb.size === 0) return 0;

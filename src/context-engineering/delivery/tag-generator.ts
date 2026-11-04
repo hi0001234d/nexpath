@@ -75,10 +75,12 @@ export function estimateTokenCount(text: string): number {
 }
 
 function slugify(text: string): string {
+  // Letters of every script stay in the tag (multilingual #7); ASCII tags are unchanged.
   return text
+    .normalize('NFC')
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9_\-\/]/g, '-')
+    .replace(/[^\p{L}\p{M}\p{N}_\-\/]/gu, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
 }

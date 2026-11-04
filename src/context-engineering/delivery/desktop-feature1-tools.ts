@@ -78,7 +78,8 @@ export class DesktopFeature1Tools {
         await this.openclaw.saveSessionDecisions(sessionDecisionsFromMap(this.store, session));
       },
     });
-    this.bridge = createHostLlmBridge({ getClient: () => this.client });
+    // MemOS writes in the user's own language, never translated (multilingual #7).
+    this.bridge = createHostLlmBridge({ getClient: () => this.client, language: 'match' });
     this.memos = options.drivers?.memos ?? new MemosDriver({ home: join(options.dataDir, 'memos'), bridge: this.bridge });
     this.openclaw =
       options.drivers?.openclaw ??
