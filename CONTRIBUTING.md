@@ -35,7 +35,10 @@ Nexpath does and how to install and run it. This guide covers how to contribute 
 ## Local Setup
 
 The published package is `nexpath-cli`; from a clone you get the same `nexpath` binary
-via `npm link`.
+via `npm link`. Use **Node 22.22.3+** (`nvm use` picks it up from `.nvmrc`).
+
+Feature 1's real-tool tests are opt-in (they start the actual tools and take longer):
+`NEXPATH_MEMOS_E2E=1`, `NEXPATH_CBM_E2E=1`, `NEXPATH_OPENCLAW_E2E=1` (OpenClaw must be installed).
 
 ```bash
 git clone https://github.com/hi0001234d/nexpath.git

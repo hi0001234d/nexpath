@@ -39,7 +39,8 @@ export function buildProjectMemoryRefV1(parts: ProjectMemoryRefPartsV1): string 
 export function parseProjectMemoryRefV1(ref: string): ProjectMemoryRefPartsV1 | undefined {
   if (!ref.startsWith(PROMPT_ENHANCEMENT_PROJECT_MEMORY_REF_PREFIX_V1)) return undefined;
   const [sectionId, lockState, kind, id] = ref.slice(PROMPT_ENHANCEMENT_PROJECT_MEMORY_REF_PREFIX_V1.length).split(':');
-  if (!sectionId || (lockState !== 'locked' && lockState !== 'open') || !kind || !/^\d+$/.test(id ?? '')) return undefined;
+  // Negative ids are v1(a) tool results (MemOS / OpenClaw / codebase-memory-mcp): per-prompt rows, never stored.
+  if (!sectionId || (lockState !== 'locked' && lockState !== 'open') || !kind || !/^-?\d+$/.test(id ?? '')) return undefined;
   return { sectionId, locked: lockState === 'locked', kind, id: Number(id) };
 }
 

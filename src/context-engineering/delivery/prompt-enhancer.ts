@@ -25,6 +25,8 @@ import {
   getDeliveredTags,
   insertDeliveredItem,
 } from '../store/historical-map-store.js';
+import { runSourceDrivers } from '../sources/source-driver.js';
+import { selectCandidates, getReplacedContextMemory } from '../sources/candidate-filter.js';
 import { detectPromptGaps } from '../retrieval/gap-detector.js';
 import { classifyTask } from '../retrieval/task-classifier.js';
 import { rankAndAllocateBudget } from '../retrieval/budget-ranker.js';
@@ -55,6 +57,10 @@ import type {
 
 /** Time kept back from the LLM step for the delivery write that follows it. */
 const LLM_RESERVE_MS = 300;
+/** v1(a): the most the tools (MemOS / OpenClaw / codebase-memory-mcp) may take of the budget. */
+const SOURCE_BUDGET_MS = 1000;
+/** Time kept back after the tools for ranking, routing and composing. */
+const SOURCE_RESERVE_MS = 300;
 /** Below this, there is no point starting the F3 decision and rewrite at all. */
 const MIN_LLM_BUDGET_MS = 250;
 /** The F3 decision never waits longer than this, whatever the budget. */
@@ -182,7 +188,28 @@ export async function preparePromptEnhancementWithSections(
         }
 
         // 6. Query active memory facts for this project
-        const candidateFacts = getActiveContextMemory(store, projectId);
+        const mapFacts = getActiveContextMemory(store, projectId);
+        let candidateFacts = mapFacts;
+        let meaningMatchedIds: ReadonlySet<number> | undefined;
+
+        // 6b. v1(a): our map always first, tools only add lines (D7); our map decides locked /
+        //     replaced (D2). No sources configured, or every tool failing → exactly the V1 path.
+        if (options?.sources && options.sources.length > 0) {
+          const elapsed = performance.now() - startTime;
+          const sourceBudgetMs = Math.max(0, Math.min(SOURCE_BUDGET_MS, timeoutMs - elapsed - SOURCE_RESERVE_MS));
+          const sourceRun = await runSourceDrivers(
+            options.sources,
+            { prompt: rawPrompt, projectRoot: projectId, sessionId, context, hasGaps: gapAnalysis.hasGaps, mapFacts: mapFacts.map((r) => ({ id: r.id, content: r.content })) },
+            sourceBudgetMs,
+            signal
+          );
+          if (signal.aborted) {
+            throw new Error('Enhancement aborted by signal');
+          }
+          const selection = selectCandidates(mapFacts, sourceRun, getReplacedContextMemory(store, projectId));
+          candidateFacts = selection.rows;
+          meaningMatchedIds = selection.meaningMatchedIds;
+        }
 
         // 7. Retrieve session delivered tags for deduplication
         const deliveredTags = getDeliveredTags(store, projectId, sessionId);
@@ -197,6 +224,7 @@ export async function preparePromptEnhancementWithSections(
             deliveredTags,
             sessionId,
             maxTotalLines: 10,
+            meaningMatchedIds,
           }
         );
 
@@ -466,6 +494,7 @@ function selectedFacts(allocated: ScoredFact[], sections: PromptSection[]): Feat
       locked: item.fact.locked === 1,
       content: item.fact.content,
       sectionId: section.id,
+      tag: item.tag,
     });
   }
   return out;

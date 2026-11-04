@@ -376,9 +376,19 @@ function parseGitDiffByFile(gitDiff: string): ParsedFileDiff[] {
   return results;
 }
 
+const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
 function slugify(text: string): string {
-  return text
+  // Letters of every script stay in the key (multilingual #7); cut at 32 characters without splitting a
+  // letter from its vowel sign. ASCII keys are unchanged.
+  const slug = text
+    .normalize('NFC')
     .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, '_')
-    .slice(0, 32);
+    .replace(/[^\p{L}\p{M}\p{N}_-]+/gu, '_');
+  let out = '';
+  for (const { segment } of GRAPHEMES.segment(slug)) {
+    if ([...out].length + [...segment].length > 32) break;
+    out += segment;
+  }
+  return out;
 }

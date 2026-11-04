@@ -1,0 +1,411 @@
+{
+ "about": "testing/f1-popup-test/prompts.json in run2 format",
+ "files": {
+  "src/payment.ts": "export function processRetry() {}\nexport function computeBackoff() {}\nexport function refundPayment() {}\n",
+  "src/auth.ts": "export function verifyToken() {}\n",
+  "src/db.ts": "export function getPool() {}\n",
+  "src/discount.ts": "export function applyCoupon() {}\n",
+  "src/config.ts": "export const API_TIMEOUT_MS = 8000;\n"
+ },
+ "prompts": [
+  {
+   "id": 1,
+   "phase": "A. Teach decisions (session 1)",
+   "prompt": "I want to build a small checkout service for ShopCart with payments, login and discounts. Reply only with: Noted.",
+   "reply": "Noted.",
+   "expect": "setup"
+  },
+  {
+   "id": 2,
+   "phase": "A. Teach decisions (session 1)",
+   "prompt": "Locked requirement: processRetry in src/payment.ts is the only entry point for payment retries. Reply only with: Noted.",
+   "reply": "Noted.",
+   "expect": "setup"
+  },
+  {
+   "id": 3,
+   "phase": "A. Teach decisions (session 1)",
+   "prompt": "Final decision: computeBackoff in src/payment.ts uses fixed 5s/15s/45s delays. Reply only with: Noted.",
+   "reply": "Noted.",
+   "expect": "setup"
+  },
+  {
+   "id": 4,
+   "phase": "A. Teach decisions (session 1)",
+   "prompt": "Locked requirement: verifyToken in src/auth.ts must reject tokens older than 15 minutes. Reply only with: Noted.",
+   "reply": "Noted.",
+   "expect": "setup"
+  },
+  {
+   "id": 5,
+   "phase": "A. Teach decisions (session 1)",
+   "prompt": "Final decision: getPool in src/db.ts uses Postgres with a maximum of 10 connections. Reply only with: Noted.",
+   "reply": "Noted.",
+   "expect": "setup"
+  },
+  {
+   "id": 6,
+   "phase": "A. Teach decisions (session 1)",
+   "prompt": "Locked requirement: every payment log line must include the orderId and never the card number. Reply only with: Noted.",
+   "reply": "Noted.",
+   "expect": "setup"
+  },
+  {
+   "id": 7,
+   "phase": "A. Teach decisions (session 1)",
+   "prompt": "Final decision: applyCoupon in src/discount.ts never stacks two coupons on one order. Reply only with: Noted.",
+   "reply": "Noted.",
+   "expect": "setup"
+  },
+  {
+   "id": 8,
+   "phase": "A. Teach decisions (session 1)",
+   "prompt": "Lock the design: refunds go through refundPayment in src/payment.ts, never directly to the gateway. Reply only with: Noted.",
+   "reply": "Noted.",
+   "expect": "setup"
+  },
+  {
+   "id": 9,
+   "phase": "A. Teach decisions (session 1)",
+   "prompt": "Reply with exactly this one line and nothing else: Error: processRetry crashed with ECONNRESET because the gateway socket was reused after a timeout.",
+   "reply": "Error: processRetry crashed with ECONNRESET because the gateway socket was reused after a timeout.",
+   "expect": "setup"
+  },
+  {
+   "id": 10,
+   "phase": "A. Teach decisions (session 1)",
+   "prompt": "Reply with exactly this one line and nothing else: The circuit breaker caused false positives on 408 responses, so it was removed from processRetry.",
+   "reply": "The circuit breaker caused false positives on 408 responses, so it was removed from processRetry.",
+   "expect": "setup"
+  },
+  {
+   "id": 11,
+   "phase": "A. Teach decisions (session 1)",
+   "prompt": "Reply with exactly this one line and nothing else: verifyToken failed for users in other time zones because expiry was compared in local time instead of UTC.",
+   "reply": "verifyToken failed for users in other time zones because expiry was compared in local time instead of UTC.",
+   "expect": "setup"
+  },
+  {
+   "id": 12,
+   "phase": "A. Teach decisions (session 1)",
+   "prompt": "Final decision: all API timeouts are 8 seconds, set in src/config.ts as API_TIMEOUT_MS. Reply only with: Noted.",
+   "reply": "Noted.",
+   "expect": "setup"
+  },
+  {
+   "id": 13,
+   "phase": "B. Old context comes back (session 2)",
+   "newSession": true,
+   "prompt": "fix the retry crash in processRetry",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "only entry point"
+    ],
+    [
+     "ECONNRESET"
+    ],
+    [
+     "false positives"
+    ]
+   ]
+  },
+  {
+   "id": 14,
+   "phase": "B. Old context comes back (session 2)",
+   "prompt": "change the backoff delays in computeBackoff",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "5s/15s/45s"
+    ]
+   ]
+  },
+  {
+   "id": 15,
+   "phase": "B. Old context comes back (session 2)",
+   "prompt": "add a session refresh to verifyToken",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "15 minutes"
+    ],
+    [
+     "UTC"
+    ]
+   ]
+  },
+  {
+   "id": 16,
+   "phase": "B. Old context comes back (session 2)",
+   "prompt": "the checkout is slow under load, check getPool",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "maximum of 10 connections"
+    ]
+   ]
+  },
+  {
+   "id": 17,
+   "phase": "B. Old context comes back (session 2)",
+   "prompt": "let users apply two discount codes in applyCoupon",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "never stacks"
+    ]
+   ]
+  },
+  {
+   "id": 18,
+   "phase": "B. Old context comes back (session 2)",
+   "prompt": "implement refunds for cancelled orders",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "refundPayment"
+    ]
+   ]
+  },
+  {
+   "id": 19,
+   "phase": "B. Old context comes back (session 2)",
+   "prompt": "raise the API timeout for slow gateways",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "8 seconds"
+    ]
+   ]
+  },
+  {
+   "id": 20,
+   "phase": "B. Old context comes back (session 2)",
+   "prompt": "add the card details to the debug output",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "never the card number"
+    ]
+   ]
+  },
+  {
+   "id": 21,
+   "phase": "C. Nothing extra (session 2)",
+   "prompt": "fix the retry crash in processRetry",
+   "reply": "OK",
+   "expect": "no-context"
+  },
+  {
+   "id": 22,
+   "phase": "C. Nothing extra (session 2)",
+   "prompt": "hello",
+   "reply": "OK",
+   "expect": "no-context"
+  },
+  {
+   "id": 23,
+   "phase": "C. Nothing extra (session 2)",
+   "prompt": "thanks, that looks good",
+   "reply": "OK",
+   "expect": "no-context"
+  },
+  {
+   "id": 24,
+   "phase": "C. Nothing extra (session 2)",
+   "prompt": "what is the capital of France",
+   "reply": "OK",
+   "expect": "no-context"
+  },
+  {
+   "id": 25,
+   "phase": "C. Nothing extra (session 2)",
+   "prompt": "add a dark mode toggle to the settings screen",
+   "reply": "OK",
+   "expect": "no-context"
+  },
+  {
+   "id": 26,
+   "phase": "C. Nothing extra (session 2)",
+   "prompt": "update the README with install steps",
+   "reply": "OK",
+   "expect": "no-context"
+  },
+  {
+   "id": 27,
+   "phase": "D. Change a decision (session 2)",
+   "prompt": "Final decision: computeBackoff in src/payment.ts now uses exponential 2s/4s/8s delays with jitter. Reply only with: Noted.",
+   "reply": "Noted.",
+   "expect": "setup"
+  },
+  {
+   "id": 28,
+   "phase": "D. Change a decision (session 2)",
+   "prompt": "Final decision: getPool in src/db.ts now allows a maximum of 25 connections. Reply only with: Noted.",
+   "reply": "Noted.",
+   "expect": "setup"
+  },
+  {
+   "id": 29,
+   "phase": "D. Change a decision (session 2)",
+   "prompt": "fix the flaky backoff in computeBackoff",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "2s/4s/8s"
+    ]
+   ],
+   "notShows": [
+    "5s/15s/45s"
+   ]
+  },
+  {
+   "id": 30,
+   "phase": "D. Change a decision (session 2)",
+   "prompt": "increase the pool size in getPool for the sale weekend",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "25 connections"
+    ]
+   ],
+   "notShows": [
+    "maximum of 10 connections"
+   ]
+  },
+  {
+   "id": 31,
+   "phase": "E. Next session: everything comes back (session 3)",
+   "newSession": true,
+   "prompt": "hello",
+   "reply": "OK",
+   "expect": "no-context"
+  },
+  {
+   "id": 32,
+   "phase": "E. Next session: everything comes back (session 3)",
+   "prompt": "the retry crashed again with ECONNRESET in processRetry",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "ECONNRESET"
+    ],
+    [
+     "only entry point"
+    ]
+   ]
+  },
+  {
+   "id": 33,
+   "phase": "E. Next session: everything comes back (session 3)",
+   "prompt": "write unit tests for computeBackoff",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "2s/4s/8s"
+    ]
+   ],
+   "notShows": [
+    "5s/15s/45s"
+   ]
+  },
+  {
+   "id": 34,
+   "phase": "E. Next session: everything comes back (session 3)",
+   "prompt": "is getPool big enough for the sale traffic",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "25 connections"
+    ]
+   ],
+   "notShows": [
+    "maximum of 10 connections"
+   ]
+  },
+  {
+   "id": 35,
+   "phase": "E. Next session: everything comes back (session 3)",
+   "prompt": "add a new coupon type to applyCoupon",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "never stacks"
+    ]
+   ]
+  },
+  {
+   "id": 36,
+   "phase": "E. Next session: everything comes back (session 3)",
+   "prompt": "verifyToken is rejecting valid users, fix it",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "15 minutes"
+    ],
+    [
+     "UTC"
+    ]
+   ]
+  },
+  {
+   "id": 37,
+   "phase": "E. Next session: everything comes back (session 3)",
+   "prompt": "add a refund button for cancelled orders",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "refundPayment"
+    ]
+   ]
+  },
+  {
+   "id": 38,
+   "phase": "E. Next session: everything comes back (session 3)",
+   "prompt": "make the API timeout configurable per gateway",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "8 seconds"
+    ]
+   ]
+  },
+  {
+   "id": 39,
+   "phase": "E. Next session: everything comes back (session 3)",
+   "prompt": "print the card number in the debug output",
+   "reply": "OK",
+   "expect": "context",
+   "shows": [
+    [
+     "never the card number"
+    ]
+   ]
+  },
+  {
+   "id": 40,
+   "phase": "E. Next session: everything comes back (session 3)",
+   "prompt": "add a dark mode toggle to the settings screen",
+   "reply": "OK",
+   "expect": "no-context"
+  }
+ ]
+}

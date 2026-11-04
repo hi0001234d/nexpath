@@ -47,6 +47,14 @@ describe('project memory refs', () => {
     expect(parseProjectMemoryRefV1(ref)).toEqual({ sectionId: 'context_and_constraints', locked: true, kind: 'rule', id: 1 });
     expect(parseProjectMemoryRefV1('project_memory:bad')).toBeUndefined();
   });
+
+  it('v1(a): tool results (negative ids) reach the writer as facts', () => {
+    const TOOL: Memory = { sectionId: 'project_facts', locked: false, kind: 'memos_recall', id: -1, key: 'project note', value: 'Earlier: processRetry backs off 3 times before failing.' };
+    expect(parseProjectMemoryRefV1(buildProjectMemoryRefV1(TOOL))).toEqual({ sectionId: 'project_facts', locked: false, kind: 'memos_recall', id: -1 });
+    const facts = buildPromptEnhancementGuidanceFactsV1(requestWith([TOOL]));
+    expect(facts.map((f) => f.evidence?.value)).toEqual([TOOL.value]);
+    expect(parseProjectMemoryRefV1('project_memory:project_facts:open:code_context:-')).toBeUndefined();
+  });
 });
 
 describe('project memory → guidance facts', () => {

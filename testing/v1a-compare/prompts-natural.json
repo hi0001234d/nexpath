@@ -1,0 +1,45 @@
+{
+  "about": "Natural-work prompt set for V1 vs v1(a). Decisions are said in normal sentences and inside the agent's replies (not as 'Final decision:' lines). Session 3 starts after a simulated long gap in which our map's old rows were cleaned up, so only the tools can still remember them.",
+  "files": {
+    "src/invoice.ts": "export function sendInvoice() {}\nexport function renderInvoicePdf() {}\n",
+    "src/tax.ts": "export function calculateTax() {}\n",
+    "src/webhooks.ts": "export function handleStripeWebhook() {}\n",
+    "src/ratelimit.ts": "export function rateLimit() {}\n",
+    "src/email.ts": "export function sendEmail() {}\n"
+  },
+  "prompts": [
+    { "id": 1, "phase": "S1. Work, said naturally", "prompt": "we're building an invoicing service, customers should get a PDF invoice by email after every payment", "reply": "Got it. I'll start with sendInvoice in src/invoice.ts and renderInvoicePdf for the PDF.", "expect": "setup" },
+    { "id": 2, "prompt": "for rate limiting I think redis is better than memcached here, let's just go with redis", "reply": "Agreed. rateLimit in src/ratelimit.ts now uses Redis with a sliding window of 100 requests per minute per API key.", "expect": "setup" },
+    { "id": 3, "prompt": "how should we deal with stripe sending the same webhook more than once?", "reply": "Stripe retries webhooks for up to 3 days, so I made handleStripeWebhook idempotent: it stores each event id in the processed_events table and skips events it has already seen.", "expect": "setup" },
+    { "id": 4, "prompt": "run the tests please", "reply": "One failure: TypeError: Cannot read properties of undefined (reading 'amount') in calculateTax when the cart has no line items. I added a guard so empty carts get zero tax.", "expect": "setup" },
+    { "id": 5, "prompt": "the pdf looks broken on phones", "reply": "renderInvoicePdf had a fixed 800px width; I removed it and switched the page to A4 with 12mm margins, so it scales on phones now.", "expect": "setup" },
+    { "id": 6, "prompt": "finance asked that invoices never come from the noreply address, customers need to be able to answer them, use billing@ourco.com", "reply": "Understood. sendEmail now always sends invoices from billing@ourco.com.", "expect": "setup" },
+    { "id": 7, "prompt": "how are we storing money amounts?", "reply": "All amounts are stored as integer cents, with the currency in a separate ISO 4217 column. calculateTax never uses floats.", "expect": "setup" },
+    { "id": 8, "prompt": "our EU customers need VAT on their invoices", "reply": "calculateTax now applies VAT by the customer's billing country. Business customers with a valid VAT number get reverse charge, so no VAT is added for them.", "expect": "setup" },
+    { "id": 9, "prompt": "sounds good", "reply": "OK", "expect": "setup" },
+    { "id": 10, "prompt": "legal says we have to keep the invoice PDFs for 7 years", "reply": "Done. Invoice PDFs go to the invoices-archive bucket with a 7-year retention rule.", "expect": "setup" },
+
+    { "id": 11, "phase": "S2. Next day: same topics, different words", "newSession": true, "prompt": "customers are getting the same invoice email twice", "reply": "OK", "expect": "context", "shows": [["processed_events", "idempotent"]] },
+    { "id": 12, "prompt": "calculateTax blew up again on an empty cart", "reply": "OK", "expect": "context", "shows": [["empty carts", "line items", "amount"]] },
+    { "id": 13, "prompt": "switch the invoice sender to the noreply address", "reply": "OK", "expect": "context", "shows": [["billing@ourco.com"]] },
+    { "id": 14, "prompt": "should we move the rate limiter to memcached?", "reply": "OK", "expect": "context", "shows": [["redis"]] },
+    { "id": 15, "prompt": "make the invoice pdf look better on mobile", "reply": "OK", "expect": "context", "shows": [["800px", "a4"]] },
+    { "id": 16, "prompt": "store the invoice total as a float to keep it simple", "reply": "OK", "expect": "context", "shows": [["integer cents"]] },
+    { "id": 17, "prompt": "a German company with a VAT number got charged VAT on their invoice", "reply": "OK", "expect": "context", "shows": [["reverse charge"]] },
+    { "id": 18, "prompt": "how long do we keep the invoice pdfs?", "reply": "OK", "expect": "context", "shows": [["7 years", "7-year"]] },
+    { "id": 19, "prompt": "hello", "reply": "OK", "expect": "no-context" },
+    { "id": 20, "prompt": "what's a good name for a cat", "reply": "OK", "expect": "no-context" },
+    { "id": 21, "prompt": "add a dark mode toggle to the dashboard", "reply": "OK", "expect": "no-context" },
+
+    { "id": 22, "phase": "S3. Months later: our map's old rows were cleaned up", "newSession": true, "wipeMap": true, "prompt": "handleStripeWebhook is sending duplicate invoices", "reply": "OK", "expect": "context", "shows": [["processed_events", "idempotent"]] },
+    { "id": 23, "prompt": "handleStripeWebhook duplicates again, what did we decide?", "reply": "OK", "expect": "context", "shows": [["processed_events", "idempotent"]] },
+    { "id": 24, "prompt": "calculateTax crashes for an empty cart", "reply": "OK", "expect": "context", "shows": [["empty carts", "line items", "amount"]] },
+    { "id": 25, "prompt": "calculateTax: why don't B2B customers pay VAT?", "reply": "OK", "expect": "context", "shows": [["reverse charge"]] },
+    { "id": 26, "prompt": "change the sender address in sendEmail", "reply": "OK", "expect": "context", "shows": [["billing@ourco.com"]] },
+    { "id": 27, "prompt": "sendEmail: which address do invoices come from?", "reply": "OK", "expect": "context", "shows": [["billing@ourco.com"]] },
+    { "id": 28, "prompt": "rateLimit is too strict for the partner API", "reply": "OK", "expect": "context", "shows": [["100 requests"]] },
+    { "id": 29, "prompt": "rateLimit: can we raise the limit for partners?", "reply": "OK", "expect": "context", "shows": [["100 requests"]] },
+    { "id": 30, "prompt": "hello", "reply": "OK", "expect": "no-context" },
+    { "id": 31, "prompt": "what is the capital of France", "reply": "OK", "expect": "no-context" }
+  ]
+}

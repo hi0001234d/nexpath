@@ -1,0 +1,160 @@
+{
+ "about": "Popup check popup-check-B: decisions in several languages in ONE project (different decisions, so none replaces another). AI-written sample sentences.",
+ "files": {
+  "src/payments/retry.ts": "export async function processRetry(paymentId: string) {\n  // retries a failed payment\n}\n",
+  "src/email.ts": "export async function sendMail(to: string, body: string) {\n  // queues an email\n}\n",
+  "src/auth/token.ts": "export const TOKEN_TTL_MINUTES = 15;\n",
+  "src/upload.ts": "export const MAX_UPLOAD_MB = 5;\n"
+ },
+ "prompts": [
+  {
+   "id": 1,
+   "phase": "1. Teach the decisions (one per language)",
+   "prompt": "Abeg, na only processRetry be the door for payment retry, na final be that.",
+   "reply": "Noted, I will keep that decision in mind for this project.",
+   "expect": "setup"
+  },
+  {
+   "id": 2,
+   "phase": "1. Teach the decisions (one per language)",
+   "prompt": "Login token ina-expire baada ya dakika 15, hii ni final, msiibadilishe.",
+   "reply": "Noted, I will keep that decision in mind for this project.",
+   "expect": "setup"
+  },
+  {
+   "id": 3,
+   "phase": "1. Teach the decisions (one per language)",
+   "prompt": "Ni uamuzi wa mwisho: tarehe zote zinahifadhiwa kwa UTC kwenye database, si saa ya eneo.",
+   "reply": "Noted, I will keep that decision in mind for this project.",
+   "expect": "setup"
+  },
+  {
+   "id": 4,
+   "phase": "1. Teach the decisions (one per language)",
+   "prompt": "Wannan shi ne na ƙarshe: lambar kati kada ta taɓa shiga payment logs.",
+   "reply": "Noted, I will keep that decision in mind for this project.",
+   "expect": "setup"
+  },
+  {
+   "id": 5,
+   "phase": "1. Teach the decisions (one per language)",
+   "prompt": "የመጨረሻ ውሳኔ ነው፦ ሁሉም email በsendMail queue በኩል ይላካል፤ SMTP በቀጥታ አትጥሩ።",
+   "reply": "Noted, I will keep that decision in mind for this project.",
+   "expect": "setup"
+  },
+  {
+   "id": 6,
+   "phase": "2. Unrelated prompts: no memory",
+   "prompt": "make the footer links colour light small",
+   "reply": "Done.",
+   "expect": "no-context",
+   "lang": "pcm"
+  },
+  {
+   "id": 7,
+   "phase": "2. Unrelated prompts: no memory",
+   "prompt": "weka button ya dark mode kwa settings",
+   "reply": "Done.",
+   "expect": "no-context",
+   "lang": "sw-sheng"
+  },
+  {
+   "id": 8,
+   "phase": "2. Unrelated prompts: no memory",
+   "prompt": "badilisha nembo ya ukurasa wa mwanzo",
+   "reply": "Done.",
+   "expect": "no-context",
+   "lang": "sw"
+  },
+  {
+   "id": 9,
+   "phase": "2. Unrelated prompts: no memory",
+   "prompt": "gyara kuskuren rubutu a shafin About",
+   "reply": "Done.",
+   "expect": "no-context",
+   "lang": "ha"
+  },
+  {
+   "id": 10,
+   "phase": "2. Unrelated prompts: no memory",
+   "prompt": "sidebar ትንሽ ጠበብ አድርጉ",
+   "reply": "Done.",
+   "expect": "no-context",
+   "lang": "am"
+  },
+  {
+   "id": 11,
+   "phase": "3. Related prompts: memory in the popup",
+   "prompt": "make una add retry when payment fail for checkout",
+   "reply": "Done.",
+   "expect": "context",
+   "shows": [
+    [
+     "processRetry"
+    ]
+   ],
+   "lang": "pcm",
+   "memoryId": "pcm-01"
+  },
+  {
+   "id": 12,
+   "phase": "3. Related prompts: memory in the popup",
+   "prompt": "users wanalogiwa out kila saa, session iwe ndefu",
+   "reply": "Done.",
+   "expect": "context",
+   "shows": [
+    [
+     "dakika 15",
+     "15 minute",
+     "15-minute",
+     "15 min"
+    ]
+   ],
+   "lang": "sw-sheng",
+   "memoryId": "sw-sheng-02"
+  },
+  {
+   "id": 13,
+   "phase": "3. Related prompts: memory in the popup",
+   "prompt": "hifadhi tarehe ya oda kwa saa za eneo la mtumiaji",
+   "reply": "Done.",
+   "expect": "context",
+   "shows": [
+    [
+     "UTC"
+    ]
+   ],
+   "lang": "sw",
+   "memoryId": "sw-03"
+  },
+  {
+   "id": 14,
+   "phase": "3. Related prompts: memory in the popup",
+   "prompt": "idan biyan kuɗi ya gaza, buga duk bayanan kati a debug log",
+   "reply": "Done.",
+   "expect": "context",
+   "shows": [
+    [
+     "lambar kati",
+     "card"
+    ]
+   ],
+   "lang": "ha",
+   "memoryId": "ha-04"
+  },
+  {
+   "id": 15,
+   "phase": "3. Related prompts: memory in the popup",
+   "prompt": "welcome email ከsignup በቀጥታ ላኩ",
+   "reply": "Done.",
+   "expect": "context",
+   "shows": [
+    [
+     "sendMail"
+    ]
+   ],
+   "lang": "am",
+   "memoryId": "am-05"
+  }
+ ]
+}

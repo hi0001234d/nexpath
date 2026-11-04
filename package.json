@@ -42,7 +42,7 @@
   "scripts": {
     "prebuild": "tsx scripts/check-build-gate.ts",
     "build": "tsc",
-    "postbuild": "node -e \"['dist/cli/index.js','dist/server/index.js'].forEach(f => require('fs').chmodSync(f, 0o755))\"",
+    "postbuild": "node -e \"['dist/cli/index.js','dist/server/index.js'].forEach(f => require('fs').chmodSync(f, 0o755))\" && node scripts/fetch-memory-model.mjs",
     "build:ext": "node scripts/build-ext.mjs",
     "package:ext": "node scripts/package-ext.mjs",
     "build:ui-harness": "esbuild src/ext-browser/ui/ui-mock-harness/index.ts --bundle --format=esm --external:../../../ext-browser/ui/ui.js --outfile=src/ext-browser/ui/ui-mock-harness/index.js",
@@ -55,12 +55,15 @@
     "pe:body-assertion": "tsx scripts/pe-body-assertion.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build && node scripts/fetch-memory-model.mjs --require"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
     "@clack/prompts": "^0.9",
+    "@huggingface/transformers": "4.2.0",
+    "@memtensor/memos-local-plugin": "2.0.21",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "codebase-memory-mcp": "0.12.1",
     "commander": "^12",
     "cross-keychain": "^1.1.0",
     "dotenv": "^17.4.2",
@@ -70,6 +73,9 @@
     "tinyld": "^1",
     "webextension-polyfill": "^0.12.0",
     "zod": "^3"
+  },
+  "optionalDependencies": {
+    "openclaw": "2026.9.2"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.270",
@@ -84,6 +90,6 @@
     "vitest": "^4.1.8"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.22.3"
   }
 }

@@ -26,6 +26,7 @@ import type { Stage } from '../../classifier/types.js';
 import type { FlagType, Stage2TriggerResult } from '../../core/stage2.js';
 import type { StageClassifierResult } from '../../classifier/stage-classifier.js';
 import { resolveLanguage } from '../../classifier/LanguageDetector.js';
+import { cliWorkerSources, FEATURE1_TOOLS_CONFIG_KEY } from '../../context-engineering/worker/worker-client.js';
 import { insertPrompt } from '../../store/prompts.js';
 import { redactSecrets } from '../../store/redact.js';
 import { getConfig } from '../../store/config.js';
@@ -133,7 +134,8 @@ import {
   normalizeProjectId as normalizeFeature1ProjectId,
   type Feature1SelectedFact,
 } from '../../context-engineering/index.js';
-import { buildProjectMemoryRefV1, projectMemoryEvidenceKeyV1 } from '../../prompt-enhancement/project-memory-facts.js';
+import { buildProjectMemoryRefV1, parseProjectMemoryRefV1, projectMemoryEvidenceKeyV1 } from '../../prompt-enhancement/project-memory-facts.js';
+import { buildPromptEnhancementGuidanceFactsV1 } from '../../prompt-enhancement/guidance-facts.js';
 
 /**
  * nexpath auto — orchestration command (per decision-session-ux-research.md).
@@ -1141,6 +1143,43 @@ function withFeature1ProjectMemoryV1(
   };
 }
 
+/**
+ * The Feature 1 facts the prepared popup really carries (2026-11-03). Popup sections name the
+ * writer's guidance facts (`guidance_fact:pe-fact-project-memory-4`); the writer builds those from
+ * our `project_memory:` refs in a fixed, deterministic step, so the same step on the same request
+ * gives the id → ref link. If the body names a memory fact that cannot be traced back, every fact
+ * counts as shown (the earlier behaviour), so "once per session" can never silently stop working.
+ */
+export function feature1FactsInBodyV1(
+  result: Pick<PromptEnhancementPrepareResultV1, 'currentBody'>,
+  facts: readonly Feature1SelectedFact[],
+  writerRequest?: PromptEnhancementPrepareRequestV1,
+): Feature1SelectedFact[] {
+  const refByGuidanceId = new Map<string, string>();
+  if (writerRequest) {
+    for (const g of buildPromptEnhancementGuidanceFactsV1(writerRequest)) {
+      const ref = g.sourceIds.find((id) => id.startsWith('project_memory:'));
+      if (ref) refByGuidanceId.set(g.factId, ref);
+    }
+  }
+  const shownIds = new Set<number>();
+  let untraced = false;
+  for (const section of result.currentBody?.sections ?? []) {
+    for (const ref of section.sourceIds ?? []) {
+      const parts = parseProjectMemoryRefV1(ref);
+      if (parts) shownIds.add(parts.id);
+    }
+    for (const id of section.sourceFactIds ?? []) {
+      const guidanceId = id.startsWith('guidance_fact:') ? id.slice('guidance_fact:'.length) : id;
+      if (!guidanceId.startsWith('pe-fact-project-memory-')) continue;
+      const parts = parseProjectMemoryRefV1(refByGuidanceId.get(guidanceId) ?? '');
+      if (parts) shownIds.add(parts.id);
+      else untraced = true;
+    }
+  }
+  return untraced ? [...facts] : facts.filter((f) => shownIds.has(f.id));
+}
+
 /** Same display decision the host uses before storing a pending popup (see the blink gate). */
 function promptEnhancementResultWillShowV1(result: PromptEnhancementPrepareResultV1): boolean {
   return result.disposition !== 'no_popup_not_applicable'
@@ -1162,6 +1201,8 @@ export interface RunAutoOptionsV1 {
     feature1SessionId?: string;
     /** Editor context the host knows (active file, branch, recent files) for Feature 1. */
     feature1Context?: Partial<import('../../context-engineering/index.js').WorkspaceContext>;
+    /** v1(a): the host's own tool drivers (the desktop runs MemOS / OpenClaw / codebase-memory-mcp in-process). */
+    feature1Sources?: readonly import('../../context-engineering/index.js').SourceDriver[];
   };
 }
 
@@ -1213,7 +1254,17 @@ export async function runAuto(
         promptText,
         { ...options?.host?.feature1Context, workspacePath: projectRoot, store, sessionId: feature1SessionId() },
         // Memory only: Nexpath's writer does the writing, so no Feature 1 LLM rewrite here.
-        { recordDelivery: false, skipLlmRewrite: true },
+        // v1(a): with the tools switched on, MemOS / OpenClaw / codebase-memory-mcp answer
+        // through the background worker; without them (or when it is down) this is V1.
+        {
+          recordDelivery: false,
+          skipLlmRewrite: true,
+          ...(options?.host?.feature1Sources?.length
+            ? { sources: options.host.feature1Sources }
+            : !options?.host && getConfig(store.db, FEATURE1_TOOLS_CONFIG_KEY) === 'on'
+              ? { sources: cliWorkerSources().drivers }
+              : {}),
+        },
       );
     } catch {
       cachedF1Result = undefined;
@@ -1241,9 +1292,13 @@ export async function runAuto(
     capturedPlannerItems = prepared.plannerItems;
     capturedPlannerPromptDirectives = prepared.plannerPromptDirectives;
 
-    // Mark the memory as shown for this session only when Nexpath will actually show the
-    // popup; otherwise it stays available for the next prompt.
-    if (f1Result && f1Facts.length > 0 && prepared.result && promptEnhancementResultWillShowV1(prepared.result)) {
+    // Mark memory as shown for this session only when Nexpath will actually show the popup,
+    // and only the facts the popup really carries: a fact the writer was given but whose
+    // section did not make the final body stays available for later prompts (2026-11-03).
+    const shownF1Facts = f1Result && prepared.result && promptEnhancementResultWillShowV1(prepared.result)
+      ? feature1FactsInBodyV1(prepared.result, f1Facts, writerRequest)
+      : [];
+    if (f1Result && shownF1Facts.length > 0) {
       try {
         insertFeature1DeliveredItem(store, {
           projectRoot: normalizeFeature1ProjectId(peRequest.projectRoot),
@@ -1253,7 +1308,7 @@ export async function runAuto(
           isEnhanced: true,
           stage: f1Result.stage,
           stageConfidence: f1Result.stageConfidence,
-          injectedContextTags: f1Result.injectedContextTags,
+          injectedContextTags: shownF1Facts.map((f) => f.tag).filter((t): t is string => Boolean(t)),
           contextTokenEstimate: f1Result.contextTokenEstimate,
           processingTimeMs: f1Result.processingTimeMs,
         });

@@ -25,6 +25,11 @@ export interface PrereqStatus {
   npm: ToolStatus;
   /** True only when BOTH node and npm are available — setup may proceed. */
   ready: boolean;
+  /**
+   * Node meets Feature 1's memory-tools baseline (22.22.3+, see meetsToolsBaseline). Not part of `ready`:
+   * Nexpath itself still runs on older Node; the tools (MemOS / OpenClaw) need 24.
+   */
+  nodeMeetsToolsBaseline: boolean;
 }
 
 /** Injectable command runner so tests don't shell out. */
@@ -71,7 +76,22 @@ function probe(run: RunFn, cmd: string): ToolStatus {
 export function checkPrereqs(run: RunFn = defaultRun): PrereqStatus {
   const node = probe(run, 'node');
   const npm = probe(run, 'npm');
-  return { node, npm, ready: node.present && npm.present };
+  return { node, npm, ready: node.present && npm.present, nodeMeetsToolsBaseline: meetsToolsBaseline(node.version) };
+}
+
+/**
+ * Node 22.22.3+ (Nexpath's engines, 2026-11-03 team-lead decision). Inside that, OpenClaw 2026.9.2
+ * (the version Nexpath installs) runs on 22.22.3+ in the 22 line, 24.15+ in the 24 line, or 25.9+.
+ */
+export function meetsToolsBaseline(version: string | null): boolean {
+  const m = /^v?(\d+)\.(\d+)\.(\d+)/.exec(version ?? '');
+  if (!m) return false;
+  const [major, minor, patch] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const atLeast = (b: number, c: number) => minor > b || (minor === b && patch >= c);
+  if (major === 22) return atLeast(22, 3);
+  if (major === 24) return atLeast(15, 0);
+  if (major === 25) return atLeast(9, 0);
+  return major > 25;
 }
 
 /**
