@@ -10,13 +10,14 @@
  */
 
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { HostLlmBridge } from './host-llm-bridge.js';
 import type { InsertContextMemoryInput } from '../types/context-engineering.js';
 import { hashProjectPath, normalizeProjectId } from '../core/project-scope.js';
 import type { SourceCandidate, SourceDriver, SourceQuery } from './source-driver.js';
 import { words as unicodeWords } from '../core/unicode-text.js';
+import { bundledModelsDir } from './meaning-driver.js';
 
 export const MEMOS_AGENT = 'nexpath';
 
@@ -419,6 +420,15 @@ logging:
   level: warn
 `;
 
+/**
+ * Our MemOS settings for this install: MEMOS_CONFIG_YAML, plus the model inside the package when it is
+ * bundled (`embedding.local.modelPath`), so MemOS loads it with no download.
+ */
+export function memosConfigYaml(modelsDir: string | undefined = bundledModelsDir()): string {
+  if (!modelsDir) return MEMOS_CONFIG_YAML;
+  return MEMOS_CONFIG_YAML.replace('  provider: local\n', `  provider: local\n  local:\n    modelPath: ${JSON.stringify(modelsDir)}\n`);
+}
+
 /** MemOS's logger is one per process: set it up with the first project only. */
 let memosLoggingReady = false;
 
@@ -426,7 +436,13 @@ let memosLoggingReady = false;
 export async function bootInstalledMemos(home: string, bridge: HostLlmBridge): Promise<MemosCoreLike> {
   mkdirSync(home, { recursive: true, mode: 0o700 });
   const configFile = join(home, 'config.yaml');
-  if (!existsSync(configFile)) writeFileSync(configFile, MEMOS_CONFIG_YAML, { mode: 0o600 });
+  // The file is ours (written only by Nexpath). Kept current, so a bundled model's path follows the
+  // installed package (e.g. after an update moved it).
+  const wanted = memosConfigYaml();
+  if (!existsSync(configFile)) writeFileSync(configFile, wanted, { mode: 0o600 });
+  else if (readFileSync(configFile, 'utf8') !== wanted && readFileSync(configFile, 'utf8').startsWith('telemetry:\n  enabled: false\nllm:\n  provider: host')) {
+    writeFileSync(configFile, wanted, { mode: 0o600 });
+  }
 
   // The package has no "exports" map; its entry points live under dist/.
   const pipeline = (await import('@memtensor/memos-local-plugin/dist/core/pipeline/index.js' as string)) as {

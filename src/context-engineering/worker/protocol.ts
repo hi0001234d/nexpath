@@ -39,6 +39,8 @@ export interface WorkerPaths {
   socket: string;
   lock: string;
   startMarker: string;
+  /** The running worker's process id, so it can be stopped even when it is too busy to answer. */
+  pidFile: string;
 }
 
 /** Where the worker lives: next to Nexpath's database unless a home is given (tests). */
@@ -48,7 +50,7 @@ export function workerPaths(nexpathHome: string = dirname(DEFAULT_DB_PATH)): Wor
     process.platform === 'win32'
       ? `\\\\.\\pipe\\nexpath-worker-${createHash('sha256').update(`${userInfo().username}:${nexpathHome}`).digest('hex').slice(0, 12)}`
       : unixSocketPath(dir, nexpathHome);
-  return { dir, socket, lock: join(dir, 'worker.lock'), startMarker: join(dir, 'worker.starting') };
+  return { dir, socket, lock: join(dir, 'worker.lock'), startMarker: join(dir, 'worker.starting'), pidFile: join(dir, 'worker.pid') };
 }
 
 /** Unix socket paths are limited to ~104 bytes (macOS) / 108 (Linux). */

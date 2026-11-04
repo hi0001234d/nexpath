@@ -96,6 +96,9 @@ const { cliWorkerSources, requestWorker } = await dist('context-engineering/work
 const { stopFeature1Worker } = await dist('context-engineering/worker/tools-status.js');
 const { workerPaths } = await dist('context-engineering/worker/protocol.js');
 const { memoryModelDir, memoryToolDataDirs } = await dist('context-engineering/sources/memory-model.js');
+const { bundledModelsDir } = await dist('context-engineering/sources/meaning-driver.js');
+const { bundledOpenClawEntry } = await dist('context-engineering/sources/openclaw-driver.js');
+const BUNDLED_MODEL = bundledModelsDir();
 const keychain = await import(join(R, 'node_modules/cross-keychain/dist/index.js'));
 
 const fixture = JSON.parse(readFileSync(join(R, 'src/context-engineering/tests/fixtures/multilingual-memory.json'), 'utf8'));
@@ -205,7 +208,7 @@ const GOAL = ['en-US-slang', 'es-419', 'pt-BR', 'pcm', 'sw-sheng', 'sw', 'ha', '
 
 try {
   // ── TC-E2E-17 ───────────────────────────────────────────────────────────────
-  title(17, 'Install fetches the memory model once, into MemOS\'s cache');
+  title(17, 'Install: the memory model and OpenClaw come with Nexpath (or the model is fetched once)');
   let loads = 0;
   const { output: installOut } = await quietly(async () => {
     const { prefetchMemoryModel } = await dist('context-engineering/sources/memory-model.js');
@@ -215,15 +218,24 @@ try {
       prefetchMemoryModelFn: () => { loads++; return prefetchMemoryModel(); },
     });
   });
-  check(loads === 1, `model download started once (${loads})`);
-  check(installOut.includes('Downloading the memory model (24 MB)'), 'install says "Downloading the memory model (24 MB)…"');
-  check(existsSync(join(memoryModelDir(HOME), 'onnx', 'model_quantized.onnx')), 'model in ~/.cache/memos/models/Xenova/all-MiniLM-L6-v2');
+  check(loads === 1, `model step ran once (${loads})`);
+  if (BUNDLED_MODEL) {
+    check(installOut.includes('Memory model included with Nexpath'), 'install says the model is included (no download)');
+    check(existsSync(join(BUNDLED_MODEL, 'Xenova', 'all-MiniLM-L6-v2', 'onnx', 'model_quantized.onnx')), 'model inside the package (dist/models)');
+    check(!existsSync(memoryModelDir(HOME)), 'nothing downloaded into ~/.cache/memos/models');
+  } else {
+    check(installOut.includes('Downloading the memory model (24 MB)'), 'install says "Downloading the memory model (24 MB)…"');
+    check(existsSync(join(memoryModelDir(HOME), 'onnx', 'model_quantized.onnx')), 'model in ~/.cache/memos/models/Xenova/all-MiniLM-L6-v2');
+  }
+  const ocEntry = bundledOpenClawEntry();
+  check(Boolean(ocEntry), `OpenClaw came with Nexpath (${ocEntry ? ocEntry.replace(R, '<repo>') : 'missing'})`);
   const toolsOn = await withStore((store) => store.db.exec("SELECT value FROM config WHERE key = 'feature1_tools'")[0]?.values[0]?.[0]);
   check(toolsOn === 'on', `memory tools switched on (${toolsOn})`);
   // start the worker; wait for MemOS + the meaning source
   startWorker();
   const warm = await waitForSources(['memos', 'meaning']);
   check(Boolean(warm?.sources?.find((s) => s.name === 'meaning')?.available), 'worker running with the meaning source');
+  check(Boolean(warm?.sources?.find((s) => s.name === 'openclaw')?.available), 'OpenClaw available in the worker');
 
   // ── TC-E2E-18 ───────────────────────────────────────────────────────────────
   title(18, 'Save + bring back in the 5 forms (English, Hindi, Hinglish, Gujarati, Gujlish)');
@@ -302,8 +314,12 @@ try {
     hookAuto(p, prompt); // the same prompt again: MemOS's background search runs for it
     await sleep(12_000);
     const fromMemos = (await shown(p, prompt)).filter((f) => f.kind === 'memos_recall');
-    const echoes = fromMemos.filter((f) => f.content.includes('बटन का रंग नीला करना'));
-    check(echoes.length === 0, `no MemOS line repeats the prompt itself (${fromMemos.length} MemOS line(s) shown)`, JSON.stringify(fromMemos.map((f) => f.content)));
+    // An echo is a bare copy of the prompt (plan T4-6). The earlier turn WITH the agent's reply
+    // ("… — reply: done") is a real memory ("this was already done"), same rule as English.
+    const bare = (t) => t.replace(/[\s।.!?]+$/u, '').trim();
+    const echoes = fromMemos.filter((f) => bare(f.content) === bare(prompt));
+    for (const f of fromMemos) console.log(`       MemOS line: ${f.content}`);
+    check(echoes.length === 0, `no MemOS line is a bare copy of the prompt (${fromMemos.length} MemOS line(s) shown)`, JSON.stringify(fromMemos.map((f) => f.content)));
   }
 
   // ── TC-E2E-24 ───────────────────────────────────────────────────────────────
@@ -381,18 +397,19 @@ try {
   title(26, 'Uninstall, user says no to deleting data → everything kept');
   await uninstall(false);
   check(existedBefore.every((d) => existsSync(d.dir)), 'memory tools\' data kept');
-  check(existsSync(modelDir), 'memory model kept');
+  check(BUNDLED_MODEL ? existsSync(BUNDLED_MODEL) : existsSync(modelDir), 'memory model kept');
   check(existsSync(dbPath), 'local database kept');
 
   title(27, 'Uninstall, user deletes local data → all of Nexpath\'s memory data removed, nothing else');
   check(existedBefore.some((d) => d.dir.endsWith(`${sep}memos`)), 'MemOS memories existed before (real data from the turns above)');
   const { output: delOut } = await uninstall(true);
   for (const d of toolDirs) check(!existsSync(d.dir), `${d.label}: removed${existedBefore.includes(d) ? '' : ' (was not created in this run)'}`);
-  check(!existsSync(modelDir), 'memory model folder removed');
+  check(!existsSync(modelDir), 'memory model cache folder removed (or never created: the model came with Nexpath)');
   check(!existsSync(dbPath), 'local database removed');
-  check(delOut.includes('Memory model removed') && delOut.includes('Saved memories (MemOS) removed'), 'uninstall says what it removed');
+  check(delOut.includes('Saved memories (MemOS) removed') && (BUNDLED_MODEL || delOut.includes('Memory model removed')), 'uninstall says what it removed');
   check(existsSync(join(usersOwnOpenClaw, 'openclaw.json')), 'the user\'s own ~/.openclaw is untouched');
   check(existsSync(join(otherApp, 'data')), 'other apps\' cache folders are untouched');
+  if (BUNDLED_MODEL) check(existsSync(BUNDLED_MODEL), 'the model inside the package is untouched (removed with the package itself)');
 
   title(28, 'Safety: worker stopped, real key and real home untouched');
   let alive = false;

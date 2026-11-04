@@ -19,6 +19,7 @@ import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from 'node:fs';
 import { delimiter, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { codeNamesIn } from './codebase-memory-driver.js';
 import type { SourceCandidate, SourceDriver, SourceQuery } from './source-driver.js';
 
@@ -40,7 +41,7 @@ export interface OpenClawDriverOptions {
   /** Background job queue (the worker's: one job at a time, steps aside for prompts). */
   schedule?: (job: () => Promise<void>) => void;
   run?: OpenClawRunner;
-  /** Is OpenClaw installed (default: an `openclaw` on PATH, and a Node it can run on). */
+  /** Is OpenClaw installed (default: the one that came with Nexpath, else an `openclaw` on PATH, and a Node it can run on). */
   installed?: () => boolean;
   /**
    * A Node that meets the installed OpenClaw's own requirement, to run it with (default: this
@@ -249,8 +250,35 @@ export function isMissingEmbeddingKeyError(err: unknown): boolean {
   return /missing-provider-auth|No API key found for provider/i.test(text);
 }
 
-/** The real entry behind the `openclaw` command, run with this process's Node. */
+/**
+ * OpenClaw installed WITH Nexpath (optional dependency `openclaw`, the tested version): its CLI entry
+ * in the nearest `node_modules/openclaw` above this file. Found by walking up (OpenClaw's package
+ * may not export its package.json). Undefined when the optional dependency was skipped.
+ */
+export function bundledOpenClawEntry(from: string = fileURLToPath(import.meta.url)): string | undefined {
+  for (let dir = dirname(from), i = 0; i < 12; dir = dirname(dir), i++) {
+    const pkgFile = join(dir, 'node_modules', 'openclaw', 'package.json');
+    if (!existsSync(pkgFile)) continue;
+    try {
+      const pkg = JSON.parse(readFileSync(pkgFile, 'utf8')) as { bin?: string | Record<string, string> };
+      const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.openclaw;
+      const entry = bin ? join(dirname(pkgFile), bin) : undefined;
+      if (entry && existsSync(entry)) return realpathSync(entry);
+    } catch {
+      /* not usable: keep looking */
+    }
+    if (dirname(dir) === dir) break;
+  }
+  return undefined;
+}
+
+/**
+ * The real entry behind the `openclaw` command, run with this process's Node: the OpenClaw that came
+ * with Nexpath first (tested version, never the user's own setup), else an `openclaw` on PATH.
+ */
 function openClawEntry(): string | undefined {
+  const bundled = bundledOpenClawEntry();
+  if (bundled) return bundled;
   for (const dir of (process.env.PATH ?? '').split(delimiter)) {
     for (const name of process.platform === 'win32' ? ['openclaw.cmd', 'openclaw'] : ['openclaw']) {
       const candidate = join(dir, name);

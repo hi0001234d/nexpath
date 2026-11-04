@@ -2,6 +2,8 @@
  * Feature 1 — the local memory model at install / uninstall (V2 #7 multilingual memory, dev plan
  * Phase 6: "must run offline on CPU").
  *
+ * The package normally carries the model itself (dist/models, scripts/fetch-memory-model.mjs); then
+ * there is nothing to fetch. Otherwise (a source checkout, an offline build):
  * MemOS and the meaning source use `Xenova/all-MiniLM-L6-v2` (24 MB) from `~/.cache/memos/models`. It
  * used to download on first use, so the first prompts after install ran without memory. `nexpath
  * install` now fetches it once; after that Feature 1 works with the network off. No network, or a
@@ -16,7 +18,7 @@ import { existsSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { MEANING_MODEL } from './meaning-driver.js';
+import { MEANING_MODEL, bundledModelsDir } from './meaning-driver.js';
 
 export const MEMORY_MODEL_MB = 24;
 export const MEMORY_MODEL_TIMEOUT_MS = 60_000;
@@ -63,6 +65,8 @@ export interface PrefetchMemoryModelOptions {
   load?: MemoryModelLoader;
   timeoutMs?: number;
   log?: (line: string) => void;
+  /** Test seam; default: `bundledModelsDir` (the model inside the package). */
+  bundled?: () => string | undefined;
 }
 
 /**
@@ -71,6 +75,11 @@ export interface PrefetchMemoryModelOptions {
  */
 export async function prefetchMemoryModel(options: PrefetchMemoryModelOptions = {}): Promise<MemoryModelFetch> {
   const log = options.log ?? ((line: string) => console.log(line));
+  // Bundled in the package (scripts/fetch-memory-model.mjs): nothing to download.
+  if ((options.bundled ?? bundledModelsDir)()) {
+    log('✓ Memory model included with Nexpath (works offline).');
+    return 'ready';
+  }
   const timeoutMs = options.timeoutMs ?? MEMORY_MODEL_TIMEOUT_MS;
   const ac = new AbortController();
   const load = options.load ?? childProcessLoader(ac.signal);

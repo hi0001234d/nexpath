@@ -1,8 +1,7 @@
 # Nexpath one-step installer (Windows, PowerShell).
 #   1. Node 22.22.3+ (asks before installing Node 22 with nvm-windows; never touches other versions)
-#   2. npm install -g nexpath-cli          (includes MemOS + codebase-memory-mcp)
-#   3. npm install -g openclaw@2026.9.2    (optional: months-old project memory; last OpenClaw for Node 22)
-#   4. nexpath install                     (credential + agent hooks)
+#   2. npm install -g nexpath-cli          (includes MemOS, codebase-memory-mcp, OpenClaw 2026.9.2 and the memory model)
+#   3. nexpath install                     (credential + agent hooks)
 # Usage: .\scripts\install.ps1 [-Yes]
 param([switch]$Yes)
 $ErrorActionPreference = 'Stop'
@@ -13,7 +12,6 @@ function Ask([string]$Question) {
   return ($reply -eq '' -or $reply -match '^(y|yes)$')
 }
 
-$OpenClawVersion = '2026.9.2'
 
 function Test-NodeOk {
   # Node 22.22.3+ in the 22 line, 24.15+ in the 24 line, or 25.9+ (Nexpath + OpenClaw 2026.9.2)
@@ -44,18 +42,5 @@ if (-not (Test-NodeOk)) {
 Write-Host "Node $(node -v) OK"
 
 npm install -g nexpath-cli
-
-if (Get-Command openclaw -ErrorAction SilentlyContinue) {
-  # Your own OpenClaw is never replaced. Newer OpenClaw versions refuse Node 22.
-  openclaw --version *> $null
-  if ($LASTEXITCODE -eq 0) {
-    Write-Host 'OpenClaw already installed OK'
-  } else {
-    Write-Host "Your OpenClaw does not run on Node $(node -v). Nexpath uses OpenClaw $OpenClawVersion on Node 22:"
-    Write-Host "  npm install -g openclaw@$OpenClawVersion   (replaces your current OpenClaw)"
-  }
-} elseif (Ask "Install OpenClaw $OpenClawVersion for months-old project memory? (optional)") {
-  npm install -g "openclaw@$OpenClawVersion"
-}
 
 nexpath install

@@ -14,7 +14,7 @@
  */
 
 import { createRequire } from 'node:module';
-import { spawnSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { extractIdentities } from '../ingestion/fact-extractor.js';
@@ -246,11 +246,15 @@ export async function createStdioCodebaseClient(options: StdioCodebaseClientOpti
 
   const runtime = options.nodePath ?? process.execPath;
   const env = { ...process.env, ...nodeRuntimeEnv(options.nodePath), CBM_CACHE_DIR: options.cacheDir } as Record<string, string>;
-  ensureUiDisabled(runtime, bin, options.cacheDir, env);
+  // The graph UI must never run for Nexpath: no session starts until it is confirmed off.
+  if (!(await ensureUiDisabled(runtime, bin, options.cacheDir, env))) {
+    throw new Error('codebase-memory-mcp: its graph UI could not be confirmed off; not started');
+  }
 
   const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
   const { StdioClientTransport } = await import('@modelcontextprotocol/sdk/client/stdio.js');
-  const transport = new StdioClientTransport({ command: runtime, args: [bin], env, stderr: 'ignore' });
+  // --ui=false on every session as well (persisted by the tool), in case its config was reset.
+  const transport = new StdioClientTransport({ command: runtime, args: [bin, '--ui=false'], env, stderr: 'ignore' });
   const client = new Client({ name: 'nexpath-feature1', version: '1' });
   await client.connect(transport);
 
@@ -270,16 +274,37 @@ export async function createStdioCodebaseClient(options: StdioCodebaseClientOpti
       await client.close();
       // The tool keeps its own coordination daemon alive after the session ends; stop the
       // one for our cache dir so nothing lingers once the worker (or the app) is done.
-      spawnSync(runtime, [bin, 'daemon', 'stop'], { env, stdio: 'ignore', timeout: 30_000 });
+      // Asynchronous with a limit: closing never freezes the worker or the desktop app.
+      await runTool(runtime, [bin, 'daemon', 'stop'], env, DAEMON_STOP_TIMEOUT_MS);
     },
   };
 }
 
-/** The tool's graph UI listens on 127.0.0.1:9749 unless switched off (persisted per cache dir). */
-function ensureUiDisabled(runtime: string, bin: string, cacheDir: string, env: Record<string, string>): void {
+const UI_CONFIG_TIMEOUT_MS = 30_000;
+const DAEMON_STOP_TIMEOUT_MS = 10_000;
+
+/** Runs one codebase-memory-mcp command without blocking (the worker / app keeps answering). */
+function runTool(runtime: string, args: string[], env: Record<string, string>, timeoutMs: number): Promise<{ ok: boolean; stdout: string }> {
+  return new Promise((resolve) => {
+    execFile(runtime, args, { env, timeout: timeoutMs, windowsHide: true, maxBuffer: 1024 * 1024 }, (err, stdout) => {
+      resolve({ ok: !err, stdout: String(stdout ?? '') });
+    });
+  });
+}
+
+/**
+ * The tool's graph UI serves HTTP on 127.0.0.1:9749 and a fresh cache dir has it ON
+ * (`config get ui_enabled` → true, 0.12.1). Switch it off and check that it reads back `false`
+ * before the first session; only then is the marker written (otherwise: tried again next start,
+ * and no session is started). Asynchronous: about 2 s on a fresh cache dir, never a freeze.
+ */
+export async function ensureUiDisabled(runtime: string, bin: string, cacheDir: string, env: Record<string, string>): Promise<boolean> {
   const marker = join(cacheDir, '.nexpath-ui-off');
-  if (existsSync(marker)) return;
+  if (existsSync(marker)) return true;
   mkdirSync(cacheDir, { recursive: true });
-  spawnSync(runtime, [bin, '--ui=false'], { env, stdio: 'ignore', timeout: 30_000 });
+  await runTool(runtime, [bin, 'config', 'set', 'ui_enabled', 'false'], env, UI_CONFIG_TIMEOUT_MS);
+  const check = await runTool(runtime, [bin, 'config', 'get', 'ui_enabled'], env, UI_CONFIG_TIMEOUT_MS);
+  if (!check.ok || check.stdout.trim() !== 'false') return false;
   writeFileSync(marker, new Date().toISOString());
+  return true;
 }

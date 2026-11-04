@@ -37,12 +37,13 @@ import { analyzeSessionPatterns } from '../learning/pattern-learner.js';
 import { MemOSAdapter } from '../adapters/memos-adapter.js';
 import { selectCandidates } from '../sources/candidate-filter.js';
 import { rankAndAllocateBudget } from '../retrieval/budget-ranker.js';
-import { isEcho } from '../sources/memos-driver.js';
-import { MeaningDriver, MEANING_MIN_SCORE, MEANING_MIN_SCORE_DEVANAGARI } from '../sources/meaning-driver.js';
+import { isEcho, memosConfigYaml, MEMOS_CONFIG_YAML } from '../sources/memos-driver.js';
+import { MeaningDriver, MEANING_MIN_SCORE, MEANING_MIN_SCORE_DEVANAGARI, bundledModelsDir } from '../sources/meaning-driver.js';
+import { bundledOpenClawEntry } from '../sources/openclaw-driver.js';
 import { prefetchMemoryModel, removeMemoryModel, memoryModelDir, memoryModelCacheDir, memosDataDir, memoryToolDataDirs } from '../sources/memory-model.js';
 import { installAction, uninstallAction } from '../../cli/commands/install.js';
 import { resolveAgentPaths } from '../../cli/commands/install.js';
-import { mkdirSync, existsSync } from 'node:fs';
+import { mkdirSync, existsSync, realpathSync } from 'node:fs';
 import type { ContextMemoryRow } from '../types/context-engineering.js';
 import type { SourceCandidate } from '../sources/source-driver.js';
 import { words, phrase, literal, normalizeText, letterCount, scriptShare, splitSentences, SENTENCE_END } from '../core/unicode-text.js';
@@ -652,5 +653,38 @@ describe('Phase 7 — speed (S-1)', () => {
     const en = p95(english);
     const hi = p95(hindi);
     expect(hi - en).toBeLessThan(1);
+  });
+});
+
+describe('Model and OpenClaw come with Nexpath (dependencies, 2026-11-04)', () => {
+  it('the model inside the package is used with no download; MemOS gets its path', async () => {
+    const out: string[] = [];
+    const load = vi.fn(async () => {});
+    expect(await prefetchMemoryModel({ bundled: () => '/pkg/dist/models', load, log: (l) => out.push(l) })).toBe('ready');
+    expect(load).not.toHaveBeenCalled();
+    expect(out).toEqual(['✓ Memory model included with Nexpath (works offline).']);
+    const yaml = memosConfigYaml('/pkg/dist/models');
+    expect(yaml).toContain('embedding:\n  provider: local\n  local:\n    modelPath: "/pkg/dist/models"\n');
+    expect(memosConfigYaml(undefined)).toBe(MEMOS_CONFIG_YAML); // not bundled: config as before
+    expect(memosConfigYaml('C:\\Users\\a b\\models')).toContain('modelPath: "C:\\\\Users\\\\a b\\\\models"'); // Windows path, YAML-escaped
+    expect(bundledModelsDir()).toBeUndefined(); // the source tree has no dist/models
+  });
+
+  it('the OpenClaw that came with Nexpath is found in node_modules; none → undefined', () => {
+    const root = mkdtempSync(join(tmpdir(), 'nexpath-oc-'));
+    try {
+      const deep = join(root, 'node_modules', 'nexpath-cli', 'dist', 'context-engineering', 'sources');
+      mkdirSync(deep, { recursive: true });
+      const from = join(deep, 'openclaw-driver.js');
+      expect(bundledOpenClawEntry(from)).toBeUndefined();
+      const oc = join(root, 'node_modules', 'openclaw');
+      mkdirSync(oc, { recursive: true });
+      writeFileSync(join(oc, 'package.json'), JSON.stringify({ name: 'openclaw', version: '2026.9.2', bin: { openclaw: 'openclaw.mjs' } }));
+      expect(bundledOpenClawEntry(from)).toBeUndefined(); // bin file missing
+      writeFileSync(join(oc, 'openclaw.mjs'), '');
+      expect(bundledOpenClawEntry(from)).toBe(realpathSync(join(oc, 'openclaw.mjs')));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

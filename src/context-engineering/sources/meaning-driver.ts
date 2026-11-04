@@ -13,9 +13,11 @@
  */
 
 import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { SourceCandidate, SourceDriver, SourceQuery } from './source-driver.js';
 import { scriptShare } from '../core/unicode-text.js';
 
@@ -152,14 +154,27 @@ export function isMeaningModelInstalled(): boolean {
   }
 }
 
+/**
+ * `dist/models`: the model folder inside the package (put there at build time by
+ * scripts/fetch-memory-model.mjs), so no download is needed. Undefined when the model is not bundled
+ * (source checkout without a build, or an offline build) — then the cache / a download is used.
+ */
+export function bundledModelsDir(): string | undefined {
+  const dir = fileURLToPath(new URL('../../models/', import.meta.url));
+  return existsSync(join(dir, ...MEANING_MODEL.split('/'), 'onnx', 'model_quantized.onnx')) ? dir : undefined;
+}
+
 /** MemOS's local model, loaded the way MemOS loads it (core/embedding/providers/local.js). */
 export async function loadMemosEmbedder(cacheDir?: string): Promise<Embedder> {
   const entry = createRequire(import.meta.url).resolve('@huggingface/transformers');
   const hf = (await import(entry)) as {
-    env: { cacheDir?: string; allowRemoteModels?: boolean };
+    env: { cacheDir?: string; allowRemoteModels?: boolean; localModelPath?: string };
     pipeline: (task: string, model: string, options: Record<string, unknown>) => Promise<(text: string, o: Record<string, unknown>) => Promise<{ data: Float32Array }>>;
   };
   hf.env.cacheDir = cacheDir ?? join(homedir(), '.cache', 'memos', 'models');
+  // The model inside the package comes first (no download, offline from the first prompt).
+  const bundled = bundledModelsDir();
+  if (bundled) hf.env.localModelPath = bundled;
   hf.env.allowRemoteModels = true; // same as MemOS: download once if the cache is empty
   const extract = await hf.pipeline('feature-extraction', MEANING_MODEL, { dtype: 'q8', device: 'cpu' });
   return async (text) => Float32Array.from((await extract(text, { pooling: 'mean', normalize: true })).data);

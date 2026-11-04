@@ -6,6 +6,7 @@
  */
 
 import { createRequire } from 'node:module';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { setPriority } from 'node:os';
 import { dirname, join } from 'node:path';
 import { createWorkerServer, WorkerAlreadyRunningError } from './worker-server.js';
@@ -141,15 +142,36 @@ const server = createWorkerServer({
   onIdle: () => void shutdown(),
 });
 
-/** Save open sessions to OpenClaw (files only; indexing waits for the next search), then exit. */
+const pidFile = workerPaths(home).pidFile;
+
+/**
+ * Save open sessions to OpenClaw (files only; indexing waits for the next search), close the
+ * tools (codebase-memory-mcp's daemon is stopped, MemOS closes its stores), then exit.
+ */
 const shutdown = async (): Promise<never> => {
   shuttingDown = true;
   await Promise.race([sessions.endAll(), new Promise((r) => setTimeout(r, 10_000))]).catch(() => {});
+  await Promise.race([
+    Promise.all(drivers.map((d) => d.close?.().catch(() => {}))),
+    new Promise((r) => setTimeout(r, 15_000)),
+  ]).catch(() => {});
+  try {
+    if (readFileSync(pidFile, 'utf8').trim() === String(process.pid)) rmSync(pidFile, { force: true });
+  } catch {
+    /* already gone */
+  }
   process.exit(0);
 };
 
 server.listen().then(
   () => {
+    // Our pid, for stopFeature1Worker when the worker is too busy to answer a ping.
+    try {
+      mkdirSync(dirname(pidFile), { recursive: true });
+      writeFileSync(pidFile, String(process.pid), { mode: 0o600 });
+    } catch {
+      /* stopping then relies on the ping alone */
+    }
     for (const driver of drivers) void driver.available(); // start slow connects now, not on the first prompt
   },
   (err) => process.exit(err instanceof WorkerAlreadyRunningError ? 0 : 1)

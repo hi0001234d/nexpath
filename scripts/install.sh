@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # Nexpath one-step installer (macOS / Linux).
 #   1. Node 22.22.3+ (asks before installing Node 22 with nvm; never touches other Node versions)
-#   2. npm install -g nexpath-cli          (includes MemOS + codebase-memory-mcp)
-#   3. npm install -g openclaw@2026.9.2    (optional: months-old project memory; last OpenClaw for Node 22)
-#   4. nexpath install                     (credential + agent hooks)
+#   2. npm install -g nexpath-cli          (includes MemOS, codebase-memory-mcp, OpenClaw 2026.9.2 and the memory model)
+#   3. nexpath install                     (credential + agent hooks)
 # Usage: scripts/install.sh [-y]           (-y: answer yes to every question)
 set -euo pipefail
 
@@ -15,8 +14,6 @@ ask() { # ask "question" → 0 for yes
   read -r -p "$1 [Y/n] " reply </dev/tty || return 1
   case "${reply:-y}" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
 }
-
-OPENCLAW_VERSION=2026.9.2
 
 node_ok() { # Node 22.22.3+ in the 22 line, 24.15+ in the 24 line, or 25.9+ (Nexpath + OpenClaw 2026.9.2)
   command -v node >/dev/null 2>&1 || return 1
@@ -46,17 +43,5 @@ fi
 echo "Node $(node -v) ✓"
 
 npm install -g nexpath-cli
-
-if command -v openclaw >/dev/null 2>&1; then
-  # Your own OpenClaw is never replaced. Newer OpenClaw versions refuse Node 22.
-  if openclaw --version >/dev/null 2>&1; then
-    echo "OpenClaw already installed ✓ ($(openclaw --version 2>/dev/null | head -1))"
-  else
-    echo "Your OpenClaw does not run on Node $(node -v). Nexpath uses OpenClaw $OPENCLAW_VERSION on Node 22:"
-    echo "  npm install -g openclaw@$OPENCLAW_VERSION   (replaces your current OpenClaw)"
-  fi
-elif ask "Install OpenClaw $OPENCLAW_VERSION for months-old project memory? (optional)"; then
-  npm install -g "openclaw@$OPENCLAW_VERSION"
-fi
 
 nexpath install
