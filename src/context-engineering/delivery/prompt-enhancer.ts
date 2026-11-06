@@ -16,6 +16,11 @@
  *  8. Metadata tag generation & token estimation (generateContextTags, estimateTokenCount).
  *  9. Delivered items recording (insertDeliveredItem).
  *  10. Return synchronized 7-field EnhancementResult.
+ *
+ * Privacy switch (`context.dataPrivacy`, F3 2026-11-05): no cloud AI may process the user's data.
+ * The prompt is enhanced only by a rewrite on the user's own LAN machine (memory included); on an
+ * F3 skip, any F3 error, a failed LAN call or no time left, the original prompt goes back unchanged
+ * (the desktop sends whatever we return to the server), with no Cloud Pro call at all.
  */
 
 import { openStore, closeStore, type Store } from '../../store/db.js';
@@ -270,7 +275,10 @@ export async function preparePromptEnhancementWithSections(
 
         // 12. Desktop App Track: LLM Synthesis Delegation via F3 / F6 / Pro (Phase 6)
         let finalEnhancedPrompt = routingResult.enhancedPrompt;
-        const isDesktopOrLlmMode = Boolean(
+        const privacy = context?.dataPrivacy === true;
+        /** Privacy on: set only when the LAN rewrite came back; otherwise the original prompt goes back. */
+        let lanRewriteDone = false;
+        const isDesktopOrLlmMode = privacy || Boolean(
           options?.delegateToLlm ||
           options?.f3Client ||
           context?.deviceToken ||
@@ -322,10 +330,14 @@ export async function preparePromptEnhancementWithSections(
               language: 'en',
               background: false,
               localAllowed: options?.localAllowed !== false,
+              ...(privacy ? { dataPrivacy: true } : {}),
             };
 
             const decision = await untilAborted(f3Client.getResourceDecision(f3Request, f3Token, llmController.signal), llmController.signal);
             if (llmController.signal.aborted) throw new Error('LLM budget spent before the rewrite started');
+            // Privacy on: only a LAN machine may do the rewrite (a skip gets no result report).
+            if (privacy && (decision.target !== 'local' || !decision.lanDevice)) throw new Error('privacy: skipped');
+            if (decision.target === 'skip') throw new Error('F3 skip');
 
             const chatMessages = formatEnhancementChatMessages(rawPrompt, routingResult.sections);
             // The budget signal alone ends the calls at the deadline. The clients keep their
@@ -337,6 +349,7 @@ export async function preparePromptEnhancementWithSections(
               deviceId: context?.deviceId || options?.localExecutionOptions?.deviceId,
               cloudProUrl: options?.cloudProUrl,
               signal: llmController.signal,
+              allowProFallback: !privacy,
             };
 
             if (decision.target === 'local' && decision.lanDevice) {
@@ -347,6 +360,7 @@ export async function preparePromptEnhancementWithSections(
               const cancelled = llmController.signal.aborted;
               if (!cancelled && localRes.content && localRes.content.trim().length > 0) {
                 finalEnhancedPrompt = localRes.content.trim();
+                lanRewriteDone = localRes.ranOn === 'local';
               }
 
               // Asynchronously report result to F3 in background (fire-and-forget, zero critical path latency)
@@ -355,7 +369,9 @@ export async function preparePromptEnhancementWithSections(
                   {
                     decisionId: decision.decisionId,
                     ranOn: localRes.ranOn,
-                    ok: !cancelled && !localRes.fellBackToPro,
+                    // Success only when the LAN machine answered (with the privacy switch a failed
+                    // LAN call no longer falls back to Pro, so "no fallback" is not "ok").
+                    ok: !cancelled && localRes.failType === null && !localRes.fellBackToPro,
                     latencyMs: localRes.latencyMs,
                     failType: cancelled ? 'cancelled' : mapToF3FailType(localRes.failType),
                     fellBackToPro: localRes.fellBackToPro,
@@ -365,7 +381,7 @@ export async function preparePromptEnhancementWithSections(
               } catch {
                 // Ignore telemetry errors
               }
-            } else {
+            } else if (!privacy) {
               const tPro0 = performance.now();
               const proContent = await untilAborted(
                 executeCloudProFallback({ messages: chatMessages }, execOptions),
@@ -407,6 +423,19 @@ export async function preparePromptEnhancementWithSections(
         // A caller cancel during the LLM step returns the original prompt, not the enhanced one.
         if (signal.aborted) {
           throw new Error('Enhancement aborted by signal');
+        }
+
+        // Privacy on and no LAN rewrite: the original prompt, unchanged, nothing recorded as shown.
+        if (privacy && !lanRewriteDone) {
+          return {
+            isEnhanced: false,
+            enhancedPrompt: rawPrompt,
+            stage,
+            stageConfidence,
+            injectedContextTags: [],
+            contextTokenEstimate: 0,
+            processingTimeMs: Math.max(1, Math.round(performance.now() - startTime)),
+          };
         }
 
         // Enforce Clean Prompt Text Guarantee (no synthetic @ tags)

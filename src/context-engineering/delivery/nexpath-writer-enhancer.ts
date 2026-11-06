@@ -12,6 +12,10 @@
  *  - 402 (no credit), 429 (rate limit), time-out and cancel fail open: original
  *    prompt, isEnhanced false. Time-out and cancel also abort the in-flight calls.
  *  - timeoutMs is a parameter (default 15s, the writer version's budget).
+ *  - Privacy switch on (`context.dataPrivacy`): the writer pipeline (all its cloud AI calls) is
+ *    skipped as a whole. Feature 1's local path runs instead: memory is gathered on the device and
+ *    the prompt is rewritten only on the user's LAN machine (F3 decides); on a skip, any F3 error
+ *    or a failed LAN call the original prompt goes back unchanged. No Cloud Pro call.
  */
 
 import { openStore, closeStore, type Store } from '../../store/db.js';
@@ -20,6 +24,7 @@ import type { PromptEnhancementPrepareResultV1 } from '../../prompt-enhancement/
 import { normalizeProjectId } from '../core/project-scope.js';
 import { withFailOpen, buildFallbackResult } from './fail-open.js';
 import { estimateTokenCount } from './tag-generator.js';
+import { preparePromptEnhancement } from './prompt-enhancer.js';
 import type {
   EnhancementOptions,
   EnhancementResult,
@@ -32,7 +37,7 @@ export const NEXPATH_WRITER_DEFAULT_TIMEOUT_MS = 15_000;
 
 const DEFAULT_API_BASE_URL = 'https://parseos.tech';
 
-export interface NexpathWriterOptions extends Pick<EnhancementOptions, 'timeoutMs' | 'signal'> {
+export interface NexpathWriterOptions extends Pick<EnhancementOptions, 'timeoutMs' | 'signal' | 'localExecutionOptions'> {
   /** The app's server; LLM calls go to <apiBaseUrl>/v1/chat/completions. Default https://parseos.tech. */
   apiBaseUrl?: string;
   /**
@@ -57,6 +62,20 @@ export async function prepareNexpathWriterEnhancement(
 
   if (!rawPrompt || !rawPrompt.trim() || !context?.deviceToken || !context.deviceId || !context.workspacePath) {
     return buildFallbackResult(rawPrompt ?? '', startTime);
+  }
+
+  // MemOS's cloud calls follow this prompt's switch (off while it is on).
+  options?.tools?.setDataPrivacy(context.dataPrivacy === true);
+
+  if (context.dataPrivacy === true) {
+    // The local path: our memory and tools on the device, a rewrite only on the user's LAN machine.
+    return preparePromptEnhancement(rawPrompt, context, {
+      timeoutMs,
+      signal: options?.signal,
+      sources: options?.tools?.drivers,
+      f3BaseUrl: options?.apiBaseUrl,
+      localExecutionOptions: options?.localExecutionOptions,
+    });
   }
 
   return withFailOpen(
