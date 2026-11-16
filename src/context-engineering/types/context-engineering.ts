@@ -33,6 +33,13 @@ export interface WorkspaceContext {
   store?: any;
   /** Active session ID (optional) */
   sessionId?: string;
+  /**
+   * The prompt bar's privacy switch, sent by the desktop with every call (default off).
+   * On: no cloud AI processes the user's data (F3, 2026-11-05). Feature 1 only rewrites on the
+   * user's own LAN machine; on an F3 skip, any F3 error or a failed LAN call it returns the
+   * original prompt unchanged. The Nexpath writer pipeline and MemOS's cloud calls are off.
+   */
+  dataPrivacy?: boolean;
 }
 
 /** Alias for Desktop Runtime Lead (Ved) integration contract */
@@ -182,6 +189,8 @@ export interface F3ResourceRequest {
   language: F3Language;
   background: boolean;
   localAllowed: boolean;
+  /** Privacy switch on: F3 never answers "pro", it answers "skip" instead. Sent only when true. */
+  dataPrivacy?: boolean;
 }
 
 export interface F3LanDevice {
@@ -193,7 +202,8 @@ export interface F3LanDevice {
 
 export interface F3ResourceDecision {
   decisionId: string;
-  target: 'local' | 'pro';
+  /** 'skip' only with dataPrivacy: no AI call at all, the original prompt goes back. */
+  target: 'local' | 'pro' | 'skip';
   reason: string;
   lanDevice: F3LanDevice | null;
   pro: { model: string } | null;

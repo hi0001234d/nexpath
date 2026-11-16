@@ -10,6 +10,10 @@
  *
  * The npd_ token never leaves this object: MemOS only gets the bridge function (Ved,
  * 2026-11-02), OpenClaw only gets `openclawEnv` (its local embedding endpoint).
+ *
+ * Privacy switch (`dataPrivacy`, sent with every prompt): while it is on, MemOS makes no cloud AI
+ * call (summaries, relevance filter) and a private turn is never given to MemOS, so it can't be
+ * summarised in the cloud later either. Memory search on the device keeps working.
  */
 
 import { join } from 'node:path';
@@ -53,6 +57,8 @@ export interface DesktopTurn {
   prompt: string;
   response: string;
   ts?: number;
+  /** The prompt bar's privacy switch for this turn: on → the turn is not given to MemOS. */
+  dataPrivacy?: boolean;
 }
 
 const DEFAULT_API_BASE_URL = 'https://parseos.tech';
@@ -68,6 +74,8 @@ export class DesktopFeature1Tools {
   private readonly sessions: SessionEndTracker;
   private store: Store | undefined;
   private readonly summaryDelayMs: number;
+  /** The latest prompt's privacy switch; while on, MemOS's cloud calls are refused. */
+  private privacy = false;
 
   constructor(options: DesktopFeature1ToolsOptions) {
     this.summaryDelayMs = options.summaryDelayMs ?? TURN_SUMMARY_DELAY_MS;
@@ -79,8 +87,18 @@ export class DesktopFeature1Tools {
       },
     });
     // MemOS writes in the user's own language, never translated (multilingual #7).
-    this.bridge = createHostLlmBridge({ getClient: () => this.client, language: 'match' });
+    this.bridge = createHostLlmBridge({ getClient: () => (this.privacy ? undefined : this.client), language: 'match' });
     this.memos = options.drivers?.memos ?? new MemosDriver({ home: join(options.dataDir, 'memos'), bridge: this.bridge });
+    // MemOS's search may ask the cloud AI to filter results: it follows the prompt's switch.
+    const memos = this.memos;
+    const memosSource: SourceDriver | undefined = memos && {
+      name: memos.name,
+      available: () => memos.available(),
+      search: (query, deadlineAt, signal) => {
+        this.setDataPrivacy(query.context?.dataPrivacy === true);
+        return signal.aborted ? Promise.resolve([]) : memos.search(query, deadlineAt);
+      },
+    };
     this.openclaw =
       options.drivers?.openclaw ??
       new OpenClawDriver({ home: join(options.dataDir, 'openclaw'), nodePath: options.openclawNodePath, extraEnv: options.openclawEnv });
@@ -90,7 +108,7 @@ export class DesktopFeature1Tools {
         ? new CodebaseMemoryDriver({ connect: () => createStdioCodebaseClient({ cacheDir: join(options.dataDir, 'codebase-memory') }) })
         : undefined);
     const meaning = options.drivers ? options.drivers.meaning : isMeaningModelInstalled() ? new MeaningDriver() : undefined;
-    this.drivers = [this.memos, this.openclaw, this.codebase, meaning].filter((d): d is NonNullable<typeof d> => Boolean(d));
+    this.drivers = [memosSource, this.openclaw, this.codebase, meaning].filter((d): d is NonNullable<typeof d> => Boolean(d));
   }
 
   /** The device credentials for MemOS's background AI calls; the app calls this with every prompt. */
@@ -104,6 +122,11 @@ export class DesktopFeature1Tools {
       : undefined;
   }
 
+  /** The prompt bar's privacy switch for the current prompt (the writer call sets it). */
+  setDataPrivacy(on: boolean): void {
+    this.privacy = on;
+  }
+
   /** Start the slow tools (MemOS model, MCP connect) now rather than on the first prompt. */
   warmUp(): void {
     for (const driver of this.drivers) void driver.available();
@@ -114,10 +137,13 @@ export class DesktopFeature1Tools {
    * the session is kept open for OpenClaw's session-end save. Pass the app's store. Never throws.
    */
   async capture(turn: DesktopTurn, store?: Store): Promise<void> {
-    const full = { ...turn, ts: turn.ts ?? Date.now() };
+    const { dataPrivacy, ...rest } = turn;
+    const full = { ...rest, ts: turn.ts ?? Date.now() };
     if (store) this.store = store;
     this.sessions.noteTurn(full);
-    const captured = await this.memos?.capture(full).catch(() => undefined);
+    if (dataPrivacy === true) this.setDataPrivacy(true);
+    // A private turn never reaches MemOS: MemOS would summarise it with the cloud AI.
+    const captured = dataPrivacy === true ? undefined : await this.memos?.capture(full).catch(() => undefined);
     if (captured && this.memos) {
       const memos = this.memos;
       // MemOS writes the turn summary in the background: read it a little later into our map.

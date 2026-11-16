@@ -61,6 +61,11 @@ export interface LocalExecutionOptions {
   cloudProUrl?: string;
   /** Caller's cancel / time budget. Aborting stops the call at once, with no cloud fallback. */
   signal?: AbortSignal;
+  /**
+   * False with the privacy switch on: a failed LAN call ends there (empty content), it never
+   * goes to Cloud Pro. Default true.
+   */
+  allowProFallback?: boolean;
 }
 
 export interface LocalExecutionResult {
@@ -164,6 +169,17 @@ export async function executeLocalOrProCompletion(
       failType = 'BAD_OUTPUT';
     } else {
       failType = 'LOCAL_ERROR';
+    }
+
+    // Privacy switch on: no cloud model may see the prompt, so the failure is the answer.
+    if (options?.allowProFallback === false) {
+      return {
+        content: '',
+        ranOn: 'local',
+        fellBackToPro: false,
+        failType,
+        latencyMs: Math.round(performance.now() - startTime),
+      };
     }
 
     // Automatic Fail-Safe to Cloud Pro (gpt-4o-mini on parseos.tech)

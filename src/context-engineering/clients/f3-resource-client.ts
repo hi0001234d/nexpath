@@ -10,6 +10,9 @@
  *  - 30-second cache: Caches decisions per callKind.
  *  - Idempotent request IDs: Re-querying with the same requestId returns the cached decision.
  *  - Asynchronous telemetry reporting to POST /f3/v1/resource-result (fire-and-forget).
+ *  - Privacy switch (`dataPrivacy: true`, F3 Version 2, 2026-11-05): F3 answers "skip" where it
+ *    would answer "pro", and every failure here is a skip too, never Pro. No result report is
+ *    sent for a skip (F3 answers it with 400 DECISION_SKIPPED).
  */
 
 import { linkAbortSignal } from './abort-link.js';
@@ -64,7 +67,12 @@ export class F3ResourceClient {
     signal?: AbortSignal
   ): Promise<F3ResourceDecision> {
     const token = customToken || this.deviceToken;
-    const cacheKey = `${request.callKind}:${request.localAllowed}:${request.language}`;
+    const privacy = request.dataPrivacy === true;
+    // A privacy answer and a normal answer are never reused for each other.
+    const cacheKey = `${request.callKind}:${request.localAllowed}:${request.language}:${privacy}`;
+    // Off: the request is exactly today's (the field is left out, which F3 reads as false).
+    const { dataPrivacy: _dataPrivacy, ...base } = request;
+    const body: F3ResourceRequest = privacy ? { ...base, dataPrivacy: true } : base;
 
     // 1. Check in-memory 30s cache
     const cached = this.cache.get(cacheKey);
@@ -74,16 +82,19 @@ export class F3ResourceClient {
     }
 
     // 2. If localAllowed is false, immediately default to Pro without network call
+    //    (with the privacy switch on there is nowhere left to run: skip).
     if (!request.localAllowed) {
-      const proDecision: F3ResourceDecision = {
-        decisionId: `d-pro-local-disabled-${Date.now()}`,
-        target: 'pro',
-        reason: 'LOCAL_NOT_ALLOWED',
-        lanDevice: null,
-        pro: { model: 'gpt-4o-mini' },
-      };
-      this.cache.set(cacheKey, { decision: proDecision, timestamp: now });
-      return proDecision;
+      const decision: F3ResourceDecision = privacy
+        ? skipDecision('LOCAL_NOT_ALLOWED')
+        : {
+            decisionId: `d-pro-local-disabled-${Date.now()}`,
+            target: 'pro',
+            reason: 'LOCAL_NOT_ALLOWED',
+            lanDevice: null,
+            pro: { model: 'gpt-4o-mini' },
+          };
+      this.cache.set(cacheKey, { decision, timestamp: now });
+      return decision;
     }
 
     // 3. Dispatch to F3 Router with 1,000ms timeout
@@ -105,7 +116,7 @@ export class F3ResourceClient {
       const response = await fetch(`${this.baseUrl}/f3/v1/resource`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(request),
+        body: JSON.stringify(body),
         signal: controller.signal,
       });
 
@@ -113,12 +124,12 @@ export class F3ResourceClient {
       unlink();
 
       if (!response.ok) {
-        // Any 4xx or 5xx fails open to Pro
-        return this.createFallbackProDecision(`HTTP_${response.status}`);
+        // Any 4xx or 5xx fails open to Pro (privacy on: to skip)
+        return this.failOpen(`HTTP_${response.status}`, privacy);
       }
 
       const raw = await response.json();
-      const decision = this.parseDecision(raw);
+      const decision = this.parseDecision(raw, privacy);
 
       // Cache decision for 30 seconds
       this.cache.set(cacheKey, { decision, timestamp: Date.now() });
@@ -128,7 +139,7 @@ export class F3ResourceClient {
       unlink();
       const isTimeout = controller.signal.aborted;
       const reason = isTimeout ? 'ROUTER_TIMEOUT' : 'ROUTER_NETWORK_ERROR';
-      return this.createFallbackProDecision(reason);
+      return this.failOpen(reason, privacy);
     }
   }
 
@@ -137,6 +148,8 @@ export class F3ResourceClient {
    * Fire-and-forget: never throws and never blocks prompt execution.
    */
   reportResult(report: F3ResourceResultReport, customToken?: string): void {
+    // A skip decision gets no report (F3: 400 DECISION_SKIPPED).
+    if (report.decisionId.startsWith(SKIP_DECISION_PREFIX)) return;
     const token = customToken || this.deviceToken;
     const url = `${this.baseUrl}/f3/v1/resource-result`;
 
@@ -172,7 +185,15 @@ export class F3ResourceClient {
     this.cache.clear();
   }
 
-  private parseDecision(raw: any): F3ResourceDecision {
+  private parseDecision(raw: any, privacy: boolean): F3ResourceDecision {
+    if (privacy) {
+      // Only a usable LAN answer runs; "skip", a "pro" (never expected) or anything else is a skip.
+      if (raw && typeof raw === 'object' && raw.target === 'local' && raw.lanDevice) {
+        return { decisionId: raw.decisionId || `d-gen-${Date.now()}`, target: 'local', reason: raw.reason || 'SUCCESS', lanDevice: raw.lanDevice, pro: null };
+      }
+      const reason = raw && typeof raw === 'object' && typeof raw.reason === 'string' && raw.target === 'skip' ? raw.reason : 'INVALID_RESPONSE';
+      return skipDecision(reason, raw && typeof raw === 'object' && raw.target === 'skip' ? raw.decisionId : undefined);
+    }
     if (raw && typeof raw === 'object' && raw.target) {
       return {
         decisionId: raw.decisionId || `d-gen-${Date.now()}`,
@@ -185,6 +206,10 @@ export class F3ResourceClient {
     return this.createFallbackProDecision('INVALID_RESPONSE');
   }
 
+  private failOpen(reason: string, privacy: boolean): F3ResourceDecision {
+    return privacy ? skipDecision(reason) : this.createFallbackProDecision(reason);
+  }
+
   private createFallbackProDecision(reason: string): F3ResourceDecision {
     return {
       decisionId: `d-fallback-${Date.now()}`,
@@ -194,4 +219,18 @@ export class F3ResourceClient {
       pro: { model: 'gpt-4o-mini' },
     };
   }
+}
+
+/** Every skip decision id starts with this, so no result report is ever sent for one. */
+const SKIP_DECISION_PREFIX = 'd-skip-';
+
+/** A skip: no AI call, the caller gives the original prompt back. */
+function skipDecision(reason: string, serverId?: string): F3ResourceDecision {
+  return {
+    decisionId: `${SKIP_DECISION_PREFIX}${serverId || Date.now()}`,
+    target: 'skip',
+    reason,
+    lanDevice: null,
+    pro: null,
+  };
 }
