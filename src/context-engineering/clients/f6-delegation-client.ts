@@ -22,7 +22,7 @@ import type {
 } from '../types/context-engineering.js';
 import type { PromptSection } from '../delivery/section-router.js';
 
-export const DEFAULT_LOCAL_BRIDGE_PORT = 11434;
+export const DEFAULT_LOCAL_BRIDGE_PORT = 11435;
 export const CLOUD_PRO_URL = 'https://parseos.tech/v1/chat/completions';
 
 /**
