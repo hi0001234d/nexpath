@@ -101,6 +101,12 @@ export const PROMPT_ENHANCEMENT_MANDATORY_SECTION_KIND_V1 = 'source_signal_guida
  */
 export const PROMPT_ENHANCEMENT_PRUNE_EXTRA_CAP_V1 = 2;
 
+/**
+ * Hard upper bound on total surviving sections in an enhanced prompt.
+ * Enforces the team lead rule: maximum 5 to 6 sections total.
+ */
+export const PROMPT_ENHANCEMENT_MAX_TOTAL_SECTIONS = 6;
+
 export interface PromptEnhancementPruneResultV1 {
   /** The sections that survive, in their planned order. */
   readonly sectionPlans: readonly PromptEnhancementSectionPlanItemV1[];
@@ -270,8 +276,15 @@ export function prunePromptEnhancementSectionsV1(input: {
     .sort((a, b) => (a.rank - b.rank) || (a.planned - b.planned))
     .map((entry) => entry.section);
 
-  const kept = ranked.slice(0, PROMPT_ENHANCEMENT_PRUNE_EXTRA_CAP_V1);
-  dropped.push(...ranked.slice(PROMPT_ENHANCEMENT_PRUNE_EXTRA_CAP_V1));
+  const allowedExtras = Math.max(
+    0,
+    Math.min(
+      PROMPT_ENHANCEMENT_PRUNE_EXTRA_CAP_V1,
+      PROMPT_ENHANCEMENT_MAX_TOTAL_SECTIONS - floor.length
+    )
+  );
+  const kept = ranked.slice(0, allowedExtras);
+  dropped.push(...ranked.slice(allowedExtras));
 
   // Survivors render in the PLANNED order, not the ranked one: relevance decides what stays, not
   // what the body reads like. Reordering a body under the reader is a separate change nobody asked
