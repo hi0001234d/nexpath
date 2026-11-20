@@ -11,6 +11,7 @@ import { preparePromptEnhancement } from './facade.js';
 import {
   prunePromptEnhancementSectionsV1,
   PROMPT_ENHANCEMENT_PRUNE_EXTRA_CAP_V1,
+  PROMPT_ENHANCEMENT_MAX_TOTAL_SECTIONS,
 } from './section-pruner.js';
 import { routePromptEnhancement } from './routing-taxonomy.js';
 import { getPromptStartStopSourceSnapshot } from './source-reality.js';
@@ -790,5 +791,66 @@ describe('Feature 1 locked decisions (owner decision 2026-10-31)', () => {
       relevanceOrder,
     });
     expect(result.droppedSectionIds).toContain('sec-context_and_constraints');
+  });
+});
+
+describe('Total Section Ceiling (team lead rule: max 5 to 6 sections)', () => {
+  it('defines the maximum section ceiling as 6', () => {
+    expect(PROMPT_ENHANCEMENT_MAX_TOTAL_SECTIONS).toBe(6);
+  });
+
+  it('caps extra sections so that total surviving sections never exceed 6 when floor has 5 sections', () => {
+    // The pruner is completely section-name agnostic (except for original prompt and mandatory guidance).
+    // Floor membership is determined by structural flags (isRequired, safetyFlags), not kind names.
+    const floorPlans = [
+      section({ kind: 'original_request_or_goal' }),
+      section({ kind: 'source_signal_guidance' }),
+      section({ kind: 'floor_guidance_1', factIds: ['f1'], isRequired: true }),
+      section({ kind: 'floor_safety_2', safety: ['destructive_operation_warning'] }),
+      section({ kind: 'floor_safety_3', safety: ['irreversible_operation_warning'] }),
+    ];
+    const candidateExtras = [
+      section({ kind: 'candidate_extra_a', factIds: ['e1'] }),
+      section({ kind: 'candidate_extra_b', factIds: ['e2'] }),
+      section({ kind: 'candidate_extra_c', factIds: ['e3'] }),
+    ];
+
+    const result = prunePromptEnhancementSectionsV1({
+      sectionPlans: [...floorPlans, ...candidateExtras],
+      facts: [fact('f1'), fact('e1'), fact('e2'), fact('e3')],
+      relevanceOrder: ['candidate_extra_a', 'candidate_extra_b', 'candidate_extra_c'],
+    });
+
+    // Floor length is 5, cap is 6 -> allowed extras is min(2, 6 - 5) = 1.
+    // Total surviving sections: 5 + 1 = 6 <= 6.
+    expect(result.sectionPlans.length).toBeLessThanOrEqual(6);
+    expect(result.sectionPlans).toHaveLength(6);
+    expect(result.droppedSectionIds).toHaveLength(2);
+  });
+
+  it('drops all extras when floor already has 6 sections', () => {
+    const floorPlans = [
+      section({ kind: 'original_request_or_goal' }),
+      section({ kind: 'source_signal_guidance' }),
+      section({ kind: 'floor_guidance_1', factIds: ['f1'], isRequired: true }),
+      section({ kind: 'floor_safety_2', safety: ['destructive_operation_warning'] }),
+      section({ kind: 'floor_safety_3', safety: ['irreversible_operation_warning'] }),
+      section({ kind: 'floor_safety_4', safety: ['external_system_modification_warning'] }),
+    ];
+    const candidateExtras = [
+      section({ kind: 'candidate_extra_a', factIds: ['e1'] }),
+      section({ kind: 'candidate_extra_b', factIds: ['e2'] }),
+    ];
+
+    const result = prunePromptEnhancementSectionsV1({
+      sectionPlans: [...floorPlans, ...candidateExtras],
+      facts: [fact('f1'), fact('e1'), fact('e2')],
+      relevanceOrder: ['candidate_extra_a', 'candidate_extra_b'],
+    });
+
+    // Floor length is 6, cap is 6 -> allowed extras is min(2, 6 - 6) = 0.
+    // Total surviving sections: exactly 6.
+    expect(result.sectionPlans.length).toBe(6);
+    expect(result.droppedSectionIds).toHaveLength(2);
   });
 });
