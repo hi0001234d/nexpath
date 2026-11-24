@@ -1,0 +1,7 @@
+# Bot-local runtime artifacts — never commit
+github_config.json
+nexpath_study_report*
+*.log
+.env.save
+.env.local
+*.env.backup
