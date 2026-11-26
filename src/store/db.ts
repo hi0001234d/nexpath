@@ -10,7 +10,7 @@
 import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import {
-  existsSync, mkdirSync, readFileSync, writeFileSync,
+  existsSync, mkdirSync, readFileSync, writeFileSync, renameSync,
   openSync, writeSync, closeSync as closeFd, statSync, unlinkSync,
 } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -29,9 +29,9 @@ const MAX_DB_BYTES = 100 * 1024 * 1024;
 // changes if they both read the DB file, one writes a change, and the other
 // saves its stale in-memory copy on top. A per-DB lock file serialises access.
 
-const LOCK_STALE_MS = 30_000; // lock older than 30 s → crashed holder, remove
-const LOCK_WAIT_MS  =  8_000; // max time to wait before proceeding without lock
-const LOCK_RETRY_MS =    80;  // poll interval while waiting
+const LOCK_STALE_MS = 45_000; // lock older than 45 s → crashed holder, remove
+const LOCK_WAIT_MS  = 15_000; // max time to wait before proceeding without lock
+const LOCK_RETRY_MS =     80; // poll interval while waiting
 
 async function acquireLock(lockPath: string): Promise<() => void> {
   const deadline = Date.now() + LOCK_WAIT_MS;
@@ -63,8 +63,11 @@ async function acquireLock(lockPath: string): Promise<() => void> {
     }
   }
 
-  // Timeout: forcibly remove the stale lock and proceed without one
-  try { unlinkSync(lockPath); } catch { /* ignore */ }
+  // Timeout: only remove the lock if it is actually stale; never delete a live holder's lock.
+  try {
+    const age = Date.now() - statSync(lockPath).mtimeMs;
+    if (age > LOCK_STALE_MS) unlinkSync(lockPath);
+  } catch { /* ignore */ }
   return () => {};
 }
 
@@ -86,6 +89,27 @@ export async function getSql(): Promise<SqlJsStatic> {
   return _SQL;
 }
 
+function openAndMigrateDatabase(SQL: SqlJsStatic, dbPath: string): Database {
+  const buffer = dbPath !== ':memory:' && existsSync(dbPath) ? readFileSync(dbPath) : null;
+  let db: Database;
+  try {
+    db = buffer ? new SQL.Database(buffer) : new SQL.Database();
+    migrate(db);
+    applyIncrementalMigrations(db);
+  } catch (err) {
+    logger.error('db_open_failed', { path: dbPath, error: (err as Error).message });
+    if (dbPath !== ':memory:' && existsSync(dbPath)) {
+      try {
+        renameSync(dbPath, `${dbPath}.corrupt.${Date.now()}`);
+      } catch { /* ignore backup failure */ }
+    }
+    db = new SQL.Database(); // blank fallback — prevents hook & desktop crash
+    migrate(db);
+    applyIncrementalMigrations(db);
+  }
+  return db;
+}
+
 export async function openStore(dbPath: string = DEFAULT_DB_PATH): Promise<Store> {
   // Acquire exclusive lock before any disk read so no other hook process can
   // read a stale copy while we are working, then overwrite our writes.
@@ -97,21 +121,7 @@ export async function openStore(dbPath: string = DEFAULT_DB_PATH): Promise<Store
   }
 
   const SQL = await getSql();
-
-  let buffer: Buffer | null = null;
-  if (dbPath !== ':memory:' && existsSync(dbPath)) {
-    buffer = readFileSync(dbPath);
-  }
-
-  let db: Database;
-  try {
-    db = buffer ? new SQL.Database(buffer) : new SQL.Database();
-  } catch (err) {
-    logger.error('db_open_failed', { path: dbPath, error: (err as Error).message });
-    db = new SQL.Database(); // blank fallback — prevents hook crash
-  }
-  migrate(db);
-  applyIncrementalMigrations(db);
+  const db = openAndMigrateDatabase(SQL, dbPath);
 
   const store: Store = { db, dbPath, _releaseLock: releaseLock };
 
@@ -128,9 +138,20 @@ export function saveStore(store: Store): void {
   _writeToDisk(store);
 }
 
+function writeDbFileAtomically(dbPath: string, data: Uint8Array): void {
+  const tmpPath = `${dbPath}.tmp.${process.pid}`;
+  writeFileSync(tmpPath, data);
+  try {
+    renameSync(tmpPath, dbPath);
+  } catch {
+    writeFileSync(dbPath, data);
+    try { unlinkSync(tmpPath); } catch { /* ignore */ }
+  }
+}
+
 function _writeToDisk(store: Store): void {
   const data = store.db.export();
-  writeFileSync(store.dbPath, data);
+  writeDbFileAtomically(store.dbPath, data);
 
   // Enforce 100 MB soft ceiling — drop oldest 20% across all projects then VACUUM
   if (data.byteLength > MAX_DB_BYTES) {
@@ -143,7 +164,7 @@ function _writeToDisk(store: Store): void {
       )
     `);
     store.db.run('VACUUM');
-    writeFileSync(store.dbPath, store.db.export());
+    writeDbFileAtomically(store.dbPath, store.db.export());
   }
 }
 
@@ -174,9 +195,7 @@ export async function reacquireStoreLock(store: Store): Promise<void> {
   store._releaseLock = await acquireLock(store.dbPath + '.lock');
   if (existsSync(store.dbPath)) {
     const SQL   = await getSql();
-    const fresh = new SQL.Database(readFileSync(store.dbPath));
-    migrate(fresh);
-    applyIncrementalMigrations(fresh);
+    const fresh = openAndMigrateDatabase(SQL, store.dbPath);
     store.db.close();
     store.db = fresh;
   }

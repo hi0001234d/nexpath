@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { rmSync } from 'node:fs';
+import { rmSync, writeFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname, basename } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { openStore, closeStore, releaseStoreLock, reacquireStoreLock, withReleasedStoreLockV1 } from './db.js';
 import { getConfig, setConfig } from './config.js';
@@ -102,5 +102,26 @@ describe('withReleasedStoreLockV1 (MPS-8: never hold the lock across a wait)', (
     const c = await openStore(dbPath);
     expect(getConfig(c.db, 'k2')).toBe('a2');
     closeStore(c);
+  });
+});
+
+describe('corrupted DB recovery in openStore', () => {
+  it('backs up a corrupted database file ("file is not a database") and recovers cleanly', async () => {
+    const dbPath = tmpDb();
+    writeFileSync(dbPath, 'this is not a valid sqlite database header');
+
+    const store = await openStore(dbPath);
+    setConfig(store, 'recovered', 'yes');
+    closeStore(store);
+
+    const reopened = await openStore(dbPath);
+    expect(getConfig(reopened.db, 'recovered')).toBe('yes');
+    closeStore(reopened);
+
+    const dir = dirname(dbPath);
+    const base = basename(dbPath);
+    const backups = readdirSync(dir).filter((f) => f.startsWith(`${base}.corrupt.`));
+    expect(backups.length).toBe(1);
+    for (const b of backups) rmSync(join(dir, b), { force: true });
   });
 });
