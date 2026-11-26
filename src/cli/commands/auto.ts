@@ -2033,6 +2033,7 @@ export async function runAuto(
       resolvePromptEnhancementPopupCooldownV1(store, input.projectRoot),
     );
   let preparation: AutoPromptEnhancementPreparationResult | undefined;
+  let peDeliveredToHost = false;
   if (!pePopupCooldownActive) {
     await ensurePromptFactsFresh();
     const peIntegration = promptEnhancement ?? {
@@ -2118,6 +2119,7 @@ export async function runAuto(
         // Display only: the popup may draw these louder, and the agent never sees the difference.
         emphasisPhrases: emphasisPhrasesForPreparedBodyV1(preparation.result, peIntegration.request),
       });
+      peDeliveredToHost = true;
       const handoffPresent = Boolean(preparation.result.uiView.handoffAndSequenceSummary);
       logger.debug('pending_prompt_enhancement_stored', {
         projectRoot: input.projectRoot,
@@ -2154,6 +2156,21 @@ export async function runAuto(
         mgr.markPendingPopupChargeV1(store, mgr.current.promptCount, [dedupKey, firedDedupKey]);
       }
     }
+  }
+
+  // In-process Desktop host: never burn cooldown/dedup when PE was suppressed, and skip
+  // CLI Stop-hook pinch-label LLM generation & pending_advisories persistence.
+  if (options?.host) {
+    if (!peDeliveredToHost) {
+      logger.info('pipeline_outcome', { outcome: 'no_action', reason: 'host_pe_not_shown' });
+      return { outcome: 'no_action' };
+    }
+    mgr.markDecisionSessionFired(store, firedDedupKey);
+    mgr.markAdvisoryFired(store);
+    mgr.markPromptEnhancementPopupShown(store);
+    mgr.chargeShownPopupV1(store, mgr.current.promptCount, firedKey);
+    logger.info('pipeline_outcome', { outcome: 'pending', host: true });
+    return { outcome: 'pending' };
   }
 
   // keeps legacy Decision Session bookkeeping after preparation; PE preparation

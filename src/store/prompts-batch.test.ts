@@ -80,11 +80,11 @@ describe('insertPromptsBatch', () => {
     const store = await openStore(dbPath);
     writes.paths.length = 0;
     insertPromptsBatch(store, PROJECT, batch);
-    expect(writes.paths.filter((p) => p === dbPath)).toHaveLength(1);
+    expect(writes.paths.filter((p) => p === dbPath || p.startsWith(`${dbPath}.tmp.`))).toHaveLength(1);
 
     writes.paths.length = 0;
     for (const row of batch) insertPrompt(store, { projectRoot: '/control', ...row });
-    expect(writes.paths.filter((p) => p === dbPath)).toHaveLength(batch.length); // the control: per-row saves
+    expect(writes.paths.filter((p) => p === dbPath || p.startsWith(`${dbPath}.tmp.`))).toHaveLength(batch.length); // the control: per-row saves
     store.db.close();
   });
 
