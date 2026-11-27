@@ -21,6 +21,12 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         with:
           script: |
+            // Secrets are unavailable on fork PRs and until configured — skip quietly.
+            if (!process.env.DISCORD_WEBHOOK_URL) {
+              core.info('DISCORD_WEBHOOK_URL secret not set — skipping Discord notification.');
+              return;
+            }
+
             const AVATAR =
               'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
             const repoUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}`;
